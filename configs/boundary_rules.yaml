@@ -1,0 +1,394 @@
+version: "1.0.0"
+updated_at: "2025-01-17"
+description: "边界识别规则配置 - 强边界、弱边界、标题修饰符"
+
+# ============================================================================
+# 强边界定义 (Strong Boundaries)
+# ============================================================================
+
+strong_boundaries:
+  - type: "episode"
+    priority: 100
+    reason: "EP是最强边界,前后内容不应混入TITLE"
+    description: "Episode是最强的边界,TITLE不应跨越Episode边界"
+    examples:
+      - "[LoliHouse] 药屋少女 - 01 [WebRip]"
+      - "TITLE在01之前,TECH在01之后"
+  
+  - type: "episode_range"
+    priority: 100
+    reason: "Episode Range是强边界"
+    description: "Episode Range标记Batch,是强边界"
+    examples:
+      - "[VCB-Studio] Shinka no Mi 01-12 [Ma10p_1080p]"
+  
+  - type: "tech"
+    priority: 90
+    reason: "TECH是强边界,前后内容不应混入TITLE"
+    description: "技术属性是强边界,TITLE不应包含TECH"
+    subtypes:
+      - "resolution"
+      - "video_codec"
+      - "audio_codec"
+      - "source_type"
+      - "bit_depth"
+      - "hdr"
+      - "container"
+    examples:
+      - "[LoliHouse] 药屋少女 - 01 [WebRip 1080p HEVC AAC]"
+      - "TITLE在WebRip之前"
+  
+  - type: "platform"
+    priority: 80
+    reason: "Platform是强边界"
+    description: "平台标记是强边界"
+    examples:
+      - "Onmyoji - 01 1080p NF WEB-DL"
+      - "NF (Netflix) 是强边界"
+  
+  - type: "crc"
+    priority: 70
+    reason: "CRC是强边界"
+    description: "CRC校验码是强边界"
+    examples:
+      - "[LoliHouse] 药屋少女 - 01 [WebRip][A1B2C3D4]"
+
+# ============================================================================
+# 弱边界定义 (Weak Boundaries)
+# ============================================================================
+
+weak_boundaries:
+  - type: "note"
+    priority: 30
+    reason: "Note是弱边界,可能混入TITLE"
+    description: "Note标记是弱边界,可能是TITLE的一部分"
+    examples:
+      - "[LoliHouse] 药屋少女 简体内嵌 - 01 [WebRip]"
+      - "简体内嵌可能是Note,也可能是TITLE的一部分"
+  
+  - type: "noise"
+    priority: 10
+    reason: "Noise是弱边界,应该过滤"
+    description: "Noise是弱边界,通常应该过滤掉"
+    examples:
+      - "[LoliHouse] 药屋少女 [招募翻译] - 01 [WebRip]"
+      - "[招募翻译]是Noise,应该过滤"
+  
+  - type: "year"
+    priority: 20
+    reason: "Year是弱边界"
+    description: "年份标记是弱边界,可能是TITLE的一部分"
+    examples:
+      - "[LoliHouse] 药屋少女 2024 - 01 [WebRip]"
+      - "2024可能是Year,也可能是TITLE的一部分"
+
+# ============================================================================
+# 标题修饰符 (Title Modifiers)
+# ============================================================================
+
+title_modifiers:
+  description: "标题修饰符是TITLE的一部分,不应该被过滤"
+  
+  japanese:
+    - pattern: "篇"
+      reason: "日文篇章标记"
+      examples:
+        - "葬送的芙莉莲 第一篇"
+    
+    - pattern: "編"
+      reason: "日文编章标记"
+      examples:
+        - "葬送的芙莉莲 第一編"
+    
+    - pattern: "章"
+      reason: "日文章节标记"
+      examples:
+        - "葬送的芙莉莲 第一章"
+    
+    - pattern: "部"
+      reason: "日文部分标记"
+      examples:
+        - "葬送的芙莉莲 第一部"
+  
+  english:
+    - pattern: "season"
+      case_insensitive: true
+      reason: "季度标记"
+      examples:
+        - "Frieren Season 2"
+    
+    - pattern: "part"
+      case_insensitive: true
+      reason: "部分标记"
+      examples:
+        - "Frieren Part 3"
+    
+    - pattern: "final"
+      case_insensitive: true
+      reason: "最终标记"
+      examples:
+        - "Frieren Final Season"
+    
+    - pattern: "arc"
+      case_insensitive: true
+      reason: "故事弧标记"
+      examples:
+        - "Frieren Demon King Arc"
+    
+    - pattern: "saga"
+      case_insensitive: true
+      reason: "传奇标记"
+      examples:
+        - "Frieren Demon Saga"
+    
+    - pattern: "chapter"
+      case_insensitive: true
+      reason: "章节标记"
+      examples:
+        - "Frieren Chapter 1"
+    
+    - pattern: "volume"
+      case_insensitive: true
+      reason: "卷标记"
+      examples:
+        - "Frieren Volume 1"
+    
+    - pattern: "cour"
+      case_insensitive: true
+      reason: "季度标记(日本动画术语)"
+      examples:
+        - "Frieren Cour 2"
+  
+  chinese:
+    - pattern: "季"
+      reason: "中文季度标记"
+      examples:
+        - "葬送的芙莉莲 第二季"
+    
+    - pattern: "部"
+      reason: "中文部分标记"
+      examples:
+        - "葬送的芙莉莲 第一部"
+    
+    - pattern: "期"
+      reason: "中文期数标记"
+      examples:
+        - "葬送的芙莉莲 第二期"
+
+# ============================================================================
+# 边界检测规则 (Boundary Detection Rules)
+# ============================================================================
+
+boundary_detection:
+  description: "基于边界的字段提取规则"
+  
+  title_extraction:
+    - rule: "between_group_and_episode"
+      priority: 100
+      condition:
+        has_group: true
+        has_episode: true
+      extract_from:
+        start: "after_group"
+        end: "before_episode"
+      confidence: 0.9
+      description: "从GROUP和EPISODE之间提取TITLE"
+      examples:
+        - "[LoliHouse] 药屋少女 - 01 [WebRip]"
+        - "TITLE = 药屋少女"
+    
+    - rule: "between_group_and_tech"
+      priority: 90
+      condition:
+        has_group: true
+        has_tech: true
+        no_episode: true
+      extract_from:
+        start: "after_group"
+        end: "before_tech"
+      confidence: 0.7
+      description: "从GROUP和TECH之间提取TITLE"
+      examples:
+        - "[LoliHouse] 药屋少女 [WebRip 1080p]"
+        - "TITLE = 药屋少女"
+    
+    - rule: "before_episode"
+      priority: 80
+      condition:
+        has_episode: true
+        no_group: true
+      extract_from:
+        start: "beginning"
+        end: "before_episode"
+      confidence: 0.6
+      description: "从开头到EPISODE之间提取TITLE"
+      examples:
+        - "药屋少女 - 01 [WebRip]"
+        - "TITLE = 药屋少女"
+    
+    - rule: "before_tech"
+      priority: 70
+      condition:
+        has_tech: true
+        no_episode: true
+        no_group: true
+      extract_from:
+        start: "beginning"
+        end: "before_tech"
+      confidence: 0.5
+      description: "从开头到TECH之间提取TITLE"
+      examples:
+        - "药屋少女 [WebRip 1080p]"
+        - "TITLE = 药屋少女"
+  
+  episode_extraction:
+    - rule: "after_title_before_tech"
+      priority: 100
+      condition:
+        has_title: true
+        has_tech: true
+      extract_from:
+        start: "after_title"
+        end: "before_tech"
+      confidence: 0.8
+      description: "从TITLE和TECH之间提取EPISODE"
+      examples:
+        - "[LoliHouse] 药屋少女 - 01 [WebRip]"
+        - "EPISODE = 01"
+    
+    - rule: "before_tech"
+      priority: 90
+      condition:
+        has_tech: true
+        no_title: true
+      extract_from:
+        position: "before_tech"
+        lookback: 10
+      confidence: 0.7
+      description: "从TECH前面提取EPISODE"
+      examples:
+        - "01 [WebRip 1080p]"
+        - "EPISODE = 01"
+
+# ============================================================================
+# 边界过滤规则 (Boundary Filtering Rules)
+# ============================================================================
+
+boundary_filtering:
+  description: "基于边界过滤TITLE中的噪音"
+  
+  rules:
+    - name: "filter_tech_from_title"
+      priority: 100
+      description: "从TITLE中过滤技术属性"
+      filter_types:
+        - "resolution"
+        - "video_codec"
+        - "audio_codec"
+        - "source_type"
+        - "bit_depth"
+        - "hdr"
+      examples:
+        - input: "药屋少女 1080p"
+          output: "药屋少女"
+        - input: "Kusuriya HEVC"
+          output: "Kusuriya"
+    
+    - name: "filter_noise_from_title"
+      priority: 90
+      description: "从TITLE中过滤噪音"
+      filter_types:
+        - "noise"
+        - "crc"
+      examples:
+        - input: "药屋少女 [招募翻译]"
+          output: "药屋少女"
+    
+    - name: "trim_delimiters"
+      priority: 80
+      description: "去除TITLE首尾的分隔符"
+      delimiters: [" ", "/", "|", "｜", "\\", "-"]
+      examples:
+        - input: "药屋少女 / "
+          output: "药屋少女"
+        - input: " / Kusuriya"
+          output: "Kusuriya"
+    
+    - name: "filter_surrounded_by_strong_boundaries"
+      priority: 70
+      description: "过滤被强边界包围的token"
+      examples:
+        - input: "[LoliHouse] 药屋少女 招募翻译 - 01 [WebRip]"
+          filter: "招募翻译" (被TITLE和EPISODE包围)
+          output: "药屋少女"
+
+# ============================================================================
+# 边界验证规则 (Boundary Validation Rules)
+# ============================================================================
+
+boundary_validation:
+  description: "验证边界识别的正确性"
+  
+  rules:
+    - name: "title_not_cross_episode"
+      description: "TITLE不应跨越EPISODE边界"
+      validation:
+        - title_span_end <= episode_span_start
+      error_message: "TITLE跨越了EPISODE边界"
+    
+    - name: "title_not_cross_tech"
+      description: "TITLE不应跨越TECH边界"
+      validation:
+        - title_span_end <= tech_span_start
+      error_message: "TITLE跨越了TECH边界"
+    
+    - name: "episode_between_title_and_tech"
+      description: "EPISODE应该在TITLE和TECH之间"
+      validation:
+        - title_span_end <= episode_span_start
+        - episode_span_end <= tech_span_start
+      error_message: "EPISODE位置不正确"
+    
+    - name: "no_tech_in_title"
+      description: "TITLE不应包含技术属性"
+      validation:
+        - not contains_tech_keywords(title)
+      error_message: "TITLE包含技术属性"
+      tech_keywords:
+        - "1080p"
+        - "720p"
+        - "2160p"
+        - "WebRip"
+        - "WEB-DL"
+        - "BDRip"
+        - "HEVC"
+        - "AVC"
+        - "H264"
+        - "H265"
+        - "AAC"
+        - "FLAC"
+
+# ============================================================================
+# 成功指标
+# ============================================================================
+
+success_metrics:
+  boundary_detection_accuracy:
+    current: 0.80
+    target: 0.95
+    description: "边界检测准确率"
+  
+  title_extraction_accuracy:
+    current: 0.75
+    target: 0.90
+    description: "基于边界的TITLE提取准确率"
+  
+  tech_filtering_accuracy:
+    current: 0.85
+    target: 0.98
+    description: "从TITLE中过滤TECH的准确率"
+  
+  delimiter_trimming_accuracy:
+    current: 0.60
+    target: 0.95
+    description: "去除TITLE首尾分隔符的准确率"

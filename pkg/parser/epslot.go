@@ -1,0 +1,251 @@
+package parser
+
+import (
+	"regexp"
+	"strconv"
+	"strings"
+
+	"title-parser/pkg/model"
+)
+
+var taggedRangePattern = regexp.MustCompile(`(?i)^(abs|se|tv|ova|sp)[:_ -]?(\d{1,4}(?:\.\d{1,2})?(?:[-~]\d{1,4}(?:\.\d{1,2})?)?)$`)
+
+func buildEPSlotCandidates(tokens []model.Token, season string, seasonIdx int, episodeFromSxxExx string, sxxExxIdx int, episode string, episodeIdx int, episodeRange string, episodeRangeIdx int, spKind string) *model.EPSlot {
+	cands := make([]model.EPEntity, 0, 8)
+	seen := map[string]bool{}
+	add := func(e model.EPEntity) {
+		k := strings.TrimSpace(e.Kind) + "|" + strings.TrimSpace(e.Axis) + "|" + strings.TrimSpace(e.Season) + "|" + strings.TrimSpace(e.Episode) + "|" + strings.TrimSpace(e.EpisodeRange) + "|" + strings.TrimSpace(e.SPKind) + "|" + strconv.Itoa(e.TokenStart) + ":" + strconv.Itoa(e.TokenEnd)
+		if seen[k] {
+			return
+		}
+		seen[k] = true
+		cands = append(cands, e)
+	}
+
+	axisSE := "UNKNOWN"
+	if strings.TrimSpace(season) != "" {
+		axisSE = "SE"
+	}
+	if strings.TrimSpace(episodeFromSxxExx) != "" && sxxExxIdx >= 0 {
+		add(model.EPEntity{Kind: "EP", Axis: "SE", Season: season, Episode: episodeFromSxxExx, TokenStart: sxxExxIdx, TokenEnd: sxxExxIdx + 1, Source: "sxxexx"})
+	}
+	if strings.TrimSpace(episode) != "" && episodeIdx >= 0 {
+		add(model.EPEntity{Kind: "EP", Axis: axisSE, Season: season, Episode: episode, TokenStart: episodeIdx, TokenEnd: episodeIdx + 1, Source: "episode"})
+	}
+	if strings.TrimSpace(episodeRange) != "" && episodeRangeIdx >= 0 {
+		add(model.EPEntity{Kind: "RANGE", Axis: axisSE, Season: season, EpisodeRange: episodeRange, TokenStart: episodeRangeIdx, TokenEnd: episodeRangeIdx + 1, Source: "episode_range"})
+	}
+	if strings.TrimSpace(spKind) != "" {
+		ax := strings.ToUpper(strings.TrimSpace(spKind))
+		if ax == "" {
+			ax = "SP"
+		}
+		add(model.EPEntity{Kind: "SP", Axis: ax, Season: season, SPKind: strings.ToUpper(strings.TrimSpace(spKind)), Source: "sp_kind"})
+	}
+
+	// Scan tokens for additional episode-like candidates.
+	for i := 0; i < len(tokens); i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		txt := strings.TrimSpace(tokens[i].Text)
+		if txt == "" {
+			continue
+		}
+		if isTitlePrefixedDigitRangeInBracket(tokens, i) {
+			continue
+		}
+		// Tagged ranges like ABS:01-12 / TV01-12 / OVA:01
+		if m := taggedRangePattern.FindStringSubmatch(txt); len(m) == 3 {
+			axis := strings.ToUpper(strings.TrimSpace(m[1]))
+			val := strings.TrimSpace(m[2])
+			if strings.ContainsAny(val, "-~") {
+				add(model.EPEntity{Kind: "RANGE", Axis: axis, Season: season, EpisodeRange: val, TokenStart: i, TokenEnd: i + 1, Source: "tagged_range"})
+			} else {
+				add(model.EPEntity{Kind: "EP", Axis: axis, Season: season, Episode: strings.TrimLeft(val, "0"), TokenStart: i, TokenEnd: i + 1, Source: "tagged_ep"})
+			}
+			continue
+		}
+		// SP tokens with optional index like OVA1 / SP01.
+		if m := spKindPattern.FindStringSubmatch(txt); len(m) >= 2 {
+			k := strings.ToUpper(strings.TrimSpace(m[1]))
+			idx := ""
+			if len(m) >= 3 {
+				idx = strings.TrimLeft(strings.TrimSpace(m[2]), "0")
+			}
+			e := model.EPEntity{Kind: "SP", Axis: k, Season: season, SPKind: k, TokenStart: i, TokenEnd: i + 1, Source: "sp_token"}
+			if idx != "" {
+				e.Episode = idx
+			}
+			add(e)
+			continue
+		}
+		// Range candidates in bracket or plain like 01-12 / 25-48.
+		if m := episodeRangePattern.FindStringSubmatch(txt); len(m) == 3 {
+			add(model.EPEntity{Kind: "RANGE", Axis: axisSE, Season: season, EpisodeRange: strings.TrimSpace(txt), TokenStart: i, TokenEnd: i + 1, Source: "range_token"})
+			continue
+		}
+		// Single episode digits (often in brackets). Keep it conservative.
+		if episodeOfTotalPattern.MatchString(txt) {
+			if yearPattern.MatchString(txt) {
+				continue
+			}
+			if !isInBracket(tokens, i) && !isInParen(tokens, i) {
+				if len(txt) >= 3 && !strings.HasPrefix(txt, "0") {
+					continue
+				}
+			}
+			// Guard: avoid extracting episode candidates from romaji title fragments like "29-sai".
+			if i+2 < len(tokens) {
+				sep := strings.TrimSpace(tokens[i+1].Text)
+				if sep == "-" {
+					next := strings.TrimSpace(tokens[i+2].Text)
+					if looksLikeLowercaseLatinWordToken(next) {
+						continue
+					}
+				}
+			}
+			// Avoid obvious meta bracket content.
+			if isInBracket(tokens, i) {
+				if isTitlePrefixedDigitRangeInBracket(tokens, i) {
+					continue
+				}
+				if inner := bracketBlockInnerText(tokens, i); inner != "" {
+					norm := regexp.MustCompile(`\b(\d{1,4})\s*[-~]\s*(\d{1,4})\b`).ReplaceAllString(inner, "$1-$2")
+					if episodeRangePattern.MatchString(strings.TrimSpace(norm)) {
+						prev := ""
+						next := ""
+						if i-1 >= 0 {
+							prev = strings.TrimSpace(tokens[i-1].Text)
+						}
+						if i+1 < len(tokens) {
+							next = strings.TrimSpace(tokens[i+1].Text)
+						}
+						if prev == "-" || prev == "~" || next == "-" || next == "~" {
+							continue
+						}
+					}
+				}
+				if inner := bracketBlockInnerText(tokens, i); inner != "" {
+					if isLikelyMetaBracketText(inner) {
+						continue
+					}
+				}
+			}
+			if isInParen(tokens, i) {
+				if inner := parenBlockInnerText(tokens, i); inner != "" {
+					if looksLikeDateOrTimeText(inner) {
+						continue
+					}
+				}
+			}
+			nn := strings.TrimLeft(txt, "0")
+			if nn == "" {
+				nn = "0"
+			}
+			add(model.EPEntity{Kind: "EP", Axis: axisSE, Season: season, Episode: nn, TokenStart: i, TokenEnd: i + 1, Source: "ep_digit_token"})
+			continue
+		}
+	}
+
+	if len(cands) == 0 {
+		return nil
+	}
+	_ = seasonIdx
+	return &model.EPSlot{Candidates: cands}
+}
+
+func finalizeEPSlotPrimary(epslot *model.EPSlot, season string, episode string, episodeRange string, spKind string, episodeIdx int, episodeRangeIdx int, sxxExxIdx int) {
+	if epslot == nil {
+		return
+	}
+	axisSE := "UNKNOWN"
+	if strings.TrimSpace(season) != "" {
+		axisSE = "SE"
+	}
+	if strings.TrimSpace(episodeRange) != "" && episodeRangeIdx >= 0 {
+		for i := range epslot.Candidates {
+			c := epslot.Candidates[i]
+			if c.Kind != "RANGE" {
+				continue
+			}
+			if c.Source != "tagged_range" {
+				continue
+			}
+			if c.TokenStart != episodeRangeIdx {
+				continue
+			}
+			if strings.TrimSpace(c.Axis) == "" || c.Axis == "UNKNOWN" {
+				continue
+			}
+			cp := c
+			cp.Source = "tagged_range_final"
+			epslot.Primary = &cp
+			return
+		}
+		epslot.Primary = &model.EPEntity{Kind: "RANGE", Axis: axisSE, Season: season, EpisodeRange: episodeRange, TokenStart: episodeRangeIdx, TokenEnd: episodeRangeIdx + 1, Source: "episode_range_final"}
+		return
+	}
+	if strings.TrimSpace(episode) != "" && episodeIdx >= 0 {
+		// Prefer tagged candidates like "ABS:12.5" (axis encoded) when they share the same token index.
+		for i := range epslot.Candidates {
+			c := epslot.Candidates[i]
+			if c.Kind != "EP" {
+				continue
+			}
+			if c.Source != "tagged_ep" {
+				continue
+			}
+			if c.TokenStart != episodeIdx {
+				continue
+			}
+			if strings.TrimSpace(c.Axis) == "" || c.Axis == "UNKNOWN" {
+				continue
+			}
+			cp := c
+			cp.Source = "tagged_ep_final"
+			epslot.Primary = &cp
+			return
+		}
+		src := "episode_final"
+		if sxxExxIdx >= 0 && episodeIdx == sxxExxIdx {
+			src = "sxxexx_final"
+		}
+		epslot.Primary = &model.EPEntity{Kind: "EP", Axis: axisSE, Season: season, Episode: episode, TokenStart: episodeIdx, TokenEnd: episodeIdx + 1, Source: src}
+		return
+	}
+	if strings.TrimSpace(spKind) != "" {
+		ax := strings.ToUpper(strings.TrimSpace(spKind))
+		if ax == "" {
+			ax = "SP"
+		}
+		epslot.Primary = &model.EPEntity{Kind: "SP", Axis: ax, Season: season, SPKind: strings.ToUpper(strings.TrimSpace(spKind)), Source: "sp_kind_final"}
+		return
+	}
+	// Fallback: when ctx doesn't pick a primary, prefer tagged candidates (e.g. ABS:12.5).
+	best := (*model.EPEntity)(nil)
+	for i := range epslot.Candidates {
+		c := &epslot.Candidates[i]
+		if c.Source != "tagged_range" && c.Source != "tagged_ep" {
+			continue
+		}
+		if best == nil {
+			best = c
+			continue
+		}
+		if best.Kind != "RANGE" && c.Kind == "RANGE" {
+			best = c
+			continue
+		}
+		if best.Axis == "UNKNOWN" && strings.TrimSpace(c.Axis) != "" && c.Axis != "UNKNOWN" {
+			best = c
+			continue
+		}
+	}
+	if best != nil {
+		cp := *best
+		cp.Source = best.Source + "_final"
+		epslot.Primary = &cp
+		return
+	}
+}

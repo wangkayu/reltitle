@@ -1,0 +1,138 @@
+package model
+
+type AttrType string
+
+type Attribute struct {
+	Type       AttrType `json:"type"`
+	Normalized string   `json:"normalized,omitempty"`
+	TokenStart int      `json:"token_start,omitempty"`
+	TokenEnd   int      `json:"token_end,omitempty"`
+	Confidence float64  `json:"confidence,omitempty"`
+	Source     string   `json:"source,omitempty"`
+}
+
+type Token struct {
+	Text    string `json:"text"`
+	Removed bool   `json:"removed,omitempty"`
+}
+
+type TokenONNXOutput struct {
+	Tokens []string          `json:"tokens"`
+	YPred  []string          `json:"y_pred"`
+	Fields map[string]string `json:"fields"`
+	Error  string            `json:"error,omitempty"`
+}
+
+type MLRisk struct {
+	Score   float64  `json:"score,omitempty"`
+	Level   string   `json:"level,omitempty"`
+	Reasons []string `json:"reasons,omitempty"`
+}
+
+type MLOutput struct {
+	RawTitleHash    string   `json:"raw_title_hash,omitempty"`
+	TokenLabels     []string `json:"token_labels,omitempty"`
+	TitleCandidates []string `json:"title_candidates,omitempty"`
+	Risk            *MLRisk  `json:"risk,omitempty"`
+}
+
+type ParseResult struct {
+	RawTitle           string           `json:"raw_title"`
+	Group              string           `json:"group,omitempty"`
+	Title              string           `json:"title,omitempty"`
+	Aliases            []string         `json:"aliases,omitempty"`
+	Episode            string           `json:"episode,omitempty"`
+	EpisodeRange       string           `json:"episode_range,omitempty"`
+	EpRoute            string           `json:"ep_route,omitempty"`
+	Season             string           `json:"season,omitempty"`
+	SeasonRange        string           `json:"season_range,omitempty"`
+	Version            string           `json:"version,omitempty"`
+	PackKind           string           `json:"pack_kind,omitempty"`
+	SPKind             string           `json:"sp_kind,omitempty"`
+	MovieIndex         string           `json:"movie_index,omitempty"`
+	ContentKind        string           `json:"content_kind,omitempty"`
+	ContentConfidence  float64          `json:"content_confidence,omitempty"`
+	TemplateID         string           `json:"template_id,omitempty"`
+	TemplateConfidence float64          `json:"template_confidence,omitempty"`
+	TailParenBlock     string           `json:"tail_paren_block,omitempty"`
+	EPSlot             *EPSlot          `json:"epslot,omitempty"`
+	AudioSlot          *AudioSlot       `json:"audio_slot,omitempty"`
+	TokenONNX          *TokenONNXOutput `json:"token_onnx,omitempty"`
+	ML                 *MLOutput        `json:"ml,omitempty"`
+	Attributes         []Attribute      `json:"attributes,omitempty"`
+	Tokens             []Token          `json:"tokens,omitempty"`
+}
+
+type EPSlot struct {
+	Primary    *EPEntity  `json:"primary,omitempty"`
+	Candidates []EPEntity `json:"candidates,omitempty"`
+}
+
+// EPEntity represents one episode-like candidate. It is intentionally small and
+// stable, so we can support composite epslot without encoding semantics into
+// Attribute.Normalized strings.
+type EPEntity struct {
+	Kind         string `json:"kind,omitempty"` // EP | RANGE | SP
+	Axis         string `json:"axis,omitempty"` // SE | ABS | TV | OVA | SP | UNKNOWN
+	Season       string `json:"season,omitempty"`
+	Episode      string `json:"episode,omitempty"`
+	EpisodeRange string `json:"episode_range,omitempty"`
+	SPKind       string `json:"sp_kind,omitempty"` // OVA/OAD/ONA/EX/SP
+	TokenStart   int    `json:"token_start,omitempty"`
+	TokenEnd     int    `json:"token_end,omitempty"`
+	Source       string `json:"source,omitempty"` // sxxexx/episode/episode_range/sp_kind/etc
+}
+
+type AudioSlot struct {
+	Tracks []AudioTrack `json:"tracks,omitempty"`
+}
+
+type AudioTrack struct {
+	Language   string `json:"language,omitempty"`
+	Codec      string `json:"codec,omitempty"`
+	Channels   string `json:"channels,omitempty"`
+	Object     string `json:"object,omitempty"` // ATMOS etc
+	TokenStart int    `json:"token_start,omitempty"`
+	TokenEnd   int    `json:"token_end,omitempty"`
+	Source     string `json:"source,omitempty"` // tech_audio_slot/etc
+}
+
+const (
+	AttrGroup        AttrType = "group"
+	AttrEpisode      AttrType = "episode"
+	AttrEpisodeRange AttrType = "episode_range"
+	AttrSeason       AttrType = "season"
+	AttrSeasonRange  AttrType = "season_range"
+	AttrVersion      AttrType = "version"
+	AttrYear         AttrType = "year"
+	AttrMovieIndex   AttrType = "movie_index"
+	AttrMovieFlag    AttrType = "movie_flag"
+	AttrSpecialFlag  AttrType = "special_flag"
+	AttrSpecialIndex AttrType = "special_index"
+	AttrContents     AttrType = "contents"
+
+	AttrSourceType     AttrType = "source_type"
+	AttrResolution     AttrType = "resolution"
+	AttrVideoCodec     AttrType = "video_codec"
+	AttrAudioCodec     AttrType = "audio_codec"
+	AttrBitDepth       AttrType = "bit_depth"
+	AttrContainer      AttrType = "container"
+	AttrPlatform       AttrType = "platform"
+	AttrPlatformRegion AttrType = "platform_region"
+	AttrOriginRegion   AttrType = "origin_region"
+	AttrCRC            AttrType = "crc"
+	AttrTech           AttrType = "tech"
+	AttrTailGroup      AttrType = "tail_group"
+
+	AttrNote          AttrType = "note"
+	AttrNoise         AttrType = "noise"
+	AttrSubFlag       AttrType = "sub_flag"
+	AttrSubLang       AttrType = "sub_lang"
+	AttrSubFormat     AttrType = "sub_format"
+	AttrSubLangGroup  AttrType = "sub_lang_group"
+	AttrAudioFlag     AttrType = "audio_flag"
+	AttrAudioLang     AttrType = "audio_lang"
+	AttrAudioChannels AttrType = "audio_channels"
+	AttrAudioObject   AttrType = "audio_object"
+	AttrContentRating AttrType = "content_rating"
+)

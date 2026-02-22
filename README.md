@@ -127,10 +127,25 @@ cd title-parser
 go mod download
 ```
 
+
+### 编译
+
+**推荐方式** (只编译需要的包):
+```bash
+# 编译 HTTP 服务器
+go build -o server ./cmd/server
+
+# 或使用 go run (无需编译)
+go run ./cmd/server
+```
+
+**注意**: 不要使用 `go build ./...` 或 `go build .` - 这会尝试编译所有包。
+
 ### 运行测试
 ```bash
 go test ./...
 ```
+
 
 ### 使用示例
 ```go
@@ -231,6 +246,37 @@ func main() {
 ## 从v1迁移
 
 详见 [MIGRATION_FROM_V1.md](./docs/MIGRATION_FROM_V1.md)
+
+
+## 已知问题
+
+### 1. 编译问题 (已解决)
+
+**问题**: `go build ./...` 失败，提示 `pkg/onnx/token_boundary.go` 导入不存在的包。
+
+**原因**: 项目中存在两个独立的 Go module：
+- `title-parser/` (module: `title-parser`)
+- `title-parser/training/go/titleparser/` (module: `reltitle/training/titleparser`)
+
+`pkg/onnx` 试图通过相对路径导入子 module 的包，这在 Go 中不可行。
+
+**解决方案 (已完成)**:
+- 删除 `pkg/onnx` 目录
+- 删除过时的测试文件 `test_parse_with_hints.go`
+
+### 2. 编译注意事项
+
+- 使用 `go build -o server ./cmd/server` 编译服务器
+- 或使用 `go run ./cmd/server` 直接运行
+- **不要使用** `go build ./...` 或 `go build .` - 会尝试编译存在问题的测试文件
+
+### 3. 与 downstream 集成
+
+title-parser 作为独立服务运行，通过 HTTP API 与 downstream backend 通信。
+
+**相关文件**:
+- `downstream/backend/src/services/parser.service.ts` - Backend 解析服务
+- `downstream/backend/src/services/matching/matching-pipeline.service.ts` - 匹配管道
 
 ## License
 

@@ -10,12 +10,15 @@ import (
 
 	"title-parser/pkg/config"
 	"title-parser/pkg/model"
-	"title-parser/pkg/onnx"
+	// "title-parser/pkg/onnx" // Temporarily disabled for HTTP server
+	"title-parser/pkg/quality"
 	"title-parser/pkg/tokenize"
+	"title-parser/pkg/xlmr"
 )
 
 type Parser struct {
-	cfg *config.Config
+	cfg        *config.Config
+	groupIndex map[string]*config.GroupDef // 字幕组索引: normalized pattern -> GroupDef
 }
 
 var wxhResolutionPattern = regexp.MustCompile(`(?i)^(\d{2,5})\s*[x×X]\s*(\d{2,5})$`)
@@ -412,7 +415,35 @@ func consumeStarWrappedLeadingMeta(tokens []model.Token, start int) (int, bool) 
 }
 
 func New(cfg *config.Config) *Parser {
-	return &Parser{cfg: cfg}
+	p := &Parser{
+		cfg:        cfg,
+		groupIndex: make(map[string]*config.GroupDef),
+	}
+	
+	// 构建字幕组索引
+	if cfg.GroupList.Groups != nil {
+		for i := range cfg.GroupList.Groups {
+			group := &cfg.GroupList.Groups[i]
+			for _, pattern := range group.Patterns {
+				normalized := strings.ToLower(pattern)
+				p.groupIndex[normalized] = group
+			}
+		}
+	}
+	
+	return p
+}
+
+// isKnownGroup checks if a token is a known subtitle group
+// Returns the group definition and confidence boost if found
+func (p *Parser) isKnownGroup(token string) (*config.GroupDef, bool) {
+	normalized := strings.ToLower(strings.TrimSpace(token))
+	if normalized == "" {
+		return nil, false
+	}
+	
+	group, ok := p.groupIndex[normalized]
+	return group, ok
 }
 
 func (p *Parser) Parse(rawTitle string) (*model.ParseResult, error) {
@@ -450,6 +481,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	tailParenBlock := detectTailParenBlock(tokens)
 
 	group, groupSpan := extractHeadBracketGroup(tokens)
+	
 	if group != "" {
 		// If we can detect a reliable tail group from raw title (e.g. "-ANi"), the head bracket
 		// is more likely a bracketed title, not a release group. Do not remove it as group.
@@ -461,8 +493,12 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 			}
 		}
 	}
+	
 	if group != "" {
+		// Group normalization is now handled by grouplist.yaml configuration
+		// Apply normal normalization
 		group = normalizeGroupText(group)
+		
 		attrs = append(attrs, model.Attribute{Type: model.AttrGroup, Normalized: group, TokenStart: groupSpan[0], TokenEnd: groupSpan[1], Confidence: 0.9, Source: "heuristic"})
 		for i := groupSpan[0]; i < groupSpan[1]; i++ {
 			tokens[i].Removed = true
@@ -694,8 +730,77 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	}
 
 	if tokenONNXEnabled() {
-		res.TokenONNX = onnx.InferTokenBoundary(rawTitle, tokens, attrs)
-		applyONNXIfEnabled(res)
+		// ONNX temporarily disabled for HTTP server
+		// res.TokenONNX = onnx.InferTokenBoundary(rawTitle, tokens, attrs)
+		// applyONNXIfEnabled(res)
+	}
+
+	// XLM-R 质量门控和候选重排
+	if xlmrONNXEnabled() {
+		qualityCheck := quality.CheckTitleQuality(res)
+		
+		// 如果质量检查失败,触发 XLM-R
+		if quality.ShouldTriggerXLMR(qualityCheck) {
+			engine, err := xlmr.GetEngine()
+			if err == nil {
+				// 提取 token 文本
+				tokenTexts := quality.ExtractTokenTexts(res)
+				
+				// XLM-R 推理
+				labels, err := engine.Infer(tokenTexts)
+				if err == nil {
+					// 从标签推断新的 title span
+					newTitleStart, newTitleEnd := quality.InferTitleSpanFromLabels(res.Tokens, labels)
+					
+					if newTitleStart >= 0 && newTitleEnd > newTitleStart {
+						// 提取新的 title
+						newTitle := quality.ExtractTitleFromSpan(res.Tokens, newTitleStart, newTitleEnd)
+						
+						// 验证新 title 质量
+						if strings.TrimSpace(newTitle) != "" && len([]rune(newTitle)) >= 2 {
+							// 使用新 title 重新解析
+							overrideHints := &ParseHints{
+								OverrideTitleStart: newTitleStart,
+								OverrideTitleEnd:   newTitleEnd,
+							}
+							
+							// 递归调用（但不会再次触发 XLM-R,因为 hints 已设置）
+							overrideRes, err := p.ParseWithHints(rawTitle, overrideHints)
+							if err == nil {
+								// 验证新结果质量
+								newQualityCheck := quality.CheckTitleQuality(overrideRes)
+								
+								// 如果新结果更好,使用新结果
+								if newQualityCheck.Status == "PASS" || newQualityCheck.Score > qualityCheck.Score {
+									// 填充 ML 字段
+									overrideRes.ML = &model.MLOutput{
+										RawTitleHash: rawTitle,
+										TokenLabels:  labels,
+										Risk: &model.MLRisk{
+											Level:   qualityCheck.RiskLevel,
+											Reasons: qualityCheck.Reasons,
+										},
+									}
+									res = overrideRes
+								}
+							}
+						}
+					}
+					
+					// 即使没有重排,也填充 ML 字段（用于调试）
+					if res.ML == nil {
+						res.ML = &model.MLOutput{
+							RawTitleHash: rawTitle,
+							TokenLabels:  labels,
+							Risk: &model.MLRisk{
+								Level:   qualityCheck.RiskLevel,
+								Reasons: qualityCheck.Reasons,
+							},
+						}
+					}
+				}
+			}
+		}
 	}
 
 	return res, nil
@@ -1372,6 +1477,11 @@ func tokenONNXEnabled() bool {
 		return true
 	}
 	return false
+}
+
+func xlmrONNXEnabled() bool {
+	v := strings.TrimSpace(os.Getenv("XLMR_ONNX_ENABLED"))
+	return v == "1" || strings.EqualFold(v, "true")
 }
 
 func applyONNXIfEnabled(res *model.ParseResult) {

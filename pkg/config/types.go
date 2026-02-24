@@ -4,10 +4,11 @@ type Config struct {
 	Lexicon         LexiconConfig         `json:"lexicon"`
 	TemplateCatalog TemplateCatalogConfig `json:"template_catalog"`
 	Inference       InferenceRulesConfig  `json:"inference"`
+	GroupList       GroupListConfig       `json:"group_list"`
 
 	AttributeConfig    map[string]any `json:"attribute_config,omitempty"`
 	BoundaryRules      map[string]any `json:"boundary_rules,omitempty"`
-	TailgroupWhitelist map[string]any `json:"tailgroup_whitelist,omitempty"`
+	// TailgroupWhitelist removed - now using GroupList only
 }
 
 type LexiconConfig struct {
@@ -89,4 +90,22 @@ type TemplateConditionRequire struct {
 	SourceTypeIn []string `yaml:"source_type_in" json:"source_type_in"`
 	HasSxxExx    bool     `yaml:"has_sxxexx" json:"has_sxxexx"`
 	HasTailGroup bool     `yaml:"has_tail_group" json:"has_tail_group"`
+}
+
+// GroupListConfig represents the group list configuration
+type GroupListConfig struct {
+	Version     string     `yaml:"version" json:"version"`
+	UpdatedAt   string     `yaml:"last_updated" json:"last_updated"`
+	Description string     `yaml:"description" json:"description"`
+	Groups      []GroupDef `yaml:"groups" json:"groups"`
+	Statistics  map[string]any `yaml:"statistics,omitempty" json:"statistics,omitempty"`
+	UsageNotes  string     `yaml:"usage_notes,omitempty" json:"usage_notes,omitempty"`
+}
+
+// GroupDef represents a subtitle group definition
+type GroupDef struct {
+	Name            string   `yaml:"name" json:"name"`
+	Patterns        []string `yaml:"patterns" json:"patterns"`
+	Frequency       string   `yaml:"frequency" json:"frequency"`
+	ConfidenceBoost float64  `yaml:"confidence_boost" json:"confidence_boost"`
 }

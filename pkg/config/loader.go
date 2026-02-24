@@ -32,8 +32,12 @@ func LoadAll(baseDir string) (*Config, error) {
 	boundaryRulesPath := filepath.Join(baseDir, "boundary_rules.yaml")
 	_ = loadYAMLFile(boundaryRulesPath, &cfg.BoundaryRules)
 
-	tailgroupWhitelistPath := filepath.Join(baseDir, "tailgroup_whitelist.yaml")
-	_ = loadYAMLFile(tailgroupWhitelistPath, &cfg.TailgroupWhitelist)
+	// Load group list (optional, for token identification assistance)
+	groupListPath := filepath.Join(baseDir, "grouplist.yaml")
+	if err := loadYAMLFile(groupListPath, &cfg.GroupList); err != nil {
+		// GroupList is optional, log but don't fail
+		fmt.Printf("Warning: failed to load grouplist.yaml: %v\n", err)
+	}
 
 	return cfg, nil
 }

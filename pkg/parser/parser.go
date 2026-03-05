@@ -1356,6 +1356,8 @@ var reHintPrefix = regexp.MustCompile(`(?i)^(检索用|检索|檢索用|檢索|�
 var reAliasTrimTVSeasonTail = regexp.MustCompile(`(?i)(?:^|\s+)(?:tv|tb|тv|тв)\s*[-_ ]\s*\d{1,2}\s*$`)
 var reAliasTrimPlatformTail = regexp.MustCompile(`(?i)\s+(?:b-?global(?:\s+donghua)?|baha|abema|cr|amzn|amazon|netflix|nf|unext|at-?x|bs11|bs-?ntv|bs-?fuji|france\s*tv|tv)\s*$`)
 var reAliasTrimTVAnimePrefix = regexp.MustCompile(`(?i)^(?:tv\s*アニメ|tv\s*anime|tv\s*animation)\s+`)
+var reAliasMetaOnlyToken = regexp.MustCompile(`(?i)^(?:nf|cr|baha|abema|unext|netflix|vostfr|vf|french|english|japanese|jpn|jp|chs|cht|rus|esp|spa|ita|ger|dub|sub|subs|audio|tv)$`)
+var reAliasTVContentPhrase = regexp.MustCompile(`(?i)\btv\b.*\b(?:season|ova|oad|ona|movie|sp)\b`)
 var reTitleTrimTVSeasonTail = regexp.MustCompile(`(?i)\s+(?:tv|tb|тv|тв)\s*[-_ ]?\s*\d{1,3}\s*$`)
 var reTitleTrimTVTail = regexp.MustCompile(`(?i)\s+(?:tv|tb|тv|тв)\s*$`)
 var reTitleTrimTVSeriesTail = regexp.MustCompile(`(?i)\s+tv\s+series\s*$`)
@@ -1363,6 +1365,7 @@ var reTitleTrimTVEpisodeListTail = regexp.MustCompile(`(?i)\s+tv\s+\d{1,3}(?:\s*
 var reTitleStripTVAnimeSegmentPrefix = regexp.MustCompile(`(?i)(^|/\s*)tv\s*(?:アニメ|anime|animation)\s+`)
 var reTitleTrimMetaTail = regexp.MustCompile(`(?i)\s+(?:hd|sd|fhd|uhd|retail|webrip|web[- ]?dl|bdrip|bluray|blu-ray|remux|dvd|hdtv|mkv|mp4|avi|x26[45]|h\.?26[45]|hevc|av1|aac|ac3|e-?ac-?3|flac|dts(?:-?hd|-?hdma)?|hdma|truehd|ma\d{1,2}p|10[- ]?bit|8[- ]?bit)\s*$`)
 var reTitleTrimVolTail = regexp.MustCompile(`(?i)\s+(?:vol\.?(?:\s*\d{1,3})?|volume\s*\d{1,3})\s*$`)
+var reTitleTrimDVDBundleTail = regexp.MustCompile(`(?i)\s+(?:dvd(?:\s*[- ]?\s*isos?)?|dvd\s*set)\s*$`)
 
 func normalizeStreamMetaText(s string) string {
 	ss := strings.TrimSpace(s)
@@ -2009,6 +2012,12 @@ func sanitizeAliasesForOutput(aliases []string, title string) []string {
 		if isStreamMetaText(a) || reTailMetaToken.MatchString(strings.TrimSpace(a)) {
 			continue
 		}
+		if reAliasMetaOnlyToken.MatchString(strings.TrimSpace(a)) {
+			continue
+		}
+		if reAliasTVContentPhrase.MatchString(a) {
+			continue
+		}
 		low := strings.ToLower(a)
 		if strings.Contains(low, "tv +") || strings.Contains(low, "tv+") {
 			continue
@@ -2043,6 +2052,7 @@ func sanitizePrimaryTitleForOutput(title string) string {
 		s = reTitleTrimTVTail.ReplaceAllString(s, "")
 		s = reTitleTrimMetaTail.ReplaceAllString(s, "")
 		s = reTitleTrimVolTail.ReplaceAllString(s, "")
+		s = reTitleTrimDVDBundleTail.ReplaceAllString(s, "")
 		s = strings.TrimSpace(strings.Trim(s, "-_/;:,+ "))
 	}
 	return normalizeTitleMain(s)

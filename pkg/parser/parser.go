@@ -1277,7 +1277,7 @@ func isStreamingRelease(tokens []model.Token, attrs []model.Attribute) bool {
 	return false
 }
 
-var reStreamMetaFlag = regexp.MustCompile(`(?i)\b(?:multi[-_ ]?subs?|multisub|dual[-_ ]?audio|multi[-_ ]?audio|english\s*dub|dub|vostfr|vf)\b`)
+var reStreamMetaFlag = regexp.MustCompile(`(?i)\b(?:multi[-_ ]?subs?|multisub|dual[-_ ]?audio|multi[-_ ]?audio|english\s*dub|dub|vostfr|vosten|vf)\b`)
 
 var reTailMetaToken = regexp.MustCompile(`(?i)^(?:weekly|batch|reseed|complete|fin|end|final\s+season|season|season\s*\d{1,2}|s\d{1,2}|\d{1,2}(?:st|nd|rd|th))$`)
 
@@ -1286,7 +1286,8 @@ var reHintPrefix = regexp.MustCompile(`(?i)^(检索用|检索|檢索用|檢索|�
 var reAliasTrimTVSeasonTail = regexp.MustCompile(`(?i)(?:^|\s+)(?:tv|tb|тv|тв)\s*[-_ ]\s*\d{1,2}\s*$`)
 var reAliasTrimPlatformTail = regexp.MustCompile(`(?i)\s+(?:b-?global(?:\s+donghua)?|baha|abema|cr|amzn|amazon|netflix|nf|unext|at-?x|bs11|bs-?ntv|bs-?fuji|france\s*tv|tv)\s*$`)
 var reAliasTrimTVAnimePrefix = regexp.MustCompile(`(?i)^(?:tv\s*アニメ|tv\s*anime|tv\s*animation)\s+`)
-var reAliasMetaOnlyToken = regexp.MustCompile(`(?i)^(?:nf|cr|baha|abema|unext|netflix|vostfr|vf|french|english|japanese|jpn|jp|chs|cht|rus|esp|spa|ita|ger|dub|sub|subs|audio|tv)$`)
+var reAliasMetaOnlyToken = regexp.MustCompile(`(?i)^(?:nf|cr|baha|abema|unext|netflix|vostfr|vf|french|english|japanese|jpn|jp|chs|cht|chi|zho|eng|fre|fra|rus|esp|spa|ita|ger|deu|dub|sub|subs|audio|tv)$`)
+var reAliasInlineMetaWord = regexp.MustCompile(`(?i)\b(?:vostfr|vosten|vf|vost|french|english|japanese|jpn|jp|chs|cht|chi|zho|eng|fre|fra|rus|esp|spa|ita|ger|deu|dub|sub|subs|multisub|multi[-_ ]?subs?|dual[-_ ]?audio|multi[-_ ]?audio|audio)\b`)
 var reAliasTVContentPhrase = regexp.MustCompile(`(?i)\btv\b.*(?:season|series|ver(?:sion)?|reproduction|release|ova|oad|ona|movie|sp|s\d{1,2}|剪辑版|剪輯版|版|系列)`)
 var reTitleTrimTVSeasonTail = regexp.MustCompile(`(?i)\s+(?:tv|tb|тv|тв)\s*[-_ ]?\s*\d{1,3}\s*$`)
 var reTitleTrimTVTail = regexp.MustCompile(`(?i)\s+(?:tv|tb|тv|тв)\s*$`)
@@ -1904,8 +1905,10 @@ func normalizeAliasCandidateForOutput(s string) string {
 		ss = reAliasTrimTVSeasonTail.ReplaceAllString(ss, "")
 		ss = reAliasTrimPlatformTail.ReplaceAllString(ss, "")
 		ss = reAliasTrimTVAnimePrefix.ReplaceAllString(ss, "")
+		ss = reAliasInlineMetaWord.ReplaceAllString(ss, " ")
 		ss = reTitleTrimMetaTail.ReplaceAllString(ss, "")
 		ss = reTitleTrimVolTail.ReplaceAllString(ss, "")
+		ss = regexp.MustCompile(`\s+`).ReplaceAllString(ss, " ")
 		ss = strings.TrimSpace(ss)
 		ss = strings.Trim(ss, "-_/;:,+ ")
 	}

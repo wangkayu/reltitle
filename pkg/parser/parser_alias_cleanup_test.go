@@ -130,3 +130,17 @@ func containsAlias(aliases []string, want string) bool {
 	}
 	return false
 }
+
+func TestNormalizeAliasCandidateForOutput_StripsInlineLangMetaWords(t *testing.T) {
+	in := "Maria Watches Over Us Printemps VOSTFR VOSTEN マリア様がみてる ～春～"
+	got := normalizeAliasCandidateForOutput(in)
+	if strings.Contains(strings.ToLower(got), "vostfr") || strings.Contains(strings.ToLower(got), "vosten") {
+		t.Fatalf("inline lang markers should be stripped, got=%q", got)
+	}
+	if !strings.Contains(got, "Maria Watches Over Us Printemps") {
+		t.Fatalf("core alias text should be kept, got=%q", got)
+	}
+	if !strings.Contains(got, "マリア様がみてる") {
+		t.Fatalf("japanese alias text should be kept, got=%q", got)
+	}
+}

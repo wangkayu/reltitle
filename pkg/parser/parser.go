@@ -11,9 +11,7 @@ import (
 	"title-parser/pkg/config"
 	"title-parser/pkg/model"
 	// "title-parser/pkg/onnx" // Temporarily disabled for HTTP server
-	"title-parser/pkg/quality"
 	"title-parser/pkg/tokenize"
-	"title-parser/pkg/xlmr"
 )
 
 type Parser struct {
@@ -741,74 +739,6 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 		// applyONNXIfEnabled(res)
 	}
 
-	// XLM-R 质量门控和候选重排
-	if xlmrONNXEnabled() {
-		qualityCheck := quality.CheckTitleQuality(res)
-
-		// 如果质量检查失败,触发 XLM-R
-		if quality.ShouldTriggerXLMR(qualityCheck) {
-			engine, err := xlmr.GetEngine()
-			if err == nil {
-				// 提取 token 文本
-				tokenTexts := quality.ExtractTokenTexts(res)
-
-				// XLM-R 推理
-				labels, err := engine.Infer(tokenTexts)
-				if err == nil {
-					// 从标签推断新的 title span
-					newTitleStart, newTitleEnd := quality.InferTitleSpanFromLabels(res.Tokens, labels)
-
-					if newTitleStart >= 0 && newTitleEnd > newTitleStart {
-						// 提取新的 title
-						newTitle := quality.ExtractTitleFromSpan(res.Tokens, newTitleStart, newTitleEnd)
-
-						// 验证新 title 质量
-						if strings.TrimSpace(newTitle) != "" && len([]rune(newTitle)) >= 2 {
-							// 使用新 title 重新解析
-							overrideHints := &ParseHints{
-								OverrideTitleStart: newTitleStart,
-								OverrideTitleEnd:   newTitleEnd,
-							}
-
-							// 递归调用（但不会再次触发 XLM-R,因为 hints 已设置）
-							overrideRes, err := p.ParseWithHints(rawTitle, overrideHints)
-							if err == nil {
-								// 验证新结果质量
-								newQualityCheck := quality.CheckTitleQuality(overrideRes)
-
-								// 如果新结果更好,使用新结果
-								if newQualityCheck.Status == "PASS" || newQualityCheck.Score > qualityCheck.Score {
-									// 填充 ML 字段
-									overrideRes.ML = &model.MLOutput{
-										RawTitleHash: rawTitle,
-										TokenLabels:  labels,
-										Risk: &model.MLRisk{
-											Level:   qualityCheck.RiskLevel,
-											Reasons: qualityCheck.Reasons,
-										},
-									}
-									res = overrideRes
-								}
-							}
-						}
-					}
-
-					// 即使没有重排,也填充 ML 字段（用于调试）
-					if res.ML == nil {
-						res.ML = &model.MLOutput{
-							RawTitleHash: rawTitle,
-							TokenLabels:  labels,
-							Risk: &model.MLRisk{
-								Level:   qualityCheck.RiskLevel,
-								Reasons: qualityCheck.Reasons,
-							},
-						}
-					}
-				}
-			}
-		}
-	}
-
 	return res, nil
 }
 
@@ -1501,11 +1431,6 @@ func tokenONNXEnabled() bool {
 		return true
 	}
 	return false
-}
-
-func xlmrONNXEnabled() bool {
-	v := strings.TrimSpace(os.Getenv("XLMR_ONNX_ENABLED"))
-	return v == "1" || strings.EqualFold(v, "true")
 }
 
 func applyONNXIfEnabled(res *model.ParseResult) {

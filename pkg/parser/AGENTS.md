@@ -83,19 +83,7 @@ type parsePass func(tokens []model.Token, attrs *[]model.Attribute, ctx *parseCo
 - **DO NOT** hardcode patterns - use configs
 - **DO NOT** skip pass registration in `allPasses`
 - **DO NOT** modify token text directly - only set Removed
-- **DO NOT** call XLM-R directly - use quality gate
-
-## ML INTEGRATION
-
-```go
-// Quality gate triggers XLM-R
-check := quality.CheckTitleQuality(result)
-if quality.ShouldTriggerXLMR(check) {
-    labels, _ := xlmrEngine.Infer(tokens)
-    // Re-parse with hints
-    result, _ = p.ParseWithHints(rawTitle, hints)
-}
-```
+- **DO NOT** introduce ML fallback logic in v2.5 parser path
 
 ## TESTING
 

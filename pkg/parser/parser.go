@@ -419,7 +419,7 @@ func New(cfg *config.Config) *Parser {
 		cfg:        cfg,
 		groupIndex: make(map[string]*config.GroupDef),
 	}
-	
+
 	// 构建字幕组索引
 	if cfg.GroupList.Groups != nil {
 		for i := range cfg.GroupList.Groups {
@@ -430,7 +430,7 @@ func New(cfg *config.Config) *Parser {
 			}
 		}
 	}
-	
+
 	return p
 }
 
@@ -441,7 +441,7 @@ func (p *Parser) isKnownGroup(token string) (*config.GroupDef, bool) {
 	if normalized == "" {
 		return nil, false
 	}
-	
+
 	group, ok := p.groupIndex[normalized]
 	return group, ok
 }
@@ -481,7 +481,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	tailParenBlock := detectTailParenBlock(tokens)
 
 	group, groupSpan := extractHeadBracketGroup(tokens)
-	
+
 	if group != "" {
 		// If we can detect a reliable tail group from raw title (e.g. "-ANi"), the head bracket
 		// is more likely a bracketed title, not a release group. Do not remove it as group.
@@ -493,12 +493,12 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 			}
 		}
 	}
-	
+
 	if group != "" {
 		// Group normalization is now handled by grouplist.yaml configuration
 		// Apply normal normalization
 		group = normalizeGroupText(group)
-		
+
 		attrs = append(attrs, model.Attribute{Type: model.AttrGroup, Normalized: group, TokenStart: groupSpan[0], TokenEnd: groupSpan[1], Confidence: 0.9, Source: "heuristic"})
 		for i := groupSpan[0]; i < groupSpan[1]; i++ {
 			tokens[i].Removed = true
@@ -702,6 +702,12 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	if strings.HasPrefix(routeID, "streaming_release_") {
 		applyStreamingReleaseRouteV1(tailParenBlock, &aliases, &attrs)
 	}
+	origTitle := title
+	title = sanitizePrimaryTitleForOutput(title)
+	aliases = sanitizeAliasesForOutput(aliases, title)
+	if strings.TrimSpace(title) != "" && aliasSemanticKey(title) != aliasSemanticKey(origTitle) {
+		attrs = upsertTitleAttribute(attrs, title, "title_cleanup")
+	}
 	attrs = dedupeAttributes(attrs)
 
 	res := &model.ParseResult{
@@ -738,24 +744,24 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	// XLM-R 质量门控和候选重排
 	if xlmrONNXEnabled() {
 		qualityCheck := quality.CheckTitleQuality(res)
-		
+
 		// 如果质量检查失败,触发 XLM-R
 		if quality.ShouldTriggerXLMR(qualityCheck) {
 			engine, err := xlmr.GetEngine()
 			if err == nil {
 				// 提取 token 文本
 				tokenTexts := quality.ExtractTokenTexts(res)
-				
+
 				// XLM-R 推理
 				labels, err := engine.Infer(tokenTexts)
 				if err == nil {
 					// 从标签推断新的 title span
 					newTitleStart, newTitleEnd := quality.InferTitleSpanFromLabels(res.Tokens, labels)
-					
+
 					if newTitleStart >= 0 && newTitleEnd > newTitleStart {
 						// 提取新的 title
 						newTitle := quality.ExtractTitleFromSpan(res.Tokens, newTitleStart, newTitleEnd)
-						
+
 						// 验证新 title 质量
 						if strings.TrimSpace(newTitle) != "" && len([]rune(newTitle)) >= 2 {
 							// 使用新 title 重新解析
@@ -763,13 +769,13 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 								OverrideTitleStart: newTitleStart,
 								OverrideTitleEnd:   newTitleEnd,
 							}
-							
+
 							// 递归调用（但不会再次触发 XLM-R,因为 hints 已设置）
 							overrideRes, err := p.ParseWithHints(rawTitle, overrideHints)
 							if err == nil {
 								// 验证新结果质量
 								newQualityCheck := quality.CheckTitleQuality(overrideRes)
-								
+
 								// 如果新结果更好,使用新结果
 								if newQualityCheck.Status == "PASS" || newQualityCheck.Score > qualityCheck.Score {
 									// 填充 ML 字段
@@ -786,7 +792,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 							}
 						}
 					}
-					
+
 					// 即使没有重排,也填充 ML 字段（用于调试）
 					if res.ML == nil {
 						res.ML = &model.MLOutput{
@@ -1346,6 +1352,16 @@ var reStreamMetaFlag = regexp.MustCompile(`(?i)\b(?:multi[-_ ]?subs?|multisub|du
 var reTailMetaToken = regexp.MustCompile(`(?i)^(?:weekly|batch|reseed|complete|fin|end|final\s+season|season|season\s*\d{1,2}|s\d{1,2}|\d{1,2}(?:st|nd|rd|th))$`)
 
 var reHintPrefix = regexp.MustCompile(`(?i)^(检索用|检索|檢索用|檢索|索引|搜索用|搜尋用|搜索|搜尋|search)\s*[:：]\s*(.+)$`)
+
+var reAliasTrimTVSeasonTail = regexp.MustCompile(`(?i)(?:^|\s+)(?:tv|tb|тv|тв)\s*[-_ ]\s*\d{1,2}\s*$`)
+var reAliasTrimPlatformTail = regexp.MustCompile(`(?i)\s+(?:b-?global(?:\s+donghua)?|baha|abema|cr|amzn|amazon|netflix|nf|unext|at-?x|bs11|bs-?ntv|bs-?fuji|france\s*tv|tv)\s*$`)
+var reAliasTrimTVAnimePrefix = regexp.MustCompile(`(?i)^(?:tv\s*アニメ|tv\s*anime|tv\s*animation)\s+`)
+var reTitleTrimTVSeasonTail = regexp.MustCompile(`(?i)\s+(?:tv|tb|тv|тв)\s*[-_ ]?\s*\d{1,3}\s*$`)
+var reTitleTrimTVTail = regexp.MustCompile(`(?i)\s+(?:tv|tb|тv|тв)\s*$`)
+var reTitleTrimTVSeriesTail = regexp.MustCompile(`(?i)\s+tv\s+series\s*$`)
+var reTitleStripTVAnimeSegmentPrefix = regexp.MustCompile(`(?i)(^|/\s*)tv\s*(?:アニメ|anime|animation)\s+`)
+var reTitleTrimMetaTail = regexp.MustCompile(`(?i)\s+(?:hd|sd|fhd|uhd|retail|webrip|web[- ]?dl|bdrip|bluray|blu-ray|remux|dvd|hdtv|mkv|mp4|avi|x26[45]|h\.?26[45]|hevc|av1|aac|ac3|e-?ac-?3|flac|dts(?:-?hd|-?hdma)?|hdma|truehd|ma\d{1,2}p|10[- ]?bit|8[- ]?bit)\s*$`)
+var reTitleTrimVolTail = regexp.MustCompile(`(?i)\s+(?:vol\.?(?:\s*\d{1,3})?|volume\s*\d{1,3})\s*$`)
 
 func normalizeStreamMetaText(s string) string {
 	ss := strings.TrimSpace(s)
@@ -1941,6 +1957,120 @@ func cleanAliasToken(s string) string {
 	s = normalizeTitleMain(s)
 	s = stripFileExtSuffix(s)
 	return strings.TrimSpace(s)
+}
+
+func normalizeAliasCandidateForOutput(s string) string {
+	ss := cleanAliasToken(s)
+	ss = strings.TrimSpace(ss)
+	if ss == "" {
+		return ""
+	}
+	prev := ""
+	for ss != prev {
+		prev = ss
+		ss = reAliasTrimTVSeasonTail.ReplaceAllString(ss, "")
+		ss = reAliasTrimPlatformTail.ReplaceAllString(ss, "")
+		ss = reAliasTrimTVAnimePrefix.ReplaceAllString(ss, "")
+		ss = reTitleTrimMetaTail.ReplaceAllString(ss, "")
+		ss = reTitleTrimVolTail.ReplaceAllString(ss, "")
+		ss = strings.TrimSpace(ss)
+		ss = strings.Trim(ss, "-_/;:,+ ")
+	}
+	return strings.TrimSpace(cleanAliasToken(ss))
+}
+
+func aliasSemanticKey(s string) string {
+	ss := strings.TrimSpace(strings.ToLower(s))
+	if ss == "" {
+		return ""
+	}
+	var b strings.Builder
+	for _, r := range ss {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
+}
+
+func sanitizeAliasesForOutput(aliases []string, title string) []string {
+	if len(aliases) == 0 {
+		return nil
+	}
+	titleKey := aliasSemanticKey(title)
+	out := make([]string, 0, len(aliases))
+	seen := map[string]bool{}
+	for _, a := range aliases {
+		a = normalizeAliasCandidateForOutput(a)
+		if a == "" || !isValidAliasToken(a) {
+			continue
+		}
+		k := aliasSemanticKey(a)
+		if k == "" || seen[k] || (titleKey != "" && k == titleKey) {
+			continue
+		}
+		seen[k] = true
+		out = append(out, a)
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+func sanitizePrimaryTitleForOutput(title string) string {
+	s := normalizeTitleMain(title)
+	if s == "" {
+		return ""
+	}
+	prev := ""
+	for s != prev {
+		prev = s
+		s = strings.TrimSpace(s)
+		s = reTitleStripTVAnimeSegmentPrefix.ReplaceAllString(s, "$1")
+		s = reAliasTrimPlatformTail.ReplaceAllString(s, "")
+		s = reTitleTrimTVSeriesTail.ReplaceAllString(s, "")
+		s = reTitleTrimTVSeasonTail.ReplaceAllString(s, "")
+		s = reTitleTrimTVTail.ReplaceAllString(s, "")
+		s = reTitleTrimMetaTail.ReplaceAllString(s, "")
+		s = reTitleTrimVolTail.ReplaceAllString(s, "")
+		s = strings.TrimSpace(strings.Trim(s, "-_/;:,+ "))
+	}
+	return normalizeTitleMain(s)
+}
+
+func upsertTitleAttribute(attrs []model.Attribute, title string, source string) []model.Attribute {
+	title = strings.TrimSpace(title)
+	if title == "" {
+		return attrs
+	}
+	out := make([]model.Attribute, len(attrs))
+	copy(out, attrs)
+	updated := false
+	for i := range out {
+		if out[i].Type != model.AttrType("title") {
+			continue
+		}
+		out[i].Normalized = title
+		if strings.TrimSpace(source) != "" {
+			out[i].Source = source
+		}
+		if out[i].Confidence <= 0 {
+			out[i].Confidence = 0.7
+		}
+		updated = true
+	}
+	if !updated {
+		out = append(out, model.Attribute{
+			Type:       model.AttrType("title"),
+			Normalized: title,
+			TokenStart: -1,
+			TokenEnd:   -1,
+			Confidence: 0.7,
+			Source:     source,
+		})
+	}
+	return out
 }
 
 func cleanTitleToken(s string) string {
@@ -4436,6 +4566,7 @@ func detectEpisode(tokens []model.Token) (string, int) {
 
 var tailGroupPattern = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9]{2,20}$`)
 var tailGroupHyphenPrefixPattern = regexp.MustCompile(`(?i)^(?:x?264|x?265|h?264|h?265|\d\.\d|pcm|flac|aac|ac3|eac3|ddp|dts|opus|truehd|atmos)(?:\d\.\d)?$`)
+var tailGroupTechTokenPattern = regexp.MustCompile(`(?i)^(?:dts(?:hd|hdma)?|hdma|truehd|eac3|ac3|flac|opus|pcm|ma\d{1,2}p|ddp\d{0,2})$`)
 
 func isTailGroupToken(s string) bool {
 	s = strings.TrimSpace(s)
@@ -4456,6 +4587,9 @@ func isTailGroupToken(s string) bool {
 		return false
 	}
 	if up == "H264" || up == "H265" || up == "X264" || up == "X265" || up == "HEVC" || up == "AVC" || up == "AAC" {
+		return false
+	}
+	if tailGroupTechTokenPattern.MatchString(up) {
 		return false
 	}
 	return true

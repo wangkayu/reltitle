@@ -1359,6 +1359,7 @@ var reAliasTrimTVAnimePrefix = regexp.MustCompile(`(?i)^(?:tv\s*アニメ|tv\s*a
 var reTitleTrimTVSeasonTail = regexp.MustCompile(`(?i)\s+(?:tv|tb|тv|тв)\s*[-_ ]?\s*\d{1,3}\s*$`)
 var reTitleTrimTVTail = regexp.MustCompile(`(?i)\s+(?:tv|tb|тv|тв)\s*$`)
 var reTitleTrimTVSeriesTail = regexp.MustCompile(`(?i)\s+tv\s+series\s*$`)
+var reTitleTrimTVEpisodeListTail = regexp.MustCompile(`(?i)\s+tv\s+\d{1,3}(?:\s*[,，]\s*\d{1,3})*(?:\s*[-~]\s*\d{1,3})?\s*$`)
 var reTitleStripTVAnimeSegmentPrefix = regexp.MustCompile(`(?i)(^|/\s*)tv\s*(?:アニメ|anime|animation)\s+`)
 var reTitleTrimMetaTail = regexp.MustCompile(`(?i)\s+(?:hd|sd|fhd|uhd|retail|webrip|web[- ]?dl|bdrip|bluray|blu-ray|remux|dvd|hdtv|mkv|mp4|avi|x26[45]|h\.?26[45]|hevc|av1|aac|ac3|e-?ac-?3|flac|dts(?:-?hd|-?hdma)?|hdma|truehd|ma\d{1,2}p|10[- ]?bit|8[- ]?bit)\s*$`)
 var reTitleTrimVolTail = regexp.MustCompile(`(?i)\s+(?:vol\.?(?:\s*\d{1,3})?|volume\s*\d{1,3})\s*$`)
@@ -2005,6 +2006,13 @@ func sanitizeAliasesForOutput(aliases []string, title string) []string {
 		if a == "" || !isValidAliasToken(a) {
 			continue
 		}
+		if isStreamMetaText(a) || reTailMetaToken.MatchString(strings.TrimSpace(a)) {
+			continue
+		}
+		low := strings.ToLower(a)
+		if strings.Contains(low, "tv +") || strings.Contains(low, "tv+") {
+			continue
+		}
 		k := aliasSemanticKey(a)
 		if k == "" || seen[k] || (titleKey != "" && k == titleKey) {
 			continue
@@ -2030,6 +2038,7 @@ func sanitizePrimaryTitleForOutput(title string) string {
 		s = reTitleStripTVAnimeSegmentPrefix.ReplaceAllString(s, "$1")
 		s = reAliasTrimPlatformTail.ReplaceAllString(s, "")
 		s = reTitleTrimTVSeriesTail.ReplaceAllString(s, "")
+		s = reTitleTrimTVEpisodeListTail.ReplaceAllString(s, "")
 		s = reTitleTrimTVSeasonTail.ReplaceAllString(s, "")
 		s = reTitleTrimTVTail.ReplaceAllString(s, "")
 		s = reTitleTrimMetaTail.ReplaceAllString(s, "")

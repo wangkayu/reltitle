@@ -1357,15 +1357,19 @@ var reAliasTrimTVSeasonTail = regexp.MustCompile(`(?i)(?:^|\s+)(?:tv|tb|тv|тв
 var reAliasTrimPlatformTail = regexp.MustCompile(`(?i)\s+(?:b-?global(?:\s+donghua)?|baha|abema|cr|amzn|amazon|netflix|nf|unext|at-?x|bs11|bs-?ntv|bs-?fuji|france\s*tv|tv)\s*$`)
 var reAliasTrimTVAnimePrefix = regexp.MustCompile(`(?i)^(?:tv\s*アニメ|tv\s*anime|tv\s*animation)\s+`)
 var reAliasMetaOnlyToken = regexp.MustCompile(`(?i)^(?:nf|cr|baha|abema|unext|netflix|vostfr|vf|french|english|japanese|jpn|jp|chs|cht|rus|esp|spa|ita|ger|dub|sub|subs|audio|tv)$`)
-var reAliasTVContentPhrase = regexp.MustCompile(`(?i)\btv\b.*\b(?:season|ova|oad|ona|movie|sp)\b`)
+var reAliasTVContentPhrase = regexp.MustCompile(`(?i)\btv\b.*(?:season|series|ver(?:sion)?|reproduction|release|ova|oad|ona|movie|sp|s\d{1,2}|剪辑版|剪輯版|版|系列)`)
 var reTitleTrimTVSeasonTail = regexp.MustCompile(`(?i)\s+(?:tv|tb|тv|тв)\s*[-_ ]?\s*\d{1,3}\s*$`)
 var reTitleTrimTVTail = regexp.MustCompile(`(?i)\s+(?:tv|tb|тv|тв)\s*$`)
 var reTitleTrimTVSeriesTail = regexp.MustCompile(`(?i)\s+tv\s+series\s*$`)
-var reTitleTrimTVEpisodeListTail = regexp.MustCompile(`(?i)\s+tv\s+\d{1,3}(?:\s*[,，]\s*\d{1,3})*(?:\s*[-~]\s*\d{1,3})?\s*$`)
+var reTitleTrimTVEpisodeListTail = regexp.MustCompile(`(?i)\s+tv\s+[\d,，\-~\s]{2,}\s*$`)
 var reTitleStripTVAnimeSegmentPrefix = regexp.MustCompile(`(?i)(^|/\s*)tv\s*(?:アニメ|anime|animation)\s+`)
 var reTitleTrimMetaTail = regexp.MustCompile(`(?i)\s+(?:hd|sd|fhd|uhd|retail|webrip|web[- ]?dl|bdrip|bluray|blu-ray|remux|dvd|hdtv|mkv|mp4|avi|x26[45]|h\.?26[45]|hevc|av1|aac|ac3|e-?ac-?3|flac|dts(?:-?hd|-?hdma)?|hdma|truehd|ma\d{1,2}p|10[- ]?bit|8[- ]?bit)\s*$`)
 var reTitleTrimVolTail = regexp.MustCompile(`(?i)\s+(?:vol\.?(?:\s*\d{1,3})?|volume\s*\d{1,3})\s*$`)
 var reTitleTrimDVDBundleTail = regexp.MustCompile(`(?i)\s+(?:dvd(?:\s*[- ]?\s*isos?)?|dvd\s*set)\s*$`)
+var reTitleTrimDVDEpisodesTail = regexp.MustCompile(`(?i)\s+(?:r\d+\s+)?dvd\s+episodes?\s*$`)
+var reAliasTechSingle = regexp.MustCompile(`(?i)^(?:aac(?:×\d+)?|ac3|e-?ac-?3|ddp|flac|opus|mp3|dts(?:-?hd|-?hdma)?|truehd|atmos|avc|hevc|x26[45]|h\.?26[45]|mkv|mp4|dual)$`)
+var reAliasTechList = regexp.MustCompile(`(?i)^(?:\.?\s*)?(?:aac(?:×\d+)?|ac3|e-?ac-?3|ddp|flac|opus|mp3|dts(?:-?hd|-?hdma)?|truehd|atmos|avc|hevc|x26[45]|h\.?26[45]|mkv|mp4|dual)(?:\s*[,/&+]\s*(?:aac(?:×\d+)?|ac3|e-?ac-?3|ddp|flac|opus|mp3|dts(?:-?hd|-?hdma)?|truehd|atmos|avc|hevc|x26[45]|h\.?26[45]|mkv|mp4|dual))+\.?$`)
+var reAliasUploaderAtPlatform = regexp.MustCompile(`(?i)^[a-z0-9._-]{2,40}@(b-?global(?:\s+donghua)?|baha|abema|cr|amzn|amazon|netflix|nf)$`)
 
 func normalizeStreamMetaText(s string) string {
 	ss := strings.TrimSpace(s)
@@ -2022,6 +2026,9 @@ func sanitizeAliasesForOutput(aliases []string, title string) []string {
 		if strings.Contains(low, "tv +") || strings.Contains(low, "tv+") {
 			continue
 		}
+		if reAliasUploaderAtPlatform.MatchString(a) {
+			continue
+		}
 		k := aliasSemanticKey(a)
 		if k == "" || seen[k] || (titleKey != "" && k == titleKey) {
 			continue
@@ -2053,6 +2060,7 @@ func sanitizePrimaryTitleForOutput(title string) string {
 		s = reTitleTrimMetaTail.ReplaceAllString(s, "")
 		s = reTitleTrimVolTail.ReplaceAllString(s, "")
 		s = reTitleTrimDVDBundleTail.ReplaceAllString(s, "")
+		s = reTitleTrimDVDEpisodesTail.ReplaceAllString(s, "")
 		s = strings.TrimSpace(strings.Trim(s, "-_/;:,+ "))
 	}
 	return normalizeTitleMain(s)
@@ -2160,7 +2168,13 @@ func isValidAliasToken(s string) bool {
 	if regexp.MustCompile(`(?i)\bvolume\s*\d{1,3}\b`).FindStringIndex(low) != nil {
 		return false
 	}
-	if strings.Contains(low, "1080p") || strings.Contains(low, "2160p") || strings.Contains(low, "720p") {
+	if reAliasTechSingle.MatchString(strings.TrimSpace(s)) {
+		return false
+	}
+	if reAliasTechList.MatchString(strings.TrimSpace(s)) {
+		return false
+	}
+	if strings.Contains(low, "1080p") || strings.Contains(low, "2160p") || strings.Contains(low, "720p") || strings.Contains(low, "480p") || strings.Contains(low, "4k") {
 		return false
 	}
 	if strings.Contains(low, "hevc") || strings.Contains(low, "x265") || strings.Contains(low, "h265") || strings.Contains(low, "x264") || strings.Contains(low, "h264") {

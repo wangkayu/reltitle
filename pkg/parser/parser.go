@@ -2127,6 +2127,9 @@ func isValidAliasToken(s string) bool {
 	if s == "" {
 		return false
 	}
+	if strings.Contains(s, "先行版") || strings.Contains(s, "先行版本") {
+		return false
+	}
 	up := strings.ToUpper(s)
 	if up == "SP" || up == "OVA" || up == "OAD" || up == "ONA" || up == "EX" || up == "PV" || up == "OP" || up == "ED" {
 		return false
@@ -3457,6 +3460,9 @@ func isLikelyMetaBracketText(s string) bool {
 		return true
 	}
 	if strings.Contains(trim, "新番") {
+		return true
+	}
+	if trim == "先行版" || trim == "先行版本" {
 		return true
 	}
 	if trim == "转" || trim == "轉" || trim == "转载" || trim == "轉載" || trim == "转发" || trim == "轉發" {

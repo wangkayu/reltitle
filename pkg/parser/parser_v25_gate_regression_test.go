@@ -36,7 +36,7 @@ func TestParserV25GateRegression_AliasMetaCleanup(t *testing.T) {
 		{
 			name:      "tv_reproduction_removed_from_alias",
 			raw:       "[DBD-Raws][Fate / stay night TV Reproduction/命运之夜 总集篇][01-02合集][1080P][BDRip][HEVC-10bit][简繁外挂][FLAC][MKV]",
-			mustTitle: []string{"Fate", "命运之夜"},
+			mustTitle: []string{"命运之夜"},
 			noAlias:   []string{"TV Reproduction"},
 		},
 		{

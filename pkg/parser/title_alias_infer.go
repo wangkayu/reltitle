@@ -28,12 +28,12 @@ func inferTitleAndAliasesFromTitle(title string) (string, []string) {
 			if p == "" {
 				continue
 			}
-			if hasCJK(p) {
-				cjkParts = append(cjkParts, p)
-				continue
-			}
 			if hasKana(p) {
 				kanaParts = append(kanaParts, p)
+				continue
+			}
+			if hasCJK(p) {
+				cjkParts = append(cjkParts, p)
 				continue
 			}
 			if hasLatin(p) {
@@ -83,27 +83,6 @@ func inferTitleAndAliasesFromTitle(title string) (string, []string) {
 			if main == "" {
 				main = normalizeTitleMain(first)
 			}
-			if len(cjkParts) >= 2 && !hasKana(first) {
-				mainParts := make([]string, 0, len(cjkParts)+1)
-				mainParts = append(mainParts, cjkParts...)
-				latinKeep := ""
-				for _, lp := range latinParts {
-					if isShortLatinTitleCandidate(lp) {
-						latinKeep = lp
-						break
-					}
-				}
-				if latinKeep != "" {
-					mainParts = append(mainParts, latinKeep)
-				}
-				joined := strings.TrimSpace(strings.Join(mainParts, " / "))
-				main2 := normalizeTitleMain(cleanTitleToken(joined))
-				if main2 != "" {
-					main = main2
-				} else {
-					main = normalizeTitleMain(joined)
-				}
-			}
 			aliases := make([]string, 0, len(parts))
 			seen := map[string]bool{}
 			seen[strings.ToLower(strings.TrimSpace(main))] = true
@@ -128,7 +107,10 @@ func inferTitleAndAliasesFromTitle(title string) (string, []string) {
 					continue
 				}
 				if hasCJK(p) || hasKana(p) {
-					main := normalizeTitleMain(strings.TrimSpace(first + " / " + p))
+					main := normalizeTitleMain(cleanTitleToken(p))
+					if main == "" {
+						main = normalizeTitleMain(p)
+					}
 					aliases := make([]string, 0, len(parts))
 					seen := map[string]bool{}
 					seen[strings.ToLower(strings.TrimSpace(main))] = true

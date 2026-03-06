@@ -44,6 +44,7 @@ func LoadAll(baseDir string) (*Config, error) {
 	_ = loadYAMLFile(filepath.Join(baseDir, "dict_token_slot_candidates_v25.yaml"), &cfg.DictTokenSlotCandidates)
 	_ = loadYAMLFile(filepath.Join(baseDir, "dict_alias_noise_words_v25.yaml"), &cfg.DictAliasNoiseWords)
 	_ = loadYAMLFile(filepath.Join(baseDir, "dict_note_promotion_v25.yaml"), &cfg.DictNotePromotion)
+	_ = loadYAMLFile(filepath.Join(baseDir, "group_route_overrides_v25.yaml"), &cfg.GroupRoute)
 
 	return cfg, nil
 }

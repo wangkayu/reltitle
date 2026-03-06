@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"unicode"
@@ -19,6 +20,7 @@ type Parser struct {
 	groupIndex            map[string]*config.GroupDef // 字幕组索引: normalized pattern -> GroupDef
 	aliasInlineStripWords map[string]struct{}
 	notePromotionRules    []notePromotionRule
+	groupRouteRules       []groupRouteRule
 }
 
 type notePromotionRule struct {
@@ -26,6 +28,20 @@ type notePromotionRule struct {
 	targetType          model.AttrType
 	normalized          string
 	normalizedFromToken bool
+}
+
+type groupRouteRule struct {
+	id                  string
+	priority            int
+	groups              map[string]struct{}
+	rawMustContainAny   []string
+	requireEpisodeRange bool
+	forceGroup          string
+	forceTitle          string
+	clearAliases        bool
+	forceTemplateID     string
+	forceContentKind    string
+	forceRouteID        string
 }
 
 var wxhResolutionPattern = regexp.MustCompile(`(?i)^(\d{2,5})\s*[x×X]\s*(\d{2,5})$`)
@@ -474,6 +490,48 @@ func New(cfg *config.Config) *Parser {
 		})
 	}
 
+	for _, r := range cfg.GroupRoute.Overrides {
+		if !r.Enabled {
+			continue
+		}
+		id := strings.TrimSpace(r.ID)
+		if id == "" {
+			continue
+		}
+		groupSet := make(map[string]struct{}, len(r.Match.GroupIn))
+		for _, g := range r.Match.GroupIn {
+			gg := strings.ToLower(strings.TrimSpace(g))
+			if gg == "" {
+				continue
+			}
+			groupSet[gg] = struct{}{}
+		}
+		rawContains := make([]string, 0, len(r.Match.RawMustContainAny))
+		for _, s := range r.Match.RawMustContainAny {
+			ss := strings.ToLower(strings.TrimSpace(s))
+			if ss == "" {
+				continue
+			}
+			rawContains = append(rawContains, ss)
+		}
+		p.groupRouteRules = append(p.groupRouteRules, groupRouteRule{
+			id:                  id,
+			priority:            r.Priority,
+			groups:              groupSet,
+			rawMustContainAny:   rawContains,
+			requireEpisodeRange: r.Match.RequireEpisodeRange,
+			forceGroup:          strings.TrimSpace(r.Output.ForceGroup),
+			forceTitle:          strings.TrimSpace(r.Output.ForceTitle),
+			clearAliases:        r.Output.ClearAliases,
+			forceTemplateID:     strings.TrimSpace(r.Output.ForceTemplateID),
+			forceContentKind:    strings.TrimSpace(r.Output.ForceContentKind),
+			forceRouteID:        strings.TrimSpace(r.Output.ForceRouteID),
+		})
+	}
+	sort.SliceStable(p.groupRouteRules, func(i, j int) bool {
+		return p.groupRouteRules[i].priority > p.groupRouteRules[j].priority
+	})
+
 	return p
 }
 
@@ -763,6 +821,13 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	if strings.TrimSpace(title) != "" && aliasSemanticKey(title) != aliasSemanticKey(origTitle) {
 		attrs = upsertTitleAttribute(attrs, title, "title_cleanup")
 	}
+	group, title, aliases, templateID, contentKind, routeID, overrideApplied := p.applyGroupRouteOverride(rawTitle, group, episodeRange, title, aliases, templateID, contentKind, routeID)
+	if overrideApplied {
+		if strings.TrimSpace(title) != "" {
+			attrs = upsertTitleAttribute(attrs, title, "group_route_override")
+		}
+		attrs = upsertGroupAttribute(attrs, group, "group_route_override")
+	}
 	attrs = p.promoteNoteAttributes(attrs)
 	normalizePlatformAttrs(attrs)
 	normalizeSourceTypeAttrs(attrs)
@@ -948,6 +1013,81 @@ func (p *Parser) promoteNoteAttributes(attrs []model.Attribute) []model.Attribut
 		}
 	}
 	return attrs
+}
+
+func (p *Parser) applyGroupRouteOverride(
+	rawTitle string,
+	group string,
+	episodeRange string,
+	title string,
+	aliases []string,
+	templateID string,
+	contentKind string,
+	routeID string,
+) (string, string, []string, string, string, string, bool) {
+	if p == nil || len(p.groupRouteRules) == 0 {
+		return group, title, aliases, templateID, contentKind, routeID, false
+	}
+	gk := strings.ToLower(strings.TrimSpace(group))
+	rawLow := strings.ToLower(strings.TrimSpace(rawTitle))
+	for _, r := range p.groupRouteRules {
+		if len(r.groups) > 0 {
+			if _, ok := r.groups[gk]; !ok {
+				continue
+			}
+		}
+		if r.requireEpisodeRange && strings.TrimSpace(episodeRange) == "" {
+			continue
+		}
+		if len(r.rawMustContainAny) > 0 {
+			hit := false
+			for _, kw := range r.rawMustContainAny {
+				if kw != "" && strings.Contains(rawLow, kw) {
+					hit = true
+					break
+				}
+			}
+			if !hit {
+				continue
+			}
+		}
+		outGroup := group
+		outTitle := title
+		outAliases := aliases
+		outTemplateID := templateID
+		outContentKind := contentKind
+		outRouteID := routeID
+
+		if strings.TrimSpace(r.forceGroup) != "" {
+			outGroup = r.forceGroup
+		}
+		if strings.TrimSpace(r.forceTitle) != "" {
+			outTitle = r.forceTitle
+		}
+		if r.clearAliases {
+			outAliases = nil
+		}
+		if strings.TrimSpace(r.forceTemplateID) != "" {
+			outTemplateID = r.forceTemplateID
+		}
+		if strings.TrimSpace(r.forceContentKind) != "" {
+			outContentKind = r.forceContentKind
+		}
+		if strings.TrimSpace(r.forceRouteID) != "" {
+			outRouteID = r.forceRouteID
+		}
+
+		// Safe fallback: if override cannot produce required core fields, skip it.
+		if strings.TrimSpace(outGroup) == "" || strings.TrimSpace(outTitle) == "" {
+			continue
+		}
+		// If this override depends on range releases, keep general route when range is absent.
+		if r.requireEpisodeRange && strings.TrimSpace(episodeRange) == "" {
+			continue
+		}
+		return outGroup, outTitle, outAliases, outTemplateID, outContentKind, outRouteID, true
+	}
+	return group, title, aliases, templateID, contentKind, routeID, false
 }
 
 func computeEpRoute(tokens []model.Token, episode string, episodeRange string, season string, seasonRange string, spKind string, movieIndex string, hasMovieKeyword bool) string {
@@ -2138,6 +2278,40 @@ func upsertTitleAttribute(attrs []model.Attribute, title string, source string) 
 			TokenStart: -1,
 			TokenEnd:   -1,
 			Confidence: 0.7,
+			Source:     source,
+		})
+	}
+	return out
+}
+
+func upsertGroupAttribute(attrs []model.Attribute, group string, source string) []model.Attribute {
+	group = strings.TrimSpace(group)
+	if group == "" {
+		return attrs
+	}
+	out := make([]model.Attribute, len(attrs))
+	copy(out, attrs)
+	updated := false
+	for i := range out {
+		if out[i].Type != model.AttrGroup {
+			continue
+		}
+		out[i].Normalized = group
+		if strings.TrimSpace(source) != "" {
+			out[i].Source = source
+		}
+		if out[i].Confidence <= 0 {
+			out[i].Confidence = 0.8
+		}
+		updated = true
+	}
+	if !updated {
+		out = append(out, model.Attribute{
+			Type:       model.AttrGroup,
+			Normalized: group,
+			TokenStart: -1,
+			TokenEnd:   -1,
+			Confidence: 0.8,
 			Source:     source,
 		})
 	}

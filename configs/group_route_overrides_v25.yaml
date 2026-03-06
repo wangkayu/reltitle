@@ -1,0 +1,22 @@
+version: "v25-route-override-1"
+updated_at: "2026-03-06"
+description: "Group-specific route overrides with safe fallback to general route."
+
+defaults:
+  fallback_route: "general"
+
+overrides:
+  - id: "onepace_range_release"
+    enabled: true
+    priority: 100
+    match:
+      group_in: ["One Pace", "ONEPACE", "OnePace"]
+      raw_must_contain_any: ["[One Pace]"]
+      require_episode_range: true
+    output:
+      force_group: "One Pace"
+      force_title: "One Piece"
+      clear_aliases: true
+      force_template_id: "TF_BATCH_RANGE_ONEPACE_01"
+      force_content_kind: "BATCH"
+      force_route_id: "onepace_range_release"

@@ -5,6 +5,7 @@ type Config struct {
 	TemplateCatalog TemplateCatalogConfig `json:"template_catalog"`
 	Inference       InferenceRulesConfig  `json:"inference"`
 	GroupList       GroupListConfig       `json:"group_list"`
+	GroupRoute      GroupRouteConfig      `json:"group_route,omitempty"`
 
 	DictCanonicalValues     DictCanonicalValuesConfig     `json:"dict_canonical_values,omitempty"`
 	DictTokenSynonyms       DictTokenSynonymsConfig       `json:"dict_token_synonyms,omitempty"`
@@ -199,4 +200,36 @@ type NotePromotionTo struct {
 	Type                string `yaml:"type" json:"type"`
 	Normalized          string `yaml:"normalized" json:"normalized"`
 	NormalizedFromToken bool   `yaml:"normalized_from_token" json:"normalized_from_token"`
+}
+
+type GroupRouteConfig struct {
+	Version     string               `yaml:"version" json:"version"`
+	UpdatedAt   string               `yaml:"updated_at" json:"updated_at"`
+	Description string               `yaml:"description" json:"description"`
+	Defaults    map[string]any       `yaml:"defaults" json:"defaults"`
+	Overrides   []GroupRouteOverride `yaml:"overrides" json:"overrides"`
+}
+
+type GroupRouteOverride struct {
+	ID       string              `yaml:"id" json:"id"`
+	Enabled  bool                `yaml:"enabled" json:"enabled"`
+	Priority int                 `yaml:"priority" json:"priority"`
+	Match    GroupRouteMatch     `yaml:"match" json:"match"`
+	Output   GroupRouteOutput    `yaml:"output" json:"output"`
+	Guard    map[string][]string `yaml:"guard" json:"guard"`
+}
+
+type GroupRouteMatch struct {
+	GroupIn             []string `yaml:"group_in" json:"group_in"`
+	RawMustContainAny   []string `yaml:"raw_must_contain_any" json:"raw_must_contain_any"`
+	RequireEpisodeRange bool     `yaml:"require_episode_range" json:"require_episode_range"`
+}
+
+type GroupRouteOutput struct {
+	ForceGroup       string `yaml:"force_group" json:"force_group"`
+	ForceTitle       string `yaml:"force_title" json:"force_title"`
+	ClearAliases     bool   `yaml:"clear_aliases" json:"clear_aliases"`
+	ForceTemplateID  string `yaml:"force_template_id" json:"force_template_id"`
+	ForceContentKind string `yaml:"force_content_kind" json:"force_content_kind"`
+	ForceRouteID     string `yaml:"force_route_id" json:"force_route_id"`
 }

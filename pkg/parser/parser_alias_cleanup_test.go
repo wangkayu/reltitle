@@ -146,6 +146,35 @@ func TestParserAliasCleanup_BracketTitleFallbackWhenMainTitleEmpty(t *testing.T)
 	}
 }
 
+func TestParserGroupRouteOverride_OnePaceFixedTitle(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[One Pace][23-41] Syrup Village [1080p]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if res.Group != "One Pace" {
+		t.Fatalf("group=%q want=%q", res.Group, "One Pace")
+	}
+	if res.Title != "One Piece" {
+		t.Fatalf("title=%q want=%q", res.Title, "One Piece")
+	}
+	if len(res.Aliases) != 0 {
+		t.Fatalf("aliases should be empty, got=%v", res.Aliases)
+	}
+	if res.EpisodeRange != "23-41" {
+		t.Fatalf("episode_range=%q want=%q", res.EpisodeRange, "23-41")
+	}
+	if res.TemplateID != "TF_BATCH_RANGE_ONEPACE_01" {
+		t.Fatalf("template_id=%q want=%q", res.TemplateID, "TF_BATCH_RANGE_ONEPACE_01")
+	}
+}
+
 func containsAlias(aliases []string, want string) bool {
 	for _, a := range aliases {
 		if strings.EqualFold(strings.TrimSpace(a), strings.TrimSpace(want)) {

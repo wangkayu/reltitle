@@ -271,29 +271,20 @@ func (p *Parser) inferStableTechTokenAttrs(raw string, idx int) ([]model.Attribu
 			out = append(out, model.Attribute{Type: model.AttrBitDepth, Normalized: mm[1] + "bit", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.74, Source: "tech_combo_span"})
 			continue
 		}
-
-		switch low {
-		case "webdl", "web-dl":
-			out = append(out, model.Attribute{Type: model.AttrSourceType, Normalized: "WEB-DL", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
-			continue
-		case "webrip", "web-rip":
-			out = append(out, model.Attribute{Type: model.AttrSourceType, Normalized: "WEBRip", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
-			continue
-		case "bluray", "blu-ray":
-			out = append(out, model.Attribute{Type: model.AttrSourceType, Normalized: "BluRay", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
-			continue
-		case "bdrip":
-			out = append(out, model.Attribute{Type: model.AttrSourceType, Normalized: "BDRip", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
-			continue
-		case "dvdrip":
-			out = append(out, model.Attribute{Type: model.AttrSourceType, Normalized: "DVDRip", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
-			continue
-		case "hdtv":
-			out = append(out, model.Attribute{Type: model.AttrSourceType, Normalized: "HDTV", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
-			continue
-		case "remux":
+		if low == "remux" {
 			out = append(out, model.Attribute{Type: model.AttrType("remux"), Normalized: "REMUX", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.74, Source: "tech_combo_span"})
 			continue
+		}
+		if norm, ok := p.sourceTypeCanonical[low]; ok && strings.TrimSpace(norm) != "" {
+			out = append(out, model.Attribute{Type: model.AttrSourceType, Normalized: norm, TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
+			continue
+		}
+		if norm, ok := p.platformCanonical[low]; ok && strings.TrimSpace(norm) != "" {
+			out = append(out, model.Attribute{Type: model.AttrPlatform, Normalized: norm, TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.74, Source: "tech_combo_span"})
+			continue
+		}
+
+		switch low {
 		case "avc", "h264", "x264":
 			out = append(out, model.Attribute{Type: model.AttrVideoCodec, Normalized: "AVC", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
 			continue
@@ -333,8 +324,8 @@ func (p *Parser) inferStableTechTokenAttrs(raw string, idx int) ([]model.Attribu
 		case "multi":
 			out = append(out, model.Attribute{Type: model.AttrAudioFlag, Normalized: "MULTI_AUDIO", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.7, Source: "tech_combo_span"})
 			continue
-		case "cr", "crunchyroll", "adn", "baha", "amzn", "amazon", "abema", "hidive", "viutv", "nf", "netflix", "bilibili", "bili", "ytb":
-			out = append(out, model.Attribute{Type: model.AttrPlatform, Normalized: p.normalizePlatformCode(low), TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.74, Source: "tech_combo_span"})
+		case "ytb":
+			out = append(out, model.Attribute{Type: model.AttrPlatform, Normalized: "YTB", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.74, Source: "tech_combo_span"})
 			continue
 		}
 	}

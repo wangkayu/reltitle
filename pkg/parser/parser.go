@@ -3182,11 +3182,6 @@ func (p *Parser) isValidAliasToken(s string) bool {
 	return true
 }
 
-func isValidAliasToken(s string) bool {
-	var p *Parser
-	return p.isValidAliasToken(s)
-}
-
 var reAliasMetaTokenSplit = regexp.MustCompile(`[\s,./+_|&:;()\[\]{}]+`)
 
 func (p *Parser) hasAliasMetaFromDictionary(s string) bool {
@@ -3231,7 +3226,7 @@ func (p *Parser) hasAliasMetaFromDictionary(s string) bool {
 }
 
 func (p *Parser) inferTitleAndAliasesFromTitle(title string) (string, []string) {
-	main, aliases := inferTitleAndAliasesFromTitleWithValidator(title, p.isValidAliasToken)
+	main, aliases := inferTitleAndAliasesFromTitle(title, p.isValidAliasToken)
 	if len(aliases) == 0 {
 		return main, nil
 	}

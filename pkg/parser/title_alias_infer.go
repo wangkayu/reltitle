@@ -6,15 +6,7 @@ import (
 	"title-parser/pkg/model"
 )
 
-func inferTitleAndAliasesFromTitle(title string) (string, []string) {
-	return inferTitleAndAliasesFromTitleWithValidator(title, nil)
-}
-
-func inferTitleAndAliasesFromTitleWithValidator(title string, isAliasValid func(string) bool) (string, []string) {
-	aliasValid := isAliasValid
-	if aliasValid == nil {
-		aliasValid = isValidAliasToken
-	}
+func inferTitleAndAliasesFromTitle(title string, aliasValid func(string) bool) (string, []string) {
 	s := strings.TrimSpace(title)
 	if s == "" {
 		return "", nil

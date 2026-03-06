@@ -7,15 +7,7 @@ import (
 	"title-parser/pkg/model"
 )
 
-func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Attribute) (string, []string, int, int) {
-	return extractBracketTitleAliasesAndRemoveFromTokensWithValidator(tokens, attrs, nil)
-}
-
-func extractBracketTitleAliasesAndRemoveFromTokensWithValidator(tokens []model.Token, attrs *[]model.Attribute, isAliasValid func(string) bool) (string, []string, int, int) {
-	aliasValid := isAliasValid
-	if aliasValid == nil {
-		aliasValid = isValidAliasToken
-	}
+func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Attribute, aliasValid func(string) bool) (string, []string, int, int) {
 	if len(tokens) == 0 {
 		return "", nil, -1, -1
 	}

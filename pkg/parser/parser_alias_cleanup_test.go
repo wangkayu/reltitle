@@ -247,6 +247,47 @@ func TestParserGroupRouteOverride_GroupEPRouteAtlasWithSP(t *testing.T) {
 	}
 }
 
+func TestParserStableTechSpanCombo_CommaSeparatedCodecBlock(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[CicakRumah] 2200-nen Neko no Kuni Nippon - S01E09 (2200年ねこの国ニッポン) [ABEMA.WEB-DL 1080P AVC, AAC, DUAL][001EC424]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	foundVideo := false
+	foundAudio := false
+	foundDual := false
+	for _, a := range res.Attributes {
+		if a.Type == model.AttrVideoCodec && strings.EqualFold(strings.TrimSpace(a.Normalized), "AVC") {
+			foundVideo = true
+			if a.Source == "template_float_infer" {
+				t.Fatalf("video_codec should be resolved before template float infer, got source=%q", a.Source)
+			}
+		}
+		if a.Type == model.AttrAudioCodec && strings.EqualFold(strings.TrimSpace(a.Normalized), "AAC") {
+			foundAudio = true
+			if a.Source == "template_float_infer" {
+				t.Fatalf("audio_codec should be resolved before template float infer, got source=%q", a.Source)
+			}
+		}
+		if a.Type == model.AttrAudioFlag && strings.EqualFold(strings.TrimSpace(a.Normalized), "DUAL_AUDIO") {
+			foundDual = true
+		}
+	}
+	if !foundVideo || !foundAudio {
+		t.Fatalf("expected AVC/AAC from stable tech span combo, got attrs=%v", res.Attributes)
+	}
+	if !foundDual {
+		t.Fatalf("expected DUAL_AUDIO from stable tech span combo, got attrs=%v", res.Attributes)
+	}
+}
+
 func TestParserEpisodePriority_BracketTitleLeadingNumberSweetSub(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

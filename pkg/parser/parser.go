@@ -97,6 +97,250 @@ func extractWxHResolutionAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[
 	}
 }
 
+var stableTechResolutionPattern = regexp.MustCompile(`(?i)^(\d{3,4})p$`)
+var stableTechBitDepthPattern = regexp.MustCompile(`(?i)^(8|10|12)\s*bit$`)
+var stableTechSplitPattern = regexp.MustCompile(`[+_/\.]`)
+
+func extractStableTechSpanComboAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Attribute) {
+	if attrs == nil || len(tokens) == 0 {
+		return
+	}
+	for i := 0; i < len(tokens); i++ {
+		if tokens[i].Text != "[" && tokens[i].Text != "【" && tokens[i].Text != "(" && tokens[i].Text != "（" {
+			continue
+		}
+
+		open := i
+		close := -1
+		if tokens[i].Text == "[" || tokens[i].Text == "【" {
+			openTok := tokens[i].Text
+			closeTok := "]"
+			if openTok == "【" {
+				closeTok = "】"
+			}
+			depth := 0
+			for j := i; j < len(tokens); j++ {
+				t := strings.TrimSpace(tokens[j].Text)
+				if t == openTok {
+					depth++
+					continue
+				}
+				if t == closeTok {
+					depth--
+					if depth == 0 {
+						close = j
+						break
+					}
+				}
+			}
+			if close <= i {
+				continue
+			}
+		} else {
+			_, c, _, ok := parseParenBlock(tokens, i, len(tokens))
+			if !ok || c <= i {
+				continue
+			}
+			close = c
+		}
+		if close <= open+1 {
+			i = close
+			continue
+		}
+
+		blockAttrs := make([]model.Attribute, 0, 6)
+		recognized := make(map[int]bool)
+		nonSepCount := 0
+		coreCount := 0
+
+		for j := open + 1; j < close; j++ {
+			if tokens[j].Removed {
+				continue
+			}
+			txt := strings.TrimSpace(tokens[j].Text)
+			if txt == "" || isTechDelimiterToken(txt) {
+				continue
+			}
+			nonSepCount++
+			local, ok := inferStableTechTokenAttrs(txt, j)
+			if !ok {
+				continue
+			}
+			for _, a := range local {
+				if isStableTechCoreType(a.Type) {
+					coreCount++
+				}
+				blockAttrs = append(blockAttrs, a)
+			}
+			recognized[j] = true
+		}
+
+		if nonSepCount == 0 || len(blockAttrs) < 2 || coreCount == 0 {
+			i = close
+			continue
+		}
+		if float64(len(recognized))/float64(nonSepCount) < 0.6 {
+			i = close
+			continue
+		}
+
+		*attrs = append(*attrs, blockAttrs...)
+		for idx := range recognized {
+			tokens[idx].Removed = true
+		}
+		for j := open + 1; j < close; j++ {
+			if tokens[j].Removed {
+				continue
+			}
+			txt := strings.TrimSpace(tokens[j].Text)
+			if !isTechDelimiterToken(txt) {
+				continue
+			}
+			left := j - 1
+			right := j + 1
+			if left > open && right < close && recognized[left] && recognized[right] {
+				tokens[j].Removed = true
+			}
+		}
+		i = close
+	}
+}
+
+func isTechDelimiterToken(s string) bool {
+	switch strings.TrimSpace(s) {
+	case "-", "_", "+", ",", "，", ".", "/", "／", "&", "＆":
+		return true
+	default:
+		return false
+	}
+}
+
+func isStableTechCoreType(t model.AttrType) bool {
+	switch t {
+	case model.AttrResolution, model.AttrSourceType, model.AttrVideoCodec, model.AttrAudioCodec, model.AttrPlatform:
+		return true
+	default:
+		return false
+	}
+}
+
+func inferStableTechTokenAttrs(raw string, idx int) ([]model.Attribute, bool) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil, false
+	}
+	clean := strings.Trim(raw, "[](){}<>【】（）.,，:：;；'\"")
+	clean = strings.TrimSpace(clean)
+	if clean == "" {
+		return nil, false
+	}
+
+	parts := []string{clean}
+	if stableTechSplitPattern.MatchString(clean) {
+		tmp := stableTechSplitPattern.Split(clean, -1)
+		parts = make([]string, 0, len(tmp))
+		for _, p := range tmp {
+			pp := strings.TrimSpace(p)
+			if pp == "" {
+				continue
+			}
+			parts = append(parts, pp)
+		}
+		if len(parts) == 0 {
+			parts = []string{clean}
+		}
+	}
+
+	out := make([]model.Attribute, 0, 3)
+	for _, p := range parts {
+		pp := strings.TrimSpace(p)
+		if pp == "" {
+			continue
+		}
+		low := strings.ToLower(pp)
+
+		if m := stableTechResolutionPattern.FindStringSubmatch(low); len(m) == 2 {
+			out = append(out, model.Attribute{Type: model.AttrResolution, Normalized: m[1] + "p", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
+			continue
+		}
+
+		if mm := stableTechBitDepthPattern.FindStringSubmatch(low); len(mm) == 2 {
+			out = append(out, model.Attribute{Type: model.AttrBitDepth, Normalized: mm[1] + "bit", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.74, Source: "tech_combo_span"})
+			continue
+		}
+
+		switch low {
+		case "webdl", "web-dl":
+			out = append(out, model.Attribute{Type: model.AttrSourceType, Normalized: "WEB-DL", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
+			continue
+		case "webrip", "web-rip":
+			out = append(out, model.Attribute{Type: model.AttrSourceType, Normalized: "WEBRip", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
+			continue
+		case "bluray", "blu-ray":
+			out = append(out, model.Attribute{Type: model.AttrSourceType, Normalized: "BluRay", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
+			continue
+		case "bdrip":
+			out = append(out, model.Attribute{Type: model.AttrSourceType, Normalized: "BDRip", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
+			continue
+		case "dvdrip":
+			out = append(out, model.Attribute{Type: model.AttrSourceType, Normalized: "DVDRip", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
+			continue
+		case "hdtv":
+			out = append(out, model.Attribute{Type: model.AttrSourceType, Normalized: "HDTV", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
+			continue
+		case "remux":
+			out = append(out, model.Attribute{Type: model.AttrType("remux"), Normalized: "REMUX", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.74, Source: "tech_combo_span"})
+			continue
+		case "avc", "h264", "x264":
+			out = append(out, model.Attribute{Type: model.AttrVideoCodec, Normalized: "AVC", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
+			continue
+		case "hevc", "h265", "x265":
+			out = append(out, model.Attribute{Type: model.AttrVideoCodec, Normalized: "HEVC", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
+			continue
+		case "av1":
+			out = append(out, model.Attribute{Type: model.AttrVideoCodec, Normalized: "AV1", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
+			continue
+		case "aac":
+			out = append(out, model.Attribute{Type: model.AttrAudioCodec, Normalized: "AAC", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
+			continue
+		case "flac":
+			out = append(out, model.Attribute{Type: model.AttrAudioCodec, Normalized: "FLAC", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
+			continue
+		case "ac3":
+			out = append(out, model.Attribute{Type: model.AttrAudioCodec, Normalized: "AC3", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
+			continue
+		case "eac3", "e-ac-3", "ddp":
+			out = append(out, model.Attribute{Type: model.AttrAudioCodec, Normalized: "EAC3", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
+			continue
+		case "opus":
+			out = append(out, model.Attribute{Type: model.AttrAudioCodec, Normalized: "OPUS", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
+			continue
+		case "dts", "dtshd", "dts-hd", "dts-hdma", "truehd", "pcm":
+			out = append(out, model.Attribute{Type: model.AttrAudioCodec, Normalized: strings.ToUpper(strings.ReplaceAll(low, "-", "")), TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
+			continue
+		case "mkv":
+			out = append(out, model.Attribute{Type: model.AttrContainer, Normalized: "MKV", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.74, Source: "tech_combo_span"})
+			continue
+		case "mp4":
+			out = append(out, model.Attribute{Type: model.AttrContainer, Normalized: "MP4", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.74, Source: "tech_combo_span"})
+			continue
+		case "dual":
+			out = append(out, model.Attribute{Type: model.AttrAudioFlag, Normalized: "DUAL_AUDIO", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.7, Source: "tech_combo_span"})
+			continue
+		case "multi":
+			out = append(out, model.Attribute{Type: model.AttrAudioFlag, Normalized: "MULTI_AUDIO", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.7, Source: "tech_combo_span"})
+			continue
+		case "cr", "crunchyroll", "adn", "baha", "amzn", "amazon", "abema", "hidive", "viutv", "nf", "netflix", "bilibili", "bili", "ytb":
+			out = append(out, model.Attribute{Type: model.AttrPlatform, Normalized: normalizePlatformCode(low), TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.74, Source: "tech_combo_span"})
+			continue
+		}
+	}
+	if len(out) == 0 {
+		return nil, false
+	}
+	return out, true
+}
+
 func extractYearAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Attribute, hasTech bool) {
 	if attrs == nil || len(tokens) == 0 {
 		return
@@ -605,6 +849,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	extractSearchHintIndexAttrsAndRemoveFromTokens(tokens, &attrs)
 	extractSeasonShowTagAttrsAndRemoveFromTokens(tokens, &attrs)
 	p.applyLexicon(tokens, &attrs)
+	extractStableTechSpanComboAttrsAndRemoveFromTokens(tokens, &attrs)
 	promoteFrenchMultiNoteToAudioFlag(attrs)
 	normalizePlatformAttrs(attrs)
 	normalizeSourceTypeAttrs(attrs)

@@ -56,6 +56,7 @@ canonical:
     - ENGLISH_DUB
     - DUAL_AUDIO
     - MULTI_AUDIO
+    - ATMOS
 
   audio_lang:
     - CHN
@@ -82,6 +83,7 @@ canonical:
     - EAC3
     - E-AC-3
     - FLAC
+    - MP3
     - OPUS
     - DTS
     - DTSHD

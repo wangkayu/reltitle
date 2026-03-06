@@ -3226,9 +3226,6 @@ func (p *Parser) hasAliasMetaFromDictionary(s string) bool {
 				return true
 			}
 		}
-		if t == "atmos" || t == "mp3" {
-			return true
-		}
 	}
 	return false
 }

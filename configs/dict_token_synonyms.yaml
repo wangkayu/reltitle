@@ -275,6 +275,13 @@ rules:
       normalized: PCM
     priority: 95
 
+  - id: audio_codec_mp3
+    raw_tokens: ["mp3"]
+    emit:
+      type: audio_codec
+      normalized: MP3
+    priority: 90
+
   - id: container_mkv
     raw_tokens: ["mkv"]
     emit:
@@ -309,6 +316,13 @@ rules:
       type: audio_flag
       normalized: MULTI_AUDIO
     priority: 95
+
+  - id: audio_flag_atmos
+    raw_tokens: ["atmos", "dolby atmos"]
+    emit:
+      type: audio_flag
+      normalized: ATMOS
+    priority: 90
 
   - id: sub_flag_vostfr
     raw_tokens: ["vostfr"]

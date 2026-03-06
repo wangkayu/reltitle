@@ -285,7 +285,7 @@ func main() {
 					accumulateTokenFreq(st.StreamingMissTokenFreq, st.StreamingMissTechFreq, &res)
 				}
 			}
-			bucket := tailParenBucket(strings.TrimSpace(res.TailParenBlock))
+			bucket := tailParenBucket(strings.Join(append(res.CanonicalTitleAliases(), res.CanonicalSearchHints()...), ","))
 			switch bucket {
 			case "empty":
 				st.StreamingTailParenEmpty++

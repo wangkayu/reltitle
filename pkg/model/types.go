@@ -38,19 +38,6 @@ type MLOutput struct {
 
 type ParseResult struct {
 	RawTitle           string           `json:"raw_title"`
-	Group              string           `json:"-"`
-	Title              string           `json:"-"`
-	Aliases            []string         `json:"-"`
-	Episode            string           `json:"-"`
-	EpisodeRange       string           `json:"-"`
-	EpRoute            string           `json:"-"`
-	Season             string           `json:"-"`
-	SeasonRange        string           `json:"-"`
-	Version            string           `json:"-"`
-	PackKind           string           `json:"-"`
-	SPKind             string           `json:"-"`
-	MovieIndex         string           `json:"-"`
-	TailParenBlock     string           `json:"-"`
 	ContentKind        string           `json:"content_kind,omitempty"`
 	ContentConfidence  float64          `json:"content_confidence,omitempty"`
 	TemplateID         string           `json:"template_id,omitempty"`

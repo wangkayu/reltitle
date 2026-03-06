@@ -28,32 +28,15 @@ func (r *ParseResult) firstAttrValue(t AttrType) string {
 }
 
 func (r *ParseResult) CanonicalTitle() string {
-	if v := r.firstAttrValue(AttrTitle); v != "" {
-		return v
-	}
-	return strings.TrimSpace(r.Title)
+	return r.firstAttrValue(AttrTitle)
 }
 
 func (r *ParseResult) CanonicalGroup() string {
-	if v := r.firstAttrValue(AttrGroup); v != "" {
-		return v
-	}
-	return strings.TrimSpace(r.Group)
+	return r.firstAttrValue(AttrGroup)
 }
 
 func (r *ParseResult) CanonicalTitleAliases() []string {
-	if vs := r.attrValues(AttrTitleAlias); len(vs) > 0 {
-		return vs
-	}
-	out := make([]string, 0, len(r.Aliases))
-	for _, a := range r.Aliases {
-		a = strings.TrimSpace(a)
-		if a == "" {
-			continue
-		}
-		out = append(out, a)
-	}
-	return out
+	return r.attrValues(AttrTitleAlias)
 }
 
 func (r *ParseResult) CanonicalSearchHints() []string {
@@ -66,10 +49,7 @@ func (r *ParseResult) CanonicalEpisode() string {
 			return v
 		}
 	}
-	if v := r.firstAttrValue(AttrEpisode); v != "" {
-		return v
-	}
-	return strings.TrimSpace(r.Episode)
+	return r.firstAttrValue(AttrEpisode)
 }
 
 func (r *ParseResult) CanonicalEpisodeRange() string {
@@ -78,10 +58,7 @@ func (r *ParseResult) CanonicalEpisodeRange() string {
 			return v
 		}
 	}
-	if v := r.firstAttrValue(AttrEpisodeRange); v != "" {
-		return v
-	}
-	return strings.TrimSpace(r.EpisodeRange)
+	return r.firstAttrValue(AttrEpisodeRange)
 }
 
 func (r *ParseResult) CanonicalSeason() string {
@@ -90,52 +67,47 @@ func (r *ParseResult) CanonicalSeason() string {
 			return v
 		}
 	}
-	if v := r.firstAttrValue(AttrSeason); v != "" {
-		return v
-	}
-	return strings.TrimSpace(r.Season)
+	return r.firstAttrValue(AttrSeason)
 }
 
 func (r *ParseResult) CanonicalSeasonRange() string {
-	if v := r.firstAttrValue(AttrSeasonRange); v != "" {
-		return v
-	}
-	return strings.TrimSpace(r.SeasonRange)
+	return r.firstAttrValue(AttrSeasonRange)
 }
 
 func (r *ParseResult) CanonicalVersion() string {
-	if v := r.firstAttrValue(AttrVersion); v != "" {
-		return v
-	}
-	return strings.TrimSpace(r.Version)
+	return r.firstAttrValue(AttrVersion)
 }
 
 func (r *ParseResult) CanonicalPackKind() string {
-	if v := r.firstAttrValue(AttrPackKind); v != "" {
-		return v
-	}
-	return strings.TrimSpace(r.PackKind)
+	return r.firstAttrValue(AttrPackKind)
 }
 
 func (r *ParseResult) CanonicalSPKind() string {
-	if v := r.firstAttrValue(AttrSPKind); v != "" {
-		return v
-	}
-	return strings.TrimSpace(r.SPKind)
+	return r.firstAttrValue(AttrSPKind)
 }
 
 func (r *ParseResult) CanonicalMovieIndex() string {
-	if v := r.firstAttrValue(AttrMovieIndex); v != "" {
-		return v
-	}
-	return strings.TrimSpace(r.MovieIndex)
+	return r.firstAttrValue(AttrMovieIndex)
 }
 
 func (r *ParseResult) CanonicalEpRoute() string {
-	if v := strings.TrimSpace(r.EpRoute); v != "" {
-		return v
-	}
 	if r == nil || r.EPSlot == nil || r.EPSlot.Primary == nil {
+		// Fallback for list-like packs where epslot may not have primary.
+		if r == nil {
+			return ""
+		}
+		if strings.TrimSpace(r.CanonicalEpisodeRange()) != "" {
+			return "RANGE"
+		}
+		if strings.TrimSpace(r.CanonicalSPKind()) != "" {
+			return "SP_ONLY"
+		}
+		if strings.TrimSpace(r.CanonicalEpisode()) != "" {
+			if strings.TrimSpace(r.CanonicalSeason()) != "" {
+				return "SXXEXX"
+			}
+			return "PLAIN_EP"
+		}
 		return ""
 	}
 	k := strings.ToUpper(strings.TrimSpace(r.EPSlot.Primary.Kind))

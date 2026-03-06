@@ -865,14 +865,14 @@ func computeDiffSummary(baseMap rawTitleMap, newMap rawTitleMap, topN int) *diff
 func diffOne(d *diffSummary, b *model.ParseResult, n *model.ParseResult) {
 	checkFieldChange(d, "content_kind", b.ContentKind, n.ContentKind, b.RawTitle)
 	checkFieldChange(d, "template_id", b.TemplateID, n.TemplateID, b.RawTitle)
-	checkFieldChange(d, "group", b.Group, n.Group, b.RawTitle)
-	checkFieldChange(d, "title", b.Title, n.Title, b.RawTitle)
-	checkFieldChange(d, "episode", b.Episode, n.Episode, b.RawTitle)
-	checkFieldChange(d, "episode_range", b.EpisodeRange, n.EpisodeRange, b.RawTitle)
-	checkFieldChange(d, "season", b.Season, n.Season, b.RawTitle)
-	checkFieldChange(d, "pack_kind", b.PackKind, n.PackKind, b.RawTitle)
-	checkFieldChange(d, "sp_kind", b.SPKind, n.SPKind, b.RawTitle)
-	checkFieldChange(d, "movie_index", b.MovieIndex, n.MovieIndex, b.RawTitle)
+	checkFieldChange(d, "group", b.CanonicalGroup(), n.CanonicalGroup(), b.RawTitle)
+	checkFieldChange(d, "title", b.CanonicalTitle(), n.CanonicalTitle(), b.RawTitle)
+	checkFieldChange(d, "episode", b.CanonicalEpisode(), n.CanonicalEpisode(), b.RawTitle)
+	checkFieldChange(d, "episode_range", b.CanonicalEpisodeRange(), n.CanonicalEpisodeRange(), b.RawTitle)
+	checkFieldChange(d, "season", b.CanonicalSeason(), n.CanonicalSeason(), b.RawTitle)
+	checkFieldChange(d, "pack_kind", b.CanonicalPackKind(), n.CanonicalPackKind(), b.RawTitle)
+	checkFieldChange(d, "sp_kind", b.CanonicalSPKind(), n.CanonicalSPKind(), b.RawTitle)
+	checkFieldChange(d, "movie_index", b.CanonicalMovieIndex(), n.CanonicalMovieIndex(), b.RawTitle)
 
 	if strings.TrimSpace(b.ContentKind) != strings.TrimSpace(n.ContentKind) {
 		from := strings.TrimSpace(b.ContentKind)

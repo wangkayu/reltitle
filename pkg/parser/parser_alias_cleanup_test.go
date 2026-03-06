@@ -441,6 +441,77 @@ func TestParserEpisodeDashBoundary_AllowsVersionAndEndFlag(t *testing.T) {
 	}
 }
 
+func TestParserEpisodeZero_DashZeroStyle(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[ANi] KamitsubakiShi Kensetsuchū / 神椿市建設中。 - 00 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalEpisode(res); got != "0" {
+		t.Fatalf("episode=%q want=%q", got, "0")
+	}
+}
+
+func TestParserEpisodeRange_EpisodeKeywordRange(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Furretar] 台配 - BLEACH 千年血战篇 -相克谭- (Season 17 Episode 27-40)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalEpisodeRange(res); got != "27-40" {
+		t.Fatalf("episode_range=%q want=%q", got, "27-40")
+	}
+}
+
+func TestParserEpisodeChineseLeadingVariants(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	cases := []struct {
+		name string
+		raw  string
+		ep   string
+	}{
+		{
+			name: "bracket_ch_ep_with_marker",
+			raw:  "[AngelEcho]辺境都市の育成者 边境都市的培养者 [第01话②]",
+			ep:   "1",
+		},
+		{
+			name: "ch_ep_with_tail_text",
+			raw:  "[AngelEcho]とじのみこ四コマ計画 刀使之巫女四格计划 第14话&最终话",
+			ep:   "14",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			res, err := p.Parse(tc.raw)
+			if err != nil {
+				t.Fatalf("parse failed: %v", err)
+			}
+			if got := canonicalEpisode(res); got != tc.ep {
+				t.Fatalf("episode=%q want=%q", got, tc.ep)
+			}
+		})
+	}
+}
+
 func TestParserNoiseWrapper_UnwrapTransportNestedBracket(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

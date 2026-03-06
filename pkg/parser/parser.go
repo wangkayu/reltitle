@@ -4427,6 +4427,70 @@ func isTitlePrefixedDigitRangeInBracket(tokens []model.Token, idx int) bool {
 }
 
 func detectEpisodeRange(tokens []model.Token) (string, int) {
+	// Pattern: Episode 27-40 / EP 01-12
+	for i := 0; i < len(tokens); i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		if isInBracket(tokens, i) {
+			continue
+		}
+		kw := strings.TrimSpace(tokens[i].Text)
+		if !(strings.EqualFold(kw, "episode") || strings.EqualFold(kw, "ep")) {
+			continue
+		}
+		if i+1 >= len(tokens) {
+			continue
+		}
+		if m := episodeRangePattern.FindStringSubmatch(strings.TrimSpace(tokens[i+1].Text)); len(m) == 3 {
+			l := strings.TrimLeft(strings.TrimSpace(m[1]), "0")
+			if l == "" {
+				l = "0"
+			}
+			r := strings.TrimLeft(strings.TrimSpace(m[2]), "0")
+			if r == "" {
+				r = "0"
+			}
+			return l + "-" + r, i + 1
+		}
+		if m := episodeRangeEmbeddedPattern.FindStringSubmatch(strings.TrimSpace(tokens[i+1].Text)); len(m) == 3 {
+			l := strings.TrimLeft(strings.TrimSpace(m[1]), "0")
+			if l == "" {
+				l = "0"
+			}
+			r := strings.TrimLeft(strings.TrimSpace(m[2]), "0")
+			if r == "" {
+				r = "0"
+			}
+			return l + "-" + r, i + 1
+		}
+		if i+3 < len(tokens) {
+			lraw := strings.TrimSpace(tokens[i+1].Text)
+			sep := strings.TrimSpace(tokens[i+2].Text)
+			rraw := strings.TrimSpace(tokens[i+3].Text)
+			if episodeOfTotalPattern.MatchString(lraw) && (sep == "-" || sep == "~") {
+				if !episodeOfTotalPattern.MatchString(rraw) {
+					if mm := leadingDigitsPattern.FindStringSubmatch(rraw); len(mm) == 2 {
+						rraw = strings.TrimSpace(mm[1])
+					}
+				}
+			}
+			if episodeOfTotalPattern.MatchString(lraw) && (sep == "-" || sep == "~") && episodeOfTotalPattern.MatchString(rraw) {
+				l := strings.TrimLeft(lraw, "0")
+				if l == "" {
+					l = "0"
+				}
+				r := strings.TrimLeft(rraw, "0")
+				if r == "" {
+					r = "0"
+				}
+				if l != "0" && r != "0" {
+					return l + "-" + r, i + 1
+				}
+			}
+		}
+	}
+
 	// Pattern: "01 a 12" (Spanish/Portuguese range) in plain text.
 	// We normalize it into a single token "01-12" to avoid leaving "a 12" as tail noise.
 	for i := 0; i+2 < len(tokens); i++ {
@@ -4882,6 +4946,8 @@ func extractInlineStarGroup(tokens []model.Token) string {
 var episodePattern = regexp.MustCompile(`(?i)^(?:(e|ep|第))?(\d{1,4})(?:\.(\d{1,2}))?(?:[vV]\d{1,2})?$`)
 var episodeVersionSuffixPattern = regexp.MustCompile(`(?i)^(?:\d{1,4}(?:\.\d{1,2})?)[vV]\d{1,2}$`)
 var chineseEpisodeSuffixPattern = regexp.MustCompile(`^(?:第)?(\d{1,4})(?:话|集)$`)
+var chineseEpisodeWithSuffixMarkerPattern = regexp.MustCompile(`^(?:第)?(\d{1,4})(?:话|集|話)[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳]$`)
+var chineseEpisodeLeadingPattern = regexp.MustCompile(`^(?:第)?(\d{1,4})(?:话|集|話)(?:$|(?:\s|[&＆(（\[【]).*)`)
 var embeddedChineseEpisodeSuffixPattern = regexp.MustCompile(`第(\d{1,4})(?:集|话|話)$`)
 var yearPattern = regexp.MustCompile(`^(?:19|20)\d{2}$`)
 var starEpisodeEmbeddedPattern = regexp.MustCompile(`(?:★|☆)(\d{1,4})(?:★|☆)`)
@@ -5201,9 +5267,6 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 		if n == "" {
 			n = "0"
 		}
-		if n == "0" {
-			continue
-		}
 		if score > bestScore {
 			best = n
 			bestIdx = i + 1
@@ -5278,9 +5341,6 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 			n := strings.TrimLeft(mm[1], "0")
 			if n == "" {
 				n = "0"
-			}
-			if n == "0" {
-				continue
 			}
 			if strings.TrimSpace(mm[2]) != "" {
 				n = n + "." + strings.TrimSpace(mm[2])
@@ -5401,6 +5461,32 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 			}
 			continue
 		}
+		if mm := chineseEpisodeWithSuffixMarkerPattern.FindStringSubmatch(tokens[i].Text); len(mm) == 2 {
+			n := strings.TrimLeft(mm[1], "0")
+			if n == "" {
+				n = "0"
+			}
+			score := len(mm[1]) + 90
+			if score > bestScore {
+				bestScore = score
+				bestIdx = i
+				best = n
+			}
+			continue
+		}
+		if mm := chineseEpisodeLeadingPattern.FindStringSubmatch(tokens[i].Text); len(mm) == 2 {
+			n := strings.TrimLeft(mm[1], "0")
+			if n == "" {
+				n = "0"
+			}
+			score := len(mm[1]) + 86
+			if score > bestScore {
+				bestScore = score
+				bestIdx = i
+				best = n
+			}
+			continue
+		}
 		m := episodePattern.FindStringSubmatch(tokens[i].Text)
 		if len(m) >= 3 {
 			prefix := strings.TrimSpace(m[1])
@@ -5477,7 +5563,15 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 					}
 				}
 				if n == "0" {
-					continue
+					isStrongZero := inBracket
+					if !isStrongZero && i-1 >= 0 && strings.TrimSpace(tokens[i-1].Text) == "-" {
+						if i+1 < len(tokens) && isEpisodeBoundaryRightToken(tokens[i+1].Text) {
+							isStrongZero = true
+						}
+					}
+					if !isStrongZero {
+						continue
+					}
 				}
 			}
 			score := len(m[2])

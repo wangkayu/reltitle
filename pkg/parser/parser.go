@@ -625,6 +625,18 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	title, aliases := inferTitleAndAliasesFromTitle(title)
 	titleStart, titleEnd := inferTitleTokenSpan(tokens, episodeIdx, episodeRangeIdx, seasonCutIdx)
 	aliases = mergeAliases(ctx.ForcedAliases, aliases)
+	if strings.TrimSpace(title) == "" {
+		scanStart := 0
+		if len(groupSpan) == 2 && groupSpan[1] > scanStart {
+			scanStart = groupSpan[1]
+		}
+		if fbTitle, fbAliases, fbStart, fbEnd := inferBracketTitleFallback(tokens, scanStart, episodeIdx, episodeRangeIdx); strings.TrimSpace(fbTitle) != "" {
+			title = fbTitle
+			aliases = mergeAliases(aliases, fbAliases)
+			titleStart = fbStart
+			titleEnd = fbEnd
+		}
+	}
 	if strings.TrimSpace(ctx.ForcedTitle) != "" {
 		ft := ctx.ForcedTitle
 		// If forced title contains strong delimiters (e.g. from bracket title extraction),
@@ -2355,6 +2367,101 @@ func inferAliasesFromAdjacentBrackets(tokens []model.Token, titleEnd int, episod
 		return nil
 	}
 	return aliases
+}
+
+func inferBracketTitleFallback(tokens []model.Token, scanStart int, episodeIdx int, episodeRangeIdx int) (string, []string, int, int) {
+	if scanStart < 0 {
+		scanStart = 0
+	}
+	if scanStart >= len(tokens) {
+		return "", nil, -1, -1
+	}
+	epStart := len(tokens)
+	if episodeRangeIdx >= 0 && episodeRangeIdx < epStart {
+		epStart = episodeRangeIdx
+	}
+	if episodeIdx >= 0 && episodeIdx < epStart {
+		epStart = episodeIdx
+	}
+	if epStart <= scanStart {
+		return "", nil, -1, -1
+	}
+
+	for i := scanStart; i < epStart; i++ {
+		open, close, ok := headAliasBracketPair(tokens[i].Text)
+		if !ok {
+			continue
+		}
+		end := -1
+		depth := 0
+		for j := i; j < epStart; j++ {
+			if tokens[j].Text == open {
+				depth++
+				continue
+			}
+			if tokens[j].Text == close {
+				if depth > 0 {
+					depth--
+					if depth == 0 {
+						end = j
+						break
+					}
+				}
+			}
+		}
+		if end < 0 {
+			continue
+		}
+
+		parts := make([]string, 0, end-i)
+		for k := i + 1; k < end; k++ {
+			t := strings.TrimSpace(tokens[k].Text)
+			if t == "" {
+				continue
+			}
+			parts = append(parts, t)
+		}
+		inner := strings.TrimSpace(strings.Join(parts, " "))
+		if inner == "" || isLikelyMetaBracketText(inner) {
+			i = end
+			continue
+		}
+		main, aliases := inferTitleAndAliasesFromTitle(inner)
+		main = sanitizePrimaryTitleForOutput(main)
+		if strings.TrimSpace(main) == "" {
+			i = end
+			continue
+		}
+		if isLikelyGroupLikeTitleFallback(main) {
+			i = end
+			continue
+		}
+		return main, aliases, i + 1, end
+	}
+	return "", nil, -1, -1
+}
+
+var bracketTitleFallbackGroupLikePattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._&+\-]{1,31}$`)
+
+func isLikelyGroupLikeTitleFallback(s string) bool {
+	ss := strings.TrimSpace(s)
+	if ss == "" {
+		return true
+	}
+	if hasCJK(ss) {
+		return false
+	}
+	if strings.ContainsAny(ss, " /|｜;；:\\") {
+		return false
+	}
+	if strings.Contains(ss, " ") {
+		return false
+	}
+	up := strings.ToUpper(ss)
+	if strings.Contains(up, "RAWS") || strings.Contains(up, "SUBS") {
+		return true
+	}
+	return bracketTitleFallbackGroupLikePattern.MatchString(ss)
 }
 
 var tailGroupFromRawTitlePattern = regexp.MustCompile(`(?i)(?:^|\s)-(?:\s*)?([A-Za-z][A-Za-z0-9]{1,24}(?:-[A-Za-z0-9]{1,24}){0,4}-(?:Raws|Subs))\b`)

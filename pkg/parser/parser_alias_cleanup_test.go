@@ -122,6 +122,30 @@ func TestParserAliasCleanup_DelicosSlashTitleNotMerged(t *testing.T) {
 	}
 }
 
+func TestParserAliasCleanup_BracketTitleFallbackWhenMainTitleEmpty(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "【喵萌Production】★07月新番★[LoveLive! 超級明星!! 2期 / Love Live! Superstar!! S2][04][WebRip][1080p][繁日雙語][招募翻譯]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	if strings.TrimSpace(res.Title) == "" {
+		t.Fatalf("title should not be empty, aliases=%v", res.Aliases)
+	}
+	if strings.Contains(res.Title, "/") {
+		t.Fatalf("title should not keep slash-merged aliases: %q", res.Title)
+	}
+	if !containsAlias(res.Aliases, "Love Live! Superstar!!") && !containsAlias(res.Aliases, "Love Live! Superstar!! S2") {
+		t.Fatalf("expected alias from bracket title split, got=%v", res.Aliases)
+	}
+}
+
 func containsAlias(aliases []string, want string) bool {
 	for _, a := range aliases {
 		if strings.EqualFold(strings.TrimSpace(a), strings.TrimSpace(want)) {

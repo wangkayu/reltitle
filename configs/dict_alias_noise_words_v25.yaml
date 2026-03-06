@@ -1,0 +1,75 @@
+version: "v25-draft-1"
+updated_at: "2026-03-06"
+description: "Alias cleanup noise dictionary (language/platform/tech/meta)"
+
+alias_noise:
+  exact_words_case_insensitive:
+    # language/meta tags
+    - VOSTFR
+    - VOSTEN
+    - VF
+    - VOST
+    - FRENCH
+    - ENGLISH
+    - JAPANESE
+    - JPN
+    - JP
+    - CHS
+    - CHT
+    - CHI
+    - ZHO
+    - ENG
+    - FRE
+    - FRA
+    - RUS
+    - SPA
+    - ESP
+    - ITA
+    - GER
+    - DEU
+    - DUB
+    - SUB
+    - SUBS
+    - AUDIO
+    # stream/platform tags
+    - NF
+    - NETFLIX
+    - CR
+    - BAHA
+    - ABEMA
+    - UNEXT
+    - AMZN
+    # release meta
+    - BATCH
+    - WEEKLY
+    - RESEED
+    - COMPLETE
+    - FIN
+    - END
+    - 先行版
+    - 先行版本
+
+  regex_patterns:
+    # simple tech words / containers / codecs
+    - '(?i)^(1080p|2160p|720p|480p)$'
+    - '(?i)^(hevc|avc|x264|x265|h264|h265|aac|ac3|flac|ddp|dts|atmos)$'
+    - '(?i)^(mkv|mp4|avi)$'
+    - '(?i)^(web-?dl|webrip|bdrip|bluray|hdtv|dvd|remux)$'
+
+  inline_strip_words_case_insensitive:
+    - VOSTFR
+    - VOSTEN
+    - VF
+    - FRENCH
+    - ENGLISH
+    - JAPANESE
+    - FRE
+    - FRA
+    - ENG
+    - CHI
+    - ZHO
+    - DUB
+    - SUB
+    - SUBS
+    - AUDIO
+

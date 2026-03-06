@@ -15,8 +15,17 @@ import (
 )
 
 type Parser struct {
-	cfg        *config.Config
-	groupIndex map[string]*config.GroupDef // 字幕组索引: normalized pattern -> GroupDef
+	cfg                   *config.Config
+	groupIndex            map[string]*config.GroupDef // 字幕组索引: normalized pattern -> GroupDef
+	aliasInlineStripWords map[string]struct{}
+	notePromotionRules    []notePromotionRule
+}
+
+type notePromotionRule struct {
+	values              map[string]struct{}
+	targetType          model.AttrType
+	normalized          string
+	normalizedFromToken bool
 }
 
 var wxhResolutionPattern = regexp.MustCompile(`(?i)^(\d{2,5})\s*[x×X]\s*(\d{2,5})$`)
@@ -413,9 +422,13 @@ func consumeStarWrappedLeadingMeta(tokens []model.Token, start int) (int, bool) 
 }
 
 func New(cfg *config.Config) *Parser {
+	if cfg == nil {
+		cfg = &config.Config{}
+	}
 	p := &Parser{
-		cfg:        cfg,
-		groupIndex: make(map[string]*config.GroupDef),
+		cfg:                   cfg,
+		groupIndex:            make(map[string]*config.GroupDef),
+		aliasInlineStripWords: make(map[string]struct{}),
 	}
 
 	// 构建字幕组索引
@@ -427,6 +440,38 @@ func New(cfg *config.Config) *Parser {
 				p.groupIndex[normalized] = group
 			}
 		}
+	}
+
+	for _, w := range cfg.DictAliasNoiseWords.AliasNoise.InlineStripWordsCaseInsensitive {
+		ww := strings.ToLower(strings.TrimSpace(w))
+		if ww == "" {
+			continue
+		}
+		p.aliasInlineStripWords[ww] = struct{}{}
+	}
+
+	for _, r := range cfg.DictNotePromotion.Rules {
+		targetType := model.AttrType(strings.TrimSpace(r.PromoteTo.Type))
+		if targetType == "" {
+			continue
+		}
+		vals := make(map[string]struct{})
+		for _, v := range r.Match.NoteValuesCaseInsensitive {
+			vv := strings.ToLower(strings.TrimSpace(v))
+			if vv == "" {
+				continue
+			}
+			vals[vv] = struct{}{}
+		}
+		if len(vals) == 0 {
+			continue
+		}
+		p.notePromotionRules = append(p.notePromotionRules, notePromotionRule{
+			values:              vals,
+			targetType:          targetType,
+			normalized:          strings.TrimSpace(r.PromoteTo.Normalized),
+			normalizedFromToken: r.PromoteTo.NormalizedFromToken,
+		})
 	}
 
 	return p
@@ -702,10 +747,13 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	}
 	origTitle := title
 	title = sanitizePrimaryTitleForOutput(title)
-	aliases = sanitizeAliasesForOutput(aliases, title)
+	aliases = p.sanitizeAliasesForOutput(aliases, title)
 	if strings.TrimSpace(title) != "" && aliasSemanticKey(title) != aliasSemanticKey(origTitle) {
 		attrs = upsertTitleAttribute(attrs, title, "title_cleanup")
 	}
+	attrs = p.promoteNoteAttributes(attrs)
+	normalizePlatformAttrs(attrs)
+	normalizeSourceTypeAttrs(attrs)
 	attrs = dedupeAttributes(attrs)
 
 	res := &model.ParseResult{
@@ -849,6 +897,45 @@ func dedupeAttributes(attrs []model.Attribute) []model.Attribute {
 		}
 	}
 	return out
+}
+
+func (p *Parser) promoteNoteAttributes(attrs []model.Attribute) []model.Attribute {
+	if p == nil || len(p.notePromotionRules) == 0 {
+		return attrs
+	}
+	for i := range attrs {
+		if attrs[i].Type != model.AttrNote {
+			continue
+		}
+		n := strings.TrimSpace(attrs[i].Normalized)
+		if n == "" {
+			continue
+		}
+		low := strings.ToLower(n)
+		for _, rule := range p.notePromotionRules {
+			if _, ok := rule.values[low]; !ok {
+				continue
+			}
+			attrs[i].Type = rule.targetType
+			if rule.normalizedFromToken {
+				switch rule.targetType {
+				case model.AttrPlatform:
+					attrs[i].Normalized = normalizePlatformCode(n)
+				case model.AttrSourceType:
+					attrs[i].Normalized = strings.TrimSpace(n)
+				default:
+					attrs[i].Normalized = strings.TrimSpace(strings.ToUpper(n))
+				}
+			} else if strings.TrimSpace(rule.normalized) != "" {
+				attrs[i].Normalized = strings.TrimSpace(rule.normalized)
+			}
+			if attrs[i].Source == "" {
+				attrs[i].Source = "note_promote_dict"
+			}
+			break
+		}
+	}
+	return attrs
 }
 
 func computeEpRoute(tokens []model.Token, episode string, episodeRange string, season string, seasonRange string, spKind string, movieIndex string, hasMovieKeyword bool) string {
@@ -1152,6 +1239,8 @@ func normalizePlatformCode(s string) string {
 	switch up {
 	case "CRUNCHYROLL", "CR":
 		return "CR"
+	case "NETFLIX", "NF":
+		return "NETFLIX"
 	case "BAHAMUT", "BAHA":
 		return "BAHA"
 	case "BILIBILI_GLOBAL", "BILIBILI":
@@ -1287,7 +1376,6 @@ var reAliasTrimTVSeasonTail = regexp.MustCompile(`(?i)(?:^|\s+)(?:tv|tb|тv|тв
 var reAliasTrimPlatformTail = regexp.MustCompile(`(?i)\s+(?:b-?global(?:\s+donghua)?|baha|abema|cr|amzn|amazon|netflix|nf|unext|at-?x|bs11|bs-?ntv|bs-?fuji|france\s*tv|tv)\s*$`)
 var reAliasTrimTVAnimePrefix = regexp.MustCompile(`(?i)^(?:tv\s*アニメ|tv\s*anime|tv\s*animation)\s+`)
 var reAliasMetaOnlyToken = regexp.MustCompile(`(?i)^(?:nf|cr|baha|abema|unext|netflix|vostfr|vf|french|english|japanese|jpn|jp|chs|cht|chi|zho|eng|fre|fra|rus|esp|spa|ita|ger|deu|dub|sub|subs|audio|tv)$`)
-var reAliasInlineMetaWord = regexp.MustCompile(`(?i)\b(?:vostfr|vosten|vf|vost|french|english|japanese|jpn|jp|chs|cht|chi|zho|eng|fre|fra|rus|esp|spa|ita|ger|deu|dub|sub|subs|multisub|multi[-_ ]?subs?|dual[-_ ]?audio|multi[-_ ]?audio|audio)\b`)
 var reAliasTVContentPhrase = regexp.MustCompile(`(?i)\btv\b.*(?:season|series|ver(?:sion)?|reproduction|release|ova|oad|ona|movie|sp|s\d{1,2}|剪辑版|剪輯版|版|系列)`)
 var reTitleTrimTVSeasonTail = regexp.MustCompile(`(?i)\s+(?:tv|tb|тv|тв)\s*[-_ ]?\s*\d{1,3}\s*$`)
 var reTitleTrimTVTail = regexp.MustCompile(`(?i)\s+(?:tv|tb|тv|тв)\s*$`)
@@ -1893,7 +1981,7 @@ func cleanAliasToken(s string) string {
 	return strings.TrimSpace(s)
 }
 
-func normalizeAliasCandidateForOutput(s string) string {
+func (p *Parser) normalizeAliasCandidateForOutput(s string) string {
 	ss := cleanAliasToken(s)
 	ss = strings.TrimSpace(ss)
 	if ss == "" {
@@ -1905,7 +1993,23 @@ func normalizeAliasCandidateForOutput(s string) string {
 		ss = reAliasTrimTVSeasonTail.ReplaceAllString(ss, "")
 		ss = reAliasTrimPlatformTail.ReplaceAllString(ss, "")
 		ss = reAliasTrimTVAnimePrefix.ReplaceAllString(ss, "")
-		ss = reAliasInlineMetaWord.ReplaceAllString(ss, " ")
+		if p != nil && len(p.aliasInlineStripWords) > 0 {
+			fields := strings.Fields(ss)
+			if len(fields) > 0 {
+				kept := make([]string, 0, len(fields))
+				for _, f := range fields {
+					norm := strings.Trim(f, "[](){}【】（）.,;:!?'\"-_")
+					if norm == "" {
+						continue
+					}
+					if _, ok := p.aliasInlineStripWords[strings.ToLower(norm)]; ok {
+						continue
+					}
+					kept = append(kept, f)
+				}
+				ss = strings.Join(kept, " ")
+			}
+		}
 		ss = reTitleTrimMetaTail.ReplaceAllString(ss, "")
 		ss = reTitleTrimVolTail.ReplaceAllString(ss, "")
 		ss = regexp.MustCompile(`\s+`).ReplaceAllString(ss, " ")
@@ -1929,7 +2033,7 @@ func aliasSemanticKey(s string) string {
 	return b.String()
 }
 
-func sanitizeAliasesForOutput(aliases []string, title string) []string {
+func (p *Parser) sanitizeAliasesForOutput(aliases []string, title string) []string {
 	if len(aliases) == 0 {
 		return nil
 	}
@@ -1937,7 +2041,7 @@ func sanitizeAliasesForOutput(aliases []string, title string) []string {
 	out := make([]string, 0, len(aliases))
 	seen := map[string]bool{}
 	for _, a := range aliases {
-		a = normalizeAliasCandidateForOutput(a)
+		a = p.normalizeAliasCandidateForOutput(a)
 		if a == "" || !isValidAliasToken(a) {
 			continue
 		}

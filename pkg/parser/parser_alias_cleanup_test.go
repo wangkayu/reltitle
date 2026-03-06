@@ -132,8 +132,14 @@ func containsAlias(aliases []string, want string) bool {
 }
 
 func TestNormalizeAliasCandidateForOutput_StripsInlineLangMetaWords(t *testing.T) {
+	p := &Parser{
+		aliasInlineStripWords: map[string]struct{}{
+			"vostfr": {},
+			"vosten": {},
+		},
+	}
 	in := "Maria Watches Over Us Printemps VOSTFR VOSTEN マリア様がみてる ～春～"
-	got := normalizeAliasCandidateForOutput(in)
+	got := p.normalizeAliasCandidateForOutput(in)
 	if strings.Contains(strings.ToLower(got), "vostfr") || strings.Contains(strings.ToLower(got), "vosten") {
 		t.Fatalf("inline lang markers should be stripped, got=%q", got)
 	}

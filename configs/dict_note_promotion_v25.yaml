@@ -1,0 +1,70 @@
+version: "v25-draft-1"
+updated_at: "2026-03-06"
+description: "Promotion rules from note -> typed attributes"
+
+defaults:
+  action: replace_note_type
+  source: note_promote_dict
+  keep_note_if_promoted: false
+
+rules:
+  - id: note_to_source_web
+    match:
+      note_values_case_insensitive: ["WEB", "WEBRIP", "WEB-RIP", "WEB RIP"]
+    promote_to:
+      type: source_type
+      normalized: WEBRip
+
+  - id: note_to_source_webdl
+    match:
+      note_values_case_insensitive: ["WEBDL", "WEB-DL", "WEB DL"]
+    promote_to:
+      type: source_type
+      normalized: WEB-DL
+
+  - id: note_to_source_bd
+    match:
+      note_values_case_insensitive: ["BD", "BDRIP", "BLURAY", "BLU-RAY"]
+    promote_to:
+      type: source_type
+      normalized: BDRip
+
+  - id: note_to_platform
+    match:
+      note_values_case_insensitive: ["NF", "NETFLIX", "CR", "BAHA", "ABEMA", "UNEXT", "AMZN", "AMAZON", "AT-X", "BS11"]
+    promote_to:
+      type: platform
+      normalized_from_token: true
+
+  - id: note_to_sub_flag_multi
+    match:
+      note_values_case_insensitive: ["MULTI", "MULTISUB"]
+    promote_to:
+      type: sub_flag
+      normalized: MULTI_SUBS
+
+  - id: note_to_sub_flag_subs
+    match:
+      note_values_case_insensitive: ["SUBS", "SUB"]
+    promote_to:
+      type: sub_flag
+      normalized: SUBS
+
+  - id: note_to_sub_flag_vost
+    match:
+      note_values_case_insensitive: ["VOSTFR", "VOSTEN", "VF"]
+    promote_to:
+      type: sub_flag
+      normalized_from_token: true
+
+note_whitelist:
+  # 未命中 promotion 且属于白名单的 note 保留
+  - 检索
+  - 检索用
+  - 招募翻译
+  - 招募校对
+  - 招募时轴
+  - END
+  - FIN
+  - COMPLETE
+  - 新番

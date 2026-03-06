@@ -1,0 +1,55 @@
+version: "v25-draft-1"
+updated_at: "2026-03-06"
+description: "Slot candidate and conflict-resolution hints for ambiguous tokens"
+
+defaults:
+  conflict_strategy: "highest_priority_then_context"
+  fallback_slot: "note"
+
+candidates:
+  - token: "MULTI"
+    slot_candidates:
+      - slot: sub_flag
+        normalized: MULTI_SUBS
+        priority: 90
+        when:
+          nearby_tokens_any: ["sub", "subs", "subtitle", "vostfr", "vf"]
+      - slot: audio_flag
+        normalized: MULTI_AUDIO
+        priority: 80
+        when:
+          nearby_tokens_any: ["audio", "dub", "dual audio"]
+      - slot: note
+        normalized: MULTI
+        priority: 10
+
+  - token: "DUAL"
+    slot_candidates:
+      - slot: audio_flag
+        normalized: DUAL_AUDIO
+        priority: 90
+        when:
+          nearby_tokens_any: ["audio", "aac", "ac3", "flac"]
+      - slot: sub_flag
+        normalized: DUAL_SUBS
+        priority: 70
+        when:
+          nearby_tokens_any: ["sub", "subs", "subtitle"]
+
+  - token: "WEB"
+    slot_candidates:
+      - slot: source_type
+        normalized: WEBRip
+        priority: 95
+      - slot: note
+        normalized: WEB
+        priority: 5
+
+  - token: "TS"
+    slot_candidates:
+      - slot: source_type
+        normalized: TS
+        priority: 75
+      - slot: note
+        normalized: TS
+        priority: 25

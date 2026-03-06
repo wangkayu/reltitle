@@ -1,0 +1,93 @@
+version: "v25-draft-1"
+updated_at: "2026-03-06"
+description: "Canonical normalized values for parser v2.5 dictionary pipeline"
+
+canonical:
+  source_type:
+    - WEBRip
+    - WEB-DL
+    - BDRip
+    - Bluray
+    - HDTV
+    - DVD
+    - Remux
+
+  platform:
+    - NETFLIX
+    - CR
+    - BAHA
+    - ABEMA
+    - UNEXT
+    - AMZN
+    - AT-X
+    - BS11
+
+  sub_flag:
+    - SUBS
+    - MULTI_SUBS
+    - VOSTFR
+    - VOSTEN
+    - VF
+    - DUAL_SUBS
+
+  sub_lang:
+    - CHS
+    - CHT
+    - JPN
+    - ENG
+    - FRA
+    - RUS
+    - SPA
+    - DEU
+    - ITA
+
+  audio_flag:
+    - DUB
+    - ENGLISH_DUB
+    - DUAL_AUDIO
+    - MULTI_AUDIO
+
+  audio_lang:
+    - CHN
+    - JPN
+    - ENG
+    - FRA
+    - RUS
+
+  resolution:
+    - 2160p
+    - 1080p
+    - 720p
+    - 480p
+
+  video_codec:
+    - HEVC
+    - AVC
+    - AV1
+    - XVID
+
+  audio_codec:
+    - AAC
+    - AC3
+    - E-AC-3
+    - FLAC
+    - DTS
+    - TRUEHD
+    - PCM
+
+  container:
+    - MKV
+    - MP4
+    - AVI
+
+  note_whitelist:
+    # 仅保留在 note 的业务备注（示例）
+    - 招募翻译
+    - 招募校对
+    - 招募时轴
+    - 检索
+    - 检索用
+    - 新番
+    - END
+    - FIN
+    - COMPLETE

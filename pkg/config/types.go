@@ -6,8 +6,14 @@ type Config struct {
 	Inference       InferenceRulesConfig  `json:"inference"`
 	GroupList       GroupListConfig       `json:"group_list"`
 
-	AttributeConfig    map[string]any `json:"attribute_config,omitempty"`
-	BoundaryRules      map[string]any `json:"boundary_rules,omitempty"`
+	DictCanonicalValues     DictCanonicalValuesConfig     `json:"dict_canonical_values,omitempty"`
+	DictTokenSynonyms       DictTokenSynonymsConfig       `json:"dict_token_synonyms,omitempty"`
+	DictTokenSlotCandidates DictTokenSlotCandidatesConfig `json:"dict_token_slot_candidates,omitempty"`
+	DictAliasNoiseWords     DictAliasNoiseWordsConfig     `json:"dict_alias_noise_words,omitempty"`
+	DictNotePromotion       DictNotePromotionConfig       `json:"dict_note_promotion,omitempty"`
+
+	AttributeConfig map[string]any `json:"attribute_config,omitempty"`
+	BoundaryRules   map[string]any `json:"boundary_rules,omitempty"`
 	// TailgroupWhitelist removed - now using GroupList only
 }
 
@@ -94,12 +100,12 @@ type TemplateConditionRequire struct {
 
 // GroupListConfig represents the group list configuration
 type GroupListConfig struct {
-	Version     string     `yaml:"version" json:"version"`
-	UpdatedAt   string     `yaml:"last_updated" json:"last_updated"`
-	Description string     `yaml:"description" json:"description"`
-	Groups      []GroupDef `yaml:"groups" json:"groups"`
+	Version     string         `yaml:"version" json:"version"`
+	UpdatedAt   string         `yaml:"last_updated" json:"last_updated"`
+	Description string         `yaml:"description" json:"description"`
+	Groups      []GroupDef     `yaml:"groups" json:"groups"`
 	Statistics  map[string]any `yaml:"statistics,omitempty" json:"statistics,omitempty"`
-	UsageNotes  string     `yaml:"usage_notes,omitempty" json:"usage_notes,omitempty"`
+	UsageNotes  string         `yaml:"usage_notes,omitempty" json:"usage_notes,omitempty"`
 }
 
 // GroupDef represents a subtitle group definition
@@ -108,4 +114,89 @@ type GroupDef struct {
 	Patterns        []string `yaml:"patterns" json:"patterns"`
 	Frequency       string   `yaml:"frequency" json:"frequency"`
 	ConfidenceBoost float64  `yaml:"confidence_boost" json:"confidence_boost"`
+}
+
+type DictCanonicalValuesConfig struct {
+	Version     string         `yaml:"version" json:"version"`
+	UpdatedAt   string         `yaml:"updated_at" json:"updated_at"`
+	Description string         `yaml:"description" json:"description"`
+	Canonical   map[string]any `yaml:"canonical" json:"canonical"`
+}
+
+type DictTokenSynonymsConfig struct {
+	Version     string             `yaml:"version" json:"version"`
+	UpdatedAt   string             `yaml:"updated_at" json:"updated_at"`
+	Description string             `yaml:"description" json:"description"`
+	Rules       []TokenSynonymRule `yaml:"rules" json:"rules"`
+}
+
+type TokenSynonymRule struct {
+	ID        string             `yaml:"id" json:"id"`
+	RawTokens []string           `yaml:"raw_tokens" json:"raw_tokens"`
+	Emit      TokenSynonymTarget `yaml:"emit" json:"emit"`
+	Priority  int                `yaml:"priority" json:"priority"`
+}
+
+type TokenSynonymTarget struct {
+	Type                string `yaml:"type" json:"type"`
+	Normalized          string `yaml:"normalized" json:"normalized"`
+	NormalizedFromToken bool   `yaml:"normalized_from_token" json:"normalized_from_token"`
+}
+
+type DictTokenSlotCandidatesConfig struct {
+	Version     string               `yaml:"version" json:"version"`
+	UpdatedAt   string               `yaml:"updated_at" json:"updated_at"`
+	Description string               `yaml:"description" json:"description"`
+	Defaults    map[string]any       `yaml:"defaults" json:"defaults"`
+	Candidates  []TokenSlotCandidate `yaml:"candidates" json:"candidates"`
+}
+
+type TokenSlotCandidate struct {
+	Token          string                   `yaml:"token" json:"token"`
+	SlotCandidates []TokenSlotCandidateItem `yaml:"slot_candidates" json:"slot_candidates"`
+}
+
+type TokenSlotCandidateItem struct {
+	Slot       string         `yaml:"slot" json:"slot"`
+	Normalized string         `yaml:"normalized" json:"normalized"`
+	Priority   int            `yaml:"priority" json:"priority"`
+	When       map[string]any `yaml:"when" json:"when"`
+}
+
+type DictAliasNoiseWordsConfig struct {
+	Version     string           `yaml:"version" json:"version"`
+	UpdatedAt   string           `yaml:"updated_at" json:"updated_at"`
+	Description string           `yaml:"description" json:"description"`
+	AliasNoise  AliasNoiseConfig `yaml:"alias_noise" json:"alias_noise"`
+}
+
+type AliasNoiseConfig struct {
+	ExactWordsCaseInsensitive       []string `yaml:"exact_words_case_insensitive" json:"exact_words_case_insensitive"`
+	RegexPatterns                   []string `yaml:"regex_patterns" json:"regex_patterns"`
+	InlineStripWordsCaseInsensitive []string `yaml:"inline_strip_words_case_insensitive" json:"inline_strip_words_case_insensitive"`
+}
+
+type DictNotePromotionConfig struct {
+	Version       string              `yaml:"version" json:"version"`
+	UpdatedAt     string              `yaml:"updated_at" json:"updated_at"`
+	Description   string              `yaml:"description" json:"description"`
+	Defaults      map[string]any      `yaml:"defaults" json:"defaults"`
+	Rules         []NotePromotionRule `yaml:"rules" json:"rules"`
+	NoteWhitelist []string            `yaml:"note_whitelist" json:"note_whitelist"`
+}
+
+type NotePromotionRule struct {
+	ID        string             `yaml:"id" json:"id"`
+	Match     NotePromotionMatch `yaml:"match" json:"match"`
+	PromoteTo NotePromotionTo    `yaml:"promote_to" json:"promote_to"`
+}
+
+type NotePromotionMatch struct {
+	NoteValuesCaseInsensitive []string `yaml:"note_values_case_insensitive" json:"note_values_case_insensitive"`
+}
+
+type NotePromotionTo struct {
+	Type                string `yaml:"type" json:"type"`
+	Normalized          string `yaml:"normalized" json:"normalized"`
+	NormalizedFromToken bool   `yaml:"normalized_from_token" json:"normalized_from_token"`
 }

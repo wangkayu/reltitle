@@ -1,0 +1,88 @@
+version: "v25-draft-1"
+updated_at: "2026-03-06"
+description: "Token synonym normalization map for parser v2.5"
+
+rules:
+  - id: source_web
+    raw_tokens: ["web", "webrip", "web-rip", "web rip"]
+    emit:
+      type: source_type
+      normalized: WEBRip
+    priority: 100
+
+  - id: source_webdl
+    raw_tokens: ["web-dl", "webdl", "web dl"]
+    emit:
+      type: source_type
+      normalized: WEB-DL
+    priority: 100
+
+  - id: source_bdrip
+    raw_tokens: ["bdrip", "bd-rip", "bd rip", "bluray", "blu-ray", "bd"]
+    emit:
+      type: source_type
+      normalized: BDRip
+    priority: 95
+
+  - id: platform_nf
+    raw_tokens: ["nf", "netflix"]
+    emit:
+      type: platform
+      normalized: NETFLIX
+    priority: 100
+
+  - id: platform_cr
+    raw_tokens: ["cr", "crunchyroll"]
+    emit:
+      type: platform
+      normalized: CR
+    priority: 100
+
+  - id: platform_baha
+    raw_tokens: ["baha", "bahamut"]
+    emit:
+      type: platform
+      normalized: BAHA
+    priority: 100
+
+  - id: sub_flag_vostfr
+    raw_tokens: ["vostfr"]
+    emit:
+      type: sub_flag
+      normalized: VOSTFR
+    priority: 90
+
+  - id: sub_flag_vosten
+    raw_tokens: ["vosten"]
+    emit:
+      type: sub_flag
+      normalized: VOSTEN
+    priority: 90
+
+  - id: sub_flag_vf
+    raw_tokens: ["vf"]
+    emit:
+      type: sub_flag
+      normalized: VF
+    priority: 90
+
+  - id: sub_lang_fra
+    raw_tokens: ["fre", "fra", "french"]
+    emit:
+      type: sub_lang
+      normalized: FRA
+    priority: 85
+
+  - id: sub_lang_eng
+    raw_tokens: ["eng", "english"]
+    emit:
+      type: sub_lang
+      normalized: ENG
+    priority: 85
+
+  - id: sub_lang_chi
+    raw_tokens: ["chi", "zho", "chs", "cht"]
+    emit:
+      type: sub_lang
+      normalized_from_token: true
+    priority: 85

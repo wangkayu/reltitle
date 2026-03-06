@@ -39,6 +39,12 @@ func LoadAll(baseDir string) (*Config, error) {
 		fmt.Printf("Warning: failed to load grouplist.yaml: %v\n", err)
 	}
 
+	_ = loadYAMLFile(filepath.Join(baseDir, "dict_canonical_values_v25.yaml"), &cfg.DictCanonicalValues)
+	_ = loadYAMLFile(filepath.Join(baseDir, "dict_token_synonyms_v25.yaml"), &cfg.DictTokenSynonyms)
+	_ = loadYAMLFile(filepath.Join(baseDir, "dict_token_slot_candidates_v25.yaml"), &cfg.DictTokenSlotCandidates)
+	_ = loadYAMLFile(filepath.Join(baseDir, "dict_alias_noise_words_v25.yaml"), &cfg.DictAliasNoiseWords)
+	_ = loadYAMLFile(filepath.Join(baseDir, "dict_note_promotion_v25.yaml"), &cfg.DictNotePromotion)
+
 	return cfg, nil
 }
 

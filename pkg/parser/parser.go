@@ -3233,7 +3233,7 @@ func (p *Parser) hasAliasMetaFromDictionary(s string) bool {
 }
 
 func (p *Parser) inferTitleAndAliasesFromTitle(title string) (string, []string) {
-	main, aliases := inferTitleAndAliasesFromTitle(title)
+	main, aliases := inferTitleAndAliasesFromTitleWithValidator(title, p.isValidAliasToken)
 	if len(aliases) == 0 {
 		return main, nil
 	}

@@ -7,6 +7,14 @@ import (
 )
 
 func inferTitleAndAliasesFromTitle(title string) (string, []string) {
+	return inferTitleAndAliasesFromTitleWithValidator(title, nil)
+}
+
+func inferTitleAndAliasesFromTitleWithValidator(title string, isAliasValid func(string) bool) (string, []string) {
+	aliasValid := isAliasValid
+	if aliasValid == nil {
+		aliasValid = isValidAliasToken
+	}
 	s := strings.TrimSpace(title)
 	if s == "" {
 		return "", nil
@@ -43,7 +51,7 @@ func inferTitleAndAliasesFromTitle(title string) (string, []string) {
 		}
 		addAlias := func(out *[]string, seen map[string]bool, cand string) {
 			cand = cleanTitleToken(cand)
-			if !isValidAliasToken(cand) {
+			if !aliasValid(cand) {
 				return
 			}
 			k := strings.ToLower(strings.TrimSpace(cand))
@@ -178,7 +186,7 @@ func inferTitleAndAliasesFromTitle(title string) (string, []string) {
 				continue
 			}
 			p = cleanAliasToken(p)
-			if !isValidAliasToken(p) {
+			if !aliasValid(p) {
 				continue
 			}
 			key := strings.ToLower(p)
@@ -219,7 +227,7 @@ func inferTitleAndAliasesFromTitle(title string) (string, []string) {
 			seen[strings.ToLower(main)] = true
 			for _, p := range mergedLatin {
 				p = cleanAliasToken(p)
-				if !isValidAliasToken(p) {
+				if !aliasValid(p) {
 					continue
 				}
 				k := strings.ToLower(p)

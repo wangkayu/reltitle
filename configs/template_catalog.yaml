@@ -361,6 +361,21 @@ batch_templates:
         platform_in: ["CR", "BAHA", "BILIBILI", "AMZN", "ABEMA", "HIDIVE", "ADN", "VIUTV"]
         source_type_in: ["WEB-DL", "WEBRip"]
 
+  - id: "TF_STREAMING_BATCH_RANGE_PACK_01"
+    name: "(Streaming) [GROUP] TITLE [RANGE] [PACK] [TECH]"
+    content_types: ["BATCH"]
+    signature: "G T R C X"
+    confidence: 0.99
+    description: "Streaming range pack with explicit pack marker"
+    examples:
+      - "[Lilith-Raws x WitEx.io] Natsume Yuujinchou Go [01-11+3SP][Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]"
+      - "[Anime Time] One Piece (Egghead Arc) (1086-1155) [1080p][HEVC 10bit][AAC][Eng Sub] [Batch]"
+    route_id: "streaming_release_v1"
+    conditions:
+      require:
+        platform_in: ["CR", "BAHA", "BILIBILI", "AMZN", "ABEMA", "HIDIVE", "ADN", "VIUTV"]
+        source_type_in: ["WEB-DL", "WEBRip"]
+
   - id: "TF_BATCH_RANGE_SIMPLE_01"
     name: "TITLE [01-12]"
     content_types: ["BATCH"]
@@ -512,6 +527,26 @@ batch_templates:
     examples:
       - "[VCB-Studio] Shinka no Mi 01-12 [Ma10p_1080p]"
       - "[Lilith-Raws] 药屋少女 01-24 [BDRip]"
+
+  - id: "TF_BATCH_RANGE_PACK_01"
+    name: "[GROUP] TITLE XX-XX [PACK] [TECH]"
+    content_types: ["BATCH"]
+    signature: "G T R C X"
+    confidence: 0.97
+    description: "Episode range + pack marker + tech"
+    examples:
+      - "[LoliHouse] 2.5-jigen no Ririsa [01-24 合集][WebRip 1080p HEVC-10bit AAC]"
+      - "[Anime Time] One Piece (Egghead Arc) (1086-1155) [Batch][1080p][HEVC 10bit]"
+
+  - id: "TF_BATCH_RANGE_PACK_02"
+    name: "[GROUP] TITLE XX-XX [PACK]"
+    content_types: ["BATCH"]
+    signature: "G T R C"
+    confidence: 0.93
+    description: "Episode range + pack marker, no strict tech requirement"
+    examples:
+      - "[c.c动漫] [虽然是公会的柜台小姐...][01-12][合集][BIG5][720P][MP4]"
+      - "[PMFAN字幕组][宝可梦 钻石&珍珠][000-193+M10-M13][合集]"
   
   - id: "TF_BATCH_RANGE_02"
     name: "TITLE XX-XX [TECH]"
@@ -563,6 +598,25 @@ batch_templates:
     examples:
       - "[SubsPlease] Kusuriya Batch [1080p]"
       - "[Erai-raws] Anime Title Batch [720p]"
+
+  - id: "TF_BATCH_COMPLETE_RANGE_01"
+    name: "[GROUP] TITLE Complete [RANGE] [TECH]"
+    content_types: ["BATCH"]
+    signature: "G T C R X"
+    confidence: 0.96
+    description: "Complete pack with explicit range or range+special segment"
+    examples:
+      - "[Amor字幕组][特利迦奥特曼][合集][1-25+特别篇][CHS][1080P]"
+      - "[动漫国&桜都字幕组][Silent Witch][01-13(全集)][1080P][MP4]"
+
+  - id: "TF_BATCH_COMPLETE_RANGE_02"
+    name: "[GROUP] TITLE Complete [RANGE]"
+    content_types: ["BATCH"]
+    signature: "G T C R"
+    confidence: 0.9
+    description: "Complete + range fallback template (weak tech cases)"
+    examples:
+      - "[Group] Title [全集][01-12+SP]"
   
   # Batch with Contents模板
   - id: "TF_BATCH_CONTENTS_01"

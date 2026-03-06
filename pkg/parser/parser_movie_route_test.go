@@ -104,3 +104,46 @@ func TestParserMovieRoute_DashCodecNumberNotEpisode(t *testing.T) {
 		t.Fatalf("epslot.primary.episode=%q want empty", res.EPSlot.Primary.Episode)
 	}
 }
+
+func TestParserMovieRoute_DayIndexDemotedToMovieIndex(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[GJ.Y] IDOLiSH7 Movie: LIVE 4bit - BEYOND THE PERiOD - Day 1 (CR 1920x1080 AVC AAC MKV)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "MOVIE" {
+		t.Fatalf("content_kind=%q want=%q", got, "MOVIE")
+	}
+	if got := firstAttrValue(res, model.AttrEpisode); got != "" {
+		t.Fatalf("episode=%q want empty", got)
+	}
+	if got := firstAttrValue(res, model.AttrMovieIndex); got != "1" {
+		t.Fatalf("movie_index=%q want=%q", got, "1")
+	}
+}
+
+func TestParserMovieRoute_SeasonPartTvEpisodeNotDemoted(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[LoliHouse] 关于我转生变成史莱姆这档事 第二季 第2部分 / Tensei Shitara Slime Datta Ken 2nd Season Part 2 - 41 [WebRip 1080p HEVC-10bit AAC][简繁英内封]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got == "MOVIE" {
+		t.Fatalf("content_kind=%q should not be MOVIE", got)
+	}
+	if got := firstAttrValue(res, model.AttrEpisode); got != "41" {
+		t.Fatalf("episode=%q want=%q", got, "41")
+	}
+}

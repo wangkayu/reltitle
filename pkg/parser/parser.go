@@ -1092,6 +1092,16 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 		}
 	}
 
+	if shouldDemoteEpisodeToMovieIndex(rawTitle, episode, episodeRange, season, seasonRange, packKind, hasMovieKeyword, movieIndex) {
+		if strings.TrimSpace(movieIndex) == "" {
+			movieIndex = strings.TrimSpace(episode)
+			movieIndexIdx = episodeIdx
+		}
+		episode = ""
+		episodeIdx = -1
+		epslot = nil
+	}
+
 	_, titleEnd0 := p.inferTitleTokenSpan(tokens, episodeIdx, episodeRangeIdx, seasonCutIdx)
 	parenAliases := p.extractParenAliasesAndRemoveFromTitle(tokens, titleEnd0, episodeIdx, episodeRangeIdx, &attrs)
 
@@ -1713,6 +1723,32 @@ func hasMovieKeywordInRawTitle(raw string) bool {
 		return true
 	}
 	return strings.Contains(raw, "劇場版") || strings.Contains(raw, "剧场版") || strings.Contains(raw, "映画") || strings.Contains(raw, "电影") || strings.Contains(raw, "電影") || strings.Contains(raw, "大电影") || strings.Contains(raw, "大電影")
+}
+
+func shouldDemoteEpisodeToMovieIndex(rawTitle string, episode string, episodeRange string, season string, seasonRange string, packKind string, hasMovieKeyword bool, movieIndex string) bool {
+	if strings.TrimSpace(episode) == "" {
+		return false
+	}
+	if strings.TrimSpace(episodeRange) != "" || strings.TrimSpace(season) != "" || strings.TrimSpace(seasonRange) != "" {
+		return false
+	}
+	if isMovieExcludedByPackKind(packKind) {
+		return false
+	}
+	hasMovieCtx := hasMovieKeyword || strings.TrimSpace(movieIndex) != "" || hasMovieKeywordInRawTitle(rawTitle)
+	if !hasMovieCtx {
+		return false
+	}
+	if strings.TrimSpace(movieIndex) != "" {
+		return true
+	}
+	if moviePartSignalPattern.MatchString(rawTitle) {
+		return true
+	}
+	if hasMovieKeywordInRawTitle(rawTitle) && movieBracketEpisodePattern.MatchString(rawTitle) {
+		return true
+	}
+	return false
 }
 
 func hasMovieRouteHardExclusion(rawTitle string, attrs []model.Attribute, episodeRange string, season string, seasonRange string, packKind string) bool {
@@ -7099,6 +7135,8 @@ var movieIndexPattern = regexp.MustCompile(`(?i)^(?:movie)?\s*(\d{1,3})$`)
 var jpMovieIndexPattern = regexp.MustCompile(`(?i)(?:劇場版|剧场版)(?:第)?(\d{1,3})(?:部)?`)
 var filmIndexPattern = regexp.MustCompile(`(?i)^film[\s._-]?(\d{1,3})$`)
 var movieShortIndexPattern = regexp.MustCompile(`(?i)^m0*(\d{1,3})$`)
+var moviePartSignalPattern = regexp.MustCompile(`(?i)\b(?:part|day|chapter)\s*[-:：]?\s*0*(\d{1,3})\b|(?:第\s*0*(\d{1,3})\s*部)|(?:前篇|後篇|后篇|完结篇|完結篇)`)
+var movieBracketEpisodePattern = regexp.MustCompile(`[\[【(（]\s*0*(\d{1,3})\s*[\]】)）]`)
 
 func isMovieKeywordText(text string) bool {
 	lt := strings.ToLower(strings.TrimSpace(text))

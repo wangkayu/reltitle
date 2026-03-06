@@ -36,6 +36,8 @@ func applyTemplateSignalAdjudication(
 	if tpl == nil || tpl.Signals == nil {
 		return attrs, group, episode, episodeIdx, episodeRange, episodeRangeIdx, season, seasonIdx, nil
 	}
+	sourceTypeMap := buildTypeCanonicalMap(cfg, "source_type")
+	platformMap := buildTypeCanonicalMap(cfg, "platform")
 	sig := tpl.Signals
 	events := make([]string, 0, 4)
 
@@ -119,7 +121,18 @@ func applyTemplateSignalAdjudication(
 
 	if sig.TechStartsAfterEPStrict {
 		var techEvents []string
-		attrs, techEvents = applyTechStartsAfterEPStrict(attrs, tokens, episodeIdx, episodeRangeIdx, seasonIdx, titleStart, titleEnd, hasTitleSpan)
+		attrs, techEvents = applyTechStartsAfterEPStrict(
+			attrs,
+			tokens,
+			episodeIdx,
+			episodeRangeIdx,
+			seasonIdx,
+			titleStart,
+			titleEnd,
+			hasTitleSpan,
+			sourceTypeMap,
+			platformMap,
+		)
 		events = append(events, techEvents...)
 	}
 
@@ -135,6 +148,8 @@ func applyTechStartsAfterEPStrict(
 	titleStart int,
 	titleEnd int,
 	hasTitleSpan bool,
+	sourceTypeMap map[string]string,
+	platformMap map[string]string,
 ) ([]model.Attribute, []string) {
 	anchor := maxSignalIdx(episodeIdx, episodeRangeIdx, seasonIdx)
 	if anchor < 0 || len(tokens) == 0 || len(attrs) == 0 {
@@ -188,7 +203,7 @@ func applyTechStartsAfterEPStrict(
 		if t == "" {
 			continue
 		}
-		typ, norm, ok := inferPostEPTechToken(t)
+		typ, norm, ok := inferPostEPTechToken(t, sourceTypeMap, platformMap)
 		if !ok || hasType[typ] {
 			continue
 		}
@@ -217,7 +232,7 @@ func cleanTemplateSignalTechToken(s string) string {
 	return strings.TrimSpace(s)
 }
 
-func inferPostEPTechToken(token string) (model.AttrType, string, bool) {
+func inferPostEPTechToken(token string, sourceTypeMap map[string]string, platformMap map[string]string) (model.AttrType, string, bool) {
 	if token == "" {
 		return "", "", false
 	}
@@ -228,26 +243,11 @@ func inferPostEPTechToken(token string) (model.AttrType, string, bool) {
 	if m := templateSignalResolutionToken.FindStringSubmatch(low); len(m) == 2 {
 		return model.AttrResolution, m[1] + "p", true
 	}
+	if norm, ok := sourceTypeMap[low]; ok {
+		return model.AttrSourceType, norm, true
+	}
 	if templateSignalSourceTypeToken.MatchString(low) {
-		switch {
-		case strings.HasPrefix(low, "web"):
-			if strings.Contains(low, "dl") {
-				return model.AttrSourceType, "WEB-DL", true
-			}
-			return model.AttrSourceType, "WEBRip", true
-		case strings.Contains(low, "bdrip"):
-			return model.AttrSourceType, "BDRip", true
-		case strings.Contains(low, "blu"):
-			return model.AttrSourceType, "BluRay", true
-		case strings.Contains(low, "hdtv"):
-			return model.AttrSourceType, "HDTV", true
-		case strings.Contains(low, "dvdrip"):
-			return model.AttrSourceType, "DVDRip", true
-		case strings.Contains(low, "dvd"):
-			return model.AttrSourceType, "DVD", true
-		case strings.Contains(low, "remux"):
-			return model.AttrSourceType, "Remux", true
-		}
+		return model.AttrSourceType, strings.TrimSpace(token), true
 	}
 	if templateSignalVideoCodecToken.MatchString(low) {
 		n := strings.ReplaceAll(low, ".", "")
@@ -266,6 +266,9 @@ func inferPostEPTechToken(token string) (model.AttrType, string, bool) {
 		default:
 			return model.AttrAudioCodec, strings.ToUpper(low), true
 		}
+	}
+	if norm, ok := platformMap[low]; ok {
+		return model.AttrPlatform, norm, true
 	}
 	if templateSignalPlatformToken.MatchString(low) {
 		return model.AttrPlatform, strings.ToUpper(low), true

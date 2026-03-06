@@ -65,6 +65,13 @@ rules:
       normalized: HDRip
     priority: 90
 
+  - id: source_remux
+    raw_tokens: ["remux"]
+    emit:
+      type: source_type
+      normalized: Remux
+    priority: 90
+
   - id: platform_nf
     raw_tokens: ["nf", "netflix"]
     emit:

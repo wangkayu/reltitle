@@ -143,14 +143,14 @@ func loadByRawTitle(path string) (map[string][]model.ParseResult, int, error) {
 func diffOne(d *DiffCounts, b model.ParseResult, n model.ParseResult) {
 	checkFieldChange(d, "content_kind", b.ContentKind, n.ContentKind)
 	checkFieldChange(d, "template_id", b.TemplateID, n.TemplateID)
-	checkFieldChange(d, "group", b.Group, n.Group)
-	checkFieldChange(d, "title", b.Title, n.Title)
-	checkFieldChange(d, "episode", b.Episode, n.Episode)
-	checkFieldChange(d, "episode_range", b.EpisodeRange, n.EpisodeRange)
-	checkFieldChange(d, "season", b.Season, n.Season)
-	checkFieldChange(d, "pack_kind", b.PackKind, n.PackKind)
-	checkFieldChange(d, "sp_kind", b.SPKind, n.SPKind)
-	checkFieldChange(d, "movie_index", b.MovieIndex, n.MovieIndex)
+	checkFieldChange(d, "group", b.CanonicalGroup(), n.CanonicalGroup())
+	checkFieldChange(d, "title", b.CanonicalTitle(), n.CanonicalTitle())
+	checkFieldChange(d, "episode", b.CanonicalEpisode(), n.CanonicalEpisode())
+	checkFieldChange(d, "episode_range", b.CanonicalEpisodeRange(), n.CanonicalEpisodeRange())
+	checkFieldChange(d, "season", b.CanonicalSeason(), n.CanonicalSeason())
+	checkFieldChange(d, "pack_kind", b.CanonicalPackKind(), n.CanonicalPackKind())
+	checkFieldChange(d, "sp_kind", b.CanonicalSPKind(), n.CanonicalSPKind())
+	checkFieldChange(d, "movie_index", b.CanonicalMovieIndex(), n.CanonicalMovieIndex())
 
 	if strings.TrimSpace(b.ContentKind) != strings.TrimSpace(n.ContentKind) {
 		from := strings.TrimSpace(b.ContentKind)

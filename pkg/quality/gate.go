@@ -30,9 +30,13 @@ func CheckTitleQuality(res *model.ParseResult) *QualityCheck {
 		check.Reasons = append(check.Reasons, "nil_result")
 		return check
 	}
+	title := res.CanonicalTitle()
+	episode := res.CanonicalEpisode()
+	episodeRange := res.CanonicalEpisodeRange()
+	packKind := res.CanonicalPackKind()
 
 	// 检查 1: Title 是否为空
-	if strings.TrimSpace(res.Title) == "" {
+	if strings.TrimSpace(title) == "" {
 		check.Status = "FAIL"
 		check.Score -= 0.5
 		check.RiskLevel = "HIGH"
@@ -40,7 +44,7 @@ func CheckTitleQuality(res *model.ParseResult) *QualityCheck {
 	}
 
 	// 检查 2: Title 是否过短 (< 2 字符)
-	if len([]rune(strings.TrimSpace(res.Title))) < 2 {
+	if len([]rune(strings.TrimSpace(title))) < 2 {
 		check.Status = "FAIL"
 		check.Score -= 0.3
 		check.RiskLevel = "HIGH"
@@ -48,7 +52,7 @@ func CheckTitleQuality(res *model.ParseResult) *QualityCheck {
 	}
 
 	// 检查 3: Title 是否只包含技术标签
-	if isTitleOnlyTechTags(res.Title) {
+	if isTitleOnlyTechTags(title) {
 		check.Status = "FAIL"
 		check.Score -= 0.4
 		check.RiskLevel = "HIGH"
@@ -56,7 +60,7 @@ func CheckTitleQuality(res *model.ParseResult) *QualityCheck {
 	}
 
 	// 检查 4: Title 是否包含明显的技术属性
-	if titleContainsTechAttributes(res.Title, res.Attributes) {
+	if titleContainsTechAttributes(title, res.Attributes) {
 		check.Score -= 0.2
 		check.RiskLevel = "MEDIUM"
 		check.Reasons = append(check.Reasons, "title_contains_tech_attrs")
@@ -70,7 +74,7 @@ func CheckTitleQuality(res *model.ParseResult) *QualityCheck {
 	}
 
 	// 检查 6: 是否缺少关键字段
-	if isMissingCriticalFields(res) {
+	if isMissingCriticalFields(res.ContentKind, episode, episodeRange, packKind) {
 		check.Score -= 0.1
 		check.RiskLevel = "MEDIUM"
 		check.Reasons = append(check.Reasons, "missing_critical_fields")
@@ -116,12 +120,12 @@ func isTitleOnlyTechTags(title string) bool {
 	}
 
 	titleLower := strings.ToLower(title)
-	
+
 	// 检查是否以 CRC 开头(常见错误)
 	if strings.HasPrefix(titleLower, "crc") {
 		return true
 	}
-	
+
 	for _, tag := range techTags {
 		if strings.Contains(titleLower, tag) {
 			// 如果 title 主要由技术标签组成
@@ -163,8 +167,11 @@ func titleContainsTechAttributes(title string, attrs []model.Attribute) bool {
 
 // isTitleBoundarySuspicious 检查 title 边界是否可疑
 func isTitleBoundarySuspicious(res *model.ParseResult) bool {
+	if res == nil {
+		return false
+	}
 	// 如果 title 包含方括号或圆括号,可能边界不准确
-	title := res.Title
+	title := res.CanonicalTitle()
 	if strings.Contains(title, "[") || strings.Contains(title, "]") {
 		return true
 	}
@@ -178,7 +185,7 @@ func isTitleBoundarySuspicious(res *model.ParseResult) bool {
 		lastChar := title[len(title)-1]
 		if lastChar >= '0' && lastChar <= '9' {
 			// 但如果有明确的 episode 字段,则不算可疑
-			if strings.TrimSpace(res.Episode) == "" && strings.TrimSpace(res.EpisodeRange) == "" {
+			if strings.TrimSpace(res.CanonicalEpisode()) == "" && strings.TrimSpace(res.CanonicalEpisodeRange()) == "" {
 				return true
 			}
 		}
@@ -188,12 +195,12 @@ func isTitleBoundarySuspicious(res *model.ParseResult) bool {
 }
 
 // isMissingCriticalFields 检查是否缺少关键字段
-func isMissingCriticalFields(res *model.ParseResult) bool {
+func isMissingCriticalFields(contentKind string, episode string, episodeRange string, packKind string) bool {
 	// 对于 TV 剧集,应该有 episode 或 episode_range
-	if res.ContentKind == "tv" || res.ContentKind == "series" {
-		if strings.TrimSpace(res.Episode) == "" && strings.TrimSpace(res.EpisodeRange) == "" {
+	if contentKind == "tv" || contentKind == "series" {
+		if strings.TrimSpace(episode) == "" && strings.TrimSpace(episodeRange) == "" {
 			// 除非是 pack
-			if res.PackKind == "" {
+			if packKind == "" {
 				return true
 			}
 		}

@@ -106,7 +106,7 @@ func main() {
 		}
 
 		if isStreamingReleaseStrict(cur) {
-			if hasStreamingMetaInAliases(cur.Aliases) {
+			if hasStreamingMetaInAliases(cur.CanonicalTitleAliases()) {
 				d.StreamingMetaAliasViolations++
 				if *topN > 0 && len(d.StreamingMetaAliasBadTopN) < *topN {
 					d.StreamingMetaAliasBadTopN = append(d.StreamingMetaAliasBadTopN, rt)
@@ -142,18 +142,18 @@ func hasStreamingMetaInAliases(aliases []string) bool {
 }
 
 func diffOne(d *diffCounts, b model.ParseResult, n model.ParseResult, topN int) {
-	checkFieldChange(d, "ep_route", b.EpRoute, n.EpRoute, b.RawTitle, topN)
+	checkFieldChange(d, "ep_route", b.CanonicalEpRoute(), n.CanonicalEpRoute(), b.RawTitle, topN)
 	checkFieldChange(d, "content_kind", b.ContentKind, n.ContentKind, b.RawTitle, topN)
 	checkFieldChange(d, "template_id", b.TemplateID, n.TemplateID, b.RawTitle, topN)
 
-	checkFieldChange(d, "group", b.Group, n.Group, b.RawTitle, topN)
-	checkFieldChange(d, "title", b.Title, n.Title, b.RawTitle, topN)
-	checkFieldChange(d, "episode", b.Episode, n.Episode, b.RawTitle, topN)
-	checkFieldChange(d, "episode_range", b.EpisodeRange, n.EpisodeRange, b.RawTitle, topN)
-	checkFieldChange(d, "season", b.Season, n.Season, b.RawTitle, topN)
-	checkFieldChange(d, "pack_kind", b.PackKind, n.PackKind, b.RawTitle, topN)
-	checkFieldChange(d, "sp_kind", b.SPKind, n.SPKind, b.RawTitle, topN)
-	checkFieldChange(d, "movie_index", b.MovieIndex, n.MovieIndex, b.RawTitle, topN)
+	checkFieldChange(d, "group", b.CanonicalGroup(), n.CanonicalGroup(), b.RawTitle, topN)
+	checkFieldChange(d, "title", b.CanonicalTitle(), n.CanonicalTitle(), b.RawTitle, topN)
+	checkFieldChange(d, "episode", b.CanonicalEpisode(), n.CanonicalEpisode(), b.RawTitle, topN)
+	checkFieldChange(d, "episode_range", b.CanonicalEpisodeRange(), n.CanonicalEpisodeRange(), b.RawTitle, topN)
+	checkFieldChange(d, "season", b.CanonicalSeason(), n.CanonicalSeason(), b.RawTitle, topN)
+	checkFieldChange(d, "pack_kind", b.CanonicalPackKind(), n.CanonicalPackKind(), b.RawTitle, topN)
+	checkFieldChange(d, "sp_kind", b.CanonicalSPKind(), n.CanonicalSPKind(), b.RawTitle, topN)
+	checkFieldChange(d, "movie_index", b.CanonicalMovieIndex(), n.CanonicalMovieIndex(), b.RawTitle, topN)
 }
 
 func checkFieldChange(d *diffCounts, field string, b string, n string, rawTitle string, topN int) {

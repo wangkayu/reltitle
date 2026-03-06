@@ -168,14 +168,14 @@ func main() {
 				if strings.TrimSpace(in.RawTitle) != "" {
 					if strings.TrimSpace(res.ContentKind) == "" &&
 						strings.TrimSpace(res.TemplateID) == "" &&
-						strings.TrimSpace(res.Group) == "" &&
-						strings.TrimSpace(res.Title) == "" &&
-						strings.TrimSpace(res.Episode) == "" &&
-						strings.TrimSpace(res.EpisodeRange) == "" &&
-						strings.TrimSpace(res.Season) == "" &&
-						strings.TrimSpace(res.PackKind) == "" &&
-						strings.TrimSpace(res.SPKind) == "" &&
-						strings.TrimSpace(res.MovieIndex) == "" {
+						strings.TrimSpace(res.CanonicalGroup()) == "" &&
+						strings.TrimSpace(res.CanonicalTitle()) == "" &&
+						strings.TrimSpace(res.CanonicalEpisode()) == "" &&
+						strings.TrimSpace(res.CanonicalEpisodeRange()) == "" &&
+						strings.TrimSpace(res.CanonicalSeason()) == "" &&
+						strings.TrimSpace(res.CanonicalPackKind()) == "" &&
+						strings.TrimSpace(res.CanonicalSPKind()) == "" &&
+						strings.TrimSpace(res.CanonicalMovieIndex()) == "" {
 						needReparse = true
 					}
 				}
@@ -216,9 +216,10 @@ func main() {
 		st.Total++
 
 		st.ContentKind[res.ContentKind]++
-		st.EpRoute[res.EpRoute]++
+		epRoute := res.CanonicalEpRoute()
+		st.EpRoute[epRoute]++
 		st.TemplateID[strings.TrimSpace(res.TemplateID)]++
-		epKey := strings.TrimSpace(res.EpRoute)
+		epKey := strings.TrimSpace(epRoute)
 		if epKey == "" {
 			epKey = "(empty)"
 		}
@@ -244,19 +245,19 @@ func main() {
 		}
 
 		countNonEmpty(st.NonEmpty, "template_id", res.TemplateID)
-		countNonEmpty(st.NonEmpty, "group", res.Group)
-		countNonEmpty(st.NonEmpty, "title", res.Title)
-		countNonEmpty(st.NonEmpty, "episode", res.Episode)
-		countNonEmpty(st.NonEmpty, "episode_range", res.EpisodeRange)
-		countNonEmpty(st.NonEmpty, "season", res.Season)
-		countNonEmpty(st.NonEmpty, "pack_kind", res.PackKind)
-		countNonEmpty(st.NonEmpty, "sp_kind", res.SPKind)
-		countNonEmpty(st.NonEmpty, "movie_index", res.MovieIndex)
+		countNonEmpty(st.NonEmpty, "group", res.CanonicalGroup())
+		countNonEmpty(st.NonEmpty, "title", res.CanonicalTitle())
+		countNonEmpty(st.NonEmpty, "episode", res.CanonicalEpisode())
+		countNonEmpty(st.NonEmpty, "episode_range", res.CanonicalEpisodeRange())
+		countNonEmpty(st.NonEmpty, "season", res.CanonicalSeason())
+		countNonEmpty(st.NonEmpty, "pack_kind", res.CanonicalPackKind())
+		countNonEmpty(st.NonEmpty, "sp_kind", res.CanonicalSPKind())
+		countNonEmpty(st.NonEmpty, "movie_index", res.CanonicalMovieIndex())
 
 		isStreaming := isStreamingReleaseStrict(&res)
 		if isStreaming {
 			st.StreamingTotal++
-			epKey2 := strings.TrimSpace(res.EpRoute)
+			epKey2 := strings.TrimSpace(epRoute)
 			if epKey2 == "" {
 				epKey2 = "(empty)"
 			}
@@ -295,7 +296,7 @@ func main() {
 			case "mixed":
 				st.StreamingTailParenMixed++
 			}
-			if hasStreamingMetaInAliases(res.Aliases) {
+			if hasStreamingMetaInAliases(res.CanonicalTitleAliases()) {
 				st.StreamingMetaAliasBad++
 			}
 		}

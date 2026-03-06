@@ -187,3 +187,34 @@ func TestParserBatchTemplateRangePack_NoTechWithCollectionKeyword(t *testing.T) 
 		t.Fatalf("pack_kind=%q want=%q", got, "collection")
 	}
 }
+
+func TestParserBatchTemplateRangePack_TVQuanJiUsesPackKindNotContents(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[DBD-Raws][2.5次元的诱惑/2.5 Jigen no Ririsa][01-24TV全集][1080P][BDRip][HEVC-10bit][简繁外挂][FLAC][MKV](2.5次元の誘惑)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "BATCH" {
+		t.Fatalf("content_kind=%q want=%q", got, "BATCH")
+	}
+	if got := canonicalEpisodeRange(res); got != "1-24" {
+		t.Fatalf("episode_range=%q want=%q", got, "1-24")
+	}
+	if got := firstAttrValue(res, model.AttrPackKind); got != "全集" {
+		t.Fatalf("pack_kind=%q want=%q", got, "全集")
+	}
+	if vals := attrValues(res, model.AttrContents); len(vals) > 0 {
+		t.Fatalf("contents should be empty for TV全集 batch flag, got=%v", vals)
+	}
+	for _, a := range canonicalAliases(res) {
+		if strings.Contains(a, "01 24TV") || strings.Contains(a, "24TV") {
+			t.Fatalf("episode range marker leaked into alias: %q aliases=%v", a, canonicalAliases(res))
+		}
+	}
+}

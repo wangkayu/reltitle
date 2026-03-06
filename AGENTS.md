@@ -6,7 +6,7 @@
 
 ## OVERVIEW
 
-Config-driven anime/film torrent title parser (v2). Extracts title, episode, season, group, tech specs from release titles. Go 1.22 + Gin HTTP server + Python ML training pipeline.
+Config-driven anime/film torrent title parser (v2.5). Extracts title, episode, season, group, tech specs from release titles. Runtime path is pure rule parser (no ML/ONNX dependency).
 
 ## STRUCTURE
 
@@ -17,9 +17,7 @@ title-parser/
 │   ├── model/              # Data types (Attribute, ParseResult, Token)
 │   ├── api/                # Gin HTTP handlers
 │   ├── config/             # YAML config loader
-│   ├── xlmr/               # XLM-RoBERTa ONNX inference
 │   ├── crf/                # CRF model (Viterbi)
-│   ├── quality/            # Quality gate / ML trigger
 │   └── tokenize/           # CJK+Latin tokenizer
 ├── cmd/                    # CLI tools (18 tools)
 │   ├── server/             # HTTP server entry point
@@ -36,7 +34,6 @@ title-parser/
 │   ├── scripts/            # 160+ Python training scripts
 │   ├── go/titleparser/     # Secondary Go parser (separate module)
 │   └── artifacts/          # Model checkpoints, datasets
-├── xlmr-service/           # FastAPI XLM-R service (port 8081)
 ├── docs/                   # Design documentation
 └── tests/baselines/        # Golden file regression tests
 ```
@@ -49,8 +46,7 @@ title-parser/
 | Add lexicon entry | `configs/lexicon_v1.yaml` | No code changes needed |
 | Add parsing template | `configs/template_catalog.yaml` | 33 templates exist |
 | HTTP API | `pkg/api/handler.go` | `/api/v1/parse`, `/api/v1/parse/batch` |
-| Quality check logic | `pkg/quality/gate.go` | Triggers XLM-R on low confidence |
-| XLM-R integration | `pkg/xlmr/xlmr_onnx.go` | ONNX Runtime inference |
+| Canonical output helpers | `pkg/model/canonical.go` | Access canonical attrs/epslot |
 | Training pipeline | `training/scripts/run_student_structured_ml_pipeline_v0.py` | Main ML loop |
 | Regression tests | `tests/baselines/` | Golden file testing |
 | Add new CLI tool | `cmd/<tool>/main.go` | Follow existing patterns |
@@ -64,14 +60,11 @@ title-parser/
 | `Attribute` | struct | `pkg/model/types.go:5` | Single extracted attribute |
 | `Token` | struct | `pkg/model/types.go:14` | Tokenized text unit |
 | `Config` | struct | `pkg/config/types.go` | Config container |
-| `XLMREngine` | struct | `pkg/xlmr/xlmr_onnx.go` | XLM-R ONNX inference |
-| `QualityCheck` | struct | `pkg/quality/gate.go` | Quality assessment |
 
 ## CONVENTIONS
 
 - **Config-driven**: Rules in YAML, not hardcoded. Add lexicon/template entries via config files.
 - **Pass-based parsing**: Parser runs multiple passes (extract_pack, detect_episode, etc.)
-- **Quality-gated ML**: Low confidence results trigger XLM-R model
 - **Two Go modules**: Root module + `training/go/titleparser/` submodule (cannot cross-import)
 - **Golden file testing**: Regression tests use `.jsonl` baselines in `tests/baselines/`
 
@@ -81,7 +74,6 @@ title-parser/
 - **DO NOT** import `training/go/titleparser` from root module - separate modules
 - **DO NOT** hardcode parsing rules in Go code - use YAML configs
 - **DO NOT** suppress type errors with `as any` or `@ts-ignore`
-- **DO NOT** skip quality gate when modifying parser logic
 
 ## UNIQUE STYLES
 
@@ -113,8 +105,6 @@ go run ./cmd/regression_check -- -config configs -base tests/baselines/baseline.
 # Python training (requires config.yaml setup)
 python training/scripts/run_student_structured_ml_pipeline_v0.py --do-export --do-teacher
 
-# XLM-R service (requires XLMR_MODEL_DIR)
-cd xlmr-service && python main.py
 ```
 
 ## NOTES

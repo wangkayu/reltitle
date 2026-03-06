@@ -26,7 +26,7 @@ pkg/parser/
 ├── title_alias_infer.go   # Alias inference
 ├── template_and_content_infer.go  # Template/content inference
 ├── pack_extract.go        # Pack content extraction
-└── hints.go               # ParseHints for ML re-rank
+└── hints.go               # ParseHints for deterministic overrides
 ```
 
 ## WHERE TO LOOK
@@ -39,7 +39,7 @@ pkg/parser/
 | EPSlot structure | `epslot.go` | `EPSlot`, `EPEntity` |
 | Audio extraction | `audio_slot.go` | `extractAudioSlot()` |
 | Pack detection | `pack_extract.go` | `ExtractPackContents()` |
-| ML hints | `hints.go` | `ParseHints` |
+| Parse hints | `hints.go` | `ParseHints` |
 
 ## KEY TYPES
 

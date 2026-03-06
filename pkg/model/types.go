@@ -16,26 +16,6 @@ type Token struct {
 	Removed bool   `json:"removed,omitempty"`
 }
 
-type TokenONNXOutput struct {
-	Tokens []string          `json:"tokens"`
-	YPred  []string          `json:"y_pred"`
-	Fields map[string]string `json:"fields"`
-	Error  string            `json:"error,omitempty"`
-}
-
-type MLRisk struct {
-	Score   float64  `json:"score,omitempty"`
-	Level   string   `json:"level,omitempty"`
-	Reasons []string `json:"reasons,omitempty"`
-}
-
-type MLOutput struct {
-	RawTitleHash    string   `json:"raw_title_hash,omitempty"`
-	TokenLabels     []string `json:"token_labels,omitempty"`
-	TitleCandidates []string `json:"title_candidates,omitempty"`
-	Risk            *MLRisk  `json:"risk,omitempty"`
-}
-
 type ParseResult struct {
 	RawTitle           string      `json:"raw_title"`
 	ContentKind        string      `json:"content_kind,omitempty"`

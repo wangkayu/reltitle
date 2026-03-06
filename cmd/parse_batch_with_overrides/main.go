@@ -45,7 +45,7 @@ func main() {
 
 	configDir := flag.String("config", "configs", "config directory")
 	inPath := flag.String("in", "", "input title file (one title per line, supports continuation lines). default: stdin")
-	overridesPath := flag.String("overrides", "", "override proposal jsonl(s). comma-separated. (e.g. from cmd/propose_rerank_episodes / cmd/propose_rerank_titlecut)")
+	overridesPath := flag.String("overrides", "", "override proposal jsonl(s), comma-separated")
 	outPath := flag.String("out", "", "output jsonl (ParseResult). default: stdout")
 	limit := flag.Int("limit", 0, "max number of titles to process (0 = no limit)")
 	minConfidence := flag.Float64("min_confidence", 0.0, "only apply overrides when recommended.confidence >= this threshold")

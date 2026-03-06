@@ -41,19 +41,19 @@ type notePromotionRule struct {
 }
 
 type groupRouteRule struct {
-	id                  string
-	priority            int
-	groups              map[string]struct{}
-	rawMustContainAny   []string
-	requireEpisodeRange bool
-	requireEpisodeLike  bool
+	id                      string
+	priority                int
+	groups                  map[string]struct{}
+	rawMustContainAny       []string
+	requireEpisodeRange     bool
+	requireEpisodeLike      bool
 	requireEpisodeWithTitle bool
-	forceGroup          string
-	forceTitle          string
-	clearAliases        bool
-	forceTemplateID     string
-	forceContentKind    string
-	forceRouteID        string
+	forceGroup              string
+	forceTitle              string
+	clearAliases            bool
+	forceTemplateID         string
+	forceContentKind        string
+	forceRouteID            string
 }
 
 var wxhResolutionPattern = regexp.MustCompile(`(?i)^(\d{2,5})\s*[x×X]\s*(\d{2,5})$`)
@@ -743,19 +743,19 @@ func New(cfg *config.Config) *Parser {
 			rawContains = append(rawContains, ss)
 		}
 		p.groupRouteRules = append(p.groupRouteRules, groupRouteRule{
-			id:                  id,
-			priority:            r.Priority,
-			groups:              groupSet,
-			rawMustContainAny:   rawContains,
-			requireEpisodeRange: r.Match.RequireEpisodeRange,
-			requireEpisodeLike:  r.Match.RequireEpisodeLike,
+			id:                      id,
+			priority:                r.Priority,
+			groups:                  groupSet,
+			rawMustContainAny:       rawContains,
+			requireEpisodeRange:     r.Match.RequireEpisodeRange,
+			requireEpisodeLike:      r.Match.RequireEpisodeLike,
 			requireEpisodeWithTitle: r.Match.RequireEpisodeWithTitle,
-			forceGroup:          strings.TrimSpace(r.Output.ForceGroup),
-			forceTitle:          strings.TrimSpace(r.Output.ForceTitle),
-			clearAliases:        r.Output.ClearAliases,
-			forceTemplateID:     strings.TrimSpace(r.Output.ForceTemplateID),
-			forceContentKind:    strings.TrimSpace(r.Output.ForceContentKind),
-			forceRouteID:        strings.TrimSpace(r.Output.ForceRouteID),
+			forceGroup:              strings.TrimSpace(r.Output.ForceGroup),
+			forceTitle:              strings.TrimSpace(r.Output.ForceTitle),
+			clearAliases:            r.Output.ClearAliases,
+			forceTemplateID:         strings.TrimSpace(r.Output.ForceTemplateID),
+			forceContentKind:        strings.TrimSpace(r.Output.ForceContentKind),
+			forceRouteID:            strings.TrimSpace(r.Output.ForceRouteID),
 		})
 	}
 	sort.SliceStable(p.groupRouteRules, func(i, j int) bool {
@@ -1092,10 +1092,10 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	}
 
 	_, titleEnd0 := p.inferTitleTokenSpan(tokens, episodeIdx, episodeRangeIdx, seasonCutIdx)
-	parenAliases := extractParenAliasesAndRemoveFromTitle(tokens, titleEnd0, episodeIdx, episodeRangeIdx, &attrs)
+	parenAliases := p.extractParenAliasesAndRemoveFromTitle(tokens, titleEnd0, episodeIdx, episodeRangeIdx, &attrs)
 
 	title := p.extractTitle(tokens, episodeIdx, episodeRangeIdx, seasonCutIdx)
-	title, aliases := inferTitleAndAliasesFromTitle(title)
+	title, aliases := p.inferTitleAndAliasesFromTitle(title)
 	titleStart, titleEnd := p.inferTitleTokenSpan(tokens, episodeIdx, episodeRangeIdx, seasonCutIdx)
 	aliases = mergeAliases(ctx.ForcedAliases, aliases)
 	if strings.TrimSpace(title) == "" {
@@ -1103,7 +1103,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 		if len(groupSpan) == 2 && groupSpan[1] > scanStart {
 			scanStart = groupSpan[1]
 		}
-		if fbTitle, fbAliases, fbStart, fbEnd := inferBracketTitleFallback(tokens, scanStart, episodeIdx, episodeRangeIdx); strings.TrimSpace(fbTitle) != "" {
+		if fbTitle, fbAliases, fbStart, fbEnd := p.inferBracketTitleFallback(tokens, scanStart, episodeIdx, episodeRangeIdx); strings.TrimSpace(fbTitle) != "" {
 			title = fbTitle
 			aliases = mergeAliases(aliases, fbAliases)
 			titleStart = fbStart
@@ -1115,7 +1115,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 		// If forced title contains strong delimiters (e.g. from bracket title extraction),
 		// still infer main title + aliases deterministically.
 		if strings.ContainsAny(ft, "/／|｜;；\\") {
-			ftMain, ftAliases := inferTitleAndAliasesFromTitle(ft)
+			ftMain, ftAliases := p.inferTitleAndAliasesFromTitle(ft)
 			if strings.TrimSpace(ftMain) != "" {
 				title = ftMain
 				aliases = mergeAliases(aliases, ftAliases)
@@ -1146,7 +1146,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	}
 	if titleStart >= 0 && titleEnd > titleStart {
 		attrs = append(attrs, model.Attribute{Type: model.AttrTitle, Normalized: title, TokenStart: titleStart, TokenEnd: titleEnd, Confidence: 0.7, Source: "heuristic"})
-		aliases = mergeAliases(aliases, inferAliasesFromAdjacentBrackets(tokens, titleEnd, episodeIdx, episodeRangeIdx))
+		aliases = mergeAliases(aliases, p.inferAliasesFromAdjacentBrackets(tokens, titleEnd, episodeIdx, episodeRangeIdx))
 	}
 	aliases = mergeAliases(aliases, parenAliases)
 	aliases = mergeAliases(aliases, inferPostEpisodeSearchHintAliasesFromParens(tokens, episodeIdx, episodeRangeIdx, &attrs))
@@ -1244,8 +1244,8 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 		}
 	}
 	if hasTech {
-		aliases = mergeAliases(aliases, inferTailAliasesFromPipes(tokens, attrs, group))
-		aliases = mergeAliases(aliases, inferTailAliasesFromParens(tokens, &attrs))
+		aliases = mergeAliases(aliases, p.inferTailAliasesFromPipes(tokens, attrs, group))
+		aliases = mergeAliases(aliases, p.inferTailAliasesFromParens(tokens, &attrs))
 	}
 	if strings.TrimSpace(packKind) == "" {
 		if strings.TrimSpace(episode) == "" && strings.TrimSpace(episodeRange) == "" {
@@ -1289,7 +1289,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	contentKind, contentConf = inferContentKind(p.cfg, episode, episodeRange, season, seasonRange, packKind, spKind, movieIndex, hasTech, hasMovieKeyword, hasYear)
 	templateID, templateConf, routeID = matchTemplate(p.cfg, epRoute, contentKind, group, episode, episodeRange, season, packKind, spKind, movieIndex, hasTech, hasMovieKeyword, attrs, tokens)
 	if strings.HasPrefix(routeID, "streaming_release_") {
-		applyStreamingReleaseRouteV1(tailParenBlock, &aliases, &attrs)
+		p.applyStreamingReleaseRouteV1(tailParenBlock, &aliases, &attrs)
 	}
 	origTitle := title
 	title = sanitizePrimaryTitleForOutput(title)
@@ -2375,7 +2375,7 @@ func filterOutStreamMetaAliases(aliases []string) []string {
 	return out
 }
 
-func applyStreamingReleaseRouteV1(tailParenBlock string, aliases *[]string, attrs *[]model.Attribute) {
+func (p *Parser) applyStreamingReleaseRouteV1(tailParenBlock string, aliases *[]string, attrs *[]model.Attribute) {
 	if aliases == nil {
 		return
 	}
@@ -2401,7 +2401,7 @@ func applyStreamingReleaseRouteV1(tailParenBlock string, aliases *[]string, attr
 			continue
 		}
 		it = cleanAliasToken(it)
-		if !isValidAliasToken(it) {
+		if !p.isValidAliasToken(it) {
 			continue
 		}
 		aliasCands = append(aliasCands, it)
@@ -2908,7 +2908,7 @@ func (p *Parser) sanitizeAliasesForOutput(aliases []string, title string) []stri
 	seen := map[string]bool{}
 	for _, a := range aliases {
 		a = p.normalizeAliasCandidateForOutput(a)
-		if a == "" || !isValidAliasToken(a) {
+		if a == "" || !p.isValidAliasToken(a) {
 			continue
 		}
 		if isStreamMetaText(a) || reTailMetaToken.MatchString(strings.TrimSpace(a)) {
@@ -3117,7 +3117,7 @@ func stripFileExtSuffix(s string) string {
 	return strings.TrimSpace(reFileExtSuffix.ReplaceAllString(s, ""))
 }
 
-func isValidAliasToken(s string) bool {
+func (p *Parser) isValidAliasToken(s string) bool {
 	s = strings.TrimSpace(s)
 	if s == "" {
 		return false
@@ -3169,25 +3169,99 @@ func isValidAliasToken(s string) bool {
 	if regexp.MustCompile(`(?i)\bvolume\s*\d{1,3}\b`).FindStringIndex(low) != nil {
 		return false
 	}
-	if reAliasTechSingle.MatchString(strings.TrimSpace(s)) {
-		return false
-	}
-	if reAliasTechList.MatchString(strings.TrimSpace(s)) {
+	if p.hasAliasMetaFromDictionary(s) {
 		return false
 	}
 	if strings.Contains(low, "1080p") || strings.Contains(low, "2160p") || strings.Contains(low, "720p") || strings.Contains(low, "480p") || strings.Contains(low, "4k") {
-		return false
-	}
-	if strings.Contains(low, "hevc") || strings.Contains(low, "x265") || strings.Contains(low, "h265") || strings.Contains(low, "x264") || strings.Contains(low, "h264") {
-		return false
-	}
-	if strings.Contains(low, "webrip") || strings.Contains(low, "web-dl") || strings.Contains(low, "webdl") || strings.Contains(low, "bluray") {
 		return false
 	}
 	if episodeOfTotalPattern.MatchString(s) {
 		return false
 	}
 	return true
+}
+
+func isValidAliasToken(s string) bool {
+	var p *Parser
+	return p.isValidAliasToken(s)
+}
+
+var reAliasMetaTokenSplit = regexp.MustCompile(`[\s,./+_|&:;()\[\]{}]+`)
+
+func (p *Parser) hasAliasMetaFromDictionary(s string) bool {
+	ss := strings.TrimSpace(strings.ToLower(s))
+	if ss == "" {
+		return false
+	}
+	if p != nil && p.isAliasMetaOnlyToken(ss) {
+		return true
+	}
+	if reAliasTechSingle.MatchString(strings.TrimSpace(s)) {
+		return true
+	}
+	if reAliasTechList.MatchString(strings.TrimSpace(s)) {
+		return true
+	}
+	tokens := reAliasMetaTokenSplit.Split(ss, -1)
+	for _, t := range tokens {
+		t = strings.TrimSpace(t)
+		if t == "" {
+			continue
+		}
+		if p != nil && p.isAliasMetaOnlyToken(t) {
+			return true
+		}
+		if p != nil {
+			if _, ok := p.normalizeVideoCodecToken(t); ok {
+				return true
+			}
+			if _, ok := p.normalizeAudioCodecToken(t); ok {
+				return true
+			}
+			if _, ok := p.normalizeContainerToken(t); ok {
+				return true
+			}
+			if _, ok := p.normalizeAudioFlagToken(t); ok {
+				return true
+			}
+		}
+		if t == "atmos" || t == "mp3" {
+			return true
+		}
+	}
+	return false
+}
+
+func (p *Parser) inferTitleAndAliasesFromTitle(title string) (string, []string) {
+	main, aliases := inferTitleAndAliasesFromTitle(title)
+	if len(aliases) == 0 {
+		return main, nil
+	}
+	mainKey := strings.ToLower(strings.TrimSpace(main))
+	seen := map[string]bool{}
+	if mainKey != "" {
+		seen[mainKey] = true
+	}
+	out := make([]string, 0, len(aliases))
+	for _, a := range aliases {
+		a = cleanAliasToken(a)
+		if stripped := stripExplicitSeasonSuffix(a); stripped != "" {
+			a = stripped
+		}
+		if !p.isValidAliasToken(a) {
+			continue
+		}
+		k := strings.ToLower(strings.TrimSpace(a))
+		if k == "" || seen[k] {
+			continue
+		}
+		seen[k] = true
+		out = append(out, a)
+	}
+	if len(out) == 0 {
+		return main, nil
+	}
+	return main, out
 }
 
 func mergeAliases(a []string, b []string) []string {
@@ -3246,7 +3320,7 @@ func mergeAliases(a []string, b []string) []string {
 	return out
 }
 
-func inferAliasesFromAdjacentBrackets(tokens []model.Token, titleEnd int, episodeIdx int, episodeRangeIdx int) []string {
+func (p *Parser) inferAliasesFromAdjacentBrackets(tokens []model.Token, titleEnd int, episodeIdx int, episodeRangeIdx int) []string {
 	if titleEnd < 0 {
 		return nil
 	}
@@ -3310,7 +3384,7 @@ func inferAliasesFromAdjacentBrackets(tokens []model.Token, titleEnd int, episod
 			if stripped := stripExplicitSeasonSuffix(s); stripped != "" {
 				s = stripped
 			}
-			if !isValidAliasToken(s) {
+			if !p.isValidAliasToken(s) {
 				continue
 			}
 			aliases = append(aliases, s)
@@ -3323,7 +3397,7 @@ func inferAliasesFromAdjacentBrackets(tokens []model.Token, titleEnd int, episod
 	return aliases
 }
 
-func inferBracketTitleFallback(tokens []model.Token, scanStart int, episodeIdx int, episodeRangeIdx int) (string, []string, int, int) {
+func (p *Parser) inferBracketTitleFallback(tokens []model.Token, scanStart int, episodeIdx int, episodeRangeIdx int) (string, []string, int, int) {
 	if scanStart < 0 {
 		scanStart = 0
 	}
@@ -3380,7 +3454,7 @@ func inferBracketTitleFallback(tokens []model.Token, scanStart int, episodeIdx i
 			i = end
 			continue
 		}
-		main, aliases := inferTitleAndAliasesFromTitle(inner)
+		main, aliases := p.inferTitleAndAliasesFromTitle(inner)
 		main = sanitizePrimaryTitleForOutput(main)
 		if strings.TrimSpace(main) == "" {
 			i = end
@@ -3481,7 +3555,7 @@ func promoteFrenchMultiNoteToAudioFlag(attrs []model.Attribute) {
 	}
 }
 
-func extractParenAliasesAndRemoveFromTitle(tokens []model.Token, titleEnd int, episodeIdx int, episodeRangeIdx int, attrs *[]model.Attribute) []string {
+func (p *Parser) extractParenAliasesAndRemoveFromTitle(tokens []model.Token, titleEnd int, episodeIdx int, episodeRangeIdx int, attrs *[]model.Attribute) []string {
 	if titleEnd < 0 {
 		return nil
 	}
@@ -3565,12 +3639,12 @@ func extractParenAliasesAndRemoveFromTitle(tokens []model.Token, titleEnd int, e
 					continue
 				}
 			} else {
-				if !isValidAliasToken(c) {
+				if !p.isValidAliasToken(c) {
 					continue
 				}
 				if stripped := stripExplicitSeasonSuffix(c); stripped != "" {
 					c = stripped
-					if !isValidAliasToken(c) {
+					if !p.isValidAliasToken(c) {
 						continue
 					}
 				}
@@ -3592,7 +3666,7 @@ func extractParenAliasesAndRemoveFromTitle(tokens []model.Token, titleEnd int, e
 	return aliases
 }
 
-func inferTailAliasesFromParens(tokens []model.Token, attrs *[]model.Attribute) []string {
+func (p *Parser) inferTailAliasesFromParens(tokens []model.Token, attrs *[]model.Attribute) []string {
 	if attrs == nil {
 		return nil
 	}
@@ -3662,12 +3736,12 @@ func inferTailAliasesFromParens(tokens []model.Token, attrs *[]model.Attribute) 
 					continue
 				}
 			} else {
-				if !isValidAliasToken(c) {
+				if !p.isValidAliasToken(c) {
 					continue
 				}
 				if stripped := stripExplicitSeasonSuffix(c); stripped != "" {
 					c = stripped
-					if !isValidAliasToken(c) {
+					if !p.isValidAliasToken(c) {
 						continue
 					}
 				}
@@ -6723,7 +6797,7 @@ func firstTechTokenIndexFromAttrs(attrs []model.Attribute) (int, bool) {
 	return minIdx, true
 }
 
-func inferTailAliasesFromPipes(tokens []model.Token, attrs []model.Attribute, group string) []string {
+func (p *Parser) inferTailAliasesFromPipes(tokens []model.Token, attrs []model.Attribute, group string) []string {
 	techStart, ok := firstTechTokenIndexFromAttrs(attrs)
 	if !ok {
 		return nil
@@ -6776,7 +6850,7 @@ func inferTailAliasesFromPipes(tokens []model.Token, attrs []model.Attribute, gr
 		if stripped := stripExplicitSeasonSuffix(inner); stripped != "" {
 			inner = stripped
 		}
-		if !isValidAliasToken(inner) {
+		if !p.isValidAliasToken(inner) {
 			i = segEnd
 			continue
 		}

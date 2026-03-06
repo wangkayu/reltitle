@@ -32,7 +32,7 @@ v2流程: Lexicon → 信号检测 → Content Type推理 → 模板匹配(过�
 - `configs/template_catalog.yaml` - 33个模板定义
 - `configs/inference_rules.yaml` - Content Type推理和Contents降级规则
 - `configs/boundary_rules.yaml` - 边界识别规则
-- `configs/lexicon_v1.yaml` - Lexicon字典
+- `configs/lexicon.yaml` - Lexicon字典
 - `configs/tailgroup_whitelist.yaml` - TAILGROUP白名单
 
 ### 3. 分层架构 (9层)
@@ -68,7 +68,7 @@ title-parser/
 │   ├── template_catalog.yaml
 │   ├── inference_rules.yaml
 │   ├── boundary_rules.yaml
-│   ├── lexicon_v1.yaml
+│   ├── lexicon.yaml
 │   └── tailgroup_whitelist.yaml
 ├── pkg/                         # 核心包
 │   ├── config/                  # 配置加载
@@ -226,7 +226,7 @@ func main() {
 
 | 发现了什么? | 修改哪个文件? | 时间 |
 |-----------|-------------|------|
-| 新的技术属性/平台 | `configs/lexicon_v1.yaml` | 5-10分钟 |
+| 新的技术属性/平台 | `configs/lexicon.yaml` | 5-10分钟 |
 | 新的模板格式 | `configs/template_catalog.yaml` | 15-30分钟 |
 | 新的字段类型 | `configs/attribute_config.yaml` + 代码 | 30-60分钟 |
 | 新的Content Type | `configs/inference_rules.yaml` + 代码 | 60-90分钟 |

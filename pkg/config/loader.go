@@ -11,7 +11,7 @@ import (
 func LoadAll(baseDir string) (*Config, error) {
 	cfg := &Config{}
 
-	lexiconPath := filepath.Join(baseDir, "lexicon_v1.yaml")
+	lexiconPath := filepath.Join(baseDir, "lexicon.yaml")
 	if err := loadYAMLFile(lexiconPath, &cfg.Lexicon); err != nil {
 		return nil, fmt.Errorf("load lexicon: %w", err)
 	}
@@ -39,12 +39,12 @@ func LoadAll(baseDir string) (*Config, error) {
 		fmt.Printf("Warning: failed to load grouplist.yaml: %v\n", err)
 	}
 
-	_ = loadYAMLFile(filepath.Join(baseDir, "dict_canonical_values_v25.yaml"), &cfg.DictCanonicalValues)
-	_ = loadYAMLFile(filepath.Join(baseDir, "dict_token_synonyms_v25.yaml"), &cfg.DictTokenSynonyms)
-	_ = loadYAMLFile(filepath.Join(baseDir, "dict_token_slot_candidates_v25.yaml"), &cfg.DictTokenSlotCandidates)
-	_ = loadYAMLFile(filepath.Join(baseDir, "dict_alias_noise_words_v25.yaml"), &cfg.DictAliasNoiseWords)
-	_ = loadYAMLFile(filepath.Join(baseDir, "dict_note_promotion_v25.yaml"), &cfg.DictNotePromotion)
-	_ = loadYAMLFile(filepath.Join(baseDir, "group_route_overrides_v25.yaml"), &cfg.GroupRoute)
+	_ = loadYAMLFile(filepath.Join(baseDir, "dict_canonical_values.yaml"), &cfg.DictCanonicalValues)
+	_ = loadYAMLFile(filepath.Join(baseDir, "dict_token_synonyms.yaml"), &cfg.DictTokenSynonyms)
+	_ = loadYAMLFile(filepath.Join(baseDir, "dict_token_slot_candidates.yaml"), &cfg.DictTokenSlotCandidates)
+	_ = loadYAMLFile(filepath.Join(baseDir, "dict_alias_noise_words.yaml"), &cfg.DictAliasNoiseWords)
+	_ = loadYAMLFile(filepath.Join(baseDir, "dict_note_promotion.yaml"), &cfg.DictNotePromotion)
+	_ = loadYAMLFile(filepath.Join(baseDir, "group_route_overrides.yaml"), &cfg.GroupRoute)
 
 	return cfg, nil
 }

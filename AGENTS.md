@@ -26,7 +26,7 @@ title-parser/
 │   ├── regression_check/   # Regression testing
 │   └── v2_audit/           # Parser audit tool
 ├── configs/                # YAML configuration files
-│   ├── lexicon_v1.yaml     # Dictionary entries (116KB)
+│   ├── lexicon.yaml     # Dictionary entries (116KB)
 │   ├── template_catalog.yaml  # 33 parsing templates
 │   ├── inference_rules.yaml   # Content type inference
 │   └── attribute_config.yaml  # Field definitions
@@ -43,7 +43,7 @@ title-parser/
 | Task | Location | Notes |
 |------|----------|-------|
 | Parse a title | `pkg/parser/parser.go` | Entry: `Parser.Parse()` |
-| Add lexicon entry | `configs/lexicon_v1.yaml` | No code changes needed |
+| Add lexicon entry | `configs/lexicon.yaml` | No code changes needed |
 | Add parsing template | `configs/template_catalog.yaml` | 33 templates exist |
 | HTTP API | `pkg/api/handler.go` | `/api/v1/parse`, `/api/v1/parse/batch` |
 | Canonical output helpers | `pkg/model/canonical.go` | Access canonical attrs/epslot |

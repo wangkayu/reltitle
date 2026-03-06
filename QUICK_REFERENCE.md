@@ -9,8 +9,8 @@
 
 | 发现了什么? | 修改哪个文件? | 需要改代码? | 时间 |
 |-----------|-------------|-----------|------|
-| 新的技术属性 (AV1, Opus) | `lexicon_v1.yaml` | ❌ 否 | 5-10分钟 |
-| 新的平台 (Disney+) | `lexicon_v1.yaml` | ❌ 否 | 5-10分钟 |
+| 新的技术属性 (AV1, Opus) | `lexicon.yaml` | ❌ 否 | 5-10分钟 |
+| 新的平台 (Disney+) | `lexicon.yaml` | ❌ 否 | 5-10分钟 |
 | 新的模板格式 | `template_catalog.yaml` | ❌ 否 | 15-30分钟 |
 | 新的字段类型 | `attribute_config.yaml` + 代码 | ✅ 是 | 30-60分钟 |
 | 新的Content Type | `inference_rules.yaml` + 代码 | ✅ 是 | 60-90分钟 |
@@ -24,7 +24,7 @@
 
 ### 操作
 
-**文件**: `configs/lexicon_v1.yaml`
+**文件**: `configs/lexicon.yaml`
 
 ```yaml
 entries:
@@ -96,7 +96,7 @@ fields:
       method: dictionary_match
 ```
 
-**文件2**: `configs/lexicon_v1.yaml`
+**文件2**: `configs/lexicon.yaml`
 
 ```yaml
 entries:

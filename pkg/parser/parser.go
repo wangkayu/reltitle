@@ -21,6 +21,9 @@ type Parser struct {
 	aliasInlineStripWords map[string]struct{}
 	notePromotionRules    []notePromotionRule
 	groupRouteRules       []groupRouteRule
+	sourceTypeCanonical   map[string]string
+	platformCanonical     map[string]string
+	packKindSourceType    map[string]string
 }
 
 type notePromotionRule struct {
@@ -101,7 +104,7 @@ var stableTechResolutionPattern = regexp.MustCompile(`(?i)^(\d{3,4})p$`)
 var stableTechBitDepthPattern = regexp.MustCompile(`(?i)^(8|10|12)\s*bit$`)
 var stableTechSplitPattern = regexp.MustCompile(`[+_/\.]`)
 
-func extractStableTechSpanComboAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Attribute) {
+func (p *Parser) extractStableTechSpanComboAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Attribute) {
 	if attrs == nil || len(tokens) == 0 {
 		return
 	}
@@ -162,7 +165,7 @@ func extractStableTechSpanComboAttrsAndRemoveFromTokens(tokens []model.Token, at
 				continue
 			}
 			nonSepCount++
-			local, ok := inferStableTechTokenAttrs(txt, j)
+			local, ok := p.inferStableTechTokenAttrs(txt, j)
 			if !ok {
 				continue
 			}
@@ -224,7 +227,7 @@ func isStableTechCoreType(t model.AttrType) bool {
 	}
 }
 
-func inferStableTechTokenAttrs(raw string, idx int) ([]model.Attribute, bool) {
+func (p *Parser) inferStableTechTokenAttrs(raw string, idx int) ([]model.Attribute, bool) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
 		return nil, false
@@ -239,8 +242,8 @@ func inferStableTechTokenAttrs(raw string, idx int) ([]model.Attribute, bool) {
 	if stableTechSplitPattern.MatchString(clean) {
 		tmp := stableTechSplitPattern.Split(clean, -1)
 		parts = make([]string, 0, len(tmp))
-		for _, p := range tmp {
-			pp := strings.TrimSpace(p)
+		for _, part := range tmp {
+			pp := strings.TrimSpace(part)
 			if pp == "" {
 				continue
 			}
@@ -252,8 +255,8 @@ func inferStableTechTokenAttrs(raw string, idx int) ([]model.Attribute, bool) {
 	}
 
 	out := make([]model.Attribute, 0, 3)
-	for _, p := range parts {
-		pp := strings.TrimSpace(p)
+	for _, part := range parts {
+		pp := strings.TrimSpace(part)
 		if pp == "" {
 			continue
 		}
@@ -331,7 +334,7 @@ func inferStableTechTokenAttrs(raw string, idx int) ([]model.Attribute, bool) {
 			out = append(out, model.Attribute{Type: model.AttrAudioFlag, Normalized: "MULTI_AUDIO", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.7, Source: "tech_combo_span"})
 			continue
 		case "cr", "crunchyroll", "adn", "baha", "amzn", "amazon", "abema", "hidive", "viutv", "nf", "netflix", "bilibili", "bili", "ytb":
-			out = append(out, model.Attribute{Type: model.AttrPlatform, Normalized: normalizePlatformCode(low), TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.74, Source: "tech_combo_span"})
+			out = append(out, model.Attribute{Type: model.AttrPlatform, Normalized: p.normalizePlatformCode(low), TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.74, Source: "tech_combo_span"})
 			continue
 		}
 	}
@@ -691,6 +694,9 @@ func New(cfg *config.Config) *Parser {
 		cfg:                   cfg,
 		groupIndex:            make(map[string]*config.GroupDef),
 		aliasInlineStripWords: make(map[string]struct{}),
+		sourceTypeCanonical:   buildTypeCanonicalMap(cfg, "source_type"),
+		platformCanonical:     buildTypeCanonicalMap(cfg, "platform"),
+		packKindSourceType:    buildPackKindSourceTypeMap(cfg),
 	}
 
 	// 构建字幕组索引
@@ -783,6 +789,161 @@ func New(cfg *config.Config) *Parser {
 	return p
 }
 
+func buildTypeCanonicalMap(cfg *config.Config, targetType string) map[string]string {
+	out := make(map[string]string)
+	if cfg == nil {
+		return out
+	}
+	targetKey := strings.ToLower(strings.TrimSpace(targetType))
+	if targetKey == "" {
+		return out
+	}
+	for _, r := range cfg.DictTokenSynonyms.Rules {
+		if strings.ToLower(strings.TrimSpace(r.Emit.Type)) != targetKey {
+			continue
+		}
+		norm := strings.TrimSpace(r.Emit.Normalized)
+		if norm == "" {
+			continue
+		}
+		out[strings.ToLower(norm)] = norm
+		for _, raw := range r.RawTokens {
+			rr := strings.ToLower(strings.TrimSpace(raw))
+			if rr == "" {
+				continue
+			}
+			out[rr] = norm
+		}
+	}
+	for _, canonical := range readStringSlice(cfg.DictCanonicalValues.Canonical[targetKey]) {
+		cc := strings.TrimSpace(canonical)
+		if cc == "" {
+			continue
+		}
+		key := strings.ToLower(cc)
+		if _, exists := out[key]; !exists {
+			out[key] = cc
+		}
+	}
+	for raw, canonical := range readNestedStringMap(cfg.DictCanonicalValues.Canonical, "mappings", targetKey+"_aliases") {
+		rr := strings.ToLower(strings.TrimSpace(raw))
+		cc := strings.TrimSpace(canonical)
+		if rr == "" || cc == "" {
+			continue
+		}
+		out[rr] = cc
+		if _, exists := out[strings.ToLower(cc)]; !exists {
+			out[strings.ToLower(cc)] = cc
+		}
+	}
+	return out
+}
+
+func buildPackKindSourceTypeMap(cfg *config.Config) map[string]string {
+	out := make(map[string]string)
+	if cfg == nil {
+		return out
+	}
+	for raw, canonical := range readNestedStringMap(cfg.DictCanonicalValues.Canonical, "mappings", "pack_kind_to_source_type") {
+		rr := strings.ToLower(strings.TrimSpace(raw))
+		cc := strings.TrimSpace(canonical)
+		if rr == "" || cc == "" {
+			continue
+		}
+		out[rr] = cc
+	}
+	return out
+}
+
+func readNestedStringMap(root map[string]any, path ...string) map[string]string {
+	if len(path) == 0 {
+		return map[string]string{}
+	}
+	cur := mapStringAny(root)
+	for i, key := range path {
+		if cur == nil {
+			return map[string]string{}
+		}
+		v, ok := cur[key]
+		if !ok {
+			return map[string]string{}
+		}
+		if i == len(path)-1 {
+			return mapStringString(v)
+		}
+		cur = mapStringAny(v)
+	}
+	return map[string]string{}
+}
+
+func readStringSlice(v any) []string {
+	switch vv := v.(type) {
+	case []string:
+		return append([]string(nil), vv...)
+	case []any:
+		out := make([]string, 0, len(vv))
+		for _, item := range vv {
+			s, ok := item.(string)
+			if !ok {
+				continue
+			}
+			out = append(out, s)
+		}
+		return out
+	default:
+		return nil
+	}
+}
+
+func mapStringAny(v any) map[string]any {
+	switch vv := v.(type) {
+	case map[string]any:
+		return vv
+	case map[any]any:
+		out := make(map[string]any, len(vv))
+		for k, val := range vv {
+			ks, ok := k.(string)
+			if !ok {
+				continue
+			}
+			out[ks] = val
+		}
+		return out
+	default:
+		return nil
+	}
+}
+
+func mapStringString(v any) map[string]string {
+	switch vv := v.(type) {
+	case map[string]string:
+		return vv
+	case map[string]any:
+		out := make(map[string]string, len(vv))
+		for k, val := range vv {
+			s, ok := val.(string)
+			if !ok {
+				continue
+			}
+			out[k] = s
+		}
+		return out
+	case map[any]any:
+		out := make(map[string]string, len(vv))
+		for k, val := range vv {
+			ks, ok1 := k.(string)
+			vs, ok2 := val.(string)
+			if !ok1 || !ok2 {
+				continue
+			}
+			out[ks] = vs
+		}
+		return out
+	default:
+		return map[string]string{}
+	}
+}
+
 // isKnownGroup checks if a token is a known subtitle group
 // Returns the group definition and confidence boost if found
 func (p *Parser) isKnownGroup(token string) (*config.GroupDef, bool) {
@@ -849,10 +1010,10 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	extractSearchHintIndexAttrsAndRemoveFromTokens(tokens, &attrs)
 	extractSeasonShowTagAttrsAndRemoveFromTokens(tokens, &attrs)
 	p.applyLexicon(tokens, &attrs)
-	extractStableTechSpanComboAttrsAndRemoveFromTokens(tokens, &attrs)
+	p.extractStableTechSpanComboAttrsAndRemoveFromTokens(tokens, &attrs)
 	promoteFrenchMultiNoteToAudioFlag(attrs)
-	normalizePlatformAttrs(attrs)
-	normalizeSourceTypeAttrs(attrs)
+	p.normalizePlatformAttrs(attrs)
+	p.normalizeSourceTypeAttrs(attrs)
 	convertRegionAttrsToPlatformRegion(attrs)
 	extractWxHResolutionAttrsAndRemoveFromTokens(tokens, &attrs)
 	extractYearAttrsAndRemoveFromTokens(tokens, &attrs, hasTechAttr(attrs))
@@ -1209,9 +1370,9 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	attrs = upsertScalarAttribute(attrs, model.AttrMovieIndex, movieIndex, "canonical")
 	attrs = appendTitleAliasAttributes(attrs, aliases, title, "canonical")
 	attrs = p.promoteNoteAttributes(attrs)
-	normalizePlatformAttrs(attrs)
-	normalizeSourceTypeAttrs(attrs)
-	attrs = enrichBatchSourceTypeFromPackKind(attrs, contentKind)
+	p.normalizePlatformAttrs(attrs)
+	p.normalizeSourceTypeAttrs(attrs)
+	attrs = p.enrichBatchSourceTypeFromPackKind(attrs, contentKind)
 	attrs = dedupeAttributes(attrs)
 	epslot = pruneBatchEPSlotForConservativeOutput(epslot, contentKind, episode, episodeRange, spKind)
 
@@ -1379,9 +1540,9 @@ func (p *Parser) promoteNoteAttributes(attrs []model.Attribute) []model.Attribut
 			if rule.normalizedFromToken {
 				switch rule.targetType {
 				case model.AttrPlatform:
-					attrs[i].Normalized = normalizePlatformCode(n)
+					attrs[i].Normalized = p.normalizePlatformCode(n)
 				case model.AttrSourceType:
-					attrs[i].Normalized = strings.TrimSpace(n)
+					attrs[i].Normalized = p.normalizeSourceType(n)
 				default:
 					attrs[i].Normalized = strings.TrimSpace(strings.ToUpper(n))
 				}
@@ -1790,12 +1951,12 @@ func extractPackSeasonExtrasAndRemoveFromTokens(tokens []model.Token, out *[]mod
 	}
 }
 
-func normalizePlatformAttrs(attrs []model.Attribute) {
+func (p *Parser) normalizePlatformAttrs(attrs []model.Attribute) {
 	for i := range attrs {
 		if attrs[i].Type != model.AttrPlatform {
 			continue
 		}
-		attrs[i].Normalized = normalizePlatformCode(attrs[i].Normalized)
+		attrs[i].Normalized = p.normalizePlatformCode(attrs[i].Normalized)
 	}
 }
 
@@ -1828,25 +1989,16 @@ func classifyAndEmitTailMetaNote(part string, attrs *[]model.Attribute) bool {
 	return true
 }
 
-func normalizeSourceTypeAttrs(attrs []model.Attribute) {
+func (p *Parser) normalizeSourceTypeAttrs(attrs []model.Attribute) {
 	for i := range attrs {
 		if attrs[i].Type != model.AttrSourceType {
 			continue
 		}
-		n := strings.ToUpper(strings.TrimSpace(attrs[i].Normalized))
-		if n == "WEBRIP" || n == "WEB-RIP" || n == "WEB RIP" {
-			attrs[i].Normalized = "WEBRip"
-			continue
-		}
-		if n == "WEBDL" || n == "WEB-DL" || n == "WEB DL" {
-			attrs[i].Normalized = "WEB-DL"
-			continue
-		}
-		attrs[i].Normalized = strings.TrimSpace(attrs[i].Normalized)
+		attrs[i].Normalized = p.normalizeSourceType(attrs[i].Normalized)
 	}
 }
 
-func enrichBatchSourceTypeFromPackKind(attrs []model.Attribute, contentKind string) []model.Attribute {
+func (p *Parser) enrichBatchSourceTypeFromPackKind(attrs []model.Attribute, contentKind string) []model.Attribute {
 	if !strings.EqualFold(strings.TrimSpace(contentKind), "BATCH") {
 		return attrs
 	}
@@ -1865,25 +2017,8 @@ func enrichBatchSourceTypeFromPackKind(attrs []model.Attribute, contentKind stri
 		return attrs
 	}
 	sourceType := ""
-	switch packKind {
-	case "bdrip":
-		sourceType = "BDRip"
-	case "dvdrip":
-		sourceType = "DVDRip"
-	case "dvdiso", "dvd":
-		sourceType = "DVD"
-	case "webrip", "web-rip":
-		sourceType = "WEBRip"
-	case "web-dl", "webdl":
-		sourceType = "WEB-DL"
-	case "bluray", "blu-ray":
-		sourceType = "BluRay"
-	case "bd":
-		sourceType = "BD"
-	case "hdtv", "hdtvrip":
-		sourceType = "HDTV"
-	case "hdrip":
-		sourceType = "HDRip"
+	if p != nil && len(p.packKindSourceType) > 0 {
+		sourceType = strings.TrimSpace(p.packKindSourceType[packKind])
 	}
 	if sourceType == "" {
 		return attrs
@@ -1901,34 +2036,30 @@ func enrichBatchSourceTypeFromPackKind(attrs []model.Attribute, contentKind stri
 	return out
 }
 
-func normalizePlatformCode(s string) string {
+func (p *Parser) normalizeSourceType(s string) string {
 	ss := strings.TrimSpace(s)
 	if ss == "" {
 		return ""
 	}
-	up := strings.ToUpper(ss)
-	switch up {
-	case "CRUNCHYROLL", "CR":
-		return "CR"
-	case "NETFLIX", "NF":
-		return "NETFLIX"
-	case "BAHAMUT", "BAHA":
-		return "BAHA"
-	case "BILIBILI_GLOBAL", "BILIBILI":
-		return "BILIBILI"
-	case "AMAZON", "AMZN":
-		return "AMZN"
-	case "ABEMA":
-		return "ABEMA"
-	case "HIDIVE":
-		return "HIDIVE"
-	case "ADN":
-		return "ADN"
-	case "VIUTV":
-		return "VIUTV"
-	default:
-		return up
+	if p != nil && len(p.sourceTypeCanonical) > 0 {
+		if v, ok := p.sourceTypeCanonical[strings.ToLower(ss)]; ok {
+			return v
+		}
 	}
+	return ss
+}
+
+func (p *Parser) normalizePlatformCode(s string) string {
+	ss := strings.TrimSpace(s)
+	if ss == "" {
+		return ""
+	}
+	if p != nil && len(p.platformCanonical) > 0 {
+		if v, ok := p.platformCanonical[strings.ToLower(ss)]; ok {
+			return v
+		}
+	}
+	return strings.ToUpper(ss)
 }
 
 func convertRegionAttrsToPlatformRegion(attrs []model.Attribute) {

@@ -17,11 +17,53 @@ rules:
     priority: 100
 
   - id: source_bdrip
-    raw_tokens: ["bdrip", "bd-rip", "bd rip", "bluray", "blu-ray", "bd"]
+    raw_tokens: ["bdrip", "bd-rip", "bd rip"]
     emit:
       type: source_type
       normalized: BDRip
     priority: 95
+
+  - id: source_bluray
+    raw_tokens: ["bluray", "blu-ray"]
+    emit:
+      type: source_type
+      normalized: BluRay
+    priority: 95
+
+  - id: source_bd
+    raw_tokens: ["bd"]
+    emit:
+      type: source_type
+      normalized: BD
+    priority: 95
+
+  - id: source_dvdrip
+    raw_tokens: ["dvdrip", "dvd-rip", "dvd rip"]
+    emit:
+      type: source_type
+      normalized: DVDRip
+    priority: 95
+
+  - id: source_dvd
+    raw_tokens: ["dvd", "dvdiso"]
+    emit:
+      type: source_type
+      normalized: DVD
+    priority: 95
+
+  - id: source_hdtv
+    raw_tokens: ["hdtv", "hdtvrip"]
+    emit:
+      type: source_type
+      normalized: HDTV
+    priority: 90
+
+  - id: source_hdrip
+    raw_tokens: ["hdrip"]
+    emit:
+      type: source_type
+      normalized: HDRip
+    priority: 90
 
   - id: platform_nf
     raw_tokens: ["nf", "netflix"]
@@ -42,6 +84,90 @@ rules:
     emit:
       type: platform
       normalized: BAHA
+    priority: 100
+
+  - id: platform_bilibili
+    raw_tokens: ["bilibili", "bili", "bilibili_global"]
+    emit:
+      type: platform
+      normalized: BILIBILI
+    priority: 100
+
+  - id: platform_amzn
+    raw_tokens: ["amazon", "amzn"]
+    emit:
+      type: platform
+      normalized: AMZN
+    priority: 100
+
+  - id: platform_abema
+    raw_tokens: ["abema"]
+    emit:
+      type: platform
+      normalized: ABEMA
+    priority: 100
+
+  - id: platform_unext
+    raw_tokens: ["unext", "u-next"]
+    emit:
+      type: platform
+      normalized: UNEXT
+    priority: 100
+
+  - id: platform_atx
+    raw_tokens: ["at-x", "atx"]
+    emit:
+      type: platform
+      normalized: AT-X
+    priority: 100
+
+  - id: platform_bs11
+    raw_tokens: ["bs11"]
+    emit:
+      type: platform
+      normalized: BS11
+    priority: 100
+
+  - id: platform_wowow
+    raw_tokens: ["wowow"]
+    emit:
+      type: platform
+      normalized: WOWOW
+    priority: 100
+
+  - id: platform_disney_plus
+    raw_tokens: ["disney+", "disneyplus", "disney plus", "disney"]
+    emit:
+      type: platform
+      normalized: DISNEY_PLUS
+    priority: 95
+
+  - id: platform_apple_tv_plus
+    raw_tokens: ["appletv+", "apple tv+", "appletv plus"]
+    emit:
+      type: platform
+      normalized: APPLE_TV_PLUS
+    priority: 95
+
+  - id: platform_hidive
+    raw_tokens: ["hidive"]
+    emit:
+      type: platform
+      normalized: HIDIVE
+    priority: 100
+
+  - id: platform_adn
+    raw_tokens: ["adn"]
+    emit:
+      type: platform
+      normalized: ADN
+    priority: 100
+
+  - id: platform_viutv
+    raw_tokens: ["viutv"]
+    emit:
+      type: platform
+      normalized: VIUTV
     priority: 100
 
   - id: sub_flag_vostfr

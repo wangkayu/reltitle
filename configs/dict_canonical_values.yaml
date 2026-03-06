@@ -6,8 +6,11 @@ canonical:
     - WEBRip
     - WEB-DL
     - BDRip
-    - Bluray
+    - BluRay
+    - BD
+    - DVDRip
     - HDTV
+    - HDRip
     - DVD
     - Remux
 
@@ -18,8 +21,15 @@ canonical:
     - ABEMA
     - UNEXT
     - AMZN
+    - BILIBILI
     - AT-X
     - BS11
+    - WOWOW
+    - DISNEY_PLUS
+    - APPLE_TV_PLUS
+    - HIDIVE
+    - ADN
+    - VIUTV
 
   sub_flag:
     - SUBS
@@ -90,3 +100,20 @@ canonical:
     - END
     - FIN
     - COMPLETE
+
+  mappings:
+    pack_kind_to_source_type:
+      bdrip: BDRip
+      dvdrip: DVDRip
+      dvdiso: DVD
+      dvd: DVD
+      webrip: WEBRip
+      web-rip: WEBRip
+      webdl: WEB-DL
+      web-dl: WEB-DL
+      bluray: BluRay
+      blu-ray: BluRay
+      bd: BD
+      hdtv: HDTV
+      hdtvrip: HDTV
+      hdrip: HDRip

@@ -268,7 +268,7 @@ func inferPostEPTechToken(token string) (model.AttrType, string, bool) {
 		}
 	}
 	if templateSignalPlatformToken.MatchString(low) {
-		return model.AttrPlatform, normalizePlatformCode(low), true
+		return model.AttrPlatform, strings.ToUpper(low), true
 	}
 	return "", "", false
 }

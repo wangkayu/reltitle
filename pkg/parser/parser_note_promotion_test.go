@@ -20,6 +20,9 @@ func TestPromoteNoteAttributes(t *testing.T) {
 		}
 	}
 	p := &Parser{
+		platformCanonical: map[string]string{
+			"nf": "NETFLIX",
+		},
 		notePromotionRules: []notePromotionRule{
 			makeRule([]string{"web"}, model.AttrSourceType, "WEBRip", false),
 			makeRule([]string{"bdrip"}, model.AttrSourceType, "BDRip", false),

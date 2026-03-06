@@ -1,5 +1,7 @@
 package api
 
+import "title-parser/pkg/model"
+
 // ParseOptions 解析选项
 type ParseOptions struct {
 	ExtractTitle     bool `json:"extract_title"`
@@ -21,48 +23,8 @@ type KnownGroup struct {
 	Aliases []string `json:"aliases,omitempty"`
 }
 
-// AudioInfo 结构化音频信息
-type AudioInfo struct {
-	Tracks []AudioTrack `json:"tracks,omitempty"`
-}
-
-// AudioTrack 单个音轨
-type AudioTrack struct {
-	Lang     string `json:"lang,omitempty"`     // JPN, YUE, ENG
-	Codec    string `json:"codec,omitempty"`    // AAC, FLAC, OPUS
-	Channels string `json:"channels,omitempty"` // 2.0, 5.1, 7.1
-}
-
-// SubtitleInfo 结构化字幕信息
-type SubtitleInfo struct {
-	Type   string   `json:"type,omitempty"`   // soft, hard, external, raw, multi
-	Langs  []string `json:"langs,omitempty"`  // ["CHS", "JPN"]
-	Groups []string `json:"groups,omitempty"` // ["CHS+JPN", "CHT+JPN"]
-	Format string   `json:"format,omitempty"` // ASS, PGS, SRT
-}
-
-// ParseResult 解析结果
-type ParseResult struct {
-	Title        string         `json:"title,omitempty"`
-	TitleRaw     string         `json:"title_raw,omitempty"`
-	Group        string         `json:"group,omitempty"`
-	Episode      string         `json:"episode,omitempty"`
-	EpisodeRange string         `json:"episode_range,omitempty"`
-	Season       *int           `json:"season,omitempty"`
-	SeasonRange  string         `json:"season_range,omitempty"`
-	Version      string         `json:"version,omitempty"`
-	SPKind       string         `json:"sp_kind,omitempty"`
-	PackKind     string         `json:"pack_kind,omitempty"`
-	ContentKind  string         `json:"content_kind,omitempty"`
-	Resolution   string         `json:"resolution,omitempty"`
-	VideoCodec   string         `json:"video_codec,omitempty"`
-	AudioCodec   string         `json:"audio_codec,omitempty"`
-	AudioInfo    *AudioInfo     `json:"audio_info,omitempty"`
-	SubtitleLang string         `json:"subtitle_lang,omitempty"`
-	SubtitleInfo *SubtitleInfo  `json:"subtitle_info,omitempty"`
-	Source       string         `json:"source,omitempty"`
-	Confidence   float64        `json:"confidence,omitempty"`
-}
+// ParseResult 解析结果（canonical 输出）
+type ParseResult = model.ParseResult
 
 // ParseMetadata 解析元数据
 type ParseMetadata struct {

@@ -19,15 +19,16 @@ func TestParserAliasCleanup_StripsTVAnimePrefixAndTVSeasonTail(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse failed: %v", err)
 	}
+	title := canonicalTitle(res)
 
-	if strings.Contains(strings.ToLower(res.Title), "tv アニメ") {
-		t.Fatalf("title still contains tv anime prefix: %q", res.Title)
+	if strings.Contains(strings.ToLower(title), "tv アニメ") {
+		t.Fatalf("title still contains tv anime prefix: %q", title)
 	}
-	if strings.Contains(strings.ToLower(res.Title), "vol") {
-		t.Fatalf("title still contains vol suffix: %q", res.Title)
+	if strings.Contains(strings.ToLower(title), "vol") {
+		t.Fatalf("title still contains vol suffix: %q", title)
 	}
 
-	for _, a := range res.Aliases {
+	for _, a := range canonicalAliases(res) {
 		la := strings.ToLower(a)
 		if strings.Contains(la, "tv アニメ") || strings.Contains(la, "tv anime") {
 			t.Fatalf("alias still contains tv anime prefix: %q", a)
@@ -50,10 +51,11 @@ func TestParserAliasCleanup_StripsTechTailFromTitle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse failed: %v", err)
 	}
+	title := canonicalTitle(res)
 
-	lc := strings.ToLower(res.Title)
+	lc := strings.ToLower(title)
 	if strings.Contains(lc, "ma10p") || strings.Contains(lc, "flac") || strings.Contains(lc, "dts") || strings.Contains(lc, "hdma") {
-		t.Fatalf("title still contains tech tail: %q", res.Title)
+		t.Fatalf("title still contains tech tail: %q", title)
 	}
 }
 
@@ -70,7 +72,7 @@ func TestParserAliasCleanup_DropsPreviewVersionAlias(t *testing.T) {
 		t.Fatalf("parse failed: %v", err)
 	}
 
-	for _, a := range res.Aliases {
+	for _, a := range canonicalAliases(res) {
 		if strings.Contains(a, "先行版") || strings.Contains(a, "先行版本") {
 			t.Fatalf("preview tag leaked into alias list: %q", a)
 		}
@@ -89,15 +91,17 @@ func TestParserAliasCleanup_SlashTitleNotMerged(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse failed: %v", err)
 	}
+	title := canonicalTitle(res)
+	aliases := canonicalAliases(res)
 
-	if strings.Contains(res.Title, "/") {
-		t.Fatalf("slash title should not be merged: %q", res.Title)
+	if strings.Contains(title, "/") {
+		t.Fatalf("slash title should not be merged: %q", title)
 	}
-	if res.Title != "柔光魔女股份有限公司" {
-		t.Fatalf("unexpected title: %q", res.Title)
+	if title != "柔光魔女股份有限公司" {
+		t.Fatalf("unexpected title: %q", title)
 	}
-	if !containsAlias(res.Aliases, "株式会社マジルミエ") || !containsAlias(res.Aliases, "Kabushikigaisha Magi Lumière") {
-		t.Fatalf("unexpected aliases: %v", res.Aliases)
+	if !containsAlias(aliases, "株式会社マジルミエ") || !containsAlias(aliases, "Kabushikigaisha Magi Lumière") {
+		t.Fatalf("unexpected aliases: %v", aliases)
 	}
 }
 
@@ -113,12 +117,14 @@ func TestParserAliasCleanup_DelicosSlashTitleNotMerged(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse failed: %v", err)
 	}
+	title := canonicalTitle(res)
+	aliases := canonicalAliases(res)
 
-	if strings.Contains(res.Title, "/") {
-		t.Fatalf("slash title should not be merged: %q", res.Title)
+	if strings.Contains(title, "/") {
+		t.Fatalf("slash title should not be merged: %q", title)
 	}
-	if !containsAlias(res.Aliases, "Delicos Nursery") && !containsAlias(res.Aliases, "TRUMP 系列 Delico’s Nursery") {
-		t.Fatalf("expected one clean alias, got: %v", res.Aliases)
+	if !containsAlias(aliases, "Delicos Nursery") && !containsAlias(aliases, "TRUMP 系列 Delico’s Nursery") {
+		t.Fatalf("expected one clean alias, got: %v", aliases)
 	}
 }
 
@@ -134,15 +140,17 @@ func TestParserAliasCleanup_BracketTitleFallbackWhenMainTitleEmpty(t *testing.T)
 	if err != nil {
 		t.Fatalf("parse failed: %v", err)
 	}
+	title := canonicalTitle(res)
+	aliases := canonicalAliases(res)
 
-	if strings.TrimSpace(res.Title) == "" {
-		t.Fatalf("title should not be empty, aliases=%v", res.Aliases)
+	if strings.TrimSpace(title) == "" {
+		t.Fatalf("title should not be empty, aliases=%v", aliases)
 	}
-	if strings.Contains(res.Title, "/") {
-		t.Fatalf("title should not keep slash-merged aliases: %q", res.Title)
+	if strings.Contains(title, "/") {
+		t.Fatalf("title should not keep slash-merged aliases: %q", title)
 	}
-	if !containsAlias(res.Aliases, "Love Live! Superstar!!") && !containsAlias(res.Aliases, "Love Live! Superstar!! S2") {
-		t.Fatalf("expected alias from bracket title split, got=%v", res.Aliases)
+	if !containsAlias(aliases, "Love Live! Superstar!!") && !containsAlias(aliases, "Love Live! Superstar!! S2") {
+		t.Fatalf("expected alias from bracket title split, got=%v", aliases)
 	}
 }
 
@@ -158,17 +166,21 @@ func TestParserGroupRouteOverride_OnePaceFixedTitle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse failed: %v", err)
 	}
-	if res.Group != "One Pace" {
-		t.Fatalf("group=%q want=%q", res.Group, "One Pace")
+	group := canonicalGroup(res)
+	title := canonicalTitle(res)
+	aliases := canonicalAliases(res)
+	episodeRange := canonicalEpisodeRange(res)
+	if group != "One Pace" {
+		t.Fatalf("group=%q want=%q", group, "One Pace")
 	}
-	if res.Title != "One Piece" {
-		t.Fatalf("title=%q want=%q", res.Title, "One Piece")
+	if title != "One Piece" {
+		t.Fatalf("title=%q want=%q", title, "One Piece")
 	}
-	if len(res.Aliases) != 0 {
-		t.Fatalf("aliases should be empty, got=%v", res.Aliases)
+	if len(aliases) != 0 {
+		t.Fatalf("aliases should be empty, got=%v", aliases)
 	}
-	if res.EpisodeRange != "23-41" {
-		t.Fatalf("episode_range=%q want=%q", res.EpisodeRange, "23-41")
+	if episodeRange != "23-41" {
+		t.Fatalf("episode_range=%q want=%q", episodeRange, "23-41")
 	}
 	if res.TemplateID != "TF_BATCH_RANGE_ONEPACE_01" {
 		t.Fatalf("template_id=%q want=%q", res.TemplateID, "TF_BATCH_RANGE_ONEPACE_01")
@@ -187,10 +199,12 @@ func TestParserEpisodePriority_BracketTitleLeadingNumberSweetSub(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse failed: %v", err)
 	}
-	if res.Episode != "1" {
-		t.Fatalf("episode=%q want=%q", res.Episode, "1")
+	episode := canonicalEpisode(res)
+	title := canonicalTitle(res)
+	if episode != "1" {
+		t.Fatalf("episode=%q want=%q", episode, "1")
 	}
-	if strings.TrimSpace(res.Title) == "" {
+	if strings.TrimSpace(title) == "" {
 		t.Fatalf("title should not be empty")
 	}
 }
@@ -207,11 +221,13 @@ func TestParserEpisodePriority_BracketTitleLeadingNumberCCAnime(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse failed: %v", err)
 	}
-	if res.Episode != "12" {
-		t.Fatalf("episode=%q want=%q", res.Episode, "12")
+	episode := canonicalEpisode(res)
+	title := canonicalTitle(res)
+	if episode != "12" {
+		t.Fatalf("episode=%q want=%q", episode, "12")
 	}
-	if !strings.Contains(res.Title, "不存在的戰區") {
-		t.Fatalf("title=%q should contain 86 title body", res.Title)
+	if !strings.Contains(title, "不存在的戰區") {
+		t.Fatalf("title=%q should contain 86 title body", title)
 	}
 }
 
@@ -227,11 +243,13 @@ func TestParserNoiseWrapper_UnwrapTransportNestedBracket(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse failed: %v", err)
 	}
-	if strings.TrimSpace(res.Title) == "" {
+	title := canonicalTitle(res)
+	group := canonicalGroup(res)
+	if strings.TrimSpace(title) == "" {
 		t.Fatalf("title should not be empty")
 	}
-	if !strings.EqualFold(strings.TrimSpace(res.Group), "ANi") {
-		t.Fatalf("group=%q want=%q", res.Group, "ANi")
+	if !strings.EqualFold(strings.TrimSpace(group), "ANi") {
+		t.Fatalf("group=%q want=%q", group, "ANi")
 	}
 }
 
@@ -247,8 +265,9 @@ func TestParserSingleVersionToken_Extracted(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse failed: %v", err)
 	}
-	if res.Version != "v1" {
-		t.Fatalf("version=%q want=%q", res.Version, "v1")
+	version := canonicalVersion(res)
+	if version != "v1" {
+		t.Fatalf("version=%q want=%q", version, "v1")
 	}
 }
 

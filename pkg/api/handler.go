@@ -2,12 +2,9 @@ package api
 
 import (
 	"net/http"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"title-parser/pkg/model"
 	"title-parser/pkg/parser"
 )
 
@@ -45,8 +42,8 @@ func (h *Handler) Parse(c *gin.Context) {
 	parseTime := time.Since(startTime).Milliseconds()
 
 	c.JSON(http.StatusOK, ParseResponse{
-		Success:  true,
-		Result:   convertToAPIResult(result),
+		Success: true,
+		Result:  result,
 		Metadata: &ParseMetadata{
 			ParseTimeMs:     parseTime,
 			TemplateMatched: result.TemplateID,
@@ -82,7 +79,7 @@ func (h *Handler) ParseBatch(c *gin.Context) {
 			results[i] = BatchParseResult{
 				Index:   i,
 				Success: true,
-				Result:  convertToAPIResult(result),
+				Result:  result,
 			}
 			successCount++
 		}
@@ -114,119 +111,4 @@ func (h *Handler) Health(c *gin.Context) {
 		"version":       "2.0.0",
 		"config_loaded": true,
 	})
-}
-
-// 辅助函数：转换 parser 结果到 API 结果
-func convertToAPIResult(result *model.ParseResult) *ParseResult {
-	if result == nil {
-		return nil
-	}
-
-	apiResult := &ParseResult{
-		Title:        result.Title,
-		TitleRaw:     result.RawTitle,
-		Group:        result.Group,
-		Episode:      result.Episode,
-		EpisodeRange: result.EpisodeRange,
-		SeasonRange:  result.SeasonRange,
-		Version:      result.Version,
-		SPKind:       result.SPKind,
-		PackKind:     result.PackKind,
-		ContentKind:  result.ContentKind,
-		Confidence:   result.ContentConfidence,
-	}
-
-	// 转换 Season (string -> *int)
-	if result.Season != "" {
-		if seasonInt, err := strconv.Atoi(result.Season); err == nil {
-			apiResult.Season = &seasonInt
-		}
-	}
-
-	// 从 Attributes 中提取技术信息
-	for _, attr := range result.Attributes {
-		switch attr.Type {
-		case model.AttrResolution:
-			apiResult.Resolution = attr.Normalized
-		case model.AttrVideoCodec:
-			apiResult.VideoCodec = attr.Normalized
-		case model.AttrAudioCodec:
-			apiResult.AudioCodec = attr.Normalized
-		case model.AttrSourceType:
-			apiResult.Source = attr.Normalized
-		case model.AttrSubLang:
-			apiResult.SubtitleLang = attr.Normalized
-		}
-	}
-
-	// 从 AudioSlot 中提取音频信息
-	if result.AudioSlot != nil && len(result.AudioSlot.Tracks) > 0 {
-		var tracks []AudioTrack
-		for _, track := range result.AudioSlot.Tracks {
-			tracks = append(tracks, AudioTrack{
-				Lang:     track.Language,
-				Codec:    track.Codec,
-				Channels: track.Channels,
-			})
-		}
-		apiResult.AudioInfo = &AudioInfo{Tracks: tracks}
-		// 如果 AudioCodec 为空，也从 AudioSlot 填充
-		if apiResult.AudioCodec == "" {
-			apiResult.AudioCodec = result.AudioSlot.Tracks[0].Codec
-		}
-	}
-
-	// 从 Attributes 中提取字幕信息，构建结构化 SubtitleInfo
-	var subFlag string
-	var subLangs []string
-	var subGroups []string
-	var subFormat string
-	for _, attr := range result.Attributes {
-		switch attr.Type {
-		case model.AttrSubFlag:
-			if attr.Normalized != "" {
-				subFlag = attr.Normalized
-			}
-		case model.AttrSubLang:
-			if attr.Normalized != "" {
-				subLangs = append(subLangs, attr.Normalized)
-			}
-		case model.AttrSubLangGroup:
-			if attr.Normalized != "" {
-				subGroups = append(subGroups, attr.Normalized)
-			}
-		case model.AttrSubFormat:
-			if attr.Normalized != "" && subFormat == "" {
-				subFormat = attr.Normalized
-			}
-		}
-	}
-	// 如果有字幕信息，构建 SubtitleInfo
-	if subFlag != "" || len(subLangs) > 0 || len(subGroups) > 0 {
-		subInfo := &SubtitleInfo{}
-		// 转换 flag 到 type
-		switch subFlag {
-		case "内封":
-			subInfo.Type = "soft"
-		case "内嵌":
-			subInfo.Type = "hard"
-		case "外挂":
-			subInfo.Type = "external"
-		case "RAW", "NOSUB":
-			subInfo.Type = "raw"
-		case "MULTI_SUBS":
-			subInfo.Type = "multi"
-		}
-		subInfo.Langs = subLangs
-		subInfo.Groups = subGroups
-		subInfo.Format = subFormat
-		apiResult.SubtitleInfo = subInfo
-	}
-
-	return apiResult
-}
-
-// JoinStrings joins a slice of strings with a separator
-func JoinStrings(parts []string, sep string) string {
-	return strings.Join(parts, sep)
 }

@@ -2,7 +2,6 @@ package parser
 
 import (
 	"errors"
-	"os"
 	"regexp"
 	"sort"
 	"strconv"
@@ -857,6 +856,17 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 		}
 		attrs = upsertGroupAttribute(attrs, group, "group_route_override")
 	}
+	attrs = upsertTitleAttribute(attrs, title, "canonical")
+	attrs = upsertGroupAttribute(attrs, group, "canonical")
+	attrs = upsertScalarAttribute(attrs, model.AttrEpisode, episode, "canonical")
+	attrs = upsertScalarAttribute(attrs, model.AttrEpisodeRange, episodeRange, "canonical")
+	attrs = upsertScalarAttribute(attrs, model.AttrSeason, season, "canonical")
+	attrs = upsertScalarAttribute(attrs, model.AttrSeasonRange, seasonRange, "canonical")
+	attrs = upsertScalarAttribute(attrs, model.AttrVersion, version, "canonical")
+	attrs = upsertScalarAttribute(attrs, model.AttrPackKind, packKind, "canonical")
+	attrs = upsertScalarAttribute(attrs, model.AttrSPKind, spKind, "canonical")
+	attrs = upsertScalarAttribute(attrs, model.AttrMovieIndex, movieIndex, "canonical")
+	attrs = appendTitleAliasAttributes(attrs, aliases, title, "canonical")
 	attrs = p.promoteNoteAttributes(attrs)
 	normalizePlatformAttrs(attrs)
 	normalizeSourceTypeAttrs(attrs)
@@ -885,12 +895,6 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 		AudioSlot:          ctx.AudioSlot,
 		Attributes:         attrs,
 		Tokens:             tokens,
-	}
-
-	if tokenONNXEnabled() {
-		// ONNX temporarily disabled for HTTP server
-		// res.TokenONNX = onnx.InferTokenBoundary(rawTitle, tokens, attrs)
-		// applyONNXIfEnabled(res)
 	}
 
 	return res, nil
@@ -1691,95 +1695,6 @@ func applyStreamingReleaseRouteV1(tailParenBlock string, aliases *[]string, attr
 	*aliases = mergeAliases(*aliases, aliasCands)
 }
 
-func tokenONNXEnabled() bool {
-	v := strings.TrimSpace(os.Getenv("TITLEPARSER_TOKEN_ONNX"))
-	if v != "" && v != "0" && !strings.EqualFold(v, "false") {
-		return true
-	}
-	v = strings.TrimSpace(os.Getenv("TITLEPARSER_TOKEN_ONNX_APPLY"))
-	if v != "" && v != "0" && !strings.EqualFold(v, "false") {
-		return true
-	}
-	return false
-}
-
-func applyONNXIfEnabled(res *model.ParseResult) {
-	if res == nil {
-		return
-	}
-	v := strings.TrimSpace(os.Getenv("TITLEPARSER_TOKEN_ONNX_APPLY"))
-	if v == "" || v == "0" || strings.EqualFold(v, "false") {
-		return
-	}
-	if res.TokenONNX == nil {
-		return
-	}
-	if strings.TrimSpace(res.TokenONNX.Error) != "" {
-		return
-	}
-	if res.TokenONNX.Fields == nil {
-		return
-	}
-
-	if strings.TrimSpace(res.Group) == "" {
-		g := strings.TrimSpace(res.TokenONNX.Fields["group"])
-		if g != "" {
-			res.Group = g
-		}
-	}
-
-	if strings.TrimSpace(res.Episode) == "" {
-		ep := strings.TrimSpace(res.TokenONNX.Fields["episode"])
-		if isSafeEpisode(ep) {
-			res.Episode = strings.TrimLeft(ep, "0")
-			if res.Episode == "" {
-				res.Episode = ep
-			}
-		}
-	}
-
-	if strings.TrimSpace(res.Title) == "" {
-		t := strings.TrimSpace(res.TokenONNX.Fields["title"])
-		if isSafeTitle(t, res.Group) {
-			res.Title = t
-		}
-	}
-}
-
-var safeEpisodePattern = regexp.MustCompile(`^0*\d{1,4}(?:\.\d{1,2})?$`)
-
-func isSafeEpisode(ep string) bool {
-	ep = strings.TrimSpace(ep)
-	if ep == "" {
-		return false
-	}
-	return safeEpisodePattern.MatchString(ep)
-}
-
-func isSafeTitle(title string, group string) bool {
-	title = strings.TrimSpace(title)
-	if title == "" {
-		return false
-	}
-	if len([]rune(title)) > 80 {
-		return false
-	}
-	if strings.TrimSpace(group) != "" && strings.EqualFold(strings.TrimSpace(group), title) {
-		return false
-	}
-	low := strings.ToLower(title)
-	if strings.Contains(low, "1080p") || strings.Contains(low, "2160p") || strings.Contains(low, "720p") {
-		return false
-	}
-	if strings.Contains(low, "hevc") || strings.Contains(low, "x265") || strings.Contains(low, "h265") || strings.Contains(low, "x264") || strings.Contains(low, "h264") {
-		return false
-	}
-	if strings.Contains(low, "webrip") || strings.Contains(low, "web-dl") || strings.Contains(low, "webdl") || strings.Contains(low, "bluray") {
-		return false
-	}
-	return true
-}
-
 var reSxxExxToken = regexp.MustCompile(`(?i)^s\d{1,2}e\d{1,4}$`)
 
 func hasSxxExxInTokens(tokens []model.Token) bool {
@@ -2288,7 +2203,7 @@ func upsertTitleAttribute(attrs []model.Attribute, title string, source string) 
 	copy(out, attrs)
 	updated := false
 	for i := range out {
-		if out[i].Type != model.AttrType("title") {
+		if out[i].Type != model.AttrTitle {
 			continue
 		}
 		out[i].Normalized = title
@@ -2302,8 +2217,42 @@ func upsertTitleAttribute(attrs []model.Attribute, title string, source string) 
 	}
 	if !updated {
 		out = append(out, model.Attribute{
-			Type:       model.AttrType("title"),
+			Type:       model.AttrTitle,
 			Normalized: title,
+			TokenStart: -1,
+			TokenEnd:   -1,
+			Confidence: 0.7,
+			Source:     source,
+		})
+	}
+	return out
+}
+
+func upsertScalarAttribute(attrs []model.Attribute, t model.AttrType, value string, source string) []model.Attribute {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return attrs
+	}
+	out := make([]model.Attribute, len(attrs))
+	copy(out, attrs)
+	updated := false
+	for i := range out {
+		if out[i].Type != t {
+			continue
+		}
+		out[i].Normalized = value
+		if strings.TrimSpace(source) != "" {
+			out[i].Source = source
+		}
+		if out[i].Confidence <= 0 {
+			out[i].Confidence = 0.7
+		}
+		updated = true
+	}
+	if !updated {
+		out = append(out, model.Attribute{
+			Type:       t,
+			Normalized: value,
 			TokenStart: -1,
 			TokenEnd:   -1,
 			Confidence: 0.7,
@@ -2341,6 +2290,33 @@ func upsertGroupAttribute(attrs []model.Attribute, group string, source string) 
 			TokenStart: -1,
 			TokenEnd:   -1,
 			Confidence: 0.8,
+			Source:     source,
+		})
+	}
+	return out
+}
+
+func appendTitleAliasAttributes(attrs []model.Attribute, aliases []string, title string, source string) []model.Attribute {
+	if len(aliases) == 0 {
+		return attrs
+	}
+	titleKey := aliasSemanticKey(title)
+	out := make([]model.Attribute, len(attrs), len(attrs)+len(aliases))
+	copy(out, attrs)
+	for _, a := range aliases {
+		a = strings.TrimSpace(a)
+		if a == "" {
+			continue
+		}
+		if titleKey != "" && aliasSemanticKey(a) == titleKey {
+			continue
+		}
+		out = append(out, model.Attribute{
+			Type:       model.AttrTitleAlias,
+			Normalized: a,
+			TokenStart: -1,
+			TokenEnd:   -1,
+			Confidence: 0.7,
 			Source:     source,
 		})
 	}

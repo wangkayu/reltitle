@@ -38,27 +38,27 @@ type MLOutput struct {
 
 type ParseResult struct {
 	RawTitle           string           `json:"raw_title"`
-	Group              string           `json:"group,omitempty"`
-	Title              string           `json:"title,omitempty"`
-	Aliases            []string         `json:"aliases,omitempty"`
-	Episode            string           `json:"episode,omitempty"`
-	EpisodeRange       string           `json:"episode_range,omitempty"`
-	EpRoute            string           `json:"ep_route,omitempty"`
-	Season             string           `json:"season,omitempty"`
-	SeasonRange        string           `json:"season_range,omitempty"`
-	Version            string           `json:"version,omitempty"`
-	PackKind           string           `json:"pack_kind,omitempty"`
-	SPKind             string           `json:"sp_kind,omitempty"`
-	MovieIndex         string           `json:"movie_index,omitempty"`
+	Group              string           `json:"-"`
+	Title              string           `json:"-"`
+	Aliases            []string         `json:"-"`
+	Episode            string           `json:"-"`
+	EpisodeRange       string           `json:"-"`
+	EpRoute            string           `json:"-"`
+	Season             string           `json:"-"`
+	SeasonRange        string           `json:"-"`
+	Version            string           `json:"-"`
+	PackKind           string           `json:"-"`
+	SPKind             string           `json:"-"`
+	MovieIndex         string           `json:"-"`
+	TailParenBlock     string           `json:"-"`
 	ContentKind        string           `json:"content_kind,omitempty"`
 	ContentConfidence  float64          `json:"content_confidence,omitempty"`
 	TemplateID         string           `json:"template_id,omitempty"`
 	TemplateConfidence float64          `json:"template_confidence,omitempty"`
-	TailParenBlock     string           `json:"tail_paren_block,omitempty"`
 	EPSlot             *EPSlot          `json:"epslot,omitempty"`
 	AudioSlot          *AudioSlot       `json:"audio_slot,omitempty"`
-	TokenONNX          *TokenONNXOutput `json:"token_onnx,omitempty"`
-	ML                 *MLOutput        `json:"ml,omitempty"`
+	TokenONNX          *TokenONNXOutput `json:"-"`
+	ML                 *MLOutput        `json:"-"`
 	Attributes         []Attribute      `json:"attributes,omitempty"`
 	Tokens             []Token          `json:"tokens,omitempty"`
 }
@@ -98,12 +98,17 @@ type AudioTrack struct {
 }
 
 const (
+	AttrTitle        AttrType = "title"
+	AttrTitleAlias   AttrType = "title_alias"
+	AttrSearchHint   AttrType = "search_hint"
 	AttrGroup        AttrType = "group"
 	AttrEpisode      AttrType = "episode"
 	AttrEpisodeRange AttrType = "episode_range"
 	AttrSeason       AttrType = "season"
 	AttrSeasonRange  AttrType = "season_range"
 	AttrVersion      AttrType = "version"
+	AttrPackKind     AttrType = "pack_kind"
+	AttrSPKind       AttrType = "sp_kind"
 	AttrYear         AttrType = "year"
 	AttrMovieIndex   AttrType = "movie_index"
 	AttrMovieFlag    AttrType = "movie_flag"

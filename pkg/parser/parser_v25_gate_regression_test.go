@@ -65,18 +65,20 @@ func TestParserV25GateRegression_AliasMetaCleanup(t *testing.T) {
 			if err != nil {
 				t.Fatalf("parse failed: %v", err)
 			}
+			title := canonicalTitle(res)
+			aliases := canonicalAliases(res)
 			for _, must := range tc.mustTitle {
-				if !strings.Contains(strings.ToLower(res.Title), strings.ToLower(must)) {
-					t.Fatalf("title=%q must contain %q", res.Title, must)
+				if !strings.Contains(strings.ToLower(title), strings.ToLower(must)) {
+					t.Fatalf("title=%q must contain %q", title, must)
 				}
 			}
 			for _, ban := range tc.noTitle {
-				if strings.Contains(strings.ToLower(res.Title), strings.ToLower(ban)) {
-					t.Fatalf("title=%q should not contain %q", res.Title, ban)
+				if strings.Contains(strings.ToLower(title), strings.ToLower(ban)) {
+					t.Fatalf("title=%q should not contain %q", title, ban)
 				}
 			}
 			for _, ban := range tc.noAlias {
-				for _, a := range res.Aliases {
+				for _, a := range aliases {
 					if strings.Contains(strings.ToLower(a), strings.ToLower(ban)) {
 						t.Fatalf("alias=%q should not contain %q", a, ban)
 					}

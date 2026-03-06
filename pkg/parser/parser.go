@@ -1096,7 +1096,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	parenAliases := p.extractParenAliasesAndRemoveFromTitle(tokens, titleEnd0, episodeIdx, episodeRangeIdx, &attrs)
 
 	title := p.extractTitle(tokens, episodeIdx, episodeRangeIdx, seasonCutIdx)
-	title, aliases := p.inferTitleAndAliasesFromTitle(title)
+	title, aliases := inferTitleAndAliasesFromTitleCanonical(title, p.isValidAliasToken)
 	titleStart, titleEnd := p.inferTitleTokenSpan(tokens, episodeIdx, episodeRangeIdx, seasonCutIdx)
 	aliases = mergeAliases(ctx.ForcedAliases, aliases)
 	if strings.TrimSpace(title) == "" {
@@ -1116,7 +1116,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 		// If forced title contains strong delimiters (e.g. from bracket title extraction),
 		// still infer main title + aliases deterministically.
 		if strings.ContainsAny(ft, "/／|｜;；\\") {
-			ftMain, ftAliases := p.inferTitleAndAliasesFromTitle(ft)
+			ftMain, ftAliases := inferTitleAndAliasesFromTitleCanonical(ft, p.isValidAliasToken)
 			if strings.TrimSpace(ftMain) != "" {
 				title = ftMain
 				aliases = mergeAliases(aliases, ftAliases)
@@ -3225,38 +3225,6 @@ func (p *Parser) hasAliasMetaFromDictionary(s string) bool {
 	return false
 }
 
-func (p *Parser) inferTitleAndAliasesFromTitle(title string) (string, []string) {
-	main, aliases := inferTitleAndAliasesFromTitle(title, p.isValidAliasToken)
-	if len(aliases) == 0 {
-		return main, nil
-	}
-	mainKey := strings.ToLower(strings.TrimSpace(main))
-	seen := map[string]bool{}
-	if mainKey != "" {
-		seen[mainKey] = true
-	}
-	out := make([]string, 0, len(aliases))
-	for _, a := range aliases {
-		a = cleanAliasToken(a)
-		if stripped := stripExplicitSeasonSuffix(a); stripped != "" {
-			a = stripped
-		}
-		if !p.isValidAliasToken(a) {
-			continue
-		}
-		k := strings.ToLower(strings.TrimSpace(a))
-		if k == "" || seen[k] {
-			continue
-		}
-		seen[k] = true
-		out = append(out, a)
-	}
-	if len(out) == 0 {
-		return main, nil
-	}
-	return main, out
-}
-
 func mergeAliases(a []string, b []string) []string {
 	if len(a) == 0 {
 		if len(b) == 0 {
@@ -3447,7 +3415,7 @@ func (p *Parser) inferBracketTitleFallback(tokens []model.Token, scanStart int, 
 			i = end
 			continue
 		}
-		main, aliases := p.inferTitleAndAliasesFromTitle(inner)
+		main, aliases := inferTitleAndAliasesFromTitleCanonical(inner, p.isValidAliasToken)
 		main = sanitizePrimaryTitleForOutput(main)
 		if strings.TrimSpace(main) == "" {
 			i = end

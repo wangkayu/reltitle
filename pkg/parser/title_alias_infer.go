@@ -238,6 +238,38 @@ func inferTitleAndAliasesFromTitle(title string, aliasValid func(string) bool) (
 	return normalizeTitleMain(s), nil
 }
 
+func inferTitleAndAliasesFromTitleCanonical(title string, aliasValid func(string) bool) (string, []string) {
+	main, aliases := inferTitleAndAliasesFromTitle(title, aliasValid)
+	if len(aliases) == 0 {
+		return main, nil
+	}
+	mainKey := strings.ToLower(strings.TrimSpace(main))
+	seen := map[string]bool{}
+	if mainKey != "" {
+		seen[mainKey] = true
+	}
+	out := make([]string, 0, len(aliases))
+	for _, a := range aliases {
+		a = cleanAliasToken(a)
+		if stripped := stripExplicitSeasonSuffix(a); stripped != "" {
+			a = stripped
+		}
+		if !aliasValid(a) {
+			continue
+		}
+		k := strings.ToLower(strings.TrimSpace(a))
+		if k == "" || seen[k] {
+			continue
+		}
+		seen[k] = true
+		out = append(out, a)
+	}
+	if len(out) == 0 {
+		return main, nil
+	}
+	return main, out
+}
+
 func inferPostEpisodeSearchHintAliasesFromParens(tokens []model.Token, episodeIdx int, episodeRangeIdx int, attrs *[]model.Attribute) []string {
 	epStart := len(tokens)
 	if episodeRangeIdx >= 0 && episodeRangeIdx < epStart {

@@ -13,10 +13,6 @@ var (
 	templateSignalJPEP   = regexp.MustCompile(`^第?(\d{1,4})(?:話|话|集)$`)
 	templateSignalDigits = regexp.MustCompile(`^\d{1,3}$`)
 	templateSignalResolutionToken = regexp.MustCompile(`(?i)^(\d{3,4})p$`)
-	templateSignalVideoCodecToken = regexp.MustCompile(`(?i)^(?:x\.?26[45]|h\.?26[45]|hevc|avc|av1)$`)
-	templateSignalAudioCodecToken = regexp.MustCompile(`(?i)^(?:aac|flac|ac3|e-?ac-?3|eac3|ddp|opus|pcm|dts(?:-?hd|-?hdma)?|truehd)$`)
-	templateSignalSourceTypeToken = regexp.MustCompile(`(?i)^(?:web[-_ ]?dl|web[-_ ]?rip|webrip|webdl|bdrip|bluray|blu-ray|hdtv|dvdrip|dvd|remux)$`)
-	templateSignalPlatformToken   = regexp.MustCompile(`(?i)^(?:cr|crunchyroll|nf|netflix|adn|baha|bilibili|amzn|amazon|abema|hidive|viutv)$`)
 )
 
 func applyTemplateSignalAdjudication(
@@ -258,26 +254,14 @@ func inferPostEPTechToken(
 	if norm, ok := sourceTypeMap[low]; ok {
 		return model.AttrSourceType, norm, true
 	}
-	if templateSignalSourceTypeToken.MatchString(low) {
-		return model.AttrSourceType, strings.TrimSpace(token), true
-	}
 	if norm, ok := codecMapLookup(videoCodecMap, low, true); ok {
 		return model.AttrVideoCodec, norm, true
-	}
-	if templateSignalVideoCodecToken.MatchString(low) {
-		return model.AttrVideoCodec, strings.ToUpper(strings.ReplaceAll(low, ".", "")), true
 	}
 	if norm, ok := codecMapLookup(audioCodecMap, low, false); ok {
 		return model.AttrAudioCodec, norm, true
 	}
-	if templateSignalAudioCodecToken.MatchString(low) {
-		return model.AttrAudioCodec, strings.ToUpper(strings.ReplaceAll(low, "-", "")), true
-	}
 	if norm, ok := platformMap[low]; ok {
 		return model.AttrPlatform, norm, true
-	}
-	if templateSignalPlatformToken.MatchString(low) {
-		return model.AttrPlatform, strings.ToUpper(low), true
 	}
 	return "", "", false
 }

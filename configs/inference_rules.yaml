@@ -58,6 +58,7 @@ content_type_inference:
       no_episode: true
       no_episode_range: true
       has_season: false
+      has_sp_kind: false
       has_pack_kind: false
     result: "MOVIE"
     confidence: 0.75

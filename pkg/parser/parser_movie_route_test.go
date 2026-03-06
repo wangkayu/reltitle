@@ -147,3 +147,40 @@ func TestParserMovieRoute_SeasonPartTvEpisodeNotDemoted(t *testing.T) {
 		t.Fatalf("episode=%q want=%q", got, "41")
 	}
 }
+
+func TestParserMovieRoute_OVAWithYearTech_PrefersSpecial(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Blasphemboys] Sanzoku Diary / Bandit's Diary / 山賊ダイアリー OVA (2015) [DVD AVC AC3]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "SPECIAL" {
+		t.Fatalf("content_kind=%q want=%q", got, "SPECIAL")
+	}
+	if got := firstAttrValue(res, model.AttrSPKind); got != "OVA" {
+		t.Fatalf("sp_kind=%q want=%q", got, "OVA")
+	}
+}
+
+func TestParserMovieRoute_MovieYearTech_NoSpKindStillMovie(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "Colorful (2010) MULTi 1080p WEB x265 Opus -Tsundere-Raws (VF, FRENCH, VOSTFR, Colorful (Movie))"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "MOVIE" {
+		t.Fatalf("content_kind=%q want=%q", got, "MOVIE")
+	}
+}

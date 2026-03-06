@@ -119,7 +119,7 @@ func detectMovieKeywordFromAttrs(attrs []model.Attribute) bool {
 	for _, a := range attrs {
 		// Lexicon may remove tokens like [Movie] early and emit them as notes.
 		// Also, title extraction may absorb movie keywords into the inferred title attribute.
-		if a.Type != model.AttrNote && a.Type != model.AttrType("title") {
+		if a.Type != model.AttrNote && a.Type != model.AttrTitle {
 			continue
 		}
 		n := strings.TrimSpace(a.Normalized)

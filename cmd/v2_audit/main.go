@@ -362,21 +362,15 @@ func main() {
 			v2 = res
 		} else {
 			v2 = &model.ParseResult{
-				RawTitle:       res.RawTitle,
-				Group:          res.Group,
-				Title:          res.Title,
-				Aliases:        res.Aliases,
-				Episode:        res.Episode,
-				EpisodeRange:   res.EpisodeRange,
-				EpRoute:        res.EpRoute,
-				Season:         res.Season,
-				PackKind:       res.PackKind,
-				SPKind:         res.SPKind,
-				MovieIndex:     res.MovieIndex,
-				ContentKind:    res.ContentKind,
-				TemplateID:     res.TemplateID,
-				TailParenBlock: res.TailParenBlock,
-				Attributes:     res.Attributes,
+				RawTitle:           res.RawTitle,
+				ContentKind:        res.ContentKind,
+				ContentConfidence:  res.ContentConfidence,
+				TemplateID:         res.TemplateID,
+				TemplateConfidence: res.TemplateConfidence,
+				EPSlot:             res.EPSlot,
+				AudioSlot:          res.AudioSlot,
+				Attributes:         res.Attributes,
+				Tokens:             res.Tokens,
 			}
 		}
 
@@ -429,28 +423,32 @@ func auditOne(res *model.ParseResult) AuditResult {
 	if strings.TrimSpace(res.TemplateID) == "TF_UNKNOWN_DEFAULT" {
 		out.Warnings = append(out.Warnings, "unknown_default_template")
 	}
-	if strings.TrimSpace(res.EpRoute) == "SXXEXX" {
-		if strings.TrimSpace(res.Season) == "" || strings.TrimSpace(res.Episode) == "" {
+	epRoute := strings.TrimSpace(res.CanonicalEpRoute())
+	season := strings.TrimSpace(res.CanonicalSeason())
+	episode := strings.TrimSpace(res.CanonicalEpisode())
+	episodeRange := strings.TrimSpace(res.CanonicalEpisodeRange())
+	if epRoute == "SXXEXX" {
+		if season == "" || episode == "" {
 			out.Issues = append(out.Issues, "sxxexx_route_missing_season_or_episode")
 		}
 	}
-	if strings.TrimSpace(res.EpRoute) == "RANGE" {
-		if strings.TrimSpace(res.EpisodeRange) == "" {
+	if epRoute == "RANGE" {
+		if episodeRange == "" {
 			out.Issues = append(out.Issues, "range_route_missing_episode_range")
 		}
 	}
 
 	out.AttrHits = buildAttrHits(res)
 	out.EPSummary = buildEPSummary(res)
-	out.AliasMetaHits = aliasMetaHits(res.Aliases)
+	out.AliasMetaHits = aliasMetaHits(res.CanonicalTitleAliases())
 	if len(out.AliasMetaHits) > 0 {
 		out.Warnings = append(out.Warnings, "alias_contains_streaming_meta")
 	}
 
-	if strings.TrimSpace(res.Title) == "" {
+	if strings.TrimSpace(res.CanonicalTitle()) == "" {
 		out.Issues = append(out.Issues, "missing_title")
 	}
-	if strings.TrimSpace(res.Group) == "" {
+	if strings.TrimSpace(res.CanonicalGroup()) == "" {
 		out.Warnings = append(out.Warnings, "missing_group")
 	}
 

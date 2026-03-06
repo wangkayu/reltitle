@@ -758,7 +758,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 		}
 	}
 	if titleStart >= 0 && titleEnd > titleStart {
-		attrs = append(attrs, model.Attribute{Type: model.AttrType("title"), Normalized: title, TokenStart: titleStart, TokenEnd: titleEnd, Confidence: 0.7, Source: "heuristic"})
+		attrs = append(attrs, model.Attribute{Type: model.AttrTitle, Normalized: title, TokenStart: titleStart, TokenEnd: titleEnd, Confidence: 0.7, Source: "heuristic"})
 		aliases = mergeAliases(aliases, inferAliasesFromAdjacentBrackets(tokens, titleEnd, episodeIdx, episodeRangeIdx))
 	}
 	aliases = mergeAliases(aliases, parenAliases)

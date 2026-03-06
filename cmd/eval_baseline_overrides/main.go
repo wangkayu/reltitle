@@ -514,7 +514,7 @@ func writeOverriddenWithGate(
 								}
 							}
 							if accept && titleSanityGate {
-								if !isSaneTitle(strings.TrimSpace(res.Title)) {
+								if !isSaneTitle(strings.TrimSpace(res.CanonicalTitle())) {
 									accept = false
 									rejectedTitleSanity++
 								}
@@ -743,7 +743,7 @@ func hardcaseReasons(res *model.ParseResult) map[string]bool {
 	if res == nil {
 		return out
 	}
-	if strings.TrimSpace(res.Title) == "" {
+	if strings.TrimSpace(res.CanonicalTitle()) == "" {
 		out["parser_title_empty"] = true
 	}
 	if strings.EqualFold(strings.TrimSpace(res.TemplateID), "TF_UNKNOWN_DEFAULT") {
@@ -762,7 +762,7 @@ func titleSpanFromAttrs(attrs []model.Attribute) (start int, end int, ok bool) {
 	minS := 1 << 30
 	maxE := -1
 	for _, a := range attrs {
-		if a.Type != model.AttrType("title") {
+		if a.Type != model.AttrTitle {
 			continue
 		}
 		if a.TokenStart < 0 || a.TokenEnd <= a.TokenStart {

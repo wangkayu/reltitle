@@ -283,11 +283,6 @@ func loadV2(path string) (map[string][]model.ParseResult, int, error) {
 		if key == "" {
 			return nil, 0, fmt.Errorf("missing raw_title at line %d", lineNo)
 		}
-		res.Group = strings.TrimSpace(res.Group)
-		res.Title = strings.TrimSpace(res.Title)
-		res.Episode = normalizeEpisode(res.Episode)
-		res.EpisodeRange = strings.TrimSpace(res.EpisodeRange)
-		res.Season = strings.TrimSpace(res.Season)
 		m[key] = append(m[key], res)
 	}
 	if err := scanner.Err(); err != nil {
@@ -325,20 +320,26 @@ func diffOne(st *diffStats, v1 normRecord, v2 model.ParseResult, topN int) {
 		return
 	}
 
-	cmpField(st, "group", v1.RawTitle, v1.Group, v2.Group, topN)
+	v2Group := strings.TrimSpace(v2.CanonicalGroup())
+	v2Title := strings.TrimSpace(v2.CanonicalTitle())
+	v2Episode := normalizeEpisode(v2.CanonicalEpisode())
+	v2EpisodeRange := strings.TrimSpace(v2.CanonicalEpisodeRange())
+	v2Season := strings.TrimSpace(v2.CanonicalSeason())
 
-	if v2.Title == "" && v1.Title != "" {
-		bucket(st, "title_empty_in_v2", example{RawTitle: v1.RawTitle, Field: "title", V1: v1.Title, V2: v2.Title}, topN)
+	cmpField(st, "group", v1.RawTitle, v1.Group, v2Group, topN)
+
+	if v2Title == "" && v1.Title != "" {
+		bucket(st, "title_empty_in_v2", example{RawTitle: v1.RawTitle, Field: "title", V1: v1.Title, V2: v2Title}, topN)
 	}
-	cmpField(st, "title", v1.RawTitle, v1.Title, v2.Title, topN)
+	cmpField(st, "title", v1.RawTitle, v1.Title, v2Title, topN)
 
-	if v2.Episode == "" && v1.Episode != "" {
-		bucket(st, "episode_empty_in_v2", example{RawTitle: v1.RawTitle, Field: "episode", V1: v1.Episode, V2: v2.Episode}, topN)
+	if v2Episode == "" && v1.Episode != "" {
+		bucket(st, "episode_empty_in_v2", example{RawTitle: v1.RawTitle, Field: "episode", V1: v1.Episode, V2: v2Episode}, topN)
 	}
-	cmpField(st, "episode", v1.RawTitle, v1.Episode, v2.Episode, topN)
+	cmpField(st, "episode", v1.RawTitle, v1.Episode, v2Episode, topN)
 
-	cmpField(st, "episode_range", v1.RawTitle, v1.EpisodeRange, v2.EpisodeRange, topN)
-	cmpField(st, "season", v1.RawTitle, v1.Season, v2.Season, topN)
+	cmpField(st, "episode_range", v1.RawTitle, v1.EpisodeRange, v2EpisodeRange, topN)
+	cmpField(st, "season", v1.RawTitle, v1.Season, v2Season, topN)
 }
 
 func cmpField(st *diffStats, field string, rawTitle string, a string, b string, topN int) {

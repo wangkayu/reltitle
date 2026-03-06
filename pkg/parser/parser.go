@@ -1035,6 +1035,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 
 	packKind := detectPackKind(p.cfg, rawTitle)
 	ctx := newParseContext(rawTitle, packKind, tailParenBlock)
+	ctx.AliasValidFunc = p.isValidAliasToken
 	ctx.SeasonRange = seasonRange
 	ctx.Group = group
 	for _, pass := range defaultParsePasses() {

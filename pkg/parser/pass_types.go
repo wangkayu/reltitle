@@ -3,8 +3,9 @@ package parser
 import "title-parser/pkg/model"
 
 type parseContext struct {
-	RawTitle string
-	Group    string
+	RawTitle       string
+	Group          string
+	AliasValidFunc func(string) bool
 
 	PackKind       string
 	TailParenBlock string

@@ -135,3 +135,55 @@ func TestParserBatchSourceType_FallbackFromPackKindDVDISO(t *testing.T) {
 		t.Fatalf("source_type=%q want=%q", got, "DVD")
 	}
 }
+
+func TestParserBatchTemplateRangePack_WithTech(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[LoliHouse] 2.5-jigen no Ririsa / 2.5次元的诱惑 [01-24 合集][WebRip 1080p HEVC-10bit AAC][简繁内封字幕][Fin]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "BATCH" {
+		t.Fatalf("content_kind=%q want=%q", got, "BATCH")
+	}
+	if got := res.TemplateID; got != "TF_BATCH_RANGE_PACK_01" {
+		t.Fatalf("template_id=%q want=%q", got, "TF_BATCH_RANGE_PACK_01")
+	}
+	if got := canonicalEpisodeRange(res); got != "1-24" {
+		t.Fatalf("episode_range=%q want=%q", got, "1-24")
+	}
+	if got := firstAttrValue(res, model.AttrPackKind); got != "合集" {
+		t.Fatalf("pack_kind=%q want=%q", got, "合集")
+	}
+}
+
+func TestParserBatchTemplateRangePack_NoTechWithCollectionKeyword(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[LoliHouse] Sample Title [01-12][Collection]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "BATCH" {
+		t.Fatalf("content_kind=%q want=%q", got, "BATCH")
+	}
+	if got := res.TemplateID; got != "TF_BATCH_RANGE_PACK_02" {
+		t.Fatalf("template_id=%q want=%q", got, "TF_BATCH_RANGE_PACK_02")
+	}
+	if got := canonicalEpisodeRange(res); got != "1-12" {
+		t.Fatalf("episode_range=%q want=%q", got, "1-12")
+	}
+	if got := firstAttrValue(res, model.AttrPackKind); !strings.EqualFold(got, "collection") {
+		t.Fatalf("pack_kind=%q want=%q", got, "collection")
+	}
+}

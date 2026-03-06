@@ -8,7 +8,7 @@ import (
 	"title-parser/pkg/model"
 )
 
-func inferContentKind(cfg *config.Config, episode string, episodeRange string, season string, seasonRange string, packKind string, spKind string, movieIndex string, hasTech bool, hasMovieKeyword bool, hasYear bool) (string, float64) {
+func inferContentKind(cfg *config.Config, episode string, episodeRange string, season string, seasonRange string, packKind string, spKind string, movieIndex string, hasTech bool, hasMovieKeyword bool, hasYear bool, movieRouteHardExcluded bool, hasMovieContentSignal bool) (string, float64) {
 	hasEpisode := episode != ""
 	hasEpisodeRange := episodeRange != ""
 	hasSeason := season != ""
@@ -16,6 +16,10 @@ func inferContentKind(cfg *config.Config, episode string, episodeRange string, s
 	hasPackKind := packKind != ""
 	hasSPKind := spKind != ""
 	hasMovieIndex := movieIndex != ""
+
+	if movieRouteHardExcluded && hasMovieContentSignal {
+		return "BATCH", 0.95
+	}
 
 	rules := append([]config.ContentTypeInferenceRule(nil), cfg.Inference.ContentTypeInference...)
 	sort.SliceStable(rules, func(i, j int) bool { return rules[i].Priority > rules[j].Priority })

@@ -11,6 +11,9 @@ content_type_inference:
     priority: 100
     condition:
       has_movie_index: true
+      no_episode_range: true
+      has_season: false
+      has_season_range: false
     result: "MOVIE"
     confidence: 0.95
     description: "有movie_index字段,例如: 劇場版第1部"
@@ -19,6 +22,9 @@ content_type_inference:
     priority: 95
     condition:
       sp_kind: "MOVIE"
+      no_episode_range: true
+      has_season: false
+      has_season_range: false
     result: "MOVIE"
     confidence: 0.95
     description: "sp_kind为MOVIE"
@@ -27,6 +33,9 @@ content_type_inference:
     priority: 90
     condition:
       has_movie_keyword: true
+      no_episode_range: true
+      has_season: false
+      has_season_range: false
     result: "MOVIE"
     confidence: 0.85
     description: "包含Movie关键词"

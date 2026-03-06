@@ -4464,6 +4464,134 @@ var standaloneVersionPattern = regexp.MustCompile(`(?i)^v(\d{1,2})$`)
 var regionHKMOTWEmbeddedPattern = regexp.MustCompile(`(?i)(?:仅限港澳台地区|僅限港澳台地區)`)
 var regionHKMOTWRemovalPattern = regexp.MustCompile(`(?i)[(（]?\s*(?:仅限港澳台地区|僅限港澳台地區)\s*[)）]?`)
 
+func bracketBoundsAt(tokens []model.Token, idx int) (int, int, bool) {
+	if idx < 0 || idx >= len(tokens) || !isInBracket(tokens, idx) {
+		return -1, -1, false
+	}
+	openIdx := -1
+	openTok := ""
+	depth := 0
+	for j := idx; j >= 0; j-- {
+		t := strings.TrimSpace(tokens[j].Text)
+		if t == "]" || t == "】" {
+			depth++
+			continue
+		}
+		if t == "[" || t == "【" {
+			if depth == 0 {
+				openIdx = j
+				openTok = t
+				break
+			}
+			depth--
+		}
+	}
+	if openIdx < 0 {
+		return -1, -1, false
+	}
+	closeTok := "]"
+	if openTok == "【" {
+		closeTok = "】"
+	}
+	d := 0
+	for j := openIdx; j < len(tokens); j++ {
+		t := strings.TrimSpace(tokens[j].Text)
+		if t == openTok {
+			d++
+			continue
+		}
+		if t == closeTok {
+			d--
+			if d == 0 {
+				return openIdx, j, true
+			}
+		}
+	}
+	return -1, -1, false
+}
+
+func firstMeaningfulTokenInRange(tokens []model.Token, start int, end int) (int, string) {
+	if start < 0 {
+		start = 0
+	}
+	if end > len(tokens) {
+		end = len(tokens)
+	}
+	for i := start; i < end; i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		t := strings.TrimSpace(tokens[i].Text)
+		if t == "" {
+			continue
+		}
+		return i, t
+	}
+	return -1, ""
+}
+
+func isLikelyBracketTitleWordToken(t string) bool {
+	t = strings.TrimSpace(t)
+	if t == "" {
+		return false
+	}
+	if t == "-" || t == "~" || t == ":" || t == "：" || t == "|" || t == "｜" || t == "/" || t == "／" {
+		return false
+	}
+	if episodeOfTotalPattern.MatchString(t) {
+		return false
+	}
+	if standaloneVersionPattern.MatchString(t) {
+		return false
+	}
+	up := strings.ToUpper(t)
+	if up == "END" || up == "FIN" || up == "FINAL" || up == "V2" || up == "V3" {
+		return false
+	}
+	if looksLikeTitleCutMetaToken(t) || isLikelyMetaBracketText(t) {
+		return false
+	}
+	return hasCJK(t) || hasLatin(t)
+}
+
+// Guard title-leading numeric tokens inside bracket title spans:
+// [16 位元的輝煌 ...], [86-不存在的戰區] should stay in title, not become episode primary.
+func isBracketLeadingNumericTitlePrefix(tokens []model.Token, idx int) bool {
+	if idx < 0 || idx >= len(tokens) {
+		return false
+	}
+	cur := strings.TrimSpace(tokens[idx].Text)
+	if !episodeOfTotalPattern.MatchString(cur) {
+		return false
+	}
+	openIdx, closeIdx, ok := bracketBoundsAt(tokens, idx)
+	if !ok {
+		return false
+	}
+	for j := openIdx + 1; j < idx; j++ {
+		if tokens[j].Removed {
+			continue
+		}
+		t := strings.TrimSpace(tokens[j].Text)
+		if t == "" || t == "-" || t == "~" || t == ":" || t == "：" {
+			continue
+		}
+		return false
+	}
+	n1Idx, n1 := firstMeaningfulTokenInRange(tokens, idx+1, closeIdx)
+	if n1Idx < 0 {
+		return false
+	}
+	if n1 == "-" || n1 == "~" {
+		_, n2 := firstMeaningfulTokenInRange(tokens, n1Idx+1, closeIdx)
+		if n2 == "" || episodeOfTotalPattern.MatchString(strings.TrimSpace(n2)) {
+			return false
+		}
+		return isLikelyBracketTitleWordToken(n2)
+	}
+	return isLikelyBracketTitleWordToken(n1)
+}
+
 func hasUpperASCII(s string) bool {
 	for _, r := range s {
 		if 'A' <= r && r <= 'Z' {
@@ -4608,6 +4736,9 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 					continue
 				}
 			}
+			if isBracketLeadingNumericTitlePrefix(tokens, i) {
+				continue
+			}
 		}
 		if isInParen(tokens, i) {
 			continue
@@ -4679,6 +4810,9 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 				nn := strings.TrimLeft(n, "0")
 				if nn == "" {
 					nn = "0"
+				}
+				if isBracketLeadingNumericTitlePrefix(tokens, i) {
+					continue
 				}
 				score := len(n) + 40
 				if score > bestScore {
@@ -4789,6 +4923,9 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 			if prefix == "" {
 				ok := false
 				if inBracket {
+					if isBracketLeadingNumericTitlePrefix(tokens, i) {
+						continue
+					}
 					ok = true
 				}
 				if i-1 >= 0 {

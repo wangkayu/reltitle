@@ -175,6 +175,46 @@ func TestParserGroupRouteOverride_OnePaceFixedTitle(t *testing.T) {
 	}
 }
 
+func TestParserEpisodePriority_BracketTitleLeadingNumberSweetSub(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[SweetSub][16 位元的輝煌 Another Layer][16bit Sensation: Another Layer][01][WebRip][1080P][AVC 8bit][繁日雙語][v2]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if res.Episode != "1" {
+		t.Fatalf("episode=%q want=%q", res.Episode, "1")
+	}
+	if strings.TrimSpace(res.Title) == "" {
+		t.Fatalf("title should not be empty")
+	}
+}
+
+func TestParserEpisodePriority_BracketTitleLeadingNumberCCAnime(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[c.c動漫][10月新番][86-不存在的戰區][12][BIG5][1080P][MP4]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if res.Episode != "12" {
+		t.Fatalf("episode=%q want=%q", res.Episode, "12")
+	}
+	if !strings.Contains(res.Title, "不存在的戰區") {
+		t.Fatalf("title=%q should contain 86 title body", res.Title)
+	}
+}
+
 func containsAlias(aliases []string, want string) bool {
 	for _, a := range aliases {
 		if strings.EqualFold(strings.TrimSpace(a), strings.TrimSpace(want)) {

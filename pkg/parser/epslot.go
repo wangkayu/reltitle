@@ -87,6 +87,9 @@ func buildEPSlotCandidates(tokens []model.Token, season string, seasonIdx int, e
 		}
 		// Single episode digits (often in brackets). Keep it conservative.
 		if episodeOfTotalPattern.MatchString(txt) {
+			if looksLikeDottedNumericSequence(tokens, i) {
+				continue
+			}
 			if yearPattern.MatchString(txt) {
 				continue
 			}

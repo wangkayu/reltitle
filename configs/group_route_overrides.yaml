@@ -37,3 +37,13 @@ overrides:
       require_episode_with_title: true
     output:
       force_route_id: "group_epseg_fate_sf_atlas_v1"
+
+  - id: "sazae_epseg_maruko"
+    enabled: true
+    priority: 95
+    match:
+      group_in: ["丸子家族"]
+      require_episode_like: true
+    output:
+      force_content_kind: "TV_EP"
+      force_route_id: "group_epseg_maruko_v1"

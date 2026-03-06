@@ -247,6 +247,43 @@ func TestParserGroupRouteOverride_GroupEPRouteAtlasWithSP(t *testing.T) {
 	}
 }
 
+func TestParserGroupRouteOverride_GroupEPRouteMarukoNotMovie(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[丸子家族][海螺小姐(Sazae-san)][2712]鲑仔和电线杆叔叔&不要责怪我把自己当女儿&喜欢恐怖电影吗[2023.08.06][GB][1080P][MP4]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalGroup(res); got != "丸子家族" {
+		t.Fatalf("group=%q want=%q", got, "丸子家族")
+	}
+	if got := canonicalEpisode(res); got != "2712" {
+		t.Fatalf("episode=%q want=%q", got, "2712")
+	}
+	if got := res.ContentKind; got != "TV_EP" {
+		t.Fatalf("content_kind=%q want=%q", got, "TV_EP")
+	}
+	if notes := attrValues(res, model.AttrNote); !containsAlias(notes, "鲑仔和电线杆叔叔&不要责怪我把自己当女儿&喜欢恐怖电影吗") {
+		t.Fatalf("missing maruko eptitle note, notes=%v", notes)
+	}
+	if notes := attrValues(res, model.AttrNote); !containsAlias(notes, "2023.08.06") {
+		t.Fatalf("missing maruko airdate note, notes=%v", notes)
+	}
+	if res.EPSlot == nil {
+		t.Fatalf("epslot should not be nil")
+	}
+	for _, c := range res.EPSlot.Candidates {
+		if c.Episode == "8" || c.Episode == "6" {
+			t.Fatalf("date fragments leaked into epslot candidates: %+v", res.EPSlot.Candidates)
+		}
+	}
+}
+
 func TestParserStableTechSpanCombo_CommaSeparatedCodecBlock(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

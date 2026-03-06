@@ -358,6 +358,89 @@ func TestParserEPSlotPrimary_SxxExxHasPrimary(t *testing.T) {
 	}
 }
 
+func TestParserEPSlotPrimary_SxxExxE00AsEpisodeZero(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "Towa.No.Yuugure.S01E00.VOSTFR.1080p.WEBRiP.AV1-KAF"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalEpisode(res); got != "0" {
+		t.Fatalf("episode=%q want=%q", got, "0")
+	}
+	if res.EPSlot == nil || res.EPSlot.Primary == nil {
+		t.Fatalf("epslot.primary should not be nil for sxxexx e00 title")
+	}
+	if got := strings.TrimSpace(res.EPSlot.Primary.Source); got != "sxxexx_final" {
+		t.Fatalf("epslot.primary.source=%q want=%q", got, "sxxexx_final")
+	}
+}
+
+func TestParserEpisodeDashBoundary_BeybladeStyle(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "Beyblade X - 70 - Dread Dragon [English Dub][1080p][MW]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalEpisode(res); got != "70" {
+		t.Fatalf("episode=%q want=%q", got, "70")
+	}
+}
+
+func TestParserEpisodeDashBoundary_AllowsVersionAndEndFlag(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	cases := []struct {
+		name string
+		raw  string
+		ep   string
+		ver  string
+	}{
+		{
+			name: "dash_ep_with_version",
+			raw:  "[TestGroup] Sample Show - 01 v2 [1080p][WEB-DL]",
+			ep:   "1",
+			ver:  "v2",
+		},
+		{
+			name: "dash_ep_with_endflag",
+			raw:  "[TestGroup] Sample Show - 12 END [1080p][WEB-DL]",
+			ep:   "12",
+			ver:  "",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			res, err := p.Parse(tc.raw)
+			if err != nil {
+				t.Fatalf("parse failed: %v", err)
+			}
+			if got := canonicalEpisode(res); got != tc.ep {
+				t.Fatalf("episode=%q want=%q", got, tc.ep)
+			}
+			if got := canonicalVersion(res); got != tc.ver {
+				t.Fatalf("version=%q want=%q", got, tc.ver)
+			}
+		})
+	}
+}
+
 func TestParserNoiseWrapper_UnwrapTransportNestedBracket(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

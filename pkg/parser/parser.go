@@ -4292,7 +4292,15 @@ func detectSxxExx(tokens []model.Token) (season string, episode string, tokenIdx
 		}
 		m := sxxExxPattern.FindStringSubmatch(tokens[i].Text)
 		if len(m) == 3 {
-			return strings.TrimLeft(m[1], "0"), strings.TrimLeft(m[2], "0"), i
+			season = strings.TrimLeft(m[1], "0")
+			if season == "" {
+				season = "0"
+			}
+			episode = strings.TrimLeft(m[2], "0")
+			if episode == "" {
+				episode = "0"
+			}
+			return season, episode, i
 		}
 	}
 	return "", "", -1
@@ -4884,6 +4892,22 @@ var standaloneVersionPattern = regexp.MustCompile(`(?i)^v(\d{1,2})$`)
 var regionHKMOTWEmbeddedPattern = regexp.MustCompile(`(?i)(?:仅限港澳台地区|僅限港澳台地區)`)
 var regionHKMOTWRemovalPattern = regexp.MustCompile(`(?i)[(（]?\s*(?:仅限港澳台地区|僅限港澳台地區)\s*[)）]?`)
 
+func isEpisodeBoundaryRightToken(t string) bool {
+	tt := strings.TrimSpace(t)
+	if tt == "" {
+		return false
+	}
+	switch tt {
+	case "-", "[", "【", "(", "（":
+		return true
+	}
+	if standaloneVersionPattern.MatchString(tt) {
+		return true
+	}
+	up := strings.ToUpper(tt)
+	return up == "END" || up == "FIN" || up == "FINAL"
+}
+
 func bracketBoundsAt(tokens []model.Token, idx int) (int, int, bool) {
 	if idx < 0 || idx >= len(tokens) || !isInBracket(tokens, idx) {
 		return -1, -1, false
@@ -5402,11 +5426,15 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 					sep := strings.TrimSpace(tokens[i-1].Text)
 					if sep == "-" {
 						ok = true
+						rightBoundary := false
+						if i+1 < len(tokens) {
+							rightBoundary = isEpisodeBoundaryRightToken(tokens[i+1].Text)
+						}
 						// Guard: reject cases like "Gintama-3 nen" where the number is followed by a word.
 						if !inBracket {
 							if i+1 < len(tokens) {
 								nextWord := strings.TrimSpace(tokens[i+1].Text)
-								if looksLikeLowercaseLatinWordToken(nextWord) {
+								if !rightBoundary && looksLikeLowercaseLatinWordToken(nextWord) {
 									ok = false
 								}
 							}
@@ -5423,13 +5451,7 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 									}
 								}
 								if allLetters && hasUpperASCII(p) {
-									if i+1 < len(tokens) {
-										next := strings.TrimSpace(tokens[i+1].Text)
-										if next == "[" || next == "【" || next == "(" || next == "（" {
-										} else {
-											ok = false
-										}
-									} else {
+									if !rightBoundary {
 										ok = false
 									}
 								}

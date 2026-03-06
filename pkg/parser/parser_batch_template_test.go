@@ -112,3 +112,26 @@ func TestParserBatchMovieKeyword_TVMoviePackStaysBatch(t *testing.T) {
 		t.Fatalf("expected contents attrs for TV+Movie pack")
 	}
 }
+
+func TestParserBatchSourceType_FallbackFromPackKindDVDISO(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "Dofus.livre.1.Julith.2016.DVDISO.FRENCH-MaitreAnonyme.iso"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "BATCH" {
+		t.Fatalf("content_kind=%q want=%q", got, "BATCH")
+	}
+	if got := firstAttrValue(res, model.AttrPackKind); got != "dvdiso" {
+		t.Fatalf("pack_kind=%q want=%q", got, "dvdiso")
+	}
+	if got := firstAttrValue(res, model.AttrSourceType); got != "DVD" {
+		t.Fatalf("source_type=%q want=%q", got, "DVD")
+	}
+}

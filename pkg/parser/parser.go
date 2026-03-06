@@ -1211,6 +1211,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	attrs = p.promoteNoteAttributes(attrs)
 	normalizePlatformAttrs(attrs)
 	normalizeSourceTypeAttrs(attrs)
+	attrs = enrichBatchSourceTypeFromPackKind(attrs, contentKind)
 	attrs = dedupeAttributes(attrs)
 	epslot = pruneBatchEPSlotForConservativeOutput(epslot, contentKind, episode, episodeRange, spKind)
 
@@ -1843,6 +1844,61 @@ func normalizeSourceTypeAttrs(attrs []model.Attribute) {
 		}
 		attrs[i].Normalized = strings.TrimSpace(attrs[i].Normalized)
 	}
+}
+
+func enrichBatchSourceTypeFromPackKind(attrs []model.Attribute, contentKind string) []model.Attribute {
+	if !strings.EqualFold(strings.TrimSpace(contentKind), "BATCH") {
+		return attrs
+	}
+	hasSource := false
+	packKind := ""
+	for _, a := range attrs {
+		if a.Type == model.AttrSourceType && strings.TrimSpace(a.Normalized) != "" {
+			hasSource = true
+			break
+		}
+		if packKind == "" && a.Type == model.AttrPackKind && strings.TrimSpace(a.Normalized) != "" {
+			packKind = strings.ToLower(strings.TrimSpace(a.Normalized))
+		}
+	}
+	if hasSource || packKind == "" {
+		return attrs
+	}
+	sourceType := ""
+	switch packKind {
+	case "bdrip":
+		sourceType = "BDRip"
+	case "dvdrip":
+		sourceType = "DVDRip"
+	case "dvdiso", "dvd":
+		sourceType = "DVD"
+	case "webrip", "web-rip":
+		sourceType = "WEBRip"
+	case "web-dl", "webdl":
+		sourceType = "WEB-DL"
+	case "bluray", "blu-ray":
+		sourceType = "BluRay"
+	case "bd":
+		sourceType = "BD"
+	case "hdtv", "hdtvrip":
+		sourceType = "HDTV"
+	case "hdrip":
+		sourceType = "HDRip"
+	}
+	if sourceType == "" {
+		return attrs
+	}
+	out := make([]model.Attribute, 0, len(attrs)+1)
+	out = append(out, attrs...)
+	out = append(out, model.Attribute{
+		Type:       model.AttrSourceType,
+		Normalized: sourceType,
+		TokenStart: -1,
+		TokenEnd:   -1,
+		Confidence: 0.65,
+		Source:     "pack_kind_fallback",
+	})
+	return out
 }
 
 func normalizePlatformCode(s string) string {

@@ -25,6 +25,8 @@ type Parser struct {
 	platformCanonical     map[string]string
 	videoCodecCanonical   map[string]string
 	audioCodecCanonical   map[string]string
+	containerCanonical    map[string]string
+	audioFlagCanonical    map[string]string
 	packKindSourceType    map[string]string
 }
 
@@ -293,22 +295,12 @@ func (p *Parser) inferStableTechTokenAttrs(raw string, idx int) ([]model.Attribu
 			out = append(out, model.Attribute{Type: model.AttrAudioCodec, Normalized: norm, TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
 			continue
 		}
-
-		switch low {
-		case "mkv":
-			out = append(out, model.Attribute{Type: model.AttrContainer, Normalized: "MKV", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.74, Source: "tech_combo_span"})
+		if norm, ok := p.normalizeContainerToken(low); ok {
+			out = append(out, model.Attribute{Type: model.AttrContainer, Normalized: norm, TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.74, Source: "tech_combo_span"})
 			continue
-		case "mp4":
-			out = append(out, model.Attribute{Type: model.AttrContainer, Normalized: "MP4", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.74, Source: "tech_combo_span"})
-			continue
-		case "dual":
-			out = append(out, model.Attribute{Type: model.AttrAudioFlag, Normalized: "DUAL_AUDIO", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.7, Source: "tech_combo_span"})
-			continue
-		case "multi":
-			out = append(out, model.Attribute{Type: model.AttrAudioFlag, Normalized: "MULTI_AUDIO", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.7, Source: "tech_combo_span"})
-			continue
-		case "ytb":
-			out = append(out, model.Attribute{Type: model.AttrPlatform, Normalized: "YTB", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.74, Source: "tech_combo_span"})
+		}
+		if norm, ok := p.normalizeAudioFlagToken(low); ok {
+			out = append(out, model.Attribute{Type: model.AttrAudioFlag, Normalized: norm, TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.7, Source: "tech_combo_span"})
 			continue
 		}
 	}
@@ -672,6 +664,8 @@ func New(cfg *config.Config) *Parser {
 		platformCanonical:     buildTypeCanonicalMap(cfg, "platform"),
 		videoCodecCanonical:   buildTypeCanonicalMap(cfg, "video_codec"),
 		audioCodecCanonical:   buildTypeCanonicalMap(cfg, "audio_codec"),
+		containerCanonical:    buildTypeCanonicalMap(cfg, "container"),
+		audioFlagCanonical:    buildTypeCanonicalMap(cfg, "audio_flag"),
 		packKindSourceType:    buildPackKindSourceTypeMap(cfg),
 	}
 
@@ -2055,6 +2049,28 @@ func (p *Parser) normalizeAudioCodecToken(s string) (string, bool) {
 		if v, ok := p.audioCodecCanonical[dashless]; ok {
 			return v, true
 		}
+	}
+	return "", false
+}
+
+func (p *Parser) normalizeContainerToken(s string) (string, bool) {
+	ss := strings.TrimSpace(strings.ToLower(s))
+	if ss == "" || p == nil || len(p.containerCanonical) == 0 {
+		return "", false
+	}
+	if v, ok := p.containerCanonical[ss]; ok {
+		return v, true
+	}
+	return "", false
+}
+
+func (p *Parser) normalizeAudioFlagToken(s string) (string, bool) {
+	ss := strings.TrimSpace(strings.ToLower(s))
+	if ss == "" || p == nil || len(p.audioFlagCanonical) == 0 {
+		return "", false
+	}
+	if v, ok := p.audioFlagCanonical[ss]; ok {
+		return v, true
 	}
 	return "", false
 }

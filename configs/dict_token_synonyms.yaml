@@ -177,6 +177,13 @@ rules:
       normalized: VIUTV
     priority: 100
 
+  - id: platform_ytb
+    raw_tokens: ["ytb", "youtube"]
+    emit:
+      type: platform
+      normalized: YTB
+    priority: 90
+
   - id: video_codec_avc
     raw_tokens: ["avc", "h264", "x264", "h.264", "x.264"]
     emit:
@@ -266,6 +273,41 @@ rules:
     emit:
       type: audio_codec
       normalized: PCM
+    priority: 95
+
+  - id: container_mkv
+    raw_tokens: ["mkv"]
+    emit:
+      type: container
+      normalized: MKV
+    priority: 100
+
+  - id: container_mp4
+    raw_tokens: ["mp4"]
+    emit:
+      type: container
+      normalized: MP4
+    priority: 100
+
+  - id: container_avi
+    raw_tokens: ["avi"]
+    emit:
+      type: container
+      normalized: AVI
+    priority: 100
+
+  - id: audio_flag_dual
+    raw_tokens: ["dual", "dual-audio", "dual audio"]
+    emit:
+      type: audio_flag
+      normalized: DUAL_AUDIO
+    priority: 95
+
+  - id: audio_flag_multi
+    raw_tokens: ["multi", "multi-audio", "multi audio"]
+    emit:
+      type: audio_flag
+      normalized: MULTI_AUDIO
     priority: 95
 
   - id: sub_flag_vostfr

@@ -61,6 +61,9 @@ func TestParserBatchSourceType_WEBRipRange(t *testing.T) {
 	if got := canonicalEpisodeRange(res); got != "1-1" {
 		t.Fatalf("episode_range=%q want=%q", got, "1-1")
 	}
+	if res.EPSlot == nil || res.EPSlot.Primary == nil {
+		t.Fatalf("expected epslot.primary for explicit WEBRip range case")
+	}
 }
 
 func TestParserBatchSourceType_DVDRipPack(t *testing.T) {
@@ -83,6 +86,9 @@ func TestParserBatchSourceType_DVDRipPack(t *testing.T) {
 	}
 	if got := firstAttrValue(res, model.AttrPackKind); got != "dvdrip" {
 		t.Fatalf("pack_kind=%q want=%q", got, "dvdrip")
+	}
+	if res.EPSlot != nil {
+		t.Fatalf("ambiguous batch digits should not keep candidate-only epslot, got=%+v", res.EPSlot)
 	}
 }
 

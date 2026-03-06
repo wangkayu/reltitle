@@ -1212,6 +1212,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	normalizePlatformAttrs(attrs)
 	normalizeSourceTypeAttrs(attrs)
 	attrs = dedupeAttributes(attrs)
+	epslot = pruneBatchEPSlotForConservativeOutput(epslot, contentKind, episode, episodeRange, spKind)
 
 	res := &model.ParseResult{
 		RawTitle:           originalRawTitle,
@@ -1226,6 +1227,25 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	}
 
 	return res, nil
+}
+
+func pruneBatchEPSlotForConservativeOutput(epslot *model.EPSlot, contentKind string, episode string, episodeRange string, spKind string) *model.EPSlot {
+	if epslot == nil {
+		return nil
+	}
+	if !strings.EqualFold(strings.TrimSpace(contentKind), "BATCH") {
+		return epslot
+	}
+	// For BATCH outputs, keep epslot only when we have a confirmed primary or
+	// explicit canonical episode-like fields. Otherwise candidate-only epslot is
+	// often noisy (e.g. digits inside title fragments) and should be suppressed.
+	if epslot.Primary != nil {
+		return epslot
+	}
+	if strings.TrimSpace(episode) != "" || strings.TrimSpace(episodeRange) != "" || strings.TrimSpace(spKind) != "" {
+		return epslot
+	}
+	return nil
 }
 
 var yearMonthShowTagPattern = regexp.MustCompile(`^(?:\d{4}年)?\d{1,2}月番$`)

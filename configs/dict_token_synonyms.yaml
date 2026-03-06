@@ -351,3 +351,38 @@ rules:
       type: sub_lang
       normalized_from_token: true
     priority: 85
+
+  - id: sub_lang_jpn
+    raw_tokens: ["jpn", "jp", "japanese"]
+    emit:
+      type: sub_lang
+      normalized: JPN
+    priority: 85
+
+  - id: sub_lang_rus
+    raw_tokens: ["rus", "russian"]
+    emit:
+      type: sub_lang
+      normalized: RUS
+    priority: 85
+
+  - id: sub_lang_spa
+    raw_tokens: ["spa", "esp", "spanish"]
+    emit:
+      type: sub_lang
+      normalized: SPA
+    priority: 85
+
+  - id: sub_lang_deu
+    raw_tokens: ["deu", "ger", "german"]
+    emit:
+      type: sub_lang
+      normalized: DEU
+    priority: 85
+
+  - id: sub_lang_ita
+    raw_tokens: ["ita", "italian"]
+    emit:
+      type: sub_lang
+      normalized: ITA
+    priority: 85

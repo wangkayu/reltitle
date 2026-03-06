@@ -27,6 +27,9 @@ type Parser struct {
 	audioCodecCanonical   map[string]string
 	containerCanonical    map[string]string
 	audioFlagCanonical    map[string]string
+	subFlagCanonical      map[string]string
+	subLangCanonical      map[string]string
+	audioLangCanonical    map[string]string
 	packKindSourceType    map[string]string
 }
 
@@ -666,6 +669,9 @@ func New(cfg *config.Config) *Parser {
 		audioCodecCanonical:   buildTypeCanonicalMap(cfg, "audio_codec"),
 		containerCanonical:    buildTypeCanonicalMap(cfg, "container"),
 		audioFlagCanonical:    buildTypeCanonicalMap(cfg, "audio_flag"),
+		subFlagCanonical:      buildTypeCanonicalMap(cfg, "sub_flag"),
+		subLangCanonical:      buildTypeCanonicalMap(cfg, "sub_lang"),
+		audioLangCanonical:    buildTypeCanonicalMap(cfg, "audio_lang"),
 		packKindSourceType:    buildPackKindSourceTypeMap(cfg),
 	}
 
@@ -2075,6 +2081,75 @@ func (p *Parser) normalizeAudioFlagToken(s string) (string, bool) {
 	return "", false
 }
 
+func (p *Parser) isAliasMetaOnlyToken(s string) bool {
+	ss := strings.ToLower(strings.TrimSpace(s))
+	if ss == "" {
+		return false
+	}
+	switch ss {
+	case "tv", "audio", "sub", "subs":
+		return true
+	}
+	if p == nil {
+		return false
+	}
+	if _, ok := p.platformCanonical[ss]; ok {
+		return true
+	}
+	if _, ok := p.sourceTypeCanonical[ss]; ok {
+		return true
+	}
+	if _, ok := p.normalizeVideoCodecToken(ss); ok {
+		return true
+	}
+	if _, ok := p.normalizeAudioCodecToken(ss); ok {
+		return true
+	}
+	if _, ok := p.normalizeContainerToken(ss); ok {
+		return true
+	}
+	if _, ok := p.normalizeAudioFlagToken(ss); ok {
+		return true
+	}
+	if _, ok := p.subFlagCanonical[ss]; ok {
+		return true
+	}
+	if _, ok := p.subLangCanonical[ss]; ok {
+		return true
+	}
+	if _, ok := p.audioLangCanonical[ss]; ok {
+		return true
+	}
+	return false
+}
+
+func (p *Parser) isAliasUploaderAtPlatform(s string) bool {
+	ss := strings.TrimSpace(s)
+	if ss == "" {
+		return false
+	}
+	parts := strings.Split(ss, "@")
+	if len(parts) != 2 {
+		return false
+	}
+	uploader := strings.TrimSpace(parts[0])
+	platform := strings.ToLower(strings.TrimSpace(parts[1]))
+	if !reAliasUploaderName.MatchString(uploader) {
+		return false
+	}
+	if platform == "" {
+		return false
+	}
+	if strings.HasPrefix(platform, "b-global") || strings.HasPrefix(platform, "bglobal") {
+		return true
+	}
+	if p == nil {
+		return false
+	}
+	_, ok := p.platformCanonical[platform]
+	return ok
+}
+
 func (p *Parser) normalizePlatformCode(s string) string {
 	ss := strings.TrimSpace(s)
 	if ss == "" {
@@ -2203,7 +2278,6 @@ var reHintPrefix = regexp.MustCompile(`(?i)^(检索用|检索|檢索用|檢索|�
 var reAliasTrimTVSeasonTail = regexp.MustCompile(`(?i)(?:^|\s+)(?:tv|tb|тv|тв)\s*[-_ ]\s*\d{1,2}\s*$`)
 var reAliasTrimPlatformTail = regexp.MustCompile(`(?i)\s+(?:b-?global(?:\s+donghua)?|baha|abema|cr|amzn|amazon|netflix|nf|unext|at-?x|bs11|bs-?ntv|bs-?fuji|france\s*tv|tv)\s*$`)
 var reAliasTrimTVAnimePrefix = regexp.MustCompile(`(?i)^(?:tv\s*アニメ|tv\s*anime|tv\s*animation)\s+`)
-var reAliasMetaOnlyToken = regexp.MustCompile(`(?i)^(?:nf|cr|baha|abema|unext|netflix|vostfr|vf|french|english|japanese|jpn|jp|chs|cht|chi|zho|eng|fre|fra|rus|esp|spa|ita|ger|deu|dub|sub|subs|audio|tv)$`)
 var reAliasTVContentPhrase = regexp.MustCompile(`(?i)\btv\b.*(?:season|series|ver(?:sion)?|reproduction|release|ova|oad|ona|movie|sp|s\d{1,2}|剪辑版|剪輯版|版|系列)`)
 var reTitleTrimTVSeasonTail = regexp.MustCompile(`(?i)\s+(?:tv|tb|тv|тв)\s*[-_ ]?\s*\d{1,3}\s*$`)
 var reTitleTrimTVTail = regexp.MustCompile(`(?i)\s+(?:tv|tb|тv|тв)\s*$`)
@@ -2216,7 +2290,7 @@ var reTitleTrimDVDBundleTail = regexp.MustCompile(`(?i)\s+(?:dvd(?:\s*[- ]?\s*is
 var reTitleTrimDVDEpisodesTail = regexp.MustCompile(`(?i)\s+(?:r\d+\s+)?dvd\s+episodes?\s*$`)
 var reAliasTechSingle = regexp.MustCompile(`(?i)^(?:aac(?:×\d+)?|ac3|e-?ac-?3|ddp|flac|opus|mp3|dts(?:-?hd|-?hdma)?|truehd|atmos|avc|hevc|x26[45]|h\.?26[45]|mkv|mp4|dual)$`)
 var reAliasTechList = regexp.MustCompile(`(?i)^(?:\.?\s*)?(?:aac(?:×\d+)?|ac3|e-?ac-?3|ddp|flac|opus|mp3|dts(?:-?hd|-?hdma)?|truehd|atmos|avc|hevc|x26[45]|h\.?26[45]|mkv|mp4|dual)(?:\s*[,/&+]\s*(?:aac(?:×\d+)?|ac3|e-?ac-?3|ddp|flac|opus|mp3|dts(?:-?hd|-?hdma)?|truehd|atmos|avc|hevc|x26[45]|h\.?26[45]|mkv|mp4|dual))+\.?$`)
-var reAliasUploaderAtPlatform = regexp.MustCompile(`(?i)^[a-z0-9._-]{2,40}@(b-?global(?:\s+donghua)?|baha|abema|cr|amzn|amazon|netflix|nf)$`)
+var reAliasUploaderName = regexp.MustCompile(`(?i)^[a-z0-9._-]{2,40}$`)
 
 func normalizeStreamMetaText(s string) string {
 	ss := strings.TrimSpace(s)
@@ -2787,7 +2861,7 @@ func (p *Parser) sanitizeAliasesForOutput(aliases []string, title string) []stri
 		if isStreamMetaText(a) || reTailMetaToken.MatchString(strings.TrimSpace(a)) {
 			continue
 		}
-		if reAliasMetaOnlyToken.MatchString(strings.TrimSpace(a)) {
+		if p.isAliasMetaOnlyToken(a) {
 			continue
 		}
 		if reAliasTVContentPhrase.MatchString(a) {
@@ -2797,7 +2871,7 @@ func (p *Parser) sanitizeAliasesForOutput(aliases []string, title string) []stri
 		if strings.Contains(low, "tv +") || strings.Contains(low, "tv+") {
 			continue
 		}
-		if reAliasUploaderAtPlatform.MatchString(a) {
+		if p.isAliasUploaderAtPlatform(a) {
 			continue
 		}
 		k := aliasSemanticKey(a)

@@ -20,3 +20,21 @@ overrides:
       force_template_id: "TF_BATCH_RANGE_ONEPACE_01"
       force_content_kind: "BATCH"
       force_route_id: "onepace_range_release"
+
+  - id: "fate_strange_fake_ep_wgjd"
+    enabled: true
+    priority: 95
+    match:
+      group_in: ["晚街与灯", "晚街與燈"]
+      require_episode_with_title: true
+    output:
+      force_route_id: "group_epseg_fate_sf_wgjd_v1"
+
+  - id: "fate_strange_fake_ep_atlas"
+    enabled: true
+    priority: 95
+    match:
+      group_in: ["阿特拉斯字幕组", "阿特拉斯字幕组·雪原市出差所", "阿特拉斯字幕組", "阿特拉斯字幕組·雪原市出差所"]
+      require_episode_with_title: true
+    output:
+      force_route_id: "group_epseg_fate_sf_atlas_v1"

@@ -66,6 +66,30 @@ entries:
         remove: true
         confidence: 0.65
 
+  - id: source_type_dvdrip
+    any_of:
+      - tokens: ["dvdrip"]
+        emit:
+          - type: source_type
+            normalized: "DVDRip"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["dvd-rip"]
+        emit:
+          - type: source_type
+            normalized: "DVDRip"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["dvd", "rip"]
+        emit:
+          - type: source_type
+            normalized: "DVDRip"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+
   - id: note_bdrip
     tokens: ["bdrip"]
     emit:
@@ -3663,6 +3687,117 @@ entries:
     remove: true
     confidence: 0.85
 
+  - id: resolution_540p
+    any_of:
+      - tokens: ["540p"]
+        emit:
+          - type: resolution
+            normalized: "540p"
+            token_index: -1
+        remove: true
+        confidence: 0.85
+      - tokens: ["960x540"]
+        emit:
+          - type: resolution
+            normalized: "540p"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["960X540"]
+        emit:
+          - type: resolution
+            normalized: "540p"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["960×540"]
+        emit:
+          - type: resolution
+            normalized: "540p"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+
+  - id: resolution_custom_nonstandard_p
+    any_of:
+      - tokens: ["576p"]
+        emit:
+          - type: resolution
+            normalized: "576p"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["800p"]
+        emit:
+          - type: resolution
+            normalized: "800p"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["804p"]
+        emit:
+          - type: resolution
+            normalized: "804p"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["816p"]
+        emit:
+          - type: resolution
+            normalized: "816p"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["990p"]
+        emit:
+          - type: resolution
+            normalized: "990p"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["1008p"]
+        emit:
+          - type: resolution
+            normalized: "1008p"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["1090p"]
+        emit:
+          - type: resolution
+            normalized: "1090p"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["1180p"]
+        emit:
+          - type: resolution
+            normalized: "1180p"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["1440p"]
+        emit:
+          - type: resolution
+            normalized: "1440p"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["1480p"]
+        emit:
+          - type: resolution
+            normalized: "1480p"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["1636p"]
+        emit:
+          - type: resolution
+            normalized: "1636p"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+
   - id: video_codec_hevc
     any_of:
       - tokens: ["hevc"]
@@ -4245,6 +4380,40 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.75
+
+  - id: platform_adn
+    any_of:
+      - tokens: ["adn"]
+        emit:
+          - type: platform
+            normalized: "ADN"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["animation", "digital", "network"]
+        emit:
+          - type: platform
+            normalized: "ADN"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+
+  - id: platform_viutv
+    any_of:
+      - tokens: ["viutv"]
+        emit:
+          - type: platform
+            normalized: "VIUTV"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["viu", "tv"]
+        emit:
+          - type: platform
+            normalized: "VIUTV"
+            token_index: -1
+        remove: true
+        confidence: 0.7
 
   - id: platform_abema
     any_of:

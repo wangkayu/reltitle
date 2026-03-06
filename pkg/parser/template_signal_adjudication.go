@@ -12,6 +12,11 @@ var (
 	templateSignalSxxExx = regexp.MustCompile(`(?i)^s(\d{1,2})e(\d{1,4})$`)
 	templateSignalJPEP   = regexp.MustCompile(`^第?(\d{1,4})(?:話|话|集)$`)
 	templateSignalDigits = regexp.MustCompile(`^\d{1,3}$`)
+	templateSignalResolutionToken = regexp.MustCompile(`(?i)^(\d{3,4})p$`)
+	templateSignalVideoCodecToken = regexp.MustCompile(`(?i)^(?:x\.?26[45]|h\.?26[45]|hevc|avc|av1)$`)
+	templateSignalAudioCodecToken = regexp.MustCompile(`(?i)^(?:aac|flac|ac3|e-?ac-?3|eac3|ddp|opus|pcm|dts(?:-?hd|-?hdma)?|truehd)$`)
+	templateSignalSourceTypeToken = regexp.MustCompile(`(?i)^(?:web[-_ ]?dl|web[-_ ]?rip|webrip|webdl|bdrip|bluray|blu-ray|hdtv|dvdrip|dvd|remux)$`)
+	templateSignalPlatformToken   = regexp.MustCompile(`(?i)^(?:cr|crunchyroll|nf|netflix|adn|baha|bilibili|amzn|amazon|abema|hidive|viutv)$`)
 )
 
 func applyTemplateSignalAdjudication(
@@ -112,7 +117,175 @@ func applyTemplateSignalAdjudication(
 		}
 	}
 
+	if sig.TechStartsAfterEPStrict {
+		var techEvents []string
+		attrs, techEvents = applyTechStartsAfterEPStrict(attrs, tokens, episodeIdx, episodeRangeIdx, seasonIdx, titleStart, titleEnd, hasTitleSpan)
+		events = append(events, techEvents...)
+	}
+
 	return attrs, group, episode, episodeIdx, episodeRange, episodeRangeIdx, season, seasonIdx, uniqueSignalEvents(events)
+}
+
+func applyTechStartsAfterEPStrict(
+	attrs []model.Attribute,
+	tokens []model.Token,
+	episodeIdx int,
+	episodeRangeIdx int,
+	seasonIdx int,
+	titleStart int,
+	titleEnd int,
+	hasTitleSpan bool,
+) ([]model.Attribute, []string) {
+	anchor := maxSignalIdx(episodeIdx, episodeRangeIdx, seasonIdx)
+	if anchor < 0 || len(tokens) == 0 || len(attrs) == 0 {
+		return attrs, nil
+	}
+
+	events := make([]string, 0, 6)
+	for i := range attrs {
+		if !isStrictTechAttrType(attrs[i].Type) {
+			continue
+		}
+		s := attrs[i].TokenStart
+		e := attrs[i].TokenEnd
+		if s < 0 || e <= s || s >= len(tokens) {
+			continue
+		}
+		beforeEP := s <= anchor
+		inTitle := hasTitleSpan && spansOverlap(s, e, titleStart, titleEnd)
+		if !beforeEP && !inTitle {
+			continue
+		}
+		origType := attrs[i].Type
+		attrs[i].Type = model.AttrNote
+		attrs[i].Source = "template_signal_tech_before_ep"
+		if attrs[i].Confidence > 0.6 {
+			attrs[i].Confidence = 0.6
+		}
+		events = append(events, "tech_before_ep_demoted:"+string(origType))
+	}
+
+	covered := make([]bool, len(tokens))
+	for _, a := range attrs {
+		if a.TokenStart < 0 || a.TokenEnd <= a.TokenStart || a.TokenEnd > len(tokens) {
+			continue
+		}
+		for i := a.TokenStart; i < a.TokenEnd; i++ {
+			covered[i] = true
+		}
+	}
+	hasType := make(map[model.AttrType]bool, 8)
+	for _, a := range attrs {
+		if isStrictTechAttrType(a.Type) {
+			hasType[a.Type] = true
+		}
+	}
+	for i := anchor + 1; i < len(tokens); i++ {
+		if covered[i] {
+			continue
+		}
+		t := cleanTemplateSignalTechToken(tokens[i].Text)
+		if t == "" {
+			continue
+		}
+		typ, norm, ok := inferPostEPTechToken(t)
+		if !ok || hasType[typ] {
+			continue
+		}
+		attrs = append(attrs, model.Attribute{
+			Type:       typ,
+			Normalized: norm,
+			TokenStart: i,
+			TokenEnd:   i + 1,
+			Confidence: 0.62,
+			Source:     "template_float_infer",
+		})
+		hasType[typ] = true
+		covered[i] = true
+		events = append(events, "tech_inferred_post_ep:"+string(typ))
+	}
+
+	return attrs, events
+}
+
+func cleanTemplateSignalTechToken(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return ""
+	}
+	s = strings.Trim(s, "[](){}<>【】（）.,，:：;；'\"")
+	return strings.TrimSpace(s)
+}
+
+func inferPostEPTechToken(token string) (model.AttrType, string, bool) {
+	if token == "" {
+		return "", "", false
+	}
+	low := strings.ToLower(strings.TrimSpace(token))
+	if low == "" {
+		return "", "", false
+	}
+	if m := templateSignalResolutionToken.FindStringSubmatch(low); len(m) == 2 {
+		return model.AttrResolution, m[1] + "p", true
+	}
+	if templateSignalSourceTypeToken.MatchString(low) {
+		switch {
+		case strings.HasPrefix(low, "web"):
+			if strings.Contains(low, "dl") {
+				return model.AttrSourceType, "WEB-DL", true
+			}
+			return model.AttrSourceType, "WEBRip", true
+		case strings.Contains(low, "bdrip"):
+			return model.AttrSourceType, "BDRip", true
+		case strings.Contains(low, "blu"):
+			return model.AttrSourceType, "BluRay", true
+		case strings.Contains(low, "hdtv"):
+			return model.AttrSourceType, "HDTV", true
+		case strings.Contains(low, "dvdrip"):
+			return model.AttrSourceType, "DVDRip", true
+		case strings.Contains(low, "dvd"):
+			return model.AttrSourceType, "DVD", true
+		case strings.Contains(low, "remux"):
+			return model.AttrSourceType, "Remux", true
+		}
+	}
+	if templateSignalVideoCodecToken.MatchString(low) {
+		n := strings.ReplaceAll(low, ".", "")
+		switch n {
+		case "hevc", "avc", "av1":
+			return model.AttrVideoCodec, strings.ToUpper(n), true
+		default:
+			return model.AttrVideoCodec, n, true
+		}
+	}
+	if templateSignalAudioCodecToken.MatchString(low) {
+		n := strings.ReplaceAll(low, "-", "")
+		switch n {
+		case "aac", "flac", "ac3", "eac3", "ddp", "opus", "pcm", "truehd":
+			return model.AttrAudioCodec, strings.ToUpper(n), true
+		default:
+			return model.AttrAudioCodec, strings.ToUpper(low), true
+		}
+	}
+	if templateSignalPlatformToken.MatchString(low) {
+		return model.AttrPlatform, normalizePlatformCode(low), true
+	}
+	return "", "", false
+}
+
+func isStrictTechAttrType(t model.AttrType) bool {
+	switch t {
+	case model.AttrResolution,
+		model.AttrSourceType,
+		model.AttrVideoCodec,
+		model.AttrAudioCodec,
+		model.AttrBitDepth,
+		model.AttrContainer,
+		model.AttrPlatform:
+		return true
+	default:
+		return false
+	}
 }
 
 func titleSpanFromAttrsForSignals(attrs []model.Attribute) (int, int, bool) {

@@ -278,6 +278,14 @@ func passDetectEpisodeRangeAndEpisode(tokens []model.Token, attrs *[]model.Attri
 			ctx.EpisodeVersionIdx = -1
 		}
 	}
+	if strings.TrimSpace(ctx.EpisodeRange) == "" && (strings.TrimSpace(ctx.Episode) == "" || ctx.EpisodeIdx < 0) {
+		if ep, idx, ok := detectEpisodeFromSPBracketSegment(tokens); ok {
+			ctx.Episode = ep
+			ctx.EpisodeIdx = idx
+			ctx.EpisodeVersion = ""
+			ctx.EpisodeVersionIdx = -1
+		}
+	}
 	// Detect additional special index like ES07 in patterns such as "07+ES07".
 	// This should not override the main episode; it is extra content metadata.
 	if attrs != nil {

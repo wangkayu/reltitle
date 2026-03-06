@@ -234,6 +234,8 @@ type GroupRouteMatch struct {
 	GroupIn             []string `yaml:"group_in" json:"group_in"`
 	RawMustContainAny   []string `yaml:"raw_must_contain_any" json:"raw_must_contain_any"`
 	RequireEpisodeRange bool     `yaml:"require_episode_range" json:"require_episode_range"`
+	RequireEpisodeLike  bool     `yaml:"require_episode_like" json:"require_episode_like"`
+	RequireEpisodeWithTitle bool `yaml:"require_episode_with_title" json:"require_episode_with_title"`
 }
 
 type GroupRouteOutput struct {

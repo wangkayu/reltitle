@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"title-parser/pkg/config"
+	"title-parser/pkg/model"
 )
 
 func TestParserAliasCleanup_StripsTVAnimePrefixAndTVSeasonTail(t *testing.T) {
@@ -187,6 +188,65 @@ func TestParserGroupRouteOverride_OnePaceFixedTitle(t *testing.T) {
 	}
 }
 
+func TestParserGroupRouteOverride_GroupEPRouteWGDL(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[晚街与灯][命运-奇异赝品_Fate strange Fake][09 噩梦与伦敦的黎明一同到来][WebRip][1080P_AVC_AAC][简日双语内嵌]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalEpisode(res); got != "9" {
+		t.Fatalf("episode=%q want=%q", got, "9")
+	}
+	if got := canonicalGroup(res); got != "晚街与灯" {
+		t.Fatalf("group=%q want=%q", got, "晚街与灯")
+	}
+	if got := canonicalTitle(res); got == "" {
+		t.Fatalf("title should not be empty")
+	}
+	for _, a := range canonicalAliases(res) {
+		if strings.Contains(a, "09 ") || strings.HasPrefix(strings.TrimSpace(a), "09_") {
+			t.Fatalf("episode-like alias should be pruned, aliases=%v", canonicalAliases(res))
+		}
+	}
+	if res.ContentKind == "MOVIE" {
+		t.Fatalf("content_kind should not remain MOVIE, got=%q", res.ContentKind)
+	}
+}
+
+func TestParserGroupRouteOverride_GroupEPRouteAtlasWithSP(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[阿特拉斯字幕组][命运-奇异赝品 -黎明低语-_Fate／strange Fake -Whispers of Dawn-][00_SP][简繁英内封PGS][English Dub][Web-DL Remux][1080p HEVC AAC]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalEpisode(res); got != "0" {
+		t.Fatalf("episode=%q want=%q", got, "0")
+	}
+	if got := canonicalSPKind(res); got != "SP" {
+		t.Fatalf("sp_kind=%q want=%q", got, "SP")
+	}
+	if res.ContentKind == "MOVIE" {
+		t.Fatalf("content_kind should not remain MOVIE, got=%q", res.ContentKind)
+	}
+	for _, a := range canonicalAliases(res) {
+		if strings.EqualFold(strings.TrimSpace(a), "00_SP") {
+			t.Fatalf("episode-like alias should be pruned, aliases=%v", canonicalAliases(res))
+		}
+	}
+}
+
 func TestParserEpisodePriority_BracketTitleLeadingNumberSweetSub(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {
@@ -268,6 +328,61 @@ func TestParserSingleVersionToken_Extracted(t *testing.T) {
 	version := canonicalVersion(res)
 	if version != "v1" {
 		t.Fatalf("version=%q want=%q", version, "v1")
+	}
+}
+
+func TestTemplateSignalTechStrict_InferPostEPCoreTechFromFloat(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Fansub] Example Show - 09 VOSTFR 720p WEB x.265 AAC -Tsundere-Raws (CR).mkv"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if canonicalEpisode(res) != "9" {
+		t.Fatalf("episode=%q want=9", canonicalEpisode(res))
+	}
+	vcodecs := attrValues(res, model.AttrVideoCodec)
+	if len(vcodecs) == 0 {
+		t.Fatalf("expected video codec inferred from post-ep float token, attrs=%v", res.Attributes)
+	}
+	found := false
+	for _, v := range vcodecs {
+		low := strings.ToLower(v)
+		if strings.Contains(low, "x265") || strings.Contains(low, "hevc") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected x265/hevc codec inferred from post-ep float token, got=%v", vcodecs)
+	}
+}
+
+func TestTemplateSignalTechStrict_DoesNotInferPreTitleTechAsCodec(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Fansub] x.265 Example Show - 09 VOSTFR 720p WEB AAC -Tsundere-Raws (CR).mkv"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if canonicalEpisode(res) != "9" {
+		t.Fatalf("episode=%q want=9", canonicalEpisode(res))
+	}
+	vcodecs := attrValues(res, model.AttrVideoCodec)
+	for _, v := range vcodecs {
+		if strings.Contains(strings.ToLower(v), "x265") {
+			t.Fatalf("pre-title x.265 should not be inferred as video codec, got=%v", vcodecs)
+		}
 	}
 }
 

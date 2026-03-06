@@ -36,6 +36,8 @@ type groupRouteRule struct {
 	groups              map[string]struct{}
 	rawMustContainAny   []string
 	requireEpisodeRange bool
+	requireEpisodeLike  bool
+	requireEpisodeWithTitle bool
 	forceGroup          string
 	forceTitle          string
 	clearAliases        bool
@@ -520,6 +522,8 @@ func New(cfg *config.Config) *Parser {
 			groups:              groupSet,
 			rawMustContainAny:   rawContains,
 			requireEpisodeRange: r.Match.RequireEpisodeRange,
+			requireEpisodeLike:  r.Match.RequireEpisodeLike,
+			requireEpisodeWithTitle: r.Match.RequireEpisodeWithTitle,
 			forceGroup:          strings.TrimSpace(r.Output.ForceGroup),
 			forceTitle:          strings.TrimSpace(r.Output.ForceTitle),
 			clearAliases:        r.Output.ClearAliases,
@@ -912,6 +916,36 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 		attrs = upsertTitleAttribute(attrs, title, "title_cleanup")
 	}
 	group, title, aliases, templateID, contentKind, routeID, overrideApplied := p.applyGroupRouteOverride(rawTitle, group, episodeRange, title, aliases, templateID, contentKind, routeID)
+	if overrideApplied && strings.HasPrefix(routeID, "group_epseg_") {
+		if ep, sp, ok := extractEpisodeLikeFromThirdBracket(rawTitle); ok {
+			episode = ep
+			if strings.TrimSpace(sp) != "" {
+				spKind = sp
+			}
+			aliases = pruneEpisodeLikeAliases(aliases)
+			if epslot == nil || epslot.Primary == nil || strings.TrimSpace(epslot.Primary.Episode) == "" {
+				primary := &model.EPEntity{
+					Kind:       "EP",
+					Axis:       "UNKNOWN",
+					Episode:    episode,
+					SPKind:     spKind,
+					TokenStart: -1,
+					TokenEnd:   -1,
+					Source:     "group_route_override",
+				}
+				epslot = &model.EPSlot{
+					Primary:    primary,
+					Candidates: []model.EPEntity{*primary},
+				}
+			}
+			epRoute = computeEpRoute(tokens, episode, episodeRange, season, seasonRange, spKind, movieIndex, hasMovieKeyword)
+			contentKind, contentConf = inferContentKind(p.cfg, episode, episodeRange, season, seasonRange, packKind, spKind, movieIndex, hasTech, hasMovieKeyword, hasYear)
+			if tid, tconf, _ := matchTemplate(p.cfg, epRoute, contentKind, group, episode, episodeRange, season, packKind, spKind, movieIndex, hasTech, hasMovieKeyword, attrs, tokens); strings.TrimSpace(tid) != "" && tid != "TF_UNKNOWN_DEFAULT" {
+				templateID = tid
+				templateConf = tconf
+			}
+		}
+	}
 	if overrideApplied {
 		if strings.TrimSpace(title) != "" {
 			attrs = upsertTitleAttribute(attrs, title, "group_route_override")
@@ -1121,6 +1155,17 @@ func (p *Parser) applyGroupRouteOverride(
 		if r.requireEpisodeRange && strings.TrimSpace(episodeRange) == "" {
 			continue
 		}
+		if r.requireEpisodeLike {
+			if _, _, ok := extractEpisodeLikeFromThirdBracket(rawTitle); !ok {
+				continue
+			}
+		}
+		if r.requireEpisodeWithTitle {
+			_, _, epTitle, ok := extractEpisodeLikeFromThirdBracketDetailed(rawTitle)
+			if !ok || strings.TrimSpace(epTitle) == "" {
+				continue
+			}
+		}
 		if len(r.rawMustContainAny) > 0 {
 			hit := false
 			for _, kw := range r.rawMustContainAny {
@@ -1170,6 +1215,77 @@ func (p *Parser) applyGroupRouteOverride(
 		return outGroup, outTitle, outAliases, outTemplateID, outContentKind, outRouteID, true
 	}
 	return group, title, aliases, templateID, contentKind, routeID, false
+}
+
+var bracketSegmentPattern = regexp.MustCompile(`\[(.*?)\]`)
+var episodeLikeThirdBracketPattern = regexp.MustCompile(`(?i)^\s*(\d{1,3})(?:\s*([_ .-]|&)\s*(.*))?\s*$`)
+var spKindLeadPattern = regexp.MustCompile(`(?i)^(SP|OVA|OAD|ONA|NCOP|NCED|PV|CM)\b`)
+var episodeLikeAliasPattern = regexp.MustCompile(`(?i)^\s*\d{1,3}(?:\s*([_ .-]|&)\s*.*)?$`)
+
+func extractEpisodeLikeFromThirdBracket(rawTitle string) (episode string, spKind string, ok bool) {
+	ep, sp, _, ok := extractEpisodeLikeFromThirdBracketDetailed(rawTitle)
+	return ep, sp, ok
+}
+
+func extractEpisodeLikeFromThirdBracketDetailed(rawTitle string) (episode string, spKind string, epTitle string, ok bool) {
+	if strings.TrimSpace(rawTitle) == "" {
+		return "", "", "", false
+	}
+	matches := bracketSegmentPattern.FindAllStringSubmatch(rawTitle, -1)
+	if len(matches) < 3 {
+		return "", "", "", false
+	}
+	seg := strings.TrimSpace(matches[2][1])
+	if seg == "" {
+		return "", "", "", false
+	}
+	m := episodeLikeThirdBracketPattern.FindStringSubmatch(seg)
+	if len(m) == 0 {
+		return "", "", "", false
+	}
+	epRaw := strings.TrimSpace(m[1])
+	epNum, err := strconv.Atoi(epRaw)
+	if err != nil || epNum < 0 {
+		return "", "", "", false
+	}
+	episode = strconv.Itoa(epNum)
+	rest := ""
+	if len(m) >= 4 {
+		rest = strings.TrimSpace(m[3])
+	}
+	if strings.EqualFold(strings.TrimSpace(m[2]), "&") {
+		if sm := spKindLeadPattern.FindStringSubmatch(rest); len(sm) > 1 {
+			spKind = strings.ToUpper(strings.TrimSpace(sm[1]))
+			epTitle = strings.TrimSpace(rest[len(strings.TrimSpace(sm[0])):])
+			epTitle = strings.TrimSpace(strings.TrimLeft(epTitle, "_ .-"))
+			return episode, spKind, epTitle, true
+		}
+	}
+	if sm := spKindLeadPattern.FindStringSubmatch(rest); len(sm) > 1 {
+		spKind = strings.ToUpper(strings.TrimSpace(sm[1]))
+		epTitle = strings.TrimSpace(rest[len(strings.TrimSpace(sm[0])):])
+		epTitle = strings.TrimSpace(strings.TrimLeft(epTitle, "_ .-"))
+		return episode, spKind, epTitle, true
+	}
+	return episode, "", rest, true
+}
+
+func pruneEpisodeLikeAliases(aliases []string) []string {
+	if len(aliases) == 0 {
+		return aliases
+	}
+	out := make([]string, 0, len(aliases))
+	for _, a := range aliases {
+		aa := strings.TrimSpace(a)
+		if aa == "" {
+			continue
+		}
+		if episodeLikeAliasPattern.MatchString(aa) {
+			continue
+		}
+		out = append(out, a)
+	}
+	return out
 }
 
 func computeEpRoute(tokens []model.Token, episode string, episodeRange string, season string, seasonRange string, spKind string, movieIndex string, hasMovieKeyword bool) string {
@@ -2385,6 +2501,8 @@ func cleanTitleToken(s string) string {
 }
 
 var reFileExtSuffix = regexp.MustCompile(`(?i)\.(?:mkv|mp4|avi|mov|wmv|flv|ts|m2ts|mpg|mpeg|iso|m4v)$`)
+var episodeSPAliasPattern = regexp.MustCompile(`(?i)^\d{1,4}\s*[_ .-]\s*(?:sp|ova|oad|ona|ex|pv|op|ed)$`)
+var episodeSPAliasAmpPattern = regexp.MustCompile(`(?i)^\d{1,4}\s*(?:&|＆)\s*(?:sp|ova|oad|ona|ex|pv|op|ed)$`)
 
 func stripFileExtSuffix(s string) string {
 	s = strings.TrimSpace(s)
@@ -2425,6 +2543,9 @@ func isValidAliasToken(s string) bool {
 		return false
 	}
 	if regexp.MustCompile(`(?i)^(?:sp|ova|oad|ona|ex|pv|op|ed)\d{1,3}$`).MatchString(low) {
+		return false
+	}
+	if episodeSPAliasPattern.MatchString(s) || episodeSPAliasAmpPattern.MatchString(s) {
 		return false
 	}
 	if regexp.MustCompile(`(?i)^[0-9a-f]{8}$`).MatchString(low) {
@@ -4726,33 +4847,86 @@ func looksLikeCodecNumber(tokens []model.Token, idx int) bool {
 	return false
 }
 
+var episodeSPBracketCombinedPattern = regexp.MustCompile(`(?i)^0*(\d{1,3})\s*[_ .-]\s*(sp|ova|oad|ona|ex|pv|op|ed)\s*$`)
+
+func detectEpisodeFromSPBracketSegment(tokens []model.Token) (string, int, bool) {
+	for i := 0; i < len(tokens); i++ {
+		if !isInBracket(tokens, i) {
+			continue
+		}
+		cur := strings.TrimSpace(tokens[i].Text)
+		if cur == "" {
+			continue
+		}
+		if mm := episodeSPBracketCombinedPattern.FindStringSubmatch(cur); len(mm) == 3 {
+			n := strings.TrimLeft(strings.TrimSpace(mm[1]), "0")
+			if n == "" {
+				n = "0"
+			}
+			return n, i, true
+		}
+		if !episodeOfTotalPattern.MatchString(cur) || len(cur) > 3 {
+			continue
+		}
+		if i+2 >= len(tokens) {
+			continue
+		}
+		if !isInBracket(tokens, i+1) || !isInBracket(tokens, i+2) {
+			continue
+		}
+		sep := strings.TrimSpace(tokens[i+1].Text)
+		if sep != "_" && sep != "-" && sep != "." && sep != "&" && sep != "＆" {
+			continue
+		}
+		next := strings.TrimSpace(tokens[i+2].Text)
+		if m := spKindPattern.FindStringSubmatch(next); len(m) < 2 {
+			continue
+		}
+		n := strings.TrimLeft(cur, "0")
+		if n == "" {
+			n = "0"
+		}
+		return n, i, true
+	}
+	return "", -1, false
+}
+
 func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 	bestIdx := -1
 	best := ""
 	bestScore := -1
 	bestVer := ""
+	bestKeywordIdx := -1
+	bestKeywordDashIdx := -1
 
-	// Pattern: "- Episode 52" (common in English TV rip naming).
+	// Pattern: "Episode 52" / "- Episode 52" (common in English TV rip naming).
 	for i := 0; i+1 < len(tokens); i++ {
 		if tokens[i].Removed || tokens[i+1].Removed {
 			continue
 		}
 		kw := strings.TrimSpace(tokens[i].Text)
-		if !strings.EqualFold(kw, "episode") {
+		if !(strings.EqualFold(kw, "episode") || strings.EqualFold(kw, "ep")) {
+			continue
+		}
+		if isInBracket(tokens, i) || isInParen(tokens, i) {
 			continue
 		}
 		d := strings.TrimSpace(tokens[i+1].Text)
 		if !episodeOfTotalPattern.MatchString(d) {
 			continue
 		}
-		// Guard: require a dash before the keyword to reduce false positives.
+		if yearPattern.MatchString(d) {
+			continue
+		}
+		score := 84
+		dashIdx := -1
+		// Prefer the explicit "- Episode N" style, but do not require it.
 		if i-1 >= 0 {
 			prev := strings.TrimSpace(tokens[i-1].Text)
-			if prev != "-" {
-				continue
+			if prev == "-" {
+				score += 6
+				dashIdx = i - 1
 			}
-		} else {
-			continue
 		}
 		n := strings.TrimLeft(d, "0")
 		if n == "" {
@@ -4761,16 +4935,13 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 		if n == "0" {
 			continue
 		}
-		// Remove the keyword token (and the preceding dash) to avoid polluting title.
-		tokens[i].Removed = true
-		if i-1 >= 0 {
-			tokens[i-1].Removed = true
+		if score > bestScore {
+			best = n
+			bestIdx = i + 1
+			bestScore = score
+			bestKeywordIdx = i
+			bestKeywordDashIdx = dashIdx
 		}
-		// Let the digit token remain as the episode anchor.
-		best = n
-		bestIdx = i + 1
-		bestScore = 100
-		break
 	}
 
 	for i := 0; i < len(tokens); i++ {
@@ -5055,6 +5226,12 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 		}
 	}
 	if bestIdx >= 0 {
+		if bestKeywordIdx >= 0 && bestKeywordIdx < len(tokens) {
+			tokens[bestKeywordIdx].Removed = true
+		}
+		if bestKeywordDashIdx >= 0 && bestKeywordDashIdx < len(tokens) {
+			tokens[bestKeywordDashIdx].Removed = true
+		}
 		text := strings.TrimSpace(tokens[bestIdx].Text)
 		// If the episode token is itself a special/extra marker token like "OVA02",
 		// or a version-suffixed token like "05v2", remove it to avoid polluting title
@@ -5947,9 +6124,6 @@ var spKindPattern = regexp.MustCompile(`(?i)^(sp|ova|oad|ona|ex)(\d{1,3})?$`)
 
 func detectSPKind(tokens []model.Token) string {
 	for i := 0; i < len(tokens); i++ {
-		if tokens[i].Removed {
-			continue
-		}
 		if m := regexp.MustCompile(`(?i)^0?\d{1,3}\s*(?:&|＆)\s*(sp|ova|oad|ona|ex)\b`).FindStringSubmatch(strings.TrimSpace(tokens[i].Text)); len(m) == 2 {
 			return strings.ToUpper(m[1])
 		}

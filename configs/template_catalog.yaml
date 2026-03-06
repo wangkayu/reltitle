@@ -16,6 +16,14 @@ tv_episode_templates:
     examples:
       - "[ToonsHub] Kunon the Sorcerer Can See S01E01 1080p CR WEB-DL AAC2.0 H.264 (Majutsushi Kunon wa Mieteiru, Multi-Subs)"
     route_id: "streaming_release_v1"
+    signals:
+      slot_order: ["G", "T", "E", "X"]
+      group_position: "head"
+      group_after_ep_only: false
+      forbid_group_in_title_span: true
+      ep_anchor_priority: true
+      title_over_group_default: true
+      tech_starts_after_ep: true
     conditions:
       require:
         platform_in: ["CR", "BAHA", "BILIBILI", "AMZN", "ABEMA", "HIDIVE", "ADN", "VIUTV"]
@@ -30,6 +38,14 @@ tv_episode_templates:
     examples:
       - "[ANi] Grand Blue Dreaming / GRAND BLUE 碧蓝之海 2 - 07 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
     route_id: "streaming_release_v1"
+    signals:
+      slot_order: ["G", "T", "E", "X"]
+      group_position: "head"
+      group_after_ep_only: false
+      forbid_group_in_title_span: true
+      ep_anchor_priority: true
+      title_over_group_default: true
+      tech_starts_after_ep: true
     conditions:
       require:
         platform_in: ["CR", "BAHA", "BILIBILI", "AMZN", "ABEMA", "HIDIVE", "ADN", "VIUTV"]
@@ -44,6 +60,14 @@ tv_episode_templates:
     examples:
       - "Lets Play S01E12 1080p CR WEB-DL DUAL AAC2.0 H 264-VARYG (Let’s Play: Quest Darake no My Life, Dual-Audio, Multi-Subs)"
     route_id: "streaming_release_v1"
+    signals:
+      slot_order: ["T", "E", "X"]
+      group_position: "none"
+      group_after_ep_only: false
+      forbid_group_in_title_span: false
+      ep_anchor_priority: true
+      title_over_group_default: true
+      tech_starts_after_ep: true
     conditions:
       require:
         platform_in: ["CR", "BAHA", "BILIBILI", "AMZN", "ABEMA", "HIDIVE", "ADN", "VIUTV"]
@@ -65,6 +89,7 @@ tv_episode_templates:
       forbid_group_in_title_span: true
       ep_anchor_priority: true
       title_over_group_default: true
+      tech_starts_after_ep: true
     conditions:
       require:
         platform_in: ["CR", "BAHA", "BILIBILI", "AMZN", "ABEMA", "HIDIVE", "ADN", "VIUTV"]
@@ -87,6 +112,7 @@ tv_episode_templates:
       forbid_group_in_title_span: true
       ep_anchor_priority: true
       title_over_group_default: true
+      tech_starts_after_ep: true
     conditions:
       require:
         platform_in: ["CR", "BAHA", "BILIBILI", "AMZN", "ABEMA", "HIDIVE", "ADN", "VIUTV"]
@@ -111,6 +137,14 @@ tv_episode_templates:
       - contains: "episode"
       - segment_type: "bracket"
         contains: "tech"
+    signals:
+      slot_order: ["G", "T", "E", "X"]
+      group_position: "head"
+      group_after_ep_only: false
+      forbid_group_in_title_span: true
+      ep_anchor_priority: true
+      title_over_group_default: true
+      tech_starts_after_ep: true
   
   - id: "TF_TV_STANDARD_02"
     name: "[GROUP] TITLE EP [TECH]"
@@ -121,6 +155,14 @@ tv_episode_templates:
     examples:
       - "[ANi] 药屋少女 01 [1080P]"
       - "[Lilith-Raws] 葬送的芙莉莲 28 [Baha]"
+    signals:
+      slot_order: ["G", "T", "E", "X"]
+      group_position: "head"
+      group_after_ep_only: false
+      forbid_group_in_title_span: true
+      ep_anchor_priority: true
+      title_over_group_default: true
+      tech_starts_after_ep: true
   
   - id: "TF_TV_NO_GROUP_01"
     name: "TITLE - EP [TECH]"
@@ -131,6 +173,14 @@ tv_episode_templates:
     examples:
       - "药屋少女 - 01 [1080p HEVC]"
       - "Kusuriya no Hitorigoto - 01 [WebRip]"
+    signals:
+      slot_order: ["T", "E", "X"]
+      group_position: "none"
+      group_after_ep_only: false
+      forbid_group_in_title_span: false
+      ep_anchor_priority: true
+      title_over_group_default: true
+      tech_starts_after_ep: true
   
   - id: "TF_TV_TAIL_GROUP_01"
     name: "TITLE - EP [TECH]-GROUP"
@@ -145,6 +195,7 @@ tv_episode_templates:
       forbid_group_in_title_span: true
       ep_anchor_priority: true
       title_over_group_default: true
+      tech_starts_after_ep: true
     examples:
       - "Onmyoji - 01 1080p NF WEB-DL x264-HHWEB"
       - "Kusuriya - E01 720p-SubsPlease"
@@ -162,6 +213,7 @@ tv_episode_templates:
       forbid_group_in_title_span: true
       ep_anchor_priority: true
       title_over_group_default: true
+      tech_starts_after_ep: true
     examples:
       - "[GROUP] Breaking Bad S01E01 [1080p]"
       - "[Raws] Anime Title S02E05 [WebRip]"

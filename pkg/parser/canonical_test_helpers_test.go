@@ -63,6 +63,16 @@ func canonicalVersion(res *model.ParseResult) string {
 	return firstAttrValue(res, model.AttrVersion)
 }
 
+func canonicalSPKind(res *model.ParseResult) string {
+	if res != nil && res.EPSlot != nil && res.EPSlot.Primary != nil {
+		v := strings.TrimSpace(res.EPSlot.Primary.SPKind)
+		if v != "" {
+			return v
+		}
+	}
+	return firstAttrValue(res, model.AttrSPKind)
+}
+
 func canonicalAliases(res *model.ParseResult) []string {
 	return attrValues(res, model.AttrTitleAlias)
 }

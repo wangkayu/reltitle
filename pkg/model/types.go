@@ -37,17 +37,15 @@ type MLOutput struct {
 }
 
 type ParseResult struct {
-	RawTitle           string           `json:"raw_title"`
-	ContentKind        string           `json:"content_kind,omitempty"`
-	ContentConfidence  float64          `json:"content_confidence,omitempty"`
-	TemplateID         string           `json:"template_id,omitempty"`
-	TemplateConfidence float64          `json:"template_confidence,omitempty"`
-	EPSlot             *EPSlot          `json:"epslot,omitempty"`
-	AudioSlot          *AudioSlot       `json:"audio_slot,omitempty"`
-	TokenONNX          *TokenONNXOutput `json:"-"`
-	ML                 *MLOutput        `json:"-"`
-	Attributes         []Attribute      `json:"attributes,omitempty"`
-	Tokens             []Token          `json:"tokens,omitempty"`
+	RawTitle           string      `json:"raw_title"`
+	ContentKind        string      `json:"content_kind,omitempty"`
+	ContentConfidence  float64     `json:"content_confidence,omitempty"`
+	TemplateID         string      `json:"template_id,omitempty"`
+	TemplateConfidence float64     `json:"template_confidence,omitempty"`
+	EPSlot             *EPSlot     `json:"epslot,omitempty"`
+	AudioSlot          *AudioSlot  `json:"audio_slot,omitempty"`
+	Attributes         []Attribute `json:"attributes,omitempty"`
+	Tokens             []Token     `json:"tokens,omitempty"`
 }
 
 type EPSlot struct {

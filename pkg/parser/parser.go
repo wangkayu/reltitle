@@ -2804,7 +2804,7 @@ func (p *Parser) normalizeAliasCandidateForOutput(s string) string {
 	for ss != prev {
 		prev = ss
 		ss = reAliasTrimTVSeasonTail.ReplaceAllString(ss, "")
-		ss = reAliasTrimPlatformTail.ReplaceAllString(ss, "")
+		ss = p.trimAliasPlatformTail(ss)
 		ss = reAliasTrimTVAnimePrefix.ReplaceAllString(ss, "")
 		if p != nil && len(p.aliasInlineStripWords) > 0 {
 			fields := strings.Fields(ss)
@@ -2830,6 +2830,59 @@ func (p *Parser) normalizeAliasCandidateForOutput(s string) string {
 		ss = strings.Trim(ss, "-_/;:,+ ")
 	}
 	return strings.TrimSpace(cleanAliasToken(ss))
+}
+
+func (p *Parser) trimAliasPlatformTail(s string) string {
+	ss := strings.TrimSpace(s)
+	if ss == "" {
+		return ""
+	}
+	// Keep legacy fallback for complex tails; dictionary pass runs first.
+	legacyTrim := func(v string) string {
+		return strings.TrimSpace(reAliasTrimPlatformTail.ReplaceAllString(v, ""))
+	}
+	if p == nil || len(p.platformCanonical) == 0 {
+		return legacyTrim(ss)
+	}
+	for {
+		fields := strings.Fields(ss)
+		if len(fields) == 0 {
+			return ""
+		}
+		removed := 0
+		last := strings.ToLower(strings.Trim(fields[len(fields)-1], "[](){}【】（）.,;:!?\"'_-"))
+		if last != "" {
+			if _, ok := p.platformCanonical[last]; ok {
+				removed = 1
+			} else if last == "tv" {
+				removed = 1
+			}
+		}
+		if len(fields) >= 2 {
+			last2a := strings.ToLower(strings.Trim(fields[len(fields)-2], "[](){}【】（）.,;:!?\"'_-"))
+			last2b := strings.ToLower(strings.Trim(fields[len(fields)-1], "[](){}【】（）.,;:!?\"'_-"))
+			if last2a != "" && last2b != "" {
+				pair := last2a + " " + last2b
+				if pair == "france tv" {
+					removed = 2
+				}
+			}
+		}
+		if len(fields) >= 3 {
+			a := strings.ToLower(strings.Trim(fields[len(fields)-3], "[](){}【】（）.,;:!?\"'_-"))
+			b := strings.ToLower(strings.Trim(fields[len(fields)-2], "[](){}【】（）.,;:!?\"'_-"))
+			c := strings.ToLower(strings.Trim(fields[len(fields)-1], "[](){}【】（）.,;:!?\"'_-"))
+			if a == "b-global" && b == "donghua" && c == "tv" {
+				removed = 3
+			}
+		}
+		if removed == 0 {
+			break
+		}
+		fields = fields[:len(fields)-removed]
+		ss = strings.TrimSpace(strings.Join(fields, " "))
+	}
+	return legacyTrim(ss)
 }
 
 func aliasSemanticKey(s string) string {

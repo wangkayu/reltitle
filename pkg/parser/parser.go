@@ -551,10 +551,39 @@ func (p *Parser) Parse(rawTitle string) (*model.ParseResult, error) {
 	return p.ParseWithHints(rawTitle, nil)
 }
 
+func normalizeRawTitleForParsing(raw string) string {
+	s := strings.TrimSpace(raw)
+	if s == "" {
+		return s
+	}
+	unwrap := func(prefix string) (string, bool) {
+		if !strings.HasPrefix(s, prefix) || !strings.HasSuffix(s, "]") {
+			return "", false
+		}
+		if len(s) <= len(prefix) {
+			return "", false
+		}
+		inner := strings.TrimSpace(s[len(prefix) : len(s)-1])
+		if inner == "" {
+			return "", false
+		}
+		return "[" + inner, true
+	}
+	if out, ok := unwrap("[搬運["); ok {
+		return out
+	}
+	if out, ok := unwrap("[搬运["); ok {
+		return out
+	}
+	return s
+}
+
 func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.ParseResult, error) {
 	if strings.TrimSpace(rawTitle) == "" {
 		return nil, errors.New("empty title")
 	}
+	originalRawTitle := rawTitle
+	rawTitle = normalizeRawTitleForParsing(rawTitle)
 
 	toks := tokenize.Tokenize(rawTitle)
 	tokens := make([]model.Token, 0, len(toks))
@@ -834,7 +863,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	attrs = dedupeAttributes(attrs)
 
 	res := &model.ParseResult{
-		RawTitle:           rawTitle,
+		RawTitle:           originalRawTitle,
 		Group:              group,
 		Title:              title,
 		Aliases:            aliases,

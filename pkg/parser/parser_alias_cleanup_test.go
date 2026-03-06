@@ -215,6 +215,43 @@ func TestParserEpisodePriority_BracketTitleLeadingNumberCCAnime(t *testing.T) {
 	}
 }
 
+func TestParserNoiseWrapper_UnwrapTransportNestedBracket(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[搬運[ANi] You and I Are Polar Opposites / 相反的你和我 - 01 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if strings.TrimSpace(res.Title) == "" {
+		t.Fatalf("title should not be empty")
+	}
+	if !strings.EqualFold(strings.TrimSpace(res.Group), "ANi") {
+		t.Fatalf("group=%q want=%q", res.Group, "ANi")
+	}
+}
+
+func TestParserSingleVersionToken_Extracted(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[v1]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if res.Version != "v1" {
+		t.Fatalf("version=%q want=%q", res.Version, "v1")
+	}
+}
+
 func containsAlias(aliases []string, want string) bool {
 	for _, a := range aliases {
 		if strings.EqualFold(strings.TrimSpace(a), strings.TrimSpace(want)) {

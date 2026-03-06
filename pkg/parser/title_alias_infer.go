@@ -6,7 +6,7 @@ import (
 	"title-parser/pkg/model"
 )
 
-func inferTitleAndAliasesFromTitle(title string, aliasValid func(string) bool) (string, []string) {
+func inferTitleAndAliasesFromTitleCore(title string, aliasValid func(string) bool) (string, []string) {
 	s := strings.TrimSpace(title)
 	if s == "" {
 		return "", nil
@@ -239,7 +239,11 @@ func inferTitleAndAliasesFromTitle(title string, aliasValid func(string) bool) (
 }
 
 func inferTitleAndAliasesFromTitleCanonical(title string, aliasValid func(string) bool) (string, []string) {
-	main, aliases := inferTitleAndAliasesFromTitle(title, aliasValid)
+	main, aliases := inferTitleAndAliasesFromTitleCore(title, aliasValid)
+	return canonicalizeInferredAliases(main, aliases, aliasValid)
+}
+
+func canonicalizeInferredAliases(main string, aliases []string, aliasValid func(string) bool) (string, []string) {
 	if len(aliases) == 0 {
 		return main, nil
 	}

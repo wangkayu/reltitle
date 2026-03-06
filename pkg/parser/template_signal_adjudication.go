@@ -38,6 +38,8 @@ func applyTemplateSignalAdjudication(
 	}
 	sourceTypeMap := buildTypeCanonicalMap(cfg, "source_type")
 	platformMap := buildTypeCanonicalMap(cfg, "platform")
+	videoCodecMap := buildTypeCanonicalMap(cfg, "video_codec")
+	audioCodecMap := buildTypeCanonicalMap(cfg, "audio_codec")
 	sig := tpl.Signals
 	events := make([]string, 0, 4)
 
@@ -132,6 +134,8 @@ func applyTemplateSignalAdjudication(
 			hasTitleSpan,
 			sourceTypeMap,
 			platformMap,
+			videoCodecMap,
+			audioCodecMap,
 		)
 		events = append(events, techEvents...)
 	}
@@ -150,6 +154,8 @@ func applyTechStartsAfterEPStrict(
 	hasTitleSpan bool,
 	sourceTypeMap map[string]string,
 	platformMap map[string]string,
+	videoCodecMap map[string]string,
+	audioCodecMap map[string]string,
 ) ([]model.Attribute, []string) {
 	anchor := maxSignalIdx(episodeIdx, episodeRangeIdx, seasonIdx)
 	if anchor < 0 || len(tokens) == 0 || len(attrs) == 0 {
@@ -203,7 +209,7 @@ func applyTechStartsAfterEPStrict(
 		if t == "" {
 			continue
 		}
-		typ, norm, ok := inferPostEPTechToken(t, sourceTypeMap, platformMap)
+		typ, norm, ok := inferPostEPTechToken(t, sourceTypeMap, platformMap, videoCodecMap, audioCodecMap)
 		if !ok || hasType[typ] {
 			continue
 		}
@@ -232,7 +238,13 @@ func cleanTemplateSignalTechToken(s string) string {
 	return strings.TrimSpace(s)
 }
 
-func inferPostEPTechToken(token string, sourceTypeMap map[string]string, platformMap map[string]string) (model.AttrType, string, bool) {
+func inferPostEPTechToken(
+	token string,
+	sourceTypeMap map[string]string,
+	platformMap map[string]string,
+	videoCodecMap map[string]string,
+	audioCodecMap map[string]string,
+) (model.AttrType, string, bool) {
 	if token == "" {
 		return "", "", false
 	}
@@ -249,23 +261,17 @@ func inferPostEPTechToken(token string, sourceTypeMap map[string]string, platfor
 	if templateSignalSourceTypeToken.MatchString(low) {
 		return model.AttrSourceType, strings.TrimSpace(token), true
 	}
+	if norm, ok := codecMapLookup(videoCodecMap, low, true); ok {
+		return model.AttrVideoCodec, norm, true
+	}
 	if templateSignalVideoCodecToken.MatchString(low) {
-		n := strings.ReplaceAll(low, ".", "")
-		switch n {
-		case "hevc", "avc", "av1":
-			return model.AttrVideoCodec, strings.ToUpper(n), true
-		default:
-			return model.AttrVideoCodec, n, true
-		}
+		return model.AttrVideoCodec, strings.ToUpper(strings.ReplaceAll(low, ".", "")), true
+	}
+	if norm, ok := codecMapLookup(audioCodecMap, low, false); ok {
+		return model.AttrAudioCodec, norm, true
 	}
 	if templateSignalAudioCodecToken.MatchString(low) {
-		n := strings.ReplaceAll(low, "-", "")
-		switch n {
-		case "aac", "flac", "ac3", "eac3", "ddp", "opus", "pcm", "truehd":
-			return model.AttrAudioCodec, strings.ToUpper(n), true
-		default:
-			return model.AttrAudioCodec, strings.ToUpper(low), true
-		}
+		return model.AttrAudioCodec, strings.ToUpper(strings.ReplaceAll(low, "-", "")), true
 	}
 	if norm, ok := platformMap[low]; ok {
 		return model.AttrPlatform, norm, true
@@ -274,6 +280,27 @@ func inferPostEPTechToken(token string, sourceTypeMap map[string]string, platfor
 		return model.AttrPlatform, strings.ToUpper(low), true
 	}
 	return "", "", false
+}
+
+func codecMapLookup(m map[string]string, low string, stripDots bool) (string, bool) {
+	if len(m) == 0 {
+		return "", false
+	}
+	if v, ok := m[low]; ok {
+		return v, true
+	}
+	if stripDots {
+		key := strings.ReplaceAll(low, ".", "")
+		if v, ok := m[key]; ok {
+			return v, true
+		}
+		return "", false
+	}
+	key := strings.ReplaceAll(low, "-", "")
+	if v, ok := m[key]; ok {
+		return v, true
+	}
+	return "", false
 }
 
 func isStrictTechAttrType(t model.AttrType) bool {

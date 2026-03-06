@@ -177,6 +177,97 @@ rules:
       normalized: VIUTV
     priority: 100
 
+  - id: video_codec_avc
+    raw_tokens: ["avc", "h264", "x264", "h.264", "x.264"]
+    emit:
+      type: video_codec
+      normalized: AVC
+    priority: 100
+
+  - id: video_codec_hevc
+    raw_tokens: ["hevc", "h265", "x265", "h.265", "x.265"]
+    emit:
+      type: video_codec
+      normalized: HEVC
+    priority: 100
+
+  - id: video_codec_av1
+    raw_tokens: ["av1"]
+    emit:
+      type: video_codec
+      normalized: AV1
+    priority: 100
+
+  - id: audio_codec_aac
+    raw_tokens: ["aac"]
+    emit:
+      type: audio_codec
+      normalized: AAC
+    priority: 100
+
+  - id: audio_codec_flac
+    raw_tokens: ["flac"]
+    emit:
+      type: audio_codec
+      normalized: FLAC
+    priority: 100
+
+  - id: audio_codec_ac3
+    raw_tokens: ["ac3"]
+    emit:
+      type: audio_codec
+      normalized: AC3
+    priority: 100
+
+  - id: audio_codec_eac3
+    raw_tokens: ["eac3", "e-ac-3", "ddp"]
+    emit:
+      type: audio_codec
+      normalized: EAC3
+    priority: 100
+
+  - id: audio_codec_opus
+    raw_tokens: ["opus"]
+    emit:
+      type: audio_codec
+      normalized: OPUS
+    priority: 100
+
+  - id: audio_codec_dts
+    raw_tokens: ["dts"]
+    emit:
+      type: audio_codec
+      normalized: DTS
+    priority: 95
+
+  - id: audio_codec_dtshd
+    raw_tokens: ["dts-hd", "dtshd"]
+    emit:
+      type: audio_codec
+      normalized: DTSHD
+    priority: 95
+
+  - id: audio_codec_dtshdma
+    raw_tokens: ["dts-hdma"]
+    emit:
+      type: audio_codec
+      normalized: DTSHDMA
+    priority: 95
+
+  - id: audio_codec_truehd
+    raw_tokens: ["truehd"]
+    emit:
+      type: audio_codec
+      normalized: TRUEHD
+    priority: 95
+
+  - id: audio_codec_pcm
+    raw_tokens: ["pcm"]
+    emit:
+      type: audio_codec
+      normalized: PCM
+    priority: 95
+
   - id: sub_flag_vostfr
     raw_tokens: ["vostfr"]
     emit:

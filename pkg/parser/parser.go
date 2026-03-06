@@ -23,6 +23,8 @@ type Parser struct {
 	groupRouteRules       []groupRouteRule
 	sourceTypeCanonical   map[string]string
 	platformCanonical     map[string]string
+	videoCodecCanonical   map[string]string
+	audioCodecCanonical   map[string]string
 	packKindSourceType    map[string]string
 }
 
@@ -283,35 +285,16 @@ func (p *Parser) inferStableTechTokenAttrs(raw string, idx int) ([]model.Attribu
 			out = append(out, model.Attribute{Type: model.AttrPlatform, Normalized: norm, TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.74, Source: "tech_combo_span"})
 			continue
 		}
+		if norm, ok := p.normalizeVideoCodecToken(low); ok {
+			out = append(out, model.Attribute{Type: model.AttrVideoCodec, Normalized: norm, TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
+			continue
+		}
+		if norm, ok := p.normalizeAudioCodecToken(low); ok {
+			out = append(out, model.Attribute{Type: model.AttrAudioCodec, Normalized: norm, TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
+			continue
+		}
 
 		switch low {
-		case "avc", "h264", "x264":
-			out = append(out, model.Attribute{Type: model.AttrVideoCodec, Normalized: "AVC", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
-			continue
-		case "hevc", "h265", "x265":
-			out = append(out, model.Attribute{Type: model.AttrVideoCodec, Normalized: "HEVC", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
-			continue
-		case "av1":
-			out = append(out, model.Attribute{Type: model.AttrVideoCodec, Normalized: "AV1", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
-			continue
-		case "aac":
-			out = append(out, model.Attribute{Type: model.AttrAudioCodec, Normalized: "AAC", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
-			continue
-		case "flac":
-			out = append(out, model.Attribute{Type: model.AttrAudioCodec, Normalized: "FLAC", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
-			continue
-		case "ac3":
-			out = append(out, model.Attribute{Type: model.AttrAudioCodec, Normalized: "AC3", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
-			continue
-		case "eac3", "e-ac-3", "ddp":
-			out = append(out, model.Attribute{Type: model.AttrAudioCodec, Normalized: "EAC3", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
-			continue
-		case "opus":
-			out = append(out, model.Attribute{Type: model.AttrAudioCodec, Normalized: "OPUS", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
-			continue
-		case "dts", "dtshd", "dts-hd", "dts-hdma", "truehd", "pcm":
-			out = append(out, model.Attribute{Type: model.AttrAudioCodec, Normalized: strings.ToUpper(strings.ReplaceAll(low, "-", "")), TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
-			continue
 		case "mkv":
 			out = append(out, model.Attribute{Type: model.AttrContainer, Normalized: "MKV", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.74, Source: "tech_combo_span"})
 			continue
@@ -687,6 +670,8 @@ func New(cfg *config.Config) *Parser {
 		aliasInlineStripWords: make(map[string]struct{}),
 		sourceTypeCanonical:   buildTypeCanonicalMap(cfg, "source_type"),
 		platformCanonical:     buildTypeCanonicalMap(cfg, "platform"),
+		videoCodecCanonical:   buildTypeCanonicalMap(cfg, "video_codec"),
+		audioCodecCanonical:   buildTypeCanonicalMap(cfg, "audio_codec"),
 		packKindSourceType:    buildPackKindSourceTypeMap(cfg),
 	}
 
@@ -2038,6 +2023,40 @@ func (p *Parser) normalizeSourceType(s string) string {
 		}
 	}
 	return ss
+}
+
+func (p *Parser) normalizeVideoCodecToken(s string) (string, bool) {
+	ss := strings.TrimSpace(strings.ToLower(s))
+	if ss == "" {
+		return "", false
+	}
+	if p != nil && len(p.videoCodecCanonical) > 0 {
+		if v, ok := p.videoCodecCanonical[ss]; ok {
+			return v, true
+		}
+		dotless := strings.ReplaceAll(ss, ".", "")
+		if v, ok := p.videoCodecCanonical[dotless]; ok {
+			return v, true
+		}
+	}
+	return "", false
+}
+
+func (p *Parser) normalizeAudioCodecToken(s string) (string, bool) {
+	ss := strings.TrimSpace(strings.ToLower(s))
+	if ss == "" {
+		return "", false
+	}
+	if p != nil && len(p.audioCodecCanonical) > 0 {
+		if v, ok := p.audioCodecCanonical[ss]; ok {
+			return v, true
+		}
+		dashless := strings.ReplaceAll(ss, "-", "")
+		if v, ok := p.audioCodecCanonical[dashless]; ok {
+			return v, true
+		}
+	}
+	return "", false
 }
 
 func (p *Parser) normalizePlatformCode(s string) string {

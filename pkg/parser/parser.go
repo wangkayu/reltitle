@@ -1085,12 +1085,12 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 		}
 	}
 
-	_, titleEnd0 := inferTitleTokenSpan(tokens, episodeIdx, episodeRangeIdx, seasonCutIdx)
+	_, titleEnd0 := p.inferTitleTokenSpan(tokens, episodeIdx, episodeRangeIdx, seasonCutIdx)
 	parenAliases := extractParenAliasesAndRemoveFromTitle(tokens, titleEnd0, episodeIdx, episodeRangeIdx, &attrs)
 
-	title := extractTitle(tokens, episodeIdx, episodeRangeIdx, seasonCutIdx)
+	title := p.extractTitle(tokens, episodeIdx, episodeRangeIdx, seasonCutIdx)
 	title, aliases := inferTitleAndAliasesFromTitle(title)
-	titleStart, titleEnd := inferTitleTokenSpan(tokens, episodeIdx, episodeRangeIdx, seasonCutIdx)
+	titleStart, titleEnd := p.inferTitleTokenSpan(tokens, episodeIdx, episodeRangeIdx, seasonCutIdx)
 	aliases = mergeAliases(ctx.ForcedAliases, aliases)
 	if strings.TrimSpace(title) == "" {
 		scanStart := 0
@@ -3745,7 +3745,7 @@ func headAliasBracketPair(s string) (open string, close string, ok bool) {
 	return "", "", false
 }
 
-func inferTitleTokenSpan(tokens []model.Token, episodeIdx int, episodeRangeIdx int, seasonCutIdx int) (int, int) {
+func (p *Parser) inferTitleTokenSpan(tokens []model.Token, episodeIdx int, episodeRangeIdx int, seasonCutIdx int) (int, int) {
 	start := titleStartAfterLeadingEmptyBracketBlocks(tokens)
 
 	end := len(tokens)
@@ -3796,7 +3796,7 @@ func inferTitleTokenSpan(tokens []model.Token, episodeIdx int, episodeRangeIdx i
 			}
 			t := strings.TrimSpace(tokens[i].Text)
 			if dotMode {
-				if looksLikeDotSeparatedMetaCutToken(t) {
+				if p.looksLikeDotSeparatedMetaCutToken(t) {
 					end = i
 					for end > start {
 						j := end - 1
@@ -3905,7 +3905,7 @@ func inferTitleTokenSpan(tokens []model.Token, episodeIdx int, episodeRangeIdx i
 
 var reDotSeparatedRes = regexp.MustCompile(`(?i)^\d{3,4}p$`)
 
-func looksLikeDotSeparatedMetaCutToken(s string) bool {
+func (p *Parser) looksLikeDotSeparatedMetaCutToken(s string) bool {
 	s = strings.TrimSpace(s)
 	if s == "" {
 		return false
@@ -3921,13 +3921,30 @@ func looksLikeDotSeparatedMetaCutToken(s string) bool {
 	if low == "dvdiso" {
 		return true
 	}
+	if p != nil {
+		if _, ok := p.sourceTypeCanonical[low]; ok {
+			return true
+		}
+		if _, ok := p.platformCanonical[low]; ok {
+			return true
+		}
+		if _, ok := p.normalizeVideoCodecToken(low); ok {
+			return true
+		}
+		if _, ok := p.normalizeAudioCodecToken(low); ok {
+			return true
+		}
+		if _, ok := p.normalizeContainerToken(low); ok {
+			return true
+		}
+		if _, ok := p.normalizeAudioFlagToken(low); ok {
+			return true
+		}
+	}
 	if low == "webrip" || low == "web-dl" || low == "webdl" || low == "bluray" || low == "bdrip" || low == "dvdrip" {
 		return true
 	}
 	if low == "hdr" {
-		return true
-	}
-	if low == "hevc" || low == "x265" || low == "h265" || low == "x264" || low == "h264" {
 		return true
 	}
 	if low == "mpeg" || low == "xvid" {
@@ -6046,7 +6063,7 @@ func isInBracket(tokens []model.Token, idx int) bool {
 	return depth > 0
 }
 
-func extractTitle(tokens []model.Token, episodeIdx int, episodeRangeIdx int, seasonCutIdx int) string {
+func (p *Parser) extractTitle(tokens []model.Token, episodeIdx int, episodeRangeIdx int, seasonCutIdx int) string {
 	start := titleStartAfterLeadingEmptyBracketBlocks(tokens)
 
 	end := len(tokens)
@@ -6109,7 +6126,7 @@ func extractTitle(tokens []model.Token, episodeIdx int, episodeRangeIdx int, sea
 			}
 			t := strings.TrimSpace(tokens[i].Text)
 			if dotMode {
-				if looksLikeDotSeparatedMetaCutToken(t) {
+				if p.looksLikeDotSeparatedMetaCutToken(t) {
 					end = i
 					for end > start {
 						j := end - 1

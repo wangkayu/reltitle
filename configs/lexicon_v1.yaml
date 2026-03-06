@@ -2,6 +2,46 @@ version: lexicon_v1.1
 updated_at: "2026-01-16"
 
 entries:
+  - id: noise_holiday_labor_day_cn
+    scope: paren
+    tokens: ["五一劳动节快乐"]
+    emit:
+      - type: note
+        normalized: "HOLIDAY_GREETING"
+        token_index: -1
+    remove: true
+    confidence: 0.8
+
+  - id: group_fatcat_cn_bracket
+    scope: bracket
+    tokens: ["肥猫压制"]
+    emit:
+      - type: group
+        normalized: "FatCatRAW"
+        token_index: -1
+    remove: true
+    confidence: 0.9
+
+  - id: group_fatcatraw_bracket
+    scope: bracket
+    tokens: ["fatcatraw"]
+    emit:
+      - type: group
+        normalized: "FatCatRAW"
+        token_index: -1
+    remove: true
+    confidence: 0.9
+
+  - id: noise_bd_box_bracket
+    scope: bracket
+    tokens: ["bdbox"]
+    emit:
+      - type: note
+        normalized: "BD_BOX"
+        token_index: -1
+    remove: true
+    confidence: 0.75
+
   - id: note_truefrench
     any_of:
       - tokens: ["truefrench"]

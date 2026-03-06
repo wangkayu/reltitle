@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"strings"
 	"testing"
 
 	"title-parser/pkg/config"
@@ -27,6 +28,15 @@ func TestParserBatchSourceType_BDRipPack(t *testing.T) {
 	}
 	if got := firstAttrValue(res, model.AttrPackKind); got != "bdrip" {
 		t.Fatalf("pack_kind=%q want=%q", got, "bdrip")
+	}
+	if got := canonicalGroup(res); got != "FatCatRAW" {
+		t.Fatalf("group=%q want=%q", got, "FatCatRAW")
+	}
+	for _, a := range canonicalAliases(res) {
+		la := strings.ToLower(strings.TrimSpace(a))
+		if strings.Contains(a, "节快乐") || strings.Contains(a, "壓制") || strings.Contains(a, "压制") || strings.Contains(la, "fatcatraw") || strings.EqualFold(strings.TrimSpace(a), "BDBOX") {
+			t.Fatalf("alias should drop obvious noise token, got=%q aliases=%v", a, canonicalAliases(res))
+		}
 	}
 }
 

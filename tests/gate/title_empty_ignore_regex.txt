@@ -1,0 +1,5 @@
+# Gate/eval-only ignore patterns for title-empty rows.
+# This file does not affect parser runtime behavior.
+
+# version-only noise sample, e.g. [v1]
+(?i)^\[\s*v\d{1,2}\s*\]$

@@ -332,6 +332,32 @@ func TestParserEpisodePriority_BracketTitleLeadingNumberCCAnime(t *testing.T) {
 	}
 }
 
+func TestParserEPSlotPrimary_SxxExxHasPrimary(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "9nine- Ruler's Crown S01E11 VOSTFR 1080p WEB h264 AAC - Yangire-Raws (YUZUKITV)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalEpisode(res); got != "11" {
+		t.Fatalf("episode=%q want=%q", got, "11")
+	}
+	if res.EPSlot == nil || res.EPSlot.Primary == nil {
+		t.Fatalf("epslot.primary should not be nil for sxxexx title")
+	}
+	if got := strings.TrimSpace(res.EPSlot.Primary.Source); got != "sxxexx_final" {
+		t.Fatalf("epslot.primary.source=%q want=%q", got, "sxxexx_final")
+	}
+	if got := strings.TrimSpace(res.EPSlot.Primary.Season); got != "1" {
+		t.Fatalf("epslot.primary.season=%q want=%q", got, "1")
+	}
+}
+
 func TestParserNoiseWrapper_UnwrapTransportNestedBracket(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

@@ -346,7 +346,6 @@ func passDetectEpisodeRangeAndEpisode(tokens []model.Token, attrs *[]model.Attri
 		ctx.EpisodeIdx = ctx.SxxExxIdx
 		ctx.EpisodeVersion = ""
 		ctx.EpisodeVersionIdx = -1
-		return
 	}
 	finalizeEPSlotPrimary(ctx.EPSlot, ctx.Season, ctx.Episode, ctx.EpisodeRange, ctx.SPKind, ctx.EpisodeIdx, ctx.EpisodeRangeIdx, ctx.SxxExxIdx)
 }

@@ -234,6 +234,38 @@ func templatesByEpRoute(cfg *config.Config, epRoute string) []config.TemplateDef
 	}
 }
 
+func templateByID(cfg *config.Config, id string) *config.TemplateDef {
+	id = strings.TrimSpace(id)
+	if cfg == nil || id == "" {
+		return nil
+	}
+	for i := range cfg.TemplateCatalog.TVEpisodeTemplates {
+		t := &cfg.TemplateCatalog.TVEpisodeTemplates[i]
+		if strings.TrimSpace(t.ID) == id {
+			return t
+		}
+	}
+	for i := range cfg.TemplateCatalog.BatchTemplates {
+		t := &cfg.TemplateCatalog.BatchTemplates[i]
+		if strings.TrimSpace(t.ID) == id {
+			return t
+		}
+	}
+	for i := range cfg.TemplateCatalog.MovieTemplates {
+		t := &cfg.TemplateCatalog.MovieTemplates[i]
+		if strings.TrimSpace(t.ID) == id {
+			return t
+		}
+	}
+	for i := range cfg.TemplateCatalog.SpecialTemplates {
+		t := &cfg.TemplateCatalog.SpecialTemplates[i]
+		if strings.TrimSpace(t.ID) == id {
+			return t
+		}
+	}
+	return nil
+}
+
 func templateConditionSpecificity(cond *config.TemplateConditions) int {
 	if cond == nil || cond.Require == nil {
 		return 0

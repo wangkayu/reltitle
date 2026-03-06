@@ -86,6 +86,17 @@ type TemplateDef struct {
 	Examples     []string            `yaml:"examples" json:"examples"`
 	RouteID      string              `yaml:"route_id" json:"route_id"`
 	Conditions   *TemplateConditions `yaml:"conditions" json:"conditions"`
+	Signals      *TemplateSignals    `yaml:"signals" json:"signals"`
+}
+
+type TemplateSignals struct {
+	SlotOrder               []string `yaml:"slot_order" json:"slot_order"`
+	GroupPosition           string   `yaml:"group_position" json:"group_position"`
+	GroupAfterEPOnly        bool     `yaml:"group_after_ep_only" json:"group_after_ep_only"`
+	ForbidGroupInTitleSpan  bool     `yaml:"forbid_group_in_title_span" json:"forbid_group_in_title_span"`
+	EpAnchorPriority        bool     `yaml:"ep_anchor_priority" json:"ep_anchor_priority"`
+	TitleOverGroupDefault   bool     `yaml:"title_over_group_default" json:"title_over_group_default"`
+	TechStartsAfterEPStrict bool     `yaml:"tech_starts_after_ep" json:"tech_starts_after_ep"`
 }
 
 type TemplateConditions struct {

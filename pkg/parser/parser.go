@@ -2,6 +2,7 @@ package parser
 
 import (
 	"errors"
+	"os"
 	"regexp"
 	"sort"
 	"strconv"
@@ -800,7 +801,22 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	}
 
 	if group == "" {
-		if tg, tgIdx := detectTailGroup(tokens); tg != "" {
+		epAnchor := episodeIdx
+		if episodeRangeIdx > epAnchor {
+			epAnchor = episodeRangeIdx
+		}
+		if seasonIdx > epAnchor {
+			epAnchor = seasonIdx
+		}
+		tg, tgIdx := detectTailGroup(tokens)
+		if tg != "" && epAnchor >= 0 && tgIdx >= 0 && tgIdx <= epAnchor {
+			if tg2, tgIdx2 := detectTailGroupAfter(tokens, epAnchor); tg2 != "" {
+				tg, tgIdx = tg2, tgIdx2
+			} else {
+				tg, tgIdx = "", -1
+			}
+		}
+		if tg != "" {
 			group = normalizeGroupText(tg)
 			attrs = append(attrs, model.Attribute{Type: model.AttrGroup, Normalized: group, TokenStart: tgIdx, TokenEnd: tgIdx + 1, Confidence: 0.7, Source: "heuristic"})
 		}
@@ -812,7 +828,22 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 			attrs = append(attrs, model.Attribute{Type: model.AttrTailGroup, Normalized: group, TokenStart: -1, TokenEnd: -1, Confidence: 0.65, Source: "heuristic_raw"})
 		}
 	}
-	if tg, tgIdx := detectTailGroup(tokens); tg != "" {
+	epAnchor := episodeIdx
+	if episodeRangeIdx > epAnchor {
+		epAnchor = episodeRangeIdx
+	}
+	if seasonIdx > epAnchor {
+		epAnchor = seasonIdx
+	}
+	tg, tgIdx := detectTailGroup(tokens)
+	if tg != "" && epAnchor >= 0 && tgIdx >= 0 && tgIdx <= epAnchor {
+		if tg2, tgIdx2 := detectTailGroupAfter(tokens, epAnchor); tg2 != "" {
+			tg, tgIdx = tg2, tgIdx2
+		} else {
+			tg, tgIdx = "", -1
+		}
+	}
+	if tg != "" {
 		attrs = append(attrs, model.Attribute{Type: model.AttrTailGroup, Normalized: normalizeGroupText(tg), TokenStart: tgIdx, TokenEnd: tgIdx + 1, Confidence: 0.7, Source: "heuristic"})
 	}
 
@@ -840,6 +871,37 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	epRoute := computeEpRoute(tokens, episode, episodeRange, season, seasonRange, spKind, movieIndex, hasMovieKeyword)
 	contentKind, contentConf := inferContentKind(p.cfg, episode, episodeRange, season, seasonRange, packKind, spKind, movieIndex, hasTech, hasMovieKeyword, hasYear)
 	templateID, templateConf, routeID := matchTemplate(p.cfg, epRoute, contentKind, group, episode, episodeRange, season, packKind, spKind, movieIndex, hasTech, hasMovieKeyword, attrs, tokens)
+	attrs, group, episode, episodeIdx, episodeRange, episodeRangeIdx, season, seasonIdx, signalEvents := applyTemplateSignalAdjudication(
+		p.cfg,
+		templateID,
+		tokens,
+		attrs,
+		group,
+		episode,
+		episodeIdx,
+		episodeRange,
+		episodeRangeIdx,
+		season,
+		seasonIdx,
+	)
+	if os.Getenv("TITLEPARSER_TEMPLATE_SIGNAL_TRACE") == "1" {
+		for _, ev := range signalEvents {
+			if strings.TrimSpace(ev) == "" {
+				continue
+			}
+			attrs = append(attrs, model.Attribute{
+				Type:       model.AttrNote,
+				Normalized: "template_signal:" + ev,
+				TokenStart: -1,
+				TokenEnd:   -1,
+				Confidence: 0.6,
+				Source:     "template_signal_trace",
+			})
+		}
+	}
+	epRoute = computeEpRoute(tokens, episode, episodeRange, season, seasonRange, spKind, movieIndex, hasMovieKeyword)
+	contentKind, contentConf = inferContentKind(p.cfg, episode, episodeRange, season, seasonRange, packKind, spKind, movieIndex, hasTech, hasMovieKeyword, hasYear)
+	templateID, templateConf, routeID = matchTemplate(p.cfg, epRoute, contentKind, group, episode, episodeRange, season, packKind, spKind, movieIndex, hasTech, hasMovieKeyword, attrs, tokens)
 	if strings.HasPrefix(routeID, "streaming_release_") {
 		applyStreamingReleaseRouteV1(tailParenBlock, &aliases, &attrs)
 	}
@@ -5077,8 +5139,44 @@ func isTailGroupToken(s string) bool {
 }
 
 func detectTailGroup(tokens []model.Token) (string, int) {
+	return detectTailGroupWithMinIdx(tokens, -1)
+}
+
+func detectTailGroupAfter(tokens []model.Token, minIdx int) (string, int) {
+	return detectTailGroupWithMinIdx(tokens, minIdx)
+}
+
+func detectTailGroupWithMinIdx(tokens []model.Token, minIdx int) (string, int) {
+	// Prefer explicit "... X - Raws/Subs" pattern, even if tokens were marked removed by tech passes.
+	for i := len(tokens) - 1; i >= 0; i-- {
+		if i <= minIdx {
+			continue
+		}
+		if isInBracket(tokens, i) || isInParen(tokens, i) {
+			continue
+		}
+		text := strings.TrimSpace(tokens[i].Text)
+		if !strings.EqualFold(text, "Raws") && !strings.EqualFold(text, "Subs") {
+			continue
+		}
+		if i-2 <= minIdx {
+			continue
+		}
+		if strings.TrimSpace(tokens[i-1].Text) != "-" {
+			continue
+		}
+		left := strings.TrimSpace(tokens[i-2].Text)
+		if !isTailGroupToken(left) {
+			continue
+		}
+		return left + "-" + text, i - 2
+	}
+
 	lastTail := -1
 	for j := len(tokens) - 1; j >= 0; j-- {
+		if j <= minIdx {
+			continue
+		}
 		if tokens[j].Removed {
 			continue
 		}
@@ -5098,6 +5196,9 @@ func detectTailGroup(tokens []model.Token) (string, int) {
 	}
 
 	for i := len(tokens) - 1; i >= 0; i-- {
+		if i <= minIdx {
+			continue
+		}
 		if tokens[i].Removed {
 			continue
 		}

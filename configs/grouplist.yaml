@@ -10,7 +10,6 @@
 # - 不区分 HEAD GROUP 和 TAILGROUP
 # - 不做名称替换,只提升识别置信度
 
-version: "1.0"
 last_updated: 2026-01-31
 description: 字幕组知识库,用于辅助 Parser 的 token 识别和结构识别
 groups:

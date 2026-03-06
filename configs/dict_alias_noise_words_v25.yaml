@@ -1,4 +1,3 @@
-version: "v25-draft-1"
 updated_at: "2026-03-06"
 description: "Alias cleanup noise dictionary (language/platform/tech/meta)"
 
@@ -72,4 +71,3 @@ alias_noise:
     - SUB
     - SUBS
     - AUDIO
-

@@ -1,4 +1,3 @@
-version: "v25-route-override-1"
 updated_at: "2026-03-06"
 description: "Group-specific route overrides with safe fallback to general route."
 

@@ -1,4 +1,3 @@
-version: "v25-draft-1"
 updated_at: "2026-03-06"
 description: "Slot candidate and conflict-resolution hints for ambiguous tokens"
 

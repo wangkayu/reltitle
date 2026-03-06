@@ -14,7 +14,6 @@
 # - composite: 是否为复合名称 (包含 - 等分隔符)
 # - common_positions: 常见位置 (HEAD/TAIL/BOTH)
 
-version: "1.0"
 last_updated: "2025-01-17"
 
 # 统一字幕组白名单

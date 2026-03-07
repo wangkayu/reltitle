@@ -9,6 +9,8 @@ import (
 
 var bracketStandaloneMIndexPattern = regexp.MustCompile(`(?i)^m0*(\d{1,3})$`)
 var bracketStandaloneMovieIndexPattern = regexp.MustCompile(`(?i)^movie\s*0*(\d{1,3})$`)
+var bracketInlineMovieRangePattern = regexp.MustCompile(`(?i)\b(?:movie|film)\s*0*\d{1,3}\s*[-~+]\s*0*\d{1,3}\b`)
+var bracketInlineMovieIndexPattern = regexp.MustCompile(`(?i)\b(?:movie|film)\s*0*(\d{1,3})\b`)
 
 func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Attribute, aliasValid func(string) bool) (string, []string, int, int) {
 	if len(tokens) == 0 {
@@ -102,6 +104,26 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 				n = "0"
 			}
 			return n, true
+		}
+		return "", false
+	}
+
+	parseInlineMovieIndex := func(s string) (string, bool) {
+		s = strings.TrimSpace(s)
+		if s == "" {
+			return "", false
+		}
+		if bracketInlineMovieRangePattern.MatchString(s) {
+			return "", false
+		}
+		if m := bracketInlineMovieIndexPattern.FindStringSubmatch(s); len(m) == 2 {
+			n := strings.TrimLeft(strings.TrimSpace(m[1]), "0")
+			if n == "" {
+				n = "0"
+			}
+			if n != "0" {
+				return n, true
+			}
 		}
 		return "", false
 	}
@@ -448,10 +470,8 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 			break
 		}
 		parts := make([]string, 0, end-i)
+		partsRaw := make([]string, 0, end-i)
 		for k := i + 1; k < end; k++ {
-			if tokens[k].Removed {
-				continue
-			}
 			p := strings.TrimSpace(tokens[k].Text)
 			if p == "" {
 				continue
@@ -459,10 +479,16 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 			if p == "[" || p == "]" || p == "【" || p == "】" {
 				continue
 			}
+			partsRaw = append(partsRaw, p)
+			if tokens[k].Removed {
+				continue
+			}
 			parts = append(parts, p)
 		}
 		inner := strings.TrimSpace(strings.Join(parts, " "))
 		inner = normalizeDigitRange(inner)
+		innerRaw := strings.TrimSpace(strings.Join(partsRaw, " "))
+		innerRaw = normalizeDigitRange(innerRaw)
 		if inner == "" {
 			i = end
 			continue
@@ -472,6 +498,16 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 				i = end
 				continue
 			}
+		}
+		if mi, ok := parseInlineMovieIndex(innerRaw); ok {
+			*attrs = append(*attrs, model.Attribute{
+				Type:       model.AttrMovieIndex,
+				Normalized: mi,
+				TokenStart: i + 1,
+				TokenEnd:   end,
+				Confidence: 0.72,
+				Source:     "bracket_inline_movie_index",
+			})
 		}
 		if looksLikeLeadingTitleMeta(inner) {
 			i = end
@@ -494,7 +530,7 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 				continue
 			}
 		}
-		if mi, ok := parseStandaloneMovieIndex(inner); ok {
+		if mi, ok := parseStandaloneMovieIndex(innerRaw); ok {
 			// [M21] / [Movie 21] after title blocks should be treated as movie_index.
 			// Keep title/alias extraction deterministic and avoid leaking Mxx as alias.
 			if len(blocks) > 0 {

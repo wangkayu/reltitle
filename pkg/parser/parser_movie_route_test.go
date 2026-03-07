@@ -354,6 +354,40 @@ func TestParserMovieRoute_InlineMIndexWithMovieContextExtracted(t *testing.T) {
 	}
 }
 
+func TestParserMovieRoute_BracketInlineMovieNumberExtracted(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[APTX4869][CONAN][名侦探柯南 MOVIE 27 百万美元的五棱星][BDRIP][1080P][MKV]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := firstAttrValue(res, model.AttrMovieIndex); got != "27" {
+		t.Fatalf("movie_index=%q want=%q", got, "27")
+	}
+}
+
+func TestParserMovieRoute_ParenInlineMovieNumberExtracted(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[丸子家族][电影][海螺小姐(Sazae-san Movie 1)][1956][GB][1080P][MP4]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := firstAttrValue(res, model.AttrMovieIndex); got != "1" {
+		t.Fatalf("movie_index=%q want=%q", got, "1")
+	}
+}
+
 func TestParserMovieRoute_TitleMNumberNotMovieIndex(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

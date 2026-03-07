@@ -46,6 +46,7 @@ func LoadAll(baseDir string) (*Config, error) {
 	_ = loadYAMLFile(filepath.Join(baseDir, "dict_note_promotion.yaml"), &cfg.DictNotePromotion)
 	_ = loadYAMLFile(filepath.Join(baseDir, "group_route_overrides.yaml"), &cfg.GroupRoute)
 	_ = loadYAMLFile(filepath.Join(baseDir, "group_slot2_platform_rules.yaml"), &cfg.GroupSlot2Platform)
+	_ = loadYAMLFile(filepath.Join(baseDir, "pack_profile_rules.yaml"), &cfg.PackProfileRules)
 
 	return cfg, nil
 }

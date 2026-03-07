@@ -1,12 +1,13 @@
 package config
 
 type Config struct {
-	Lexicon         LexiconConfig         `json:"lexicon"`
-	TemplateCatalog TemplateCatalogConfig `json:"template_catalog"`
-	Inference       InferenceRulesConfig  `json:"inference"`
-	GroupList       GroupListConfig       `json:"group_list"`
-	GroupRoute      GroupRouteConfig      `json:"group_route,omitempty"`
+	Lexicon            LexiconConfig            `json:"lexicon"`
+	TemplateCatalog    TemplateCatalogConfig    `json:"template_catalog"`
+	Inference          InferenceRulesConfig     `json:"inference"`
+	GroupList          GroupListConfig          `json:"group_list"`
+	GroupRoute         GroupRouteConfig         `json:"group_route,omitempty"`
 	GroupSlot2Platform GroupSlot2PlatformConfig `json:"group_slot2_platform,omitempty"`
+	PackProfileRules   PackProfileRulesConfig   `json:"pack_profile_rules,omitempty"`
 
 	DictCanonicalValues     DictCanonicalValuesConfig     `json:"dict_canonical_values,omitempty"`
 	DictTokenSynonyms       DictTokenSynonymsConfig       `json:"dict_token_synonyms,omitempty"`
@@ -232,11 +233,11 @@ type GroupRouteOverride struct {
 }
 
 type GroupRouteMatch struct {
-	GroupIn             []string `yaml:"group_in" json:"group_in"`
-	RawMustContainAny   []string `yaml:"raw_must_contain_any" json:"raw_must_contain_any"`
-	RequireEpisodeRange bool     `yaml:"require_episode_range" json:"require_episode_range"`
-	RequireEpisodeLike  bool     `yaml:"require_episode_like" json:"require_episode_like"`
-	RequireEpisodeWithTitle bool `yaml:"require_episode_with_title" json:"require_episode_with_title"`
+	GroupIn                 []string `yaml:"group_in" json:"group_in"`
+	RawMustContainAny       []string `yaml:"raw_must_contain_any" json:"raw_must_contain_any"`
+	RequireEpisodeRange     bool     `yaml:"require_episode_range" json:"require_episode_range"`
+	RequireEpisodeLike      bool     `yaml:"require_episode_like" json:"require_episode_like"`
+	RequireEpisodeWithTitle bool     `yaml:"require_episode_with_title" json:"require_episode_with_title"`
 }
 
 type GroupRouteOutput struct {
@@ -290,4 +291,30 @@ type GroupSlot2PlatformOutputConfig struct {
 	NoteOnDistributor         string  `yaml:"note_on_distributor" json:"note_on_distributor"`
 	InferUnknownPlatform      bool    `yaml:"infer_unknown_platform" json:"infer_unknown_platform"`
 	UnknownPlatformConfidence float64 `yaml:"unknown_platform_confidence" json:"unknown_platform_confidence"`
+}
+
+type PackProfileRulesConfig struct {
+	UpdatedAt   string                  `yaml:"updated_at" json:"updated_at"`
+	Description string                  `yaml:"description" json:"description"`
+	Rules       []PackProfileRuleConfig `yaml:"rules" json:"rules"`
+}
+
+type PackProfileRuleConfig struct {
+	ID       string                `yaml:"id" json:"id"`
+	Enabled  bool                  `yaml:"enabled" json:"enabled"`
+	Priority int                   `yaml:"priority" json:"priority"`
+	When     PackProfileWhenConfig `yaml:"when" json:"when"`
+	Emit     string                `yaml:"emit" json:"emit"`
+}
+
+type PackProfileWhenConfig struct {
+	ContentKindIn       []string `yaml:"content_kind_in" json:"content_kind_in"`
+	PackKindIn          []string `yaml:"pack_kind_in" json:"pack_kind_in"`
+	PackKindNotIn       []string `yaml:"pack_kind_not_in" json:"pack_kind_not_in"`
+	RequiresContentsAll []string `yaml:"requires_contents_all" json:"requires_contents_all"`
+	RequiresContentsAny []string `yaml:"requires_contents_any" json:"requires_contents_any"`
+	ForbidContentsAny   []string `yaml:"forbid_contents_any" json:"forbid_contents_any"`
+	HasSeason           *bool    `yaml:"has_season" json:"has_season"`
+	HasSeasonRange      *bool    `yaml:"has_season_range" json:"has_season_range"`
+	MinContentsDistinct int      `yaml:"min_contents_distinct" json:"min_contents_distinct"`
 }

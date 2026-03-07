@@ -24,6 +24,7 @@ type Parser struct {
 	notePromotionRules    []notePromotionRule
 	groupRouteRules       []groupRouteRule
 	groupSlot2Rules       []groupSlot2PlatformRule
+	packProfileRules      []packProfileRule
 	sourceTypeCanonical   map[string]string
 	platformCanonical     map[string]string
 	videoCodecCanonical   map[string]string
@@ -81,6 +82,21 @@ type groupSlot2PlatformRule struct {
 type groupSlot2PlatformWhitelist struct {
 	containsAny []string
 	normalized  string
+}
+
+type packProfileRule struct {
+	id                  string
+	priority            int
+	emit                string
+	contentKindIn       map[string]struct{}
+	packKindIn          map[string]struct{}
+	packKindNotIn       map[string]struct{}
+	requiresContentsAll map[string]struct{}
+	requiresContentsAny map[string]struct{}
+	forbidContentsAny   map[string]struct{}
+	hasSeason           *bool
+	hasSeasonRange      *bool
+	minContentsDistinct int
 }
 
 var wxhResolutionPattern = regexp.MustCompile(`(?i)^(\d{2,5})\s*[x×X]\s*(\d{2,5})$`)
@@ -921,6 +937,60 @@ func New(cfg *config.Config) *Parser {
 		return p.groupSlot2Rules[i].priority > p.groupSlot2Rules[j].priority
 	})
 
+	toUpperSet := func(in []string) map[string]struct{} {
+		out := make(map[string]struct{}, len(in))
+		for _, s := range in {
+			ss := strings.ToUpper(strings.TrimSpace(s))
+			if ss == "" {
+				continue
+			}
+			out[ss] = struct{}{}
+		}
+		return out
+	}
+	toLowerSet := func(in []string) map[string]struct{} {
+		out := make(map[string]struct{}, len(in))
+		for _, s := range in {
+			ss := strings.ToLower(strings.TrimSpace(s))
+			if ss == "" {
+				continue
+			}
+			out[ss] = struct{}{}
+		}
+		return out
+	}
+	for _, r := range cfg.PackProfileRules.Rules {
+		if !r.Enabled {
+			continue
+		}
+		id := strings.TrimSpace(r.ID)
+		emit := strings.TrimSpace(r.Emit)
+		if id == "" || emit == "" {
+			continue
+		}
+		minDistinct := r.When.MinContentsDistinct
+		if minDistinct < 0 {
+			minDistinct = 0
+		}
+		p.packProfileRules = append(p.packProfileRules, packProfileRule{
+			id:                  id,
+			priority:            r.Priority,
+			emit:                emit,
+			contentKindIn:       toUpperSet(r.When.ContentKindIn),
+			packKindIn:          toLowerSet(r.When.PackKindIn),
+			packKindNotIn:       toLowerSet(r.When.PackKindNotIn),
+			requiresContentsAll: toUpperSet(r.When.RequiresContentsAll),
+			requiresContentsAny: toUpperSet(r.When.RequiresContentsAny),
+			forbidContentsAny:   toUpperSet(r.When.ForbidContentsAny),
+			hasSeason:           r.When.HasSeason,
+			hasSeasonRange:      r.When.HasSeasonRange,
+			minContentsDistinct: minDistinct,
+		})
+	}
+	sort.SliceStable(p.packProfileRules, func(i, j int) bool {
+		return p.packProfileRules[i].priority > p.packProfileRules[j].priority
+	})
+
 	return p
 }
 
@@ -1585,7 +1655,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 		}
 		attrs = upsertGroupAttribute(attrs, group, "group_route_override")
 	}
-	packProfile := inferPackProfile(contentKind, packKind, season, seasonRange, attrs)
+	packProfile := p.inferPackProfile(contentKind, packKind, season, seasonRange, attrs)
 	attrs = upsertTitleAttribute(attrs, title, "canonical")
 	attrs = upsertGroupAttribute(attrs, group, "canonical")
 	attrs = upsertScalarAttribute(attrs, model.AttrEpisode, episode, "canonical")
@@ -2243,14 +2313,78 @@ func inferPackKindFromContentsAttrs(currentPackKind string, attrs []model.Attrib
 	return ""
 }
 
-func inferPackProfile(contentKind string, packKind string, season string, seasonRange string, attrs []model.Attribute) string {
-	contentKind = strings.ToUpper(strings.TrimSpace(contentKind))
-	packKind = strings.ToLower(strings.TrimSpace(packKind))
+func (p *Parser) inferPackProfile(contentKind string, packKind string, season string, seasonRange string, attrs []model.Attribute) string {
+	contentKindUp := strings.ToUpper(strings.TrimSpace(contentKind))
+	packKindLow := strings.ToLower(strings.TrimSpace(packKind))
+	hasSeason := strings.TrimSpace(season) != ""
+	hasSeasonRange := strings.TrimSpace(seasonRange) != ""
+	contentSet := collectContentsSet(attrs)
 
-	hasMovie := false
-	hasSpecial := false
-	hasSeries := false
-	contentSet := map[string]struct{}{}
+	for _, r := range p.packProfileRules {
+		if !packProfileRuleMatches(r, contentKindUp, packKindLow, contentSet, hasSeason, hasSeasonRange) {
+			continue
+		}
+		return r.emit
+	}
+	return ""
+}
+
+func packProfileRuleMatches(r packProfileRule, contentKind string, packKind string, contentSet map[string]struct{}, hasSeason bool, hasSeasonRange bool) bool {
+	if len(r.contentKindIn) > 0 {
+		if _, ok := r.contentKindIn[contentKind]; !ok {
+			return false
+		}
+	}
+	if len(r.packKindIn) > 0 {
+		if _, ok := r.packKindIn[packKind]; !ok {
+			return false
+		}
+	}
+	if len(r.packKindNotIn) > 0 {
+		if _, blocked := r.packKindNotIn[packKind]; blocked {
+			return false
+		}
+	}
+	if r.hasSeason != nil && *r.hasSeason != hasSeason {
+		return false
+	}
+	if r.hasSeasonRange != nil && *r.hasSeasonRange != hasSeasonRange {
+		return false
+	}
+	if r.minContentsDistinct > 0 && len(contentSet) < r.minContentsDistinct {
+		return false
+	}
+	if len(r.requiresContentsAll) > 0 {
+		for k := range r.requiresContentsAll {
+			if _, ok := contentSet[k]; !ok {
+				return false
+			}
+		}
+	}
+	if len(r.requiresContentsAny) > 0 {
+		hit := false
+		for k := range r.requiresContentsAny {
+			if _, ok := contentSet[k]; ok {
+				hit = true
+				break
+			}
+		}
+		if !hit {
+			return false
+		}
+	}
+	if len(r.forbidContentsAny) > 0 {
+		for k := range r.forbidContentsAny {
+			if _, blocked := contentSet[k]; blocked {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func collectContentsSet(attrs []model.Attribute) map[string]struct{} {
+	out := map[string]struct{}{}
 	for _, a := range attrs {
 		if a.Type != model.AttrContents {
 			continue
@@ -2259,48 +2393,9 @@ func inferPackProfile(contentKind string, packKind string, season string, season
 		if n == "" {
 			continue
 		}
-		contentSet[n] = struct{}{}
-		switch n {
-		case "MOVIE":
-			hasMovie = true
-		case "SPECIAL", "SP":
-			hasSpecial = true
-		case "TV", "OVA", "OAD", "ONA", "EX":
-			hasSeries = true
-			if n == "OVA" || n == "OAD" || n == "ONA" || n == "EX" {
-				hasSpecial = true
-			}
-		}
+		out[n] = struct{}{}
 	}
-
-	if hasMovie && hasSpecial {
-		return "movie_special_mix"
-	}
-	if hasMovie && hasSeries {
-		return "movie_series_mix"
-	}
-	if hasMovie && (strings.TrimSpace(season) != "" || strings.TrimSpace(seasonRange) != "") {
-		return "season_movie_mix"
-	}
-	if hasMovie && contentKind == "MOVIE" {
-		return "movie_only"
-	}
-	if hasMovie && (contentKind == "BATCH" || packKind == "contents" || packKind == "mixed_contents") {
-		return "movie_batch_mix"
-	}
-	if hasSpecial && (contentKind == "SPECIAL") && len(contentSet) == 1 {
-		return "special_only"
-	}
-	if hasSpecial && (contentKind == "BATCH" || packKind == "contents" || packKind == "mixed_contents") {
-		return "special_batch_mix"
-	}
-	if packKind == "mixed_contents" {
-		return "mixed_contents"
-	}
-	if packKind == "contents" {
-		return "contents"
-	}
-	return ""
+	return out
 }
 
 func computeEpRoute(tokens []model.Token, episode string, episodeRange string, season string, seasonRange string, spKind string, movieIndex string, hasMovieKeyword bool, movieRouteHardExcluded bool) string {

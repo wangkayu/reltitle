@@ -165,6 +165,55 @@ func TestParserAliasCleanup_DropsResolutionMetaAliases(t *testing.T) {
 	}
 }
 
+func TestParserSpecial_NCOPRouteAndTitleCleanup(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "Happy World! NCOP DVD"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if res.ContentKind != "SPECIAL" {
+		t.Fatalf("content_kind=%q want=SPECIAL", res.ContentKind)
+	}
+	if res.TemplateID != "TF_TV_SP_ONLY_04" {
+		t.Fatalf("template_id=%q want=TF_TV_SP_ONLY_04", res.TemplateID)
+	}
+	if got := canonicalSPKind(res); got != "NCOP" {
+		t.Fatalf("sp_kind=%q want=NCOP", got)
+	}
+	if got := canonicalTitle(res); strings.Contains(strings.ToUpper(got), "NCOP") {
+		t.Fatalf("title should strip NCOP suffix, got=%q", got)
+	}
+}
+
+func TestParserSpecial_NCOPNCEDNotAsTailGroup(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[sandoe41] Death March kara Hajimaru Isekai Kyousoukyoku Season One NCOP-NCED"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalGroup(res); got != "sandoe41" {
+		t.Fatalf("group=%q want=sandoe41", got)
+	}
+	if got := canonicalSPKind(res); got != "NCOP" {
+		t.Fatalf("sp_kind=%q want=NCOP", got)
+	}
+	if got := firstAttrValue(res, model.AttrTailGroup); got != "" {
+		t.Fatalf("tail_group should be empty, got=%q", got)
+	}
+}
+
 func TestParserAliasCleanup_BracketTitleFallbackWhenMainTitleEmpty(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

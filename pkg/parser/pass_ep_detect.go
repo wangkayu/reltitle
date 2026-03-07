@@ -8,8 +8,8 @@ import (
 	"title-parser/pkg/model"
 )
 
-var specialIndexTokenPattern = regexp.MustCompile(`(?i)^(es|sp|ova|oad|ona|ex)0*(\d{1,3})$`)
-var episodePlusSpecialPattern = regexp.MustCompile(`(?i)^(\d{1,4})\s*\+\s*(es|sp|ova|oad|ona|ex)0*(\d{1,3})$`)
+var specialIndexTokenPattern = regexp.MustCompile(`(?i)^(es|sp|ova|oad|ona|ex|ncop|nced|pv|cm)0*(\d{1,3})$`)
+var episodePlusSpecialPattern = regexp.MustCompile(`(?i)^(\d{1,4})\s*\+\s*(es|sp|ova|oad|ona|ex|ncop|nced|pv|cm)0*(\d{1,3})$`)
 var summarySpecialPattern = regexp.MustCompile(`^(总集篇)0*(\d{1,3})[_-](\d{1,4}(?:\.\d{1,2})?)$`)
 var summarySpecialLeadPattern = regexp.MustCompile(`^(总集篇)0*(\d{1,3})$`)
 var episodeListPattern = regexp.MustCompile(`(?i)^\s*\d{1,4}(?:\s*(?:&|＆|\+|＋|/|／|,|，|、)\s*\d{1,4})+\s*$`)

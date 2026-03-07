@@ -598,6 +598,40 @@ func TestParserEpisodeDashBoundary_AllowsVersionAndEndFlag(t *testing.T) {
 	}
 }
 
+func TestParserEpisodePriority_StrongDashBeatsEpisodeKeyword(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Fansub] Sample Show Episode 16 Preview - 09 [1080p][WEB]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalEpisode(res); got != "9" {
+		t.Fatalf("episode=%q want=%q", got, "9")
+	}
+}
+
+func TestParserEpisodePriority_KeywordEpisodeStillWorks(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Fansub] Sample Show Episode 52 [1080p][WEB]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalEpisode(res); got != "52" {
+		t.Fatalf("episode=%q want=%q", got, "52")
+	}
+}
+
 func TestParserEpisodeZero_DashZeroStyle(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

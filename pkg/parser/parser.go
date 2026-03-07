@@ -6780,13 +6780,13 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 		if yearPattern.MatchString(d) {
 			continue
 		}
-		score := 84
+		score := 74
 		dashIdx := -1
 		// Prefer the explicit "- Episode N" style, but do not require it.
 		if i-1 >= 0 {
 			prev := strings.TrimSpace(tokens[i-1].Text)
 			if prev == "-" {
-				score += 6
+				score += 4
 				dashIdx = i - 1
 			}
 		}
@@ -7047,6 +7047,7 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 					n = n + "." + dec
 				}
 			}
+			signalScore := 0
 			if prefix == "" {
 				ok := false
 				if inBracket {
@@ -7054,11 +7055,15 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 						continue
 					}
 					ok = true
+					signalScore = 96
 				}
 				if i-1 >= 0 {
 					sep := strings.TrimSpace(tokens[i-1].Text)
 					if sep == "-" {
 						ok = true
+						if signalScore < 94 {
+							signalScore = 94
+						}
 						rightBoundary := false
 						if i+1 < len(tokens) {
 							rightBoundary = isEpisodeBoundaryRightToken(tokens[i+1].Text)
@@ -7098,6 +7103,9 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 						}
 					} else if sep == "★" || sep == "☆" {
 						ok = true
+						if signalScore < 92 {
+							signalScore = 92
+						}
 					}
 				}
 				if !ok {
@@ -7107,6 +7115,9 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 							if n != "0" {
 								if n != "720" && n != "1080" && n != "2160" && n != "480" && n != "540" {
 									ok = true
+									if signalScore < 88 {
+										signalScore = 88
+									}
 								}
 							}
 						}
@@ -7129,7 +7140,11 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 			}
 			score := len(m[2])
 			if prefix != "" {
-				score += 100
+				// Medium EP signal: EP12 / E12 / 第12
+				score += 72
+			} else if signalScore > 0 {
+				// Strong EP signal: bracketed number / dash-number / star-number.
+				score += signalScore
 			}
 			if score > bestScore {
 				bestScore = score

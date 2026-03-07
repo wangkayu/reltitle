@@ -997,6 +997,12 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	tailParenBlock := detectTailParenBlock(tokens)
 
 	group, groupSpan := extractHeadBracketGroup(tokens)
+	if group == "" {
+		group, groupSpan = extractHeadParenGroup(tokens)
+	}
+	if group == "" {
+		group, groupSpan = extractHeadBracketGroupAfterLeadingParenMeta(tokens)
+	}
 
 	if group != "" {
 		// If we can detect a reliable tail group from raw title (e.g. "-ANi"), the head bracket
@@ -4876,6 +4882,137 @@ func headGroupBracketPair(s string) (open string, close string, ok bool) {
 		return "【", "】", true
 	}
 	return "", "", false
+}
+
+func extractHeadParenGroup(tokens []model.Token) (string, [2]int) {
+	if len(tokens) < 3 || strings.TrimSpace(tokens[0].Text) != "(" {
+		return "", [2]int{0, 0}
+	}
+	end := -1
+	depth := 0
+	for i := 0; i < len(tokens); i++ {
+		t := strings.TrimSpace(tokens[i].Text)
+		if t == "(" {
+			depth++
+		} else if t == ")" {
+			if depth > 0 {
+				depth--
+				if depth == 0 {
+					end = i
+					break
+				}
+			}
+		}
+	}
+	if end <= 1 {
+		return "", [2]int{0, 0}
+	}
+	parts := make([]string, 0, end-1)
+	for i := 1; i < end; i++ {
+		t := strings.TrimSpace(tokens[i].Text)
+		if t == "" {
+			continue
+		}
+		parts = append(parts, t)
+	}
+	cand := strings.TrimSpace(strings.Join(parts, " "))
+	if !isHeadParenGroupCandidate(cand) {
+		return "", [2]int{0, 0}
+	}
+	return cand, [2]int{0, end + 1}
+}
+
+var headParenUpperTokenPattern = regexp.MustCompile(`^[A-Z0-9][A-Z0-9._&+\-]{1,23}$`)
+var headParenVersionLikePattern = regexp.MustCompile(`(?i)^v(?:er)?\d+$`)
+
+func isHeadParenGroupCandidate(s string) bool {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return false
+	}
+	if isLikelyMetaBracketText(s) || isEpisodeLikeBracketText(s) {
+		return false
+	}
+	if len([]rune(s)) > 24 {
+		return false
+	}
+	if headParenVersionLikePattern.MatchString(s) {
+		return false
+	}
+	if headParenUpperTokenPattern.MatchString(s) {
+		return true
+	}
+	low := strings.ToLower(s)
+	if strings.Contains(low, "raw") || strings.Contains(low, "sub") || strings.Contains(low, "team") || strings.Contains(low, "studio") {
+		return isGroupCandidateText(s)
+	}
+	return false
+}
+
+func extractHeadBracketGroupAfterLeadingParenMeta(tokens []model.Token) (string, [2]int) {
+	if len(tokens) < 4 || strings.TrimSpace(tokens[0].Text) != "(" {
+		return "", [2]int{0, 0}
+	}
+	offset := 0
+	consumedMeta := false
+	for offset < len(tokens) && strings.TrimSpace(tokens[offset].Text) == "(" {
+		end := -1
+		depth := 0
+		for i := offset; i < len(tokens); i++ {
+			t := strings.TrimSpace(tokens[i].Text)
+			if t == "(" {
+				depth++
+			} else if t == ")" {
+				if depth > 0 {
+					depth--
+					if depth == 0 {
+						end = i
+						break
+					}
+				}
+			}
+		}
+		if end <= offset+1 {
+			return "", [2]int{0, 0}
+		}
+		parts := make([]string, 0, end-offset-1)
+		for i := offset + 1; i < end; i++ {
+			t := strings.TrimSpace(tokens[i].Text)
+			if t == "" {
+				continue
+			}
+			parts = append(parts, t)
+		}
+		cand := strings.TrimSpace(strings.Join(parts, " "))
+		if !isLeadingParenMetaText(cand) {
+			return "", [2]int{0, 0}
+		}
+		consumedMeta = true
+		offset = end + 1
+	}
+	if !consumedMeta || offset >= len(tokens) {
+		return "", [2]int{0, 0}
+	}
+	g, span := extractHeadBracketGroup(tokens[offset:])
+	if g == "" {
+		return "", [2]int{0, 0}
+	}
+	return g, [2]int{span[0] + offset, span[1] + offset}
+}
+
+func isLeadingParenMetaText(s string) bool {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return false
+	}
+	if headParenVersionLikePattern.MatchString(s) {
+		return true
+	}
+	low := strings.ToLower(s)
+	if low == "partial" || low == "reseed" || low == "fixed" {
+		return true
+	}
+	return isLikelyMetaBracketText(s)
 }
 
 func isGroupCandidateText(s string) bool {

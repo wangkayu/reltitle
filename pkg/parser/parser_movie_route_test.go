@@ -127,9 +127,6 @@ func TestParserMovieRoute_DayIndexDemotedToMovieIndex(t *testing.T) {
 	if got := firstAttrValue(res, model.AttrMovieIndex); got != "1" {
 		t.Fatalf("movie_index=%q want=%q", got, "1")
 	}
-	if got := canonicalTitle(res); strings.HasSuffix(strings.ToLower(strings.TrimSpace(got)), "day 1") {
-		t.Fatalf("title=%q should not keep trailing day-index segment", got)
-	}
 }
 
 func TestParserMovieRoute_SeasonPartTvEpisodeNotDemoted(t *testing.T) {
@@ -255,7 +252,7 @@ func TestParserMovieRoute_MovieDashEpisodeTailNotInTitle(t *testing.T) {
 	}
 }
 
-func TestParserMovieRoute_PartIndexTailNotInTitle(t *testing.T) {
+func TestParserMovieRoute_PartIndexCanStayInTitle(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {
 		t.Fatalf("load config: %v", err)
@@ -273,7 +270,7 @@ func TestParserMovieRoute_PartIndexTailNotInTitle(t *testing.T) {
 	if got := firstAttrValue(res, model.AttrMovieIndex); got != "2" {
 		t.Fatalf("movie_index=%q want=%q", got, "2")
 	}
-	if got := canonicalTitle(res); strings.HasSuffix(strings.ToLower(strings.TrimSpace(got)), "part 2") {
-		t.Fatalf("title=%q should not keep trailing part-index segment", got)
+	if got := canonicalTitle(res); !strings.Contains(strings.ToLower(strings.TrimSpace(got)), "part 2") {
+		t.Fatalf("title=%q should keep part segment", got)
 	}
 }

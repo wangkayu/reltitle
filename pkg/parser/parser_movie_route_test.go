@@ -274,3 +274,43 @@ func TestParserMovieRoute_PartIndexCanStayInTitle(t *testing.T) {
 		t.Fatalf("title=%q should keep part segment", got)
 	}
 }
+
+func TestParserMovieRoute_MShortIndexWithMovieContext(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Atlas] Fate strange Fake 劇場版 M02 [1080p][WEB-DL][AAC]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "MOVIE" {
+		t.Fatalf("content_kind=%q want=%q", got, "MOVIE")
+	}
+	if got := firstAttrValue(res, model.AttrMovieIndex); got != "2" {
+		t.Fatalf("movie_index=%q want=%q", got, "2")
+	}
+}
+
+func TestParserMovieRoute_MShortIndexWithoutMovieContextIgnored(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Group] Sample Show M2 - 03 [1080p][WEB][AAC]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := firstAttrValue(res, model.AttrMovieIndex); got != "" {
+		t.Fatalf("movie_index=%q want empty", got)
+	}
+	if got := firstAttrValue(res, model.AttrEpisode); got != "3" {
+		t.Fatalf("episode=%q want=%q", got, "3")
+	}
+}

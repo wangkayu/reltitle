@@ -1499,7 +1499,11 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 		pipeScanEnd = seasonCutIdx
 	}
 	if techStart, ok := firstTechTokenIndexFromAttrs(attrs); ok && techStart >= 0 && techStart < pipeScanEnd {
-		pipeScanEnd = techStart
+		// Do not let early pre-title tech/meta tokens (e.g. slot2 platform markers in bracket)
+		// block alias-chain extraction in the main title span.
+		if titleStart < 0 || techStart > titleStart {
+			pipeScanEnd = techStart
+		}
 	}
 	if pipeTitle, pipeAliases, ok := p.extractPreEpisodePipeAliasesAndConsume(tokens, pipeScanStart, pipeScanEnd); ok {
 		if strings.TrimSpace(pipeTitle) != "" {
@@ -8783,26 +8787,41 @@ func (p *Parser) extractPreEpisodePipeAliasesAndConsume(tokens []model.Token, st
 		return "", nil, false
 	}
 
-	firstPipe := -1
+	firstDelim := -1
+	pipeCount := 0
+	slashCount := 0
 	for i := start; i < end; i++ {
 		if tokens[i].Removed {
 			continue
 		}
-		t := strings.TrimSpace(tokens[i].Text)
-		if t == "|" || t == "｜" {
-			firstPipe = i
-			break
+		if isInBracket(tokens, i) || isInParen(tokens, i) {
+			continue
 		}
-		if t == "[" || t == "【" {
-			break
+		t := strings.TrimSpace(tokens[i].Text)
+		if isAliasChainDelimiterToken(t) {
+			if firstDelim < 0 {
+				firstDelim = i
+			}
+			if t == "|" || t == "｜" {
+				pipeCount++
+			} else {
+				slashCount++
+			}
+			continue
 		}
 	}
-	if firstPipe < 0 {
+	if firstDelim < 0 {
+		return "", nil, false
+	}
+	// Safe trigger:
+	// - pipe chain: single pipe is enough
+	// - slash chain: require at least two separators to avoid treating regular "Fate/Zero" as alias split
+	if pipeCount == 0 && slashCount < 2 {
 		return "", nil, false
 	}
 
 	scanEnd := end
-	for i := firstPipe + 1; i < end; i++ {
+	for i := firstDelim + 1; i < end; i++ {
 		if tokens[i].Removed {
 			continue
 		}
@@ -8822,15 +8841,15 @@ func (p *Parser) extractPreEpisodePipeAliasesAndConsume(tokens []model.Token, st
 		tokenTo   int
 	}
 	segments := make([]seg, 0, 4)
-	pipeCount := 0
+	delimCount := 0
 	segStart := start
 	for i := start; i <= scanEnd; i++ {
 		isSplit := i == scanEnd
 		if !isSplit {
 			t := strings.TrimSpace(tokens[i].Text)
-			if t == "|" || t == "｜" {
+			if isAliasChainDelimiterToken(t) {
 				isSplit = true
-				pipeCount++
+				delimCount++
 			}
 		}
 		if !isSplit {
@@ -8845,53 +8864,57 @@ func (p *Parser) extractPreEpisodePipeAliasesAndConsume(tokens []model.Token, st
 		}
 		segStart = i + 1
 	}
-	if pipeCount == 0 || len(segments) < 2 {
+	if delimCount == 0 || len(segments) < 2 {
 		return "", nil, false
 	}
 
-	main := normalizeTitleMain(cleanTitleToken(segments[0].text))
-	if strings.TrimSpace(main) == "" {
+	rawParts := make([]string, 0, len(segments))
+	for _, s := range segments {
+		rawParts = append(rawParts, s.text)
+	}
+	main, aliases := inferTitleAndAliasesFromTitleCanonical(strings.Join(rawParts, " / "), p.isValidAliasToken)
+	main = normalizeTitleMain(cleanTitleToken(main))
+	if strings.TrimSpace(main) == "" || len(aliases) == 0 {
 		return "", nil, false
 	}
-
-	aliases := make([]string, 0, len(segments)-1)
-	seen := map[string]struct{}{}
-	seen[strings.ToLower(strings.TrimSpace(main))] = struct{}{}
-	for i := 1; i < len(segments); i++ {
-		a := cleanAliasToken(segments[i].text)
-		if stripped := stripExplicitSeasonSuffix(a); stripped != "" {
-			a = stripped
-		}
-		if !p.isValidAliasToken(a) {
-			continue
-		}
-		if isLikelyMetaBracketText(a) || isStreamMetaText(a) || reTailMetaToken.MatchString(a) {
-			continue
-		}
-		key := strings.ToLower(strings.TrimSpace(a))
+	mainKey := strings.ToLower(strings.TrimSpace(main))
+	mainSegIdx := -1
+	mainSegScore := -1
+	for i, s := range segments {
+		key := strings.ToLower(strings.TrimSpace(normalizeTitleMain(cleanTitleToken(s.text))))
 		if key == "" {
 			continue
 		}
-		if _, ok := seen[key]; ok {
-			continue
+		score := -1
+		if key == mainKey {
+			score = len(key) + 100
+		} else if strings.Contains(key, mainKey) {
+			score = len(mainKey)
+		} else if strings.Contains(mainKey, key) {
+			score = len(key)
 		}
-		seen[key] = struct{}{}
-		aliases = append(aliases, a)
-	}
-	if len(aliases) == 0 {
-		return "", nil, false
+		if score > mainSegScore {
+			mainSegScore = score
+			mainSegIdx = i
+		}
 	}
 
-	for i := firstPipe; i < scanEnd; i++ {
+	for i := firstDelim; i < scanEnd; i++ {
 		if tokens[i].Removed {
 			continue
 		}
 		t := strings.TrimSpace(tokens[i].Text)
-		if t == "|" || t == "｜" {
+		if isAliasChainDelimiterToken(t) {
 			tokens[i].Removed = true
 		}
 	}
-	for i := 1; i < len(segments); i++ {
+	if mainSegIdx < 0 {
+		return main, aliases, true
+	}
+	for i := 0; i < len(segments); i++ {
+		if i == mainSegIdx {
+			continue
+		}
 		from := segments[i].tokenFrom
 		to := segments[i].tokenTo
 		if from < 0 {
@@ -8906,6 +8929,15 @@ func (p *Parser) extractPreEpisodePipeAliasesAndConsume(tokens []model.Token, st
 	}
 
 	return main, aliases, true
+}
+
+func isAliasChainDelimiterToken(s string) bool {
+	switch strings.TrimSpace(s) {
+	case "|", "｜", "/", "／":
+		return true
+	default:
+		return false
+	}
 }
 
 func (p *Parser) inferTailAliasesFromPipes(tokens []model.Token, attrs []model.Attribute, group string) []string {

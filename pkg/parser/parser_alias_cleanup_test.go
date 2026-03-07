@@ -1310,6 +1310,9 @@ func TestGroupRouteOverride_JibaketaStripsSlot2PrefixFromTitle(t *testing.T) {
 	if !strings.Contains(title, "閃躍吧！星夢") {
 		t.Fatalf("title core should be kept, got=%q", title)
 	}
+	if !containsAlias(canonicalAliases(res), "Kiratto Pri-chan") {
+		t.Fatalf("expected alias Kiratto Pri-chan, got=%v", canonicalAliases(res))
+	}
 }
 
 func TestGroupSlot2PlatformInfer_JibaketaDistributorNoPlatform(t *testing.T) {

@@ -1528,6 +1528,17 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	if !hasMovieKeyword && hasMovieKeywordInRawTitle(rawTitle) {
 		hasMovieKeyword = true
 	}
+	if shouldDropEpisodeRangeForMovieRange(rawTitle, movieIndexRange, episodeRange) {
+		episode = ""
+		episodeIdx = -1
+		episodeList = ""
+		episodeRange = ""
+		episodeRangeIdx = -1
+		epslot = nil
+		attrs = removeAttributeType(attrs, model.AttrEpisode)
+		attrs = removeAttributeType(attrs, model.AttrEpisodeList)
+		attrs = removeAttributeType(attrs, model.AttrEpisodeRange)
+	}
 	movieRouteHardExcluded := hasMovieRouteHardExclusion(rawTitle, attrs, episodeRange, season, seasonRange, packKind)
 	movieContentSignal := hasMovieContentSignal(attrs, hasMovieKeyword, movieIndex, spKind)
 	epRoute := computeEpRoute(tokens, episode, episodeRange, season, seasonRange, spKind, movieIndex, hasMovieKeyword, movieRouteHardExcluded)
@@ -1575,6 +1586,21 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	movieContentSignal = hasMovieContentSignal(attrs, hasMovieKeyword, movieIndex, spKind)
 	epRoute = computeEpRoute(tokens, episode, episodeRange, season, seasonRange, spKind, movieIndex, hasMovieKeyword, movieRouteHardExcluded)
 	contentKind, contentConf = inferContentKind(p.cfg, episode, episodeRange, season, seasonRange, packKind, spKind, movieIndex, hasTech, hasMovieKeyword, hasYear, movieRouteHardExcluded, movieContentSignal)
+	if shouldDropEpisodeRangeForMovieRange(rawTitle, movieIndexRange, episodeRange) {
+		episode = ""
+		episodeIdx = -1
+		episodeList = ""
+		episodeRange = ""
+		episodeRangeIdx = -1
+		epslot = nil
+		attrs = removeAttributeType(attrs, model.AttrEpisode)
+		attrs = removeAttributeType(attrs, model.AttrEpisodeList)
+		attrs = removeAttributeType(attrs, model.AttrEpisodeRange)
+		movieRouteHardExcluded = hasMovieRouteHardExclusion(rawTitle, attrs, episodeRange, season, seasonRange, packKind)
+		movieContentSignal = hasMovieContentSignal(attrs, hasMovieKeyword, movieIndex, spKind)
+		epRoute = computeEpRoute(tokens, episode, episodeRange, season, seasonRange, spKind, movieIndex, hasMovieKeyword, movieRouteHardExcluded)
+		contentKind, contentConf = inferContentKind(p.cfg, episode, episodeRange, season, seasonRange, packKind, spKind, movieIndex, hasTech, hasMovieKeyword, hasYear, movieRouteHardExcluded, movieContentSignal)
+	}
 	if ep2, mi2, epIdx2, miIdx2, changed := normalizeMovieEpisodeSignals(rawTitle, contentKind, episode, episodeRange, season, seasonRange, packKind, hasMovieKeyword, movieIndex, movieIndexRange, episodeIdx, movieIndexIdx); changed {
 		episode, movieIndex, episodeIdx, movieIndexIdx = ep2, mi2, epIdx2, miIdx2
 		title = trimMovieDashEpisodeTailFromTitle(rawTitle, title, episode, movieIndex)
@@ -2145,6 +2171,7 @@ func pruneEpisodeLikeAliases(aliases []string) []string {
 }
 
 var rawMovieMixPattern = regexp.MustCompile(`(?i)\b(?:tv|ova|oad|ona|sp|special)\s*\+\s*(?:movie|movies|film|films)\b|\b(?:movie|movies|film|films)\s*\+\s*(?:tv|ova|oad|ona|sp|special)\b|\btv\b.{0,32}\+\s*(?:movie|movies|film|films)\b|\b(?:movie|movies|film|films)\b.{0,32}\+\s*tv\b|\b(?:movies|films)\s*\d{1,3}\s*[-~]\s*\d{1,3}\b|\bmovies\b|\bfilms\b`)
+var explicitTVEpisodeRangeRawPattern = regexp.MustCompile(`(?i)\btv\s*0*\d{1,4}\s*[-~]\s*0*\d{1,4}\b`)
 
 func hasMovieKeywordInRawTitle(raw string) bool {
 	low := strings.ToLower(strings.TrimSpace(raw))
@@ -2158,6 +2185,23 @@ func hasMovieKeywordInRawTitle(raw string) bool {
 		return true
 	}
 	return rawMovieTagPattern.MatchString(raw)
+}
+
+func shouldDropEpisodeRangeForMovieRange(rawTitle string, movieIndexRange string, episodeRange string) bool {
+	mr := strings.TrimSpace(movieIndexRange)
+	er := strings.TrimSpace(episodeRange)
+	if mr == "" || er == "" {
+		return false
+	}
+	if mr != er {
+		return false
+	}
+	// Keep TV range semantics for explicit mixed patterns like:
+	// "TV 01-101 + Movie 01-04".
+	if explicitTVEpisodeRangeRawPattern.MatchString(rawTitle) {
+		return false
+	}
+	return true
 }
 
 func shouldDemoteEpisodeToMovieIndex(rawTitle string, episode string, episodeRange string, season string, seasonRange string, packKind string, hasMovieKeyword bool, movieIndex string, movieIndexRange string) bool {

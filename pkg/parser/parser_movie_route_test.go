@@ -423,6 +423,9 @@ func TestParserMovieRoute_MovieRangeBracketExtracted(t *testing.T) {
 	if got := firstAttrValue(res, model.AttrMovieIndexRange); got != "1-2" {
 		t.Fatalf("movie_index_range=%q want=%q", got, "1-2")
 	}
+	if got := firstAttrValue(res, model.AttrEpisodeRange); got != "" {
+		t.Fatalf("episode_range=%q want empty", got)
+	}
 	if got := firstAttrValue(res, model.AttrMovieIndex); got != "" {
 		t.Fatalf("movie_index=%q want empty", got)
 	}

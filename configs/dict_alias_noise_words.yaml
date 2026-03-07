@@ -47,6 +47,27 @@ alias_noise:
     - END
     - 先行版
     - 先行版本
+    # common full tokens in unknown aliases
+    - WEB1080P
+    - WEB720P
+    - WEB2160P
+    - BD1080P
+    - BD720P
+    - VCDRIP
+    - LDRIP
+    - 粤语中字
+    - 粵語中字
+    - 日语中字
+    - 日語中字
+    - 日语无字
+    - 日語無字
+    - 简繁内封
+    - 簡繁內封
+    - 简繁内嵌
+    - 簡繁內嵌
+    - 中文字幕
+    - 英语中字
+    - 英語中字
 
   regex_patterns:
     # simple tech words / containers / codecs
@@ -54,6 +75,10 @@ alias_noise:
     - '(?i)^(hevc|avc|x264|x265|h264|h265|aac|ac3|flac|ddp|dts|atmos)$'
     - '(?i)^(mkv|mp4|avi)$'
     - '(?i)^(web-?dl|webrip|bdrip|bluray|hdtv|dvd|remux)$'
+    - '(?i)^(?:bd|web|hdtv|dvd|tv|vcd|ld|uhd|fhd)[-_.]?(?:rip|remux|iso)$'
+    - '(?i)^(?:bd|web|hdtv|dvd|tv|uhd|fhd)\d{3,4}p$'
+    - '(?i)^\d{3,4}p$'
+    - '(?i)^(?:multi[-_ ]?sub|multisub|dual[-_ ]?audio|multi[-_ ]?audio)$'
 
   inline_strip_words_case_insensitive:
     - VOSTFR

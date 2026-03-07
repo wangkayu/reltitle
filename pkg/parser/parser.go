@@ -19,6 +19,8 @@ type Parser struct {
 	cfg                   *config.Config
 	groupIndex            map[string]*config.GroupDef // 字幕组索引: normalized pattern -> GroupDef
 	aliasInlineStripWords map[string]struct{}
+	aliasNoiseExactWords  map[string]struct{}
+	aliasNoisePatterns    []*regexp.Regexp
 	notePromotionRules    []notePromotionRule
 	groupRouteRules       []groupRouteRule
 	sourceTypeCanonical   map[string]string
@@ -663,6 +665,7 @@ func New(cfg *config.Config) *Parser {
 		cfg:                   cfg,
 		groupIndex:            make(map[string]*config.GroupDef),
 		aliasInlineStripWords: make(map[string]struct{}),
+		aliasNoiseExactWords:  make(map[string]struct{}),
 		sourceTypeCanonical:   buildTypeCanonicalMap(cfg, "source_type"),
 		platformCanonical:     buildTypeCanonicalMap(cfg, "platform"),
 		videoCodecCanonical:   buildTypeCanonicalMap(cfg, "video_codec"),
@@ -692,6 +695,24 @@ func New(cfg *config.Config) *Parser {
 			continue
 		}
 		p.aliasInlineStripWords[ww] = struct{}{}
+	}
+	for _, w := range cfg.DictAliasNoiseWords.AliasNoise.ExactWordsCaseInsensitive {
+		ww := strings.ToLower(strings.TrimSpace(w))
+		if ww == "" {
+			continue
+		}
+		p.aliasNoiseExactWords[ww] = struct{}{}
+	}
+	for _, pat := range cfg.DictAliasNoiseWords.AliasNoise.RegexPatterns {
+		pp := strings.TrimSpace(pat)
+		if pp == "" {
+			continue
+		}
+		re, err := regexp.Compile(pp)
+		if err != nil {
+			continue
+		}
+		p.aliasNoisePatterns = append(p.aliasNoisePatterns, re)
 	}
 
 	for _, r := range cfg.DictNotePromotion.Rules {
@@ -3475,25 +3496,6 @@ func (p *Parser) isValidAliasToken(s string) bool {
 	if p.hasAliasMetaFromDictionary(s) {
 		return false
 	}
-	if strings.Contains(low, "1080p") || strings.Contains(low, "2160p") || strings.Contains(low, "720p") || strings.Contains(low, "480p") || strings.Contains(low, "4k") {
-		return false
-	}
-	if regexp.MustCompile(`(?i)^\d{3,4}p$`).MatchString(s) {
-		return false
-	}
-	if regexp.MustCompile(`(?i)^(?:bd|web|hdtv|dvd|tv|hd|uhd|fhd)\d{3,4}p$`).MatchString(s) {
-		return false
-	}
-	if regexp.MustCompile(`(?i)^(?:bd|web|hdtv|dvd|tv|vcd|ld|uhd|fhd)[-_.]?(?:rip|remux|iso)$`).MatchString(low) {
-		return false
-	}
-	if regexp.MustCompile(`(?i)^(?:multi[-_ ]?sub|multisub|dual[-_ ]?audio|multi[-_ ]?audio)$`).MatchString(low) {
-		return false
-	}
-	// Common language/subtitle markers (CN/JP/EN/Cantonese style) should not be aliases.
-	if regexp.MustCompile(`(?i)(?:中字|无字|無字|双语|雙語|内封|內封|内嵌|內嵌|粤语|粵語|日语|日語|英语|英語|国粤|國粵|简中|繁中|中英|中日|简日|繁日|字幕)`).MatchString(s) {
-		return false
-	}
 	if episodeOfTotalPattern.MatchString(s) {
 		return false
 	}
@@ -3506,6 +3508,16 @@ func (p *Parser) hasAliasMetaFromDictionary(s string) bool {
 	ss := strings.TrimSpace(strings.ToLower(s))
 	if ss == "" {
 		return false
+	}
+	if p != nil {
+		if _, ok := p.aliasNoiseExactWords[ss]; ok {
+			return true
+		}
+		for _, re := range p.aliasNoisePatterns {
+			if re != nil && re.MatchString(strings.TrimSpace(s)) {
+				return true
+			}
+		}
 	}
 	if p != nil && p.isAliasMetaOnlyToken(ss) {
 		return true

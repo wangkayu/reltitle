@@ -70,3 +70,22 @@ func TestParserUnknownOutput_KeepTitleAlias(t *testing.T) {
 	}
 }
 
+func TestParserUnknownOutput_GroupBoundaryPreservesRemovedSubsToken(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Inka-Subs] Armor Hunter Merowlink (Mellowlink)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if res.ContentKind != "UNKNOWN" {
+		t.Fatalf("content_kind=%q want UNKNOWN", res.ContentKind)
+	}
+	if got := canonicalGroup(res); got != "Inka-Subs" {
+		t.Fatalf("group=%q want Inka-Subs", got)
+	}
+}

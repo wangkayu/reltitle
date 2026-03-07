@@ -4818,9 +4818,6 @@ func extractHeadBracketGroup(tokens []model.Token) (string, [2]int) {
 	b := blocks[0]
 	parts := make([]string, 0, b[1]-b[0])
 	for k := b[0] + 1; k < b[1]-1; k++ {
-		if tokens[k].Removed {
-			continue
-		}
 		if strings.TrimSpace(tokens[k].Text) == "" {
 			continue
 		}

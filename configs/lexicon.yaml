@@ -1914,6 +1914,20 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.75
+      - tokens: ["代理商粵語"]
+        emit:
+          - type: audio_lang
+            normalized: "YUE"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["代理商粤语"]
+        emit:
+          - type: audio_lang
+            normalized: "YUE"
+            token_index: -1
+        remove: true
+        confidence: 0.75
       - tokens: ["tvb+發行商粵語"]
         emit:
           - type: audio_lang
@@ -1945,6 +1959,20 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.7
+      - tokens: ["粤语音轨"]
+        emit:
+          - type: audio_lang
+            normalized: "YUE"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["粵語音軌"]
+        emit:
+          - type: audio_lang
+            normalized: "YUE"
+            token_index: -1
+        remove: true
+        confidence: 0.75
       - tokens: ["cantonese", "dub"]
         emit:
           - type: audio_lang

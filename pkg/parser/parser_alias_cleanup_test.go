@@ -734,6 +734,8 @@ func TestLexiconDict_ConfigFirst_YuePhraseVariants(t *testing.T) {
 		{name: "yue_eng_dual_cn", raw: "[TestGroup] Sample Show - 01 [粤英双语中字][MP4]"},
 		{name: "yue_tag_tvb_cn", raw: "[TestGroup] Sample Show - 01 [TVB+發行商粵語][MP4]"},
 		{name: "yue_reissue_cn", raw: "[TestGroup] Sample Show - 01 [代理商再版粵語][MP4]"},
+		{name: "yue_agency_cn", raw: "[TestGroup] Sample Show - 01 [代理商粵語][MP4]"},
+		{name: "yue_audio_track_cn", raw: "[TestGroup] Sample Show - 01 [日语_国语_粤语音轨][BDRip][1080P][MKV]"},
 	}
 
 	for _, tc := range cases {
@@ -763,6 +765,66 @@ func TestTagCodeAudioLang_CAUsesYUE(t *testing.T) {
 	}
 	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "YUE") {
 		t.Fatalf("expected tag code CA => audio_lang YUE, got=%v", attrValues(res, model.AttrAudioLang))
+	}
+}
+
+func TestGroupSlot2PlatformInfer_JibaketaTVBYue(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[jibaketa合成&音頻壓制][TVB粵語] Sample Show - 01 [WEB-DL][1080p]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrPlatform), "TVB") {
+		t.Fatalf("expected platform TVB, got=%v", attrValues(res, model.AttrPlatform))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "YUE") {
+		t.Fatalf("expected audio_lang YUE, got=%v", attrValues(res, model.AttrAudioLang))
+	}
+}
+
+func TestGroupSlot2PlatformInfer_JibaketaDistributorNoPlatform(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[jibaketa合成&音頻壓制][代理商粵語] Sample Show - 01 [WEB-DL][1080p]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if hasAttrValue(attrValues(res, model.AttrPlatform), "代理商粵語") {
+		t.Fatalf("distributor slot must not be emitted as platform, got=%v", attrValues(res, model.AttrPlatform))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "YUE") {
+		t.Fatalf("expected audio_lang YUE, got=%v", attrValues(res, model.AttrAudioLang))
+	}
+}
+
+func TestGroupSlot2PlatformInfer_JibaketaUnknownPlatformInfer(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[jibaketa合成&音頻壓制][MyTV粵語] Sample Show - 01 [WEB-DL][1080p]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrPlatform), "MYTV") {
+		t.Fatalf("expected inferred platform MYTV, got=%v", attrValues(res, model.AttrPlatform))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "YUE") {
+		t.Fatalf("expected audio_lang YUE, got=%v", attrValues(res, model.AttrAudioLang))
 	}
 }
 

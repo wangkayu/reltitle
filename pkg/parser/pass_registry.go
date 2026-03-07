@@ -11,6 +11,7 @@ var parsePassRegistryMu sync.RWMutex
 
 var parsePassRegistry = []namedParsePass{
 	{Name: "extract_pack", Pass: passExtractPack},
+	{Name: "group_slot2_platform_infer", Pass: passGroupSlot2PlatformInfer},
 	{Name: "group_subs_x2_override", Pass: passGroupSubsX2Override},
 	{Name: "extract_tech_subs", Pass: passExtractTechSubs},
 	{Name: "extract_tech_audio", Pass: passExtractTechAudio},

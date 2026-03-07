@@ -265,6 +265,27 @@ func TestParserBatchTemplateRangePack_TVQuanJiUsesPackKindNotContents(t *testing
 	}
 }
 
+func TestParserHeadGroupFallback_UsesSecondBracketWhenFirstIsMeta(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[1080P][DBD-Raws][东映蜘蛛侠/四百大妈/Toei Spider-Man][01-41TV全集+剧场版][HEVC-10bit][AC3][MKV](とうえい スパイダーマン‎)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalGroup(res); got != "DBD-Raws" {
+		t.Fatalf("group=%q want=%q", got, "DBD-Raws")
+	}
+	title := canonicalTitle(res)
+	if strings.Contains(strings.ToLower(title), "dbd") || strings.Contains(strings.ToLower(title), "raws") {
+		t.Fatalf("title polluted by group fallback failure: %q", title)
+	}
+}
+
 func TestParserEpisodeCompactEndFlag_NotBatch(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

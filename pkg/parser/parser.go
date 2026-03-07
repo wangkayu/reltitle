@@ -4812,31 +4812,59 @@ func extractHeadBracketGroup(tokens []model.Token) (string, [2]int) {
 		return "", [2]int{0, 0}
 	}
 
-	// Be conservative: only treat the *first* leading bracket block as a head group.
-	// Later blocks are often title / episode / language / tech sections; misclassifying them
-	// as group will remove the actual title and cause parser_title_empty.
-	b := blocks[0]
-	parts := make([]string, 0, b[1]-b[0])
-	for k := b[0] + 1; k < b[1]-1; k++ {
+	// Prefer first bracket block. If first block is clear meta (e.g. [1080P], [BDRip]),
+	// allow fallback to the first subsequent strong group candidate block.
+	for bi, b := range blocks {
+		g := headBracketBlockText(tokens, b)
+		if g == "" {
+			continue
+		}
+		if g == "整理搬运" || g == "整理搬運" {
+			continue
+		}
+		if !isGroupCandidateText(g) {
+			continue
+		}
+		if isLikelyMetaBracketText(g) || isEpisodeLikeBracketText(g) {
+			continue
+		}
+		if bi == 0 {
+			return g, [2]int{b[0], b[1]}
+		}
+		if areLeadingHeadBlocksMeta(tokens, blocks[:bi]) {
+			return g, [2]int{b[0], b[1]}
+		}
+		break
+	}
+	return "", [2]int{0, 0}
+}
+
+func headBracketBlockText(tokens []model.Token, block [3]int) string {
+	parts := make([]string, 0, block[1]-block[0])
+	for k := block[0] + 1; k < block[1]-1; k++ {
 		if strings.TrimSpace(tokens[k].Text) == "" {
 			continue
 		}
 		parts = append(parts, tokens[k].Text)
 	}
-	g := strings.TrimSpace(strings.Join(parts, " "))
-	if g == "" {
-		return "", [2]int{0, 0}
+	return strings.TrimSpace(strings.Join(parts, " "))
+}
+
+func areLeadingHeadBlocksMeta(tokens []model.Token, blocks [][3]int) bool {
+	if len(blocks) == 0 {
+		return false
 	}
-	if g == "整理搬运" || g == "整理搬運" {
-		return "", [2]int{0, 0}
+	for _, b := range blocks {
+		text := headBracketBlockText(tokens, b)
+		if text == "" {
+			continue
+		}
+		if isLikelyMetaBracketText(text) || isEpisodeLikeBracketText(text) {
+			continue
+		}
+		return false
 	}
-	if !isGroupCandidateText(g) {
-		return "", [2]int{0, 0}
-	}
-	if isLikelyMetaBracketText(g) || isEpisodeLikeBracketText(g) {
-		return "", [2]int{0, 0}
-	}
-	return g, [2]int{b[0], b[1]}
+	return true
 }
 
 func headGroupBracketPair(s string) (open string, close string, ok bool) {

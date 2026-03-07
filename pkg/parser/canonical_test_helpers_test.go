@@ -76,3 +76,11 @@ func canonicalSPKind(res *model.ParseResult) string {
 func canonicalAliases(res *model.ParseResult) []string {
 	return attrValues(res, model.AttrTitleAlias)
 }
+
+func canonicalPackKind(res *model.ParseResult) string {
+	return firstAttrValue(res, model.AttrPackKind)
+}
+
+func canonicalPackProfile(res *model.ParseResult) string {
+	return firstAttrValue(res, model.AttrPackProfile)
+}

@@ -82,6 +82,10 @@ func (r *ParseResult) CanonicalPackKind() string {
 	return r.firstAttrValue(AttrPackKind)
 }
 
+func (r *ParseResult) CanonicalPackProfile() string {
+	return r.firstAttrValue(AttrPackProfile)
+}
+
 func (r *ParseResult) CanonicalSPKind() string {
 	return r.firstAttrValue(AttrSPKind)
 }

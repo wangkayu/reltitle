@@ -337,6 +337,9 @@ func TestParserAliasCleanup_FurretarDropsMovieMetaAlias(t *testing.T) {
 		name     string
 		raw      string
 		notAlias []string
+		contents []string
+		packKind string
+		profile  string
 	}{
 		{
 			name: "[Movie] should not leak",
@@ -344,6 +347,8 @@ func TestParserAliasCleanup_FurretarDropsMovieMetaAlias(t *testing.T) {
 			notAlias: []string{
 				"Movie",
 			},
+			contents: []string{"MOVIE"},
+			profile:  "movie_only",
 		},
 		{
 			name: "(Movies + Specials) should not leak",
@@ -351,6 +356,9 @@ func TestParserAliasCleanup_FurretarDropsMovieMetaAlias(t *testing.T) {
 			notAlias: []string{
 				"Movies + Specials",
 			},
+			contents: []string{"MOVIE", "SPECIAL"},
+			packKind: "contents",
+			profile:  "movie_special_mix",
 		},
 		{
 			name: "(Season x + Movie) fragment should not leak",
@@ -359,6 +367,8 @@ func TestParserAliasCleanup_FurretarDropsMovieMetaAlias(t *testing.T) {
 				"3 + Movie",
 				"Season 1-3 + Movie",
 			},
+			contents: []string{"TV", "MOVIE"},
+			profile:  "movie_series_mix",
 		},
 	}
 
@@ -372,6 +382,22 @@ func TestParserAliasCleanup_FurretarDropsMovieMetaAlias(t *testing.T) {
 			for _, ban := range tc.notAlias {
 				if containsAlias(aliases, ban) {
 					t.Fatalf("forbidden alias leaked: %q aliases=%v", ban, aliases)
+				}
+			}
+			gotContents := attrValues(res, model.AttrContents)
+			for _, want := range tc.contents {
+				if !hasAttrValue(gotContents, want) {
+					t.Fatalf("missing contents marker %q, got=%v", want, gotContents)
+				}
+			}
+			if tc.packKind != "" {
+				if got := canonicalPackKind(res); !strings.EqualFold(got, tc.packKind) {
+					t.Fatalf("pack_kind=%q want=%q", got, tc.packKind)
+				}
+			}
+			if tc.profile != "" {
+				if got := canonicalPackProfile(res); !strings.EqualFold(got, tc.profile) {
+					t.Fatalf("pack_profile=%q want=%q", got, tc.profile)
 				}
 			}
 		})
@@ -1005,5 +1031,25 @@ func TestNormalizeAliasCandidateForOutput_StripsInlineLangMetaWords(t *testing.T
 	}
 	if !strings.Contains(got, "マリア様がみてる") {
 		t.Fatalf("japanese alias text should be kept, got=%q", got)
+	}
+}
+
+func TestExtractParenContentMarkers(t *testing.T) {
+	cases := []struct {
+		in   string
+		want []string
+	}{
+		{in: "Movie", want: []string{"MOVIE"}},
+		{in: "Movies + Specials", want: []string{"MOVIE", "SPECIAL"}},
+		{in: "Season 1-3 + Movie", want: []string{"TV", "MOVIE"}},
+		{in: "3 + Movie", want: []string{"MOVIE"}},
+	}
+	for _, tc := range cases {
+		got := extractParenContentMarkers(tc.in)
+		for _, w := range tc.want {
+			if !containsAlias(got, w) {
+				t.Fatalf("input=%q markers=%v want include=%q", tc.in, got, w)
+			}
+		}
 	}
 }

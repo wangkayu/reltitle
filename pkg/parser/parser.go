@@ -1428,6 +1428,19 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 		aliases = mergeAliases(aliases, p.inferTailAliasesFromPipes(tokens, attrs, group))
 		aliases = mergeAliases(aliases, p.inferTailAliasesFromParens(tokens, &attrs))
 	}
+	if len(aliases) > 0 {
+		var contentMarkers []string
+		aliases, contentMarkers = extractContentsFromAliases(aliases)
+		if len(contentMarkers) > 0 {
+			emitContentsAttrs(&attrs, contentMarkers, "alias_contents_marker")
+		}
+	}
+	if rawMarkers := extractContentsFromRawParens(rawTitle); len(rawMarkers) > 0 {
+		emitContentsAttrs(&attrs, rawMarkers, "raw_paren_contents_marker")
+	}
+	if strings.TrimSpace(packKind) == "" {
+		packKind = inferPackKindFromContentsAttrs(packKind, attrs)
+	}
 	if strings.TrimSpace(packKind) == "" {
 		if strings.TrimSpace(episode) == "" && strings.TrimSpace(episodeRange) == "" {
 			if regexp.MustCompile(`(?i)\bBD\b`).MatchString(rawTitle) {
@@ -1572,6 +1585,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 		}
 		attrs = upsertGroupAttribute(attrs, group, "group_route_override")
 	}
+	packProfile := inferPackProfile(contentKind, packKind, season, seasonRange, attrs)
 	attrs = upsertTitleAttribute(attrs, title, "canonical")
 	attrs = upsertGroupAttribute(attrs, group, "canonical")
 	attrs = upsertScalarAttribute(attrs, model.AttrEpisode, episode, "canonical")
@@ -1581,6 +1595,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	attrs = upsertScalarAttribute(attrs, model.AttrSeasonRange, seasonRange, "canonical")
 	attrs = upsertScalarAttribute(attrs, model.AttrVersion, version, "canonical")
 	attrs = upsertScalarAttribute(attrs, model.AttrPackKind, packKind, "canonical")
+	attrs = upsertScalarAttribute(attrs, model.AttrPackProfile, packProfile, "canonical")
 	attrs = upsertScalarAttribute(attrs, model.AttrSPKind, spKind, "canonical")
 	attrs = upsertScalarAttribute(attrs, model.AttrMovieIndex, movieIndex, "canonical")
 	attrs = appendTitleAliasAttributes(attrs, aliases, title, "canonical")
@@ -2193,6 +2208,99 @@ func hasMovieContentSignal(attrs []model.Attribute, hasMovieKeyword bool, movieI
 		}
 	}
 	return false
+}
+
+func inferPackKindFromContentsAttrs(currentPackKind string, attrs []model.Attribute) string {
+	if strings.TrimSpace(currentPackKind) != "" {
+		return strings.TrimSpace(currentPackKind)
+	}
+	seen := map[string]struct{}{}
+	hasTV := false
+	hasOther := false
+	for _, a := range attrs {
+		if a.Type != model.AttrContents {
+			continue
+		}
+		n := strings.ToUpper(strings.TrimSpace(a.Normalized))
+		if n == "" {
+			continue
+		}
+		seen[n] = struct{}{}
+		if n == "TV" {
+			hasTV = true
+		} else {
+			hasOther = true
+		}
+	}
+	if hasTV && hasOther {
+		return "mixed_contents"
+	}
+	// Require at least two distinct non-TV content markers to derive "contents",
+	// so a single "(Movie)" marker does not force content_kind to BATCH.
+	if len(seen) >= 2 {
+		return "contents"
+	}
+	return ""
+}
+
+func inferPackProfile(contentKind string, packKind string, season string, seasonRange string, attrs []model.Attribute) string {
+	contentKind = strings.ToUpper(strings.TrimSpace(contentKind))
+	packKind = strings.ToLower(strings.TrimSpace(packKind))
+
+	hasMovie := false
+	hasSpecial := false
+	hasSeries := false
+	contentSet := map[string]struct{}{}
+	for _, a := range attrs {
+		if a.Type != model.AttrContents {
+			continue
+		}
+		n := strings.ToUpper(strings.TrimSpace(a.Normalized))
+		if n == "" {
+			continue
+		}
+		contentSet[n] = struct{}{}
+		switch n {
+		case "MOVIE":
+			hasMovie = true
+		case "SPECIAL", "SP":
+			hasSpecial = true
+		case "TV", "OVA", "OAD", "ONA", "EX":
+			hasSeries = true
+			if n == "OVA" || n == "OAD" || n == "ONA" || n == "EX" {
+				hasSpecial = true
+			}
+		}
+	}
+
+	if hasMovie && hasSpecial {
+		return "movie_special_mix"
+	}
+	if hasMovie && hasSeries {
+		return "movie_series_mix"
+	}
+	if hasMovie && (strings.TrimSpace(season) != "" || strings.TrimSpace(seasonRange) != "") {
+		return "season_movie_mix"
+	}
+	if hasMovie && contentKind == "MOVIE" {
+		return "movie_only"
+	}
+	if hasMovie && (contentKind == "BATCH" || packKind == "contents" || packKind == "mixed_contents") {
+		return "movie_batch_mix"
+	}
+	if hasSpecial && (contentKind == "SPECIAL") && len(contentSet) == 1 {
+		return "special_only"
+	}
+	if hasSpecial && (contentKind == "BATCH" || packKind == "contents" || packKind == "mixed_contents") {
+		return "special_batch_mix"
+	}
+	if packKind == "mixed_contents" {
+		return "mixed_contents"
+	}
+	if packKind == "contents" {
+		return "contents"
+	}
+	return ""
 }
 
 func computeEpRoute(tokens []model.Token, episode string, episodeRange string, season string, seasonRange string, spKind string, movieIndex string, hasMovieKeyword bool, movieRouteHardExcluded bool) string {
@@ -4081,6 +4189,16 @@ func (p *Parser) extractParenAliasesAndRemoveFromTitle(tokens []model.Token, tit
 			continue
 		}
 		cands, isSearchHint, hintKeyword := splitAliasCandidatesFromParenContent(inner)
+		if !isSearchHint {
+			if markers := extractParenContentMarkers(inner); len(markers) > 0 {
+				emitContentsAttrs(attrs, markers, "paren_contents_marker")
+				for k := openIdx; k <= closeIdx; k++ {
+					tokens[k].Removed = true
+				}
+				i = closeIdx
+				continue
+			}
+		}
 		if looksLikeParenMetaOrTech(tokens, openIdx, end) && !isSearchHint {
 			if attrs != nil {
 				spl := regexp.MustCompile(`[,，;；\|/]+`).Split(inner, -1)
@@ -4198,6 +4316,13 @@ func (p *Parser) inferTailAliasesFromParens(tokens []model.Token, attrs *[]model
 			continue
 		}
 		cands, isSearchHint, hintKeyword := splitAliasCandidatesFromParenContent(inner)
+		if !isSearchHint {
+			if markers := extractParenContentMarkers(inner); len(markers) > 0 {
+				emitContentsAttrs(attrs, markers, "paren_contents_marker")
+				i = closeIdx
+				continue
+			}
+		}
 		if isLikelyMetaBracketText(inner) && !isSearchHint {
 			i = closeIdx
 			continue
@@ -4412,6 +4537,181 @@ func splitAliasCandidatesFromParenContent(content string) ([]string, bool, strin
 		return []string{content}, searchHint, hintKeyword
 	}
 	return out, searchHint, hintKeyword
+}
+
+var reParenContentSeasonRange = regexp.MustCompile(`(?i)^season\s*\d{1,2}(?:\s*[-~]\s*\d{1,2})?$`)
+var reParenContentNumericRange = regexp.MustCompile(`^\d{1,3}(?:\s*[-~]\s*\d{1,3})?$`)
+var reParenContentMarkerSplit = regexp.MustCompile(`[+＋/&|,;，；、]+`)
+
+func extractParenContentMarkers(content string) []string {
+	content = strings.TrimSpace(content)
+	if content == "" {
+		return nil
+	}
+	norm := strings.NewReplacer(
+		"＋", "+",
+		"＆", "&",
+		"｜", "|",
+		"／", "/",
+		"　", " ",
+	).Replace(content)
+	parts := reParenContentMarkerSplit.Split(norm, -1)
+	if len(parts) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(parts))
+	seen := map[string]struct{}{}
+	hasSeasonCtx := false
+	for _, p := range parts {
+		s := strings.TrimSpace(strings.Trim(p, "[](){}【】（）"))
+		if s == "" {
+			continue
+		}
+		ls := strings.ToLower(s)
+		if strings.HasPrefix(ls, "season ") || strings.HasPrefix(ls, "saison ") {
+			hasSeasonCtx = true
+		}
+		if reParenContentSeasonRange.MatchString(s) {
+			hasSeasonCtx = true
+			continue
+		}
+		if reParenContentNumericRange.MatchString(strings.ReplaceAll(s, " ", "")) {
+			continue
+		}
+		marker, ok := normalizeParenContentMarkerToken(s)
+		if !ok {
+			return nil
+		}
+		if _, exists := seen[marker]; exists {
+			continue
+		}
+		seen[marker] = struct{}{}
+		out = append(out, marker)
+	}
+	if hasSeasonCtx && len(out) > 0 {
+		if _, ok := seen["TV"]; !ok {
+			out = append([]string{"TV"}, out...)
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+func extractContentsFromAliases(aliases []string) ([]string, []string) {
+	if len(aliases) == 0 {
+		return nil, nil
+	}
+	kept := make([]string, 0, len(aliases))
+	collected := make([]string, 0, 4)
+	seen := map[string]struct{}{}
+	for _, a := range aliases {
+		s := strings.TrimSpace(a)
+		if s == "" {
+			continue
+		}
+		markers := extractParenContentMarkers(s)
+		if len(markers) == 0 {
+			kept = append(kept, a)
+			continue
+		}
+		for _, m := range markers {
+			m = strings.ToUpper(strings.TrimSpace(m))
+			if m == "" {
+				continue
+			}
+			if _, ok := seen[m]; ok {
+				continue
+			}
+			seen[m] = struct{}{}
+			collected = append(collected, m)
+		}
+	}
+	if len(kept) == 0 {
+		kept = nil
+	}
+	if len(collected) == 0 {
+		collected = nil
+	}
+	return kept, collected
+}
+
+var reRawParenContent = regexp.MustCompile(`[（(]([^（）()]{1,80})[）)]`)
+
+func extractContentsFromRawParens(rawTitle string) []string {
+	rawTitle = strings.TrimSpace(rawTitle)
+	if rawTitle == "" {
+		return nil
+	}
+	ms := reRawParenContent.FindAllStringSubmatch(rawTitle, -1)
+	if len(ms) == 0 {
+		return nil
+	}
+	seen := map[string]struct{}{}
+	out := make([]string, 0, 4)
+	for _, m := range ms {
+		if len(m) < 2 {
+			continue
+		}
+		for _, marker := range extractParenContentMarkers(m[1]) {
+			marker = strings.ToUpper(strings.TrimSpace(marker))
+			if marker == "" {
+				continue
+			}
+			if _, ok := seen[marker]; ok {
+				continue
+			}
+			seen[marker] = struct{}{}
+			out = append(out, marker)
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+func normalizeParenContentMarkerToken(s string) (string, bool) {
+	low := strings.ToLower(strings.TrimSpace(s))
+	switch low {
+	case "movie", "movies", "film", "films", "eiga", "gekijouban", "劇場版", "剧场版", "電影", "电影":
+		return "MOVIE", true
+	case "special", "specials", "sp", "特典", "特别篇", "特別篇":
+		return "SPECIAL", true
+	case "ova":
+		return "OVA", true
+	case "oad":
+		return "OAD", true
+	case "ona":
+		return "ONA", true
+	case "ex":
+		return "EX", true
+	case "tv":
+		return "TV", true
+	default:
+		return "", false
+	}
+}
+
+func emitContentsAttrs(attrs *[]model.Attribute, values []string, source string) {
+	if attrs == nil || len(values) == 0 {
+		return
+	}
+	for _, v := range values {
+		v = strings.TrimSpace(strings.ToUpper(v))
+		if v == "" {
+			continue
+		}
+		*attrs = append(*attrs, model.Attribute{
+			Type:       model.AttrContents,
+			Normalized: v,
+			TokenStart: -1,
+			TokenEnd:   -1,
+			Confidence: 0.8,
+			Source:     source,
+		})
+	}
 }
 
 func headAliasBracketPair(s string) (open string, close string, ok bool) {

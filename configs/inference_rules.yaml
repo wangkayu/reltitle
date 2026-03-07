@@ -126,6 +126,14 @@ content_type_inference:
       - "blu-ray"
       - "bdremux"
       - "bd remux"
+
+  - name: "batch_by_movie_index_range"
+    priority: 67
+    condition:
+      has_movie_index_range: true
+    result: "BATCH"
+    confidence: 0.95
+    description: "有movie_index_range字段,例如: Movie 01-03"
   
   - name: "batch_by_episode_range"
     priority: 65

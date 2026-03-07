@@ -8,7 +8,7 @@ import (
 	"title-parser/pkg/model"
 )
 
-func inferContentKind(cfg *config.Config, episode string, episodeRange string, season string, seasonRange string, packKind string, spKind string, movieIndex string, hasTech bool, hasMovieKeyword bool, hasYear bool, movieRouteHardExcluded bool, hasMovieContentSignal bool) (string, float64) {
+func inferContentKind(cfg *config.Config, episode string, episodeRange string, season string, seasonRange string, packKind string, spKind string, movieIndex string, movieIndexRange string, hasTech bool, hasMovieKeyword bool, hasYear bool, movieRouteHardExcluded bool, hasMovieContentSignal bool) (string, float64) {
 	hasEpisode := episode != ""
 	hasEpisodeRange := episodeRange != ""
 	hasSeason := season != ""
@@ -16,6 +16,11 @@ func inferContentKind(cfg *config.Config, episode string, episodeRange string, s
 	hasPackKind := packKind != ""
 	hasSPKind := spKind != ""
 	hasMovieIndex := movieIndex != ""
+	hasMovieIndexRange := movieIndexRange != ""
+
+	if hasMovieIndexRange {
+		return "BATCH", 0.95
+	}
 
 	if movieRouteHardExcluded && hasMovieContentSignal {
 		return "BATCH", 0.95
@@ -25,7 +30,7 @@ func inferContentKind(cfg *config.Config, episode string, episodeRange string, s
 	sort.SliceStable(rules, func(i, j int) bool { return rules[i].Priority > rules[j].Priority })
 
 	for _, r := range rules {
-		if matchContentTypeCondition(r, hasEpisode, hasEpisodeRange, hasSeason, hasSeasonRange, hasPackKind, hasSPKind, hasMovieIndex, hasTech, hasMovieKeyword, hasYear, spKind) {
+		if matchContentTypeCondition(r, hasEpisode, hasEpisodeRange, hasSeason, hasSeasonRange, hasPackKind, hasSPKind, hasMovieIndex, hasMovieIndexRange, hasTech, hasMovieKeyword, hasYear, spKind) {
 			return r.Result, r.Confidence
 		}
 	}
@@ -33,7 +38,7 @@ func inferContentKind(cfg *config.Config, episode string, episodeRange string, s
 	return "UNKNOWN", 0.5
 }
 
-func matchContentTypeCondition(r config.ContentTypeInferenceRule, hasEpisode bool, hasEpisodeRange bool, hasSeason bool, hasSeasonRange bool, hasPackKind bool, hasSPKind bool, hasMovieIndex bool, hasTech bool, hasMovieKeyword bool, hasYear bool, spKind string) bool {
+func matchContentTypeCondition(r config.ContentTypeInferenceRule, hasEpisode bool, hasEpisodeRange bool, hasSeason bool, hasSeasonRange bool, hasPackKind bool, hasSPKind bool, hasMovieIndex bool, hasMovieIndexRange bool, hasTech bool, hasMovieKeyword bool, hasYear bool, spKind string) bool {
 	cond := r.Condition
 	if cond == nil {
 		return false
@@ -113,6 +118,18 @@ func matchContentTypeCondition(r config.ContentTypeInferenceRule, hasEpisode boo
 	if v, ok := cond["has_movie_index"]; ok {
 		b, _ := v.(bool)
 		if b != hasMovieIndex {
+			return false
+		}
+	}
+	if v, ok := cond["has_movie_index_range"]; ok {
+		b, _ := v.(bool)
+		if b != hasMovieIndexRange {
+			return false
+		}
+	}
+	if v, ok := cond["no_movie_index_range"]; ok {
+		b, _ := v.(bool)
+		if b == hasMovieIndexRange {
 			return false
 		}
 	}

@@ -231,6 +231,56 @@ func TestParserSpecial_CMNotDetectedFromLengthUnit(t *testing.T) {
 	}
 }
 
+func TestParserLexicon_CommaLanguageTokensAreConsumed(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "A Couple of Cuckoos S02E07-09 MULTi 1080p WEB x264 AAC -Tsundere-Raws (CR) (VF, FRENCH, VOSTFR, Kakkou no Iinazuke Season 2)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	aliases := canonicalAliases(res)
+	for _, a := range aliases {
+		la := strings.ToLower(a)
+		if strings.Contains(la, "vf,") || strings.Contains(la, "french,") || strings.Contains(la, "vostfr,") {
+			t.Fatalf("comma language token leaked into alias: %v", aliases)
+		}
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "VOSTFR") {
+		t.Fatalf("expected sub_flag=VOSTFR, attrs=%v", attrValues(res, model.AttrSubFlag))
+	}
+}
+
+func TestParserLexicon_RecruitmentAndBonusMetaTokensAreConsumed(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[1080P][DBD-Raws][龙珠GT/Dragon Ball GT][01-12TV全集+SP+特典映像][HEVC-10bit][招募翻譯]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	aliases := canonicalAliases(res)
+	for _, a := range aliases {
+		if strings.Contains(a, "招募") || strings.Contains(a, "特典映像") {
+			t.Fatalf("meta token leaked into alias: %v", aliases)
+		}
+	}
+	if !hasAttrValue(attrValues(res, model.AttrNote), "RECRUITMENT") {
+		t.Fatalf("expected note=RECRUITMENT")
+	}
+	if !hasAttrValue(attrValues(res, model.AttrNote), "BONUS_VIDEO") {
+		t.Fatalf("expected note=BONUS_VIDEO")
+	}
+}
+
 func TestParserAliasCleanup_BracketTitleFallbackWhenMainTitleEmpty(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

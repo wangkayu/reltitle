@@ -67,6 +67,157 @@ entries:
     remove: true
     confidence: 0.6
 
+  - id: note_vf_trailing_comma
+    tokens: ["vf,"]
+    emit:
+      - type: note
+        normalized: "VF"
+        token_index: -1
+    remove: true
+    confidence: 0.6
+
+  - id: note_french_trailing_comma
+    tokens: ["french,"]
+    emit:
+      - type: note
+        normalized: "FRENCH"
+        token_index: -1
+    remove: true
+    confidence: 0.6
+
+  - id: sub_vostfr_trailing_comma
+    tokens: ["vostfr,"]
+    emit:
+      - type: sub_flag
+        normalized: "VOSTFR"
+        token_index: -1
+      - type: sub_lang
+        normalized: "FRA"
+        token_index: -1
+    remove: true
+    confidence: 0.7
+
+  - id: note_recruitment_meta_tokens
+    any_of:
+      - tokens: ["招募翻譯"]
+        emit:
+          - type: note
+            normalized: "RECRUITMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["招募新人"]
+        emit:
+          - type: note
+            normalized: "RECRUITMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["招募翻譯校對"]
+        emit:
+          - type: note
+            normalized: "RECRUITMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["招募翻譯時軸"]
+        emit:
+          - type: note
+            normalized: "RECRUITMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["急招募"]
+        emit:
+          - type: note
+            normalized: "RECRUITMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["（招募）"]
+        emit:
+          - type: note
+            normalized: "RECRUITMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["字幕組招人內詳"]
+        emit:
+          - type: note
+            normalized: "RECRUITMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["字幕组招人内详"]
+        emit:
+          - type: note
+            normalized: "RECRUITMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+
+  - id: note_search_and_share_meta_tokens
+    any_of:
+      - tokens: ["（检索"]
+        emit:
+          - type: note
+            normalized: "SEARCH_HINT_META"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["（檢索用"]
+        emit:
+          - type: note
+            normalized: "SEARCH_HINT_META"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["网盘"]
+        emit:
+          - type: note
+            normalized: "FILESHARE_META"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["網盤下載"]
+        emit:
+          - type: note
+            normalized: "FILESHARE_META"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+
+  - id: note_release_pack_meta_tokens
+    any_of:
+      - tokens: ["特典映像"]
+        emit:
+          - type: note
+            normalized: "BONUS_VIDEO"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["精校合集"]
+        emit:
+          - type: note
+            normalized: "CURATED_PACK"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["無對白字幕"]
+        emit:
+          - type: note
+            normalized: "NO_DIALOG_SUBS"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["年齡限制版"]
+        emit:
+          - type: note
+            normalized: "AGE_RESTRICTED"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+
   - id: note_movie_bracket
     scope: bracket
     tokens: ["movie"]
@@ -207,6 +358,16 @@ entries:
             token_index: 1
         remove: true
         confidence: 0.75
+
+  - id: lang_ita_standalone
+    scope: plain
+    tokens: ["ita"]
+    emit:
+      - type: sub_lang
+        normalized: "ITA"
+        token_index: -1
+    remove: true
+    confidence: 0.55
 
   - id: source_type_dvdrip
     any_of:

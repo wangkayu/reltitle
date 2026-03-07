@@ -4922,6 +4922,9 @@ func isEpisodeLikeBracketText(s string) bool {
 	if ss == "" {
 		return false
 	}
+	if regexp.MustCompile(`(?i)^0?\d{1,4}\s*[-~]\s*0?\d{1,4}(?:\.\d{1,2})?.*$`).MatchString(ss) {
+		return true
+	}
 	if regexp.MustCompile(`(?i)^第?\d{1,4}(?:\s*-\s*\d{1,4})?(?:集|话|話|回|章)(?:\s|$)`).MatchString(ss) {
 		return true
 	}

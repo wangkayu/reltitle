@@ -86,9 +86,9 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 		if regexp.MustCompile(`(?i)^0?\d{1,4}\s*(?:end|fin|final)$`).MatchString(s) {
 			return true
 		}
-		// Batch range forms with pack suffix should stay in token stream for episode_range detection.
-		// Examples: "01-24TV全集", "01-12 全集", "01-12FIN".
-		if regexp.MustCompile(`(?i)^0?\d{1,4}\s*[-~]\s*0?\d{1,4}\s*(?:tv)?\s*(?:全集|合集|全话|全話|fin|end|final)?$`).MatchString(s) {
+		// Batch range forms should stay in token stream for episode_range detection.
+		// Examples: "01-24TV全集", "01-12 全集", "01-12FIN", "01-12TV全集+SP+特典映像".
+		if regexp.MustCompile(`(?i)^0?\d{1,4}\s*[-~]\s*0?\d{1,4}(?:\.\d{1,2})?.*$`).MatchString(s) {
 			return true
 		}
 		// Any embedded episode marker like "第687集" (even with extra words) should be kept

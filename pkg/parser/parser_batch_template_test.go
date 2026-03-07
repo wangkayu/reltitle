@@ -256,3 +256,26 @@ func TestParserEpisodeCompactEndFlag_NotBatch(t *testing.T) {
 		t.Fatalf("expected endflag note from compact episode token, notes=%v", notes)
 	}
 }
+
+func TestParserBatchTemplateRangePack_TVQuanJiWithExtrasStillKeepsRange(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[DBD-Raws][AIR/青空][01-12TV全集+SP+剧场版+特典映像][1080P][BDRip][HEVC-10bit][简繁外挂][FLAC][MKV]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "BATCH" {
+		t.Fatalf("content_kind=%q want=%q", got, "BATCH")
+	}
+	if got := canonicalEpisodeRange(res); got != "1-12" {
+		t.Fatalf("episode_range=%q want=%q", got, "1-12")
+	}
+	if got := firstAttrValue(res, model.AttrPackKind); got != "全集" {
+		t.Fatalf("pack_kind=%q want=%q", got, "全集")
+	}
+}

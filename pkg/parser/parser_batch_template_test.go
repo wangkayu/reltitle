@@ -234,6 +234,54 @@ func TestParserBatchTemplateRangePack_NoTechWithCollectionKeyword(t *testing.T) 
 	}
 }
 
+func TestParserBatchTemplateRangePack_NoGroupWithPackAndTech(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "BLEACH (2004) - COMPLETE (001-366) - JP BD + R2J DVD [Dual Audio][FLAC] [V2]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "BATCH" {
+		t.Fatalf("content_kind=%q want=%q", got, "BATCH")
+	}
+	if got := res.TemplateID; got != "TF_BATCH_RANGE_PACK_NOGROUP_01" {
+		t.Fatalf("template_id=%q want=%q", got, "TF_BATCH_RANGE_PACK_NOGROUP_01")
+	}
+	if got := canonicalEpisodeRange(res); got != "1-366" {
+		t.Fatalf("episode_range=%q want=%q", got, "1-366")
+	}
+	if got := firstAttrValue(res, model.AttrPackKind); !strings.EqualFold(got, "complete") {
+		t.Fatalf("pack_kind=%q want=%q", got, "complete")
+	}
+	regions := attrValues(res, model.AttrPlatformRegion)
+	hasJPRegion := false
+	for _, v := range regions {
+		if strings.EqualFold(strings.TrimSpace(v), "JP") {
+			hasJPRegion = true
+			break
+		}
+	}
+	if !hasJPRegion {
+		t.Fatalf("platform_region should include JP, got=%v", regions)
+	}
+	srcTypes := attrValues(res, model.AttrSourceType)
+	hasDVD := false
+	for _, v := range srcTypes {
+		if strings.EqualFold(strings.TrimSpace(v), "DVD") {
+			hasDVD = true
+			break
+		}
+	}
+	if !hasDVD {
+		t.Fatalf("source_type should include DVD, got=%v", srcTypes)
+	}
+}
+
 func TestParserBatchTemplateRangePack_TVQuanJiUsesPackKindNotContents(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

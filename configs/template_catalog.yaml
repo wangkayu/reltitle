@@ -547,6 +547,16 @@ batch_templates:
     examples:
       - "[c.c动漫] [虽然是公会的柜台小姐...][01-12][合集][BIG5][720P][MP4]"
       - "[PMFAN字幕组][宝可梦 钻石&珍珠][000-193+M10-M13][合集]"
+
+  - id: "TF_BATCH_RANGE_PACK_NOGROUP_01"
+    name: "TITLE XX-XX [PACK] [TECH]"
+    content_types: ["BATCH"]
+    signature: "T R C X"
+    confidence: 0.94
+    description: "Episode range + pack marker + tech, 无GROUP"
+    examples:
+      - "BLEACH COMPLETE (001-366) JP BD + R2J DVD [FLAC]"
+      - "Girls Band Cry (BD REMUX EP01-03+SP 1920x1080 AVC PCM)"
   
   - id: "TF_BATCH_RANGE_02"
     name: "TITLE XX-XX [TECH]"

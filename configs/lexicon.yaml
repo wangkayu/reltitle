@@ -105,6 +105,62 @@ entries:
         remove: true
         confidence: 0.65
 
+  - id: platform_region_jp_bd
+    any_of:
+      - scope: plain
+        tokens: ["jp", "bd"]
+        emit:
+          - type: platform_region
+            normalized: "JP"
+            token_index: 0
+          - type: source_type
+            normalized: "BD"
+            token_index: 1
+        remove: true
+        confidence: 0.7
+      - scope: bracket
+        tokens: ["jp", "bd"]
+        emit:
+          - type: platform_region
+            normalized: "JP"
+            token_index: 0
+          - type: source_type
+            normalized: "BD"
+            token_index: 1
+        remove: true
+        confidence: 0.7
+
+  - id: platform_region_r2j_dvd
+    any_of:
+      - scope: plain
+        tokens: ["r2j", "dvd"]
+        emit:
+          - type: platform_region
+            normalized: "JP"
+            token_index: 0
+          - type: note
+            normalized: "R2J"
+            token_index: 0
+          - type: source_type
+            normalized: "DVD"
+            token_index: 1
+        remove: true
+        confidence: 0.75
+      - scope: bracket
+        tokens: ["r2j", "dvd"]
+        emit:
+          - type: platform_region
+            normalized: "JP"
+            token_index: 0
+          - type: note
+            normalized: "R2J"
+            token_index: 0
+          - type: source_type
+            normalized: "DVD"
+            token_index: 1
+        remove: true
+        confidence: 0.75
+
   - id: source_type_dvdrip
     any_of:
       - tokens: ["dvdrip"]

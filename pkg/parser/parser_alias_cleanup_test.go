@@ -1047,6 +1047,209 @@ func TestLexiconDict_ConfigFirst_GluedSourceResolutionVariants(t *testing.T) {
 	}
 }
 
+func TestParserTechCombo_BitDepthWithTrailingComma(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Gecko] Kaijyu Sekai Seifuku - S01E47 [ABEMA.WEB-DL 1920x1080 AVC 8bit, AAC 2.0][819BADDB].mkv"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrBitDepth), "8bit") {
+		t.Fatalf("expected bit_depth=8bit, got=%v", attrValues(res, model.AttrBitDepth))
+	}
+}
+
+func TestLexiconDict_ConfigFirst_ITABDCompound(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "Mahou Shoujo Madoka Magica S1 ITA-BD x265 10bit"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if canonicalTitle(res) != "Mahou Shoujo Madoka Magica" {
+		t.Fatalf("title polluted, got=%q", canonicalTitle(res))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrPlatformRegion), "ITA") {
+		t.Fatalf("expected platform_region=ITA, got=%v", attrValues(res, model.AttrPlatformRegion))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSourceType), "BD") {
+		t.Fatalf("expected source_type includes BD, got=%v", attrValues(res, model.AttrSourceType))
+	}
+}
+
+func TestLexiconDict_ConfigFirst_BDBoxAtomicNoAliasPollution(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[VCB-Studio] Some Title [BD-BOX][1080p][x265][10bit]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSourceType), "BD") {
+		t.Fatalf("expected source_type includes BD, got=%v", attrValues(res, model.AttrSourceType))
+	}
+	for _, a := range canonicalAliases(res) {
+		if strings.EqualFold(strings.TrimSpace(a), "BOX") {
+			t.Fatalf("bd-box token leaked as alias: %v", canonicalAliases(res))
+		}
+	}
+}
+
+func TestParserAliasCleanup_TrimTailAbsoluteEpisodeWhenSeasonRelativePrimary(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[WF] Sousou no Frieren 2nd Season - 04 [WEBRip 1080p x265 AAC][DUAL][PT-BR] (Frieren: Beyond Journey's End - 32)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalEpisode(res); got != "4" {
+		t.Fatalf("episode=%q want=4", got)
+	}
+	aliases := canonicalAliases(res)
+	if !containsAlias(aliases, "Frieren Beyond Journey's End") {
+		t.Fatalf("expected cleaned alias, got=%v", aliases)
+	}
+	for _, a := range aliases {
+		if strings.Contains(a, "32") {
+			t.Fatalf("tail absolute episode should be trimmed from alias, got=%v", aliases)
+		}
+	}
+}
+
+func TestJibaketaYueSample_SubtitleAndPlatformCleanup(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[jibaketa合成][代理商粵語]SPY×FAMILY間諜家家酒 / 间谍过家家Season 3 - 09 [粵日雙語+內封繁體中文字幕](WEB 1920x1080 AVC AACx2 SRT MUSE CHT)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "YUE") {
+		t.Fatalf("expected audio_lang YUE, got=%v", attrValues(res, model.AttrAudioLang))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSubLang), "CHT") {
+		t.Fatalf("expected sub_lang CHT, got=%v", attrValues(res, model.AttrSubLang))
+	}
+	if hasAttrValue(attrValues(res, model.AttrSubLang), "JPN") {
+		t.Fatalf("unexpected sub_lang JPN from 粵日雙語, got=%v", attrValues(res, model.AttrSubLang))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrPlatform), "MUSE") {
+		t.Fatalf("expected platform MUSE, got=%v", attrValues(res, model.AttrPlatform))
+	}
+	for _, a := range canonicalAliases(res) {
+		if strings.HasSuffix(strings.ToLower(strings.TrimSpace(a)), "season") {
+			t.Fatalf("season residue leaked in alias: %v", canonicalAliases(res))
+		}
+	}
+}
+
+func TestGeckoGTETX_ParenAliasBetweenEpisodeAndTech(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Gecko] Kaijyu Sekai Seifuku - S01E47 (かいじゅうせかいせいふく; Kaijuu Sekai Seifuku; Kaijuu Sekai Seifuku (TV)) [ABEMA.WEB-DL 1920x1080 AVC 8bit, AAC 2.0][819BADDB]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if canonicalTitle(res) != "Kaijyu Sekai Seifuku" {
+		t.Fatalf("unexpected title=%q", canonicalTitle(res))
+	}
+	aliases := canonicalAliases(res)
+	if !containsAlias(aliases, "かいじゅうせかいせいふく") {
+		t.Fatalf("expected kana alias, got=%v", aliases)
+	}
+	if !containsAlias(aliases, "Kaijuu Sekai Seifuku") {
+		t.Fatalf("expected latin alias, got=%v", aliases)
+	}
+}
+
+func TestUnderscoreSceneStyle_NoRouteNeeded(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[WZF]One_Punch_Man_(2025)_-_Ep_07~08[HI10p][1920x1080][X264-AAC][WEB][Sub_Esp]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if canonicalTitle(res) != "One Punch Man" {
+		t.Fatalf("unexpected title=%q", canonicalTitle(res))
+	}
+	if got := canonicalEpisodeRange(res); got != "7-8" {
+		t.Fatalf("episode_range=%q want=7-8", got)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSubLang), "SPA") {
+		t.Fatalf("expected sub_lang SPA, got=%v", attrValues(res, model.AttrSubLang))
+	}
+}
+
+func TestLexiconDict_4KHDRComboShouldNotPolluteTitle(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[4K影视屋][4K_HDR][007：无暇赴死No.Time.to.Die.2021][2160P][WEB-DL][杜比全景声][HEVC]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if strings.EqualFold(strings.TrimSpace(canonicalTitle(res)), "4K HDR") {
+		t.Fatalf("4k_hdr block leaked to title: %q", canonicalTitle(res))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrResolution), "2160p") {
+		t.Fatalf("expected resolution 2160p, got=%v", attrValues(res, model.AttrResolution))
+	}
+}
+
+func TestLexiconDict_DVTokenToDolbyVisionHDR(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[TestGroup] Sample Show - 01 [DV][WEB-DL][2160p][HEVC]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrType("hdr")), "DOLBY_VISION") {
+		t.Fatalf("expected hdr DOLBY_VISION, got=%v", attrValues(res, model.AttrType("hdr")))
+	}
+}
+
 func hasAttrValue(got []string, want string) bool {
 	for _, v := range got {
 		if strings.EqualFold(strings.TrimSpace(v), strings.TrimSpace(want)) {

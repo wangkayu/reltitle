@@ -129,6 +129,9 @@ func extractTechSubsSemanticsAndRemoveFromTokens(tokens []model.Token, attrs *[]
 		if noSpace == "" {
 			return false
 		}
+		isYueAudioBilingual := (strings.Contains(noSpace, "粵") || strings.Contains(noSpace, "粤")) &&
+			strings.Contains(noSpace, "日") &&
+			(strings.Contains(noSpace, "雙語") || strings.Contains(noSpace, "双语"))
 
 		isSubsLike := false
 		if strings.Contains(noSpace, "字幕") || strings.Contains(noSpaceLower, "sub") {
@@ -204,7 +207,9 @@ func extractTechSubsSemanticsAndRemoveFromTokens(tokens []model.Token, attrs *[]
 			addLang(langs, "CHT")
 		}
 		if strings.Contains(noSpace, "简日") || strings.Contains(noSpace, "簡日") || strings.Contains(noSpace, "繁日") || strings.Contains(noSpace, "繁日") || strings.Contains(noSpace, "简繁日") || strings.Contains(noSpace, "簡繁日") || strings.Contains(noSpace, "繁簡日") {
-			addLang(langs, "JPN")
+			if !isYueAudioBilingual {
+				addLang(langs, "JPN")
+			}
 			if strings.Contains(noSpace, "简日") || strings.Contains(noSpace, "簡日") {
 				addLang(langs, "CHS")
 			}
@@ -235,7 +240,9 @@ func extractTechSubsSemanticsAndRemoveFromTokens(tokens []model.Token, attrs *[]
 		}
 		if strings.Contains(noSpace, "日") {
 			if strings.Contains(noSpace, "字幕") || strings.Contains(noSpace, "内封") || strings.Contains(noSpace, "內封") || strings.Contains(noSpace, "内嵌") || strings.Contains(noSpace, "內嵌") || strings.Contains(noSpace, "外挂") || strings.Contains(noSpace, "外掛") {
-				addLang(langs, "JPN")
+				if !isYueAudioBilingual {
+					addLang(langs, "JPN")
+				}
 			}
 		}
 
@@ -246,7 +253,7 @@ func extractTechSubsSemanticsAndRemoveFromTokens(tokens []model.Token, attrs *[]
 				continue
 			}
 			su := strings.ToUpper(s)
-			if su == "ASS" || su == "SRT" || su == "SSA" || su == "SUB" {
+			if su == "ASS" || su == "SRT" || su == "SSA" {
 				addFmt(fmts, su)
 				continue
 			}
@@ -270,6 +277,11 @@ func extractTechSubsSemanticsAndRemoveFromTokens(tokens []model.Token, attrs *[]
 		}
 		if strings.Contains(noSpaceLower, "srt") {
 			addFmt(fmts, "SRT")
+		}
+		// "SUB" 在场景标题里大多表示 "有字幕"(例如 Sub_Esp)，不是字幕封装格式。
+		// 仅在明确 VOBSUB/PGS/ASS/SRT 等语义时才写入 sub_format。
+		if flag == "" && strings.Contains(noSpaceLower, "sub") {
+			flag = "SUBS"
 		}
 
 		groups := map[string]bool{}

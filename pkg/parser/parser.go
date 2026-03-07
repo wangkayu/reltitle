@@ -152,6 +152,7 @@ func extractWxHResolutionAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[
 
 var stableTechResolutionPattern = regexp.MustCompile(`(?i)^(\d{3,4})p$`)
 var stableTechBitDepthPattern = regexp.MustCompile(`(?i)^(8|10|12)\s*bit$`)
+var looseBitDepthPattern = regexp.MustCompile(`(?i)^0*(8|10|12)\s*(?:-|_)?\s*bit[\.,，:：;；!?]?$`)
 var stableTechSplitPattern = regexp.MustCompile(`[+_/\.]`)
 
 func (p *Parser) extractStableTechSpanComboAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Attribute) {
@@ -354,6 +355,52 @@ func (p *Parser) inferStableTechTokenAttrs(raw string, idx int) ([]model.Attribu
 		return nil, false
 	}
 	return out, true
+}
+
+func extractLooseBitDepthAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Attribute) {
+	if attrs == nil || len(tokens) == 0 {
+		return
+	}
+	seen := make(map[string]struct{}, 3)
+	for _, a := range *attrs {
+		if a.Type != model.AttrBitDepth {
+			continue
+		}
+		n := strings.TrimSpace(strings.ToLower(a.Normalized))
+		if n == "" {
+			continue
+		}
+		seen[n] = struct{}{}
+	}
+	for i := 0; i < len(tokens); i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		txt := strings.TrimSpace(tokens[i].Text)
+		if txt == "" {
+			continue
+		}
+		mm := looseBitDepthPattern.FindStringSubmatch(txt)
+		if len(mm) != 2 {
+			continue
+		}
+		norm := mm[1] + "bit"
+		key := strings.ToLower(norm)
+		if _, ok := seen[key]; ok {
+			tokens[i].Removed = true
+			continue
+		}
+		*attrs = append(*attrs, model.Attribute{
+			Type:       model.AttrBitDepth,
+			Normalized: norm,
+			TokenStart: i,
+			TokenEnd:   i + 1,
+			Confidence: 0.72,
+			Source:     "bit_depth_loose",
+		})
+		seen[key] = struct{}{}
+		tokens[i].Removed = true
+	}
 }
 
 func extractYearAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Attribute, hasTech bool) {
@@ -1222,6 +1269,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	extractSeasonShowTagAttrsAndRemoveFromTokens(tokens, &attrs)
 	p.applyLexicon(tokens, &attrs)
 	p.extractStableTechSpanComboAttrsAndRemoveFromTokens(tokens, &attrs)
+	extractLooseBitDepthAttrsAndRemoveFromTokens(tokens, &attrs)
 	promoteFrenchMultiNoteToAudioFlag(attrs)
 	p.normalizePlatformAttrs(attrs)
 	p.normalizeSourceTypeAttrs(attrs)
@@ -1504,7 +1552,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	}
 	if hasTech {
 		aliases = mergeAliases(aliases, p.inferTailAliasesFromPipes(tokens, attrs, group))
-		aliases = mergeAliases(aliases, p.inferTailAliasesFromParens(tokens, &attrs))
+		aliases = mergeAliases(aliases, p.inferTailAliasesFromParens(tokens, &attrs, episodeIdx, episodeRangeIdx, seasonIdx))
 	}
 	if len(aliases) > 0 {
 		var contentMarkers []string
@@ -1619,7 +1667,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	title = trimMovieRangeStartTailFromTitle(rawTitle, title, movieIndexRange, episode, episodeRange)
 	origTitle := title
 	title = sanitizePrimaryTitleForOutput(title)
-	aliases = p.sanitizeAliasesForOutput(aliases, title)
+	aliases = p.sanitizeAliasesForOutput(aliases, title, episode, season)
 	if strings.TrimSpace(title) != "" && aliasSemanticKey(title) != aliasSemanticKey(origTitle) {
 		attrs = upsertTitleAttribute(attrs, title, "title_cleanup")
 	}
@@ -2330,7 +2378,7 @@ func trimMovieRangeStartTailFromTitle(rawTitle string, title string, movieIndexR
 	if !ctxPattern.MatchString(rawTitle) {
 		return title
 	}
-	out := regexp.MustCompile(`(?i)((?:movie|film|劇場版|剧场版)\s*)0*` + regexp.QuoteMeta(start) + `\s*$`).ReplaceAllString(strings.TrimSpace(title), "$1")
+	out := regexp.MustCompile(`(?i)((?:movie|film|劇場版|剧场版)\s*)0*`+regexp.QuoteMeta(start)+`\s*$`).ReplaceAllString(strings.TrimSpace(title), "$1")
 	out = strings.TrimSpace(strings.Trim(out, "-:：_ "))
 	if out == "" {
 		return title
@@ -3116,12 +3164,17 @@ var reHintPrefix = regexp.MustCompile(`(?i)^(检索用|检索|檢索用|檢索|�
 var reAliasTrimTVSeasonTail = regexp.MustCompile(`(?i)(?:^|\s+)(?:tv|tb|тv|тв)\s*[-_ ]\s*\d{1,2}\s*$`)
 var reAliasTrimPlatformTail = regexp.MustCompile(`(?i)\s+(?:b-?global(?:\s+donghua)?|baha|abema|cr|amzn|amazon|netflix|nf|unext|at-?x|bs11|bs-?ntv|bs-?fuji|france\s*tv|tv)\s*$`)
 var reAliasTrimTVAnimePrefix = regexp.MustCompile(`(?i)^(?:tv\s*アニメ|tv\s*anime|tv\s*animation)\s+`)
+var reAliasTrimSeasonWordTail = regexp.MustCompile(`(?i)\s+(?:season|saison)\s*$`)
+var reAliasTrimEpisodeWordTail = regexp.MustCompile(`(?i)\s+(?:ep|episode)\s*$`)
 var reAliasTVContentPhrase = regexp.MustCompile(`(?i)\btv\b.*(?:season|series|ver(?:sion)?|reproduction|release|ova|oad|ona|movie|sp|s\d{1,2}|剪辑版|剪輯版|版|系列)`)
+var reAliasMovieIndexSingle = regexp.MustCompile(`(?i)^m\d{1,3}$`)
+var reAliasTrailingEpisodeTail = regexp.MustCompile(`(?i)^(.*?)(?:\s*[-:：]\s*0*(\d{1,4}))$`)
 var reTitleTrimTVSeasonTail = regexp.MustCompile(`(?i)\s+(?:tv|tb|тv|тв)\s*[-_ ]?\s*\d{1,3}\s*$`)
 var reTitleTrimTVTail = regexp.MustCompile(`(?i)\s+(?:tv|tb|тv|тв)\s*$`)
 var reTitleTrimTVSeriesTail = regexp.MustCompile(`(?i)\s+tv\s+series\s*$`)
 var reTitleTrimTVEpisodeListTail = regexp.MustCompile(`(?i)\s+tv\s+[\d,，\-~\s]{2,}\s*$`)
 var reTitleStripTVAnimeSegmentPrefix = regexp.MustCompile(`(?i)(^|/\s*)tv\s*(?:アニメ|anime|animation)\s+`)
+var reTitleTrimEpisodeWordTail = regexp.MustCompile(`(?i)\s+(?:ep|episode)\s*$`)
 var reTitleTrimPackSpecialTail = regexp.MustCompile(`(?i)\s+pack(?:\s*\+\s*(?:sp[eé]ciaux|specials?|sp|ova|oad|ona|ex))+(?:\s+(?:web|webrip|web[- ]?dl))?\s*$`)
 var reTitleTrimMetaTail = regexp.MustCompile(`(?i)\s+(?:hd|sd|fhd|uhd|retail|webrip|web[- ]?dl|bdrip|bluray|blu-ray|remux|dvd|hdtv|mkv|mp4|avi|x26[45]|h\.?26[45]|hevc|av1|aac|ac3|e-?ac-?3|flac|dts(?:-?hd|-?hdma)?|hdma|truehd|ma\d{1,2}p|10[- ]?bit|8[- ]?bit)\s*$`)
 var reTitleTrimVolTail = regexp.MustCompile(`(?i)\s+(?:vol\.?(?:\s*\d{1,3})?|volume\s*\d{1,3})\s*$`)
@@ -3643,6 +3696,8 @@ func (p *Parser) normalizeAliasCandidateForOutput(s string) string {
 	for ss != prev {
 		prev = ss
 		ss = reAliasTrimTVSeasonTail.ReplaceAllString(ss, "")
+		ss = reAliasTrimSeasonWordTail.ReplaceAllString(ss, "")
+		ss = reAliasTrimEpisodeWordTail.ReplaceAllString(ss, "")
 		ss = p.trimAliasPlatformTail(ss)
 		ss = reAliasTrimTVAnimePrefix.ReplaceAllString(ss, "")
 		if p != nil && len(p.aliasInlineStripWords) > 0 {
@@ -3738,7 +3793,48 @@ func aliasSemanticKey(s string) string {
 	return b.String()
 }
 
-func (p *Parser) sanitizeAliasesForOutput(aliases []string, title string) []string {
+func normalizeAliasTrailingAbsoluteEpisode(alias string, primaryEpisode string, season string) string {
+	alias = strings.TrimSpace(alias)
+	if alias == "" {
+		return ""
+	}
+	epN, err := strconv.Atoi(strings.TrimSpace(primaryEpisode))
+	if err != nil || epN < 0 {
+		return alias
+	}
+	seasonN, err := strconv.Atoi(strings.TrimSpace(season))
+	if err != nil || seasonN <= 1 {
+		return alias
+	}
+	mm := reAliasTrailingEpisodeTail.FindStringSubmatch(alias)
+	if len(mm) != 3 {
+		return alias
+	}
+	tailN, err := strconv.Atoi(strings.TrimSpace(mm[2]))
+	if err != nil || tailN < 0 {
+		return alias
+	}
+	if tailN == epN {
+		return alias
+	}
+	diff := tailN - epN
+	if diff < 0 {
+		diff = -diff
+	}
+	if diff < 10 {
+		return alias
+	}
+	prefix := strings.TrimSpace(mm[1])
+	if prefix == "" {
+		return alias
+	}
+	if !hasCJK(prefix) && !hasLatin(prefix) {
+		return alias
+	}
+	return strings.TrimSpace(strings.Trim(prefix, "-_/;:,+ "))
+}
+
+func (p *Parser) sanitizeAliasesForOutput(aliases []string, title string, episode string, season string) []string {
 	if len(aliases) == 0 {
 		return nil
 	}
@@ -3746,7 +3842,9 @@ func (p *Parser) sanitizeAliasesForOutput(aliases []string, title string) []stri
 	out := make([]string, 0, len(aliases))
 	seen := map[string]bool{}
 	for _, a := range aliases {
+		a = normalizeAliasTrailingAbsoluteEpisode(a, episode, season)
 		a = p.normalizeAliasCandidateForOutput(a)
+		a = normalizeAliasTrailingAbsoluteEpisode(a, episode, season)
 		if a == "" || !p.isValidAliasToken(a) {
 			continue
 		}
@@ -3754,6 +3852,9 @@ func (p *Parser) sanitizeAliasesForOutput(aliases []string, title string) []stri
 			continue
 		}
 		if p.isAliasMetaOnlyToken(a) {
+			continue
+		}
+		if reAliasMovieIndexSingle.MatchString(strings.TrimSpace(a)) {
 			continue
 		}
 		if reAliasTVContentPhrase.MatchString(a) {
@@ -3794,6 +3895,7 @@ func sanitizePrimaryTitleForOutput(title string) string {
 		s = reTitleTrimTVEpisodeListTail.ReplaceAllString(s, "")
 		s = reTitleTrimTVSeasonTail.ReplaceAllString(s, "")
 		s = reTitleTrimTVTail.ReplaceAllString(s, "")
+		s = reTitleTrimEpisodeWordTail.ReplaceAllString(s, "")
 		s = reTitleTrimPackSpecialTail.ReplaceAllString(s, "")
 		s = reTitleTrimMetaTail.ReplaceAllString(s, "")
 		s = reTitleTrimVolTail.ReplaceAllString(s, "")
@@ -4181,9 +4283,6 @@ func (p *Parser) inferAliasesFromAdjacentBrackets(tokens []model.Token, titleEnd
 		}
 		parts := make([]string, 0, end-i)
 		for k := i + 1; k < end; k++ {
-			if tokens[k].Removed {
-				continue
-			}
 			t := strings.TrimSpace(tokens[k].Text)
 			if t == "" {
 				continue
@@ -4266,6 +4365,9 @@ func (p *Parser) inferBracketTitleFallback(tokens []model.Token, scanStart int, 
 		for k := i + 1; k < end; k++ {
 			t := strings.TrimSpace(tokens[k].Text)
 			if t == "" {
+				continue
+			}
+			if t == "_" || t == "-" || t == "." || t == "|" || t == "｜" {
 				continue
 			}
 			parts = append(parts, t)
@@ -4497,7 +4599,7 @@ func (p *Parser) extractParenAliasesAndRemoveFromTitle(tokens []model.Token, tit
 	return aliases
 }
 
-func (p *Parser) inferTailAliasesFromParens(tokens []model.Token, attrs *[]model.Attribute) []string {
+func (p *Parser) inferTailAliasesFromParens(tokens []model.Token, attrs *[]model.Attribute, episodeIdx int, episodeRangeIdx int, seasonIdx int) []string {
 	if attrs == nil {
 		return nil
 	}
@@ -4520,8 +4622,26 @@ func (p *Parser) inferTailAliasesFromParens(tokens []model.Token, attrs *[]model
 	if !ok {
 		return nil
 	}
+	scanStart := techStart
+	epAnchor := episodeIdx
+	if episodeRangeIdx > epAnchor {
+		epAnchor = episodeRangeIdx
+	}
+	if seasonIdx > epAnchor {
+		epAnchor = seasonIdx
+	}
+	if epAnchor >= 0 && epAnchor+1 < scanStart {
+		scanStart = epAnchor + 1
+	}
+	if scanStart < 0 {
+		scanStart = 0
+	}
+	if scanStart >= len(tokens) {
+		return nil
+	}
+
 	aliases := make([]string, 0, 8)
-	for i := techStart; i < len(tokens); i++ {
+	for i := scanStart; i < len(tokens); i++ {
 		if tokens[i].Text != "(" && tokens[i].Text != "（" {
 			continue
 		}
@@ -5254,6 +5374,9 @@ func titleStartAfterLeadingEmptyBracketBlocks(tokens []model.Token) int {
 			if t == "[" || t == "]" || t == "【" || t == "】" {
 				continue
 			}
+			if t == "_" || t == "-" || t == "." || t == "/" || t == "／" || t == "|" || t == "｜" {
+				continue
+			}
 			innerHasVisible = true
 			innerParts = append(innerParts, t)
 			break
@@ -5272,6 +5395,9 @@ func titleStartAfterLeadingEmptyBracketBlocks(tokens []model.Token) int {
 				if t == "" || t == "[" || t == "]" || t == "【" || t == "】" {
 					continue
 				}
+				if t == "_" || t == "-" || t == "." || t == "/" || t == "／" || t == "|" || t == "｜" {
+					continue
+				}
 				return k
 			}
 			return i
@@ -5282,6 +5408,7 @@ func titleStartAfterLeadingEmptyBracketBlocks(tokens []model.Token) int {
 }
 
 var reMonthNewShow = regexp.MustCompile(`^\d{1,2}月新番$`)
+var reMetaHDRWithKToken = regexp.MustCompile(`(?i)(?:4k|8k).*hdr|hdr.*(?:4k|8k)`)
 
 func looksLikeLeadingTitleMeta(s string) bool {
 	s = strings.TrimSpace(s)
@@ -5830,6 +5957,12 @@ func isLikelyMetaBracketText(s string) bool {
 	if low == "1080p" || low == "2160p" || low == "720p" {
 		return true
 	}
+	if low == "hdr" || low == "dovi" || low == "dolbyvision" {
+		return true
+	}
+	if reMetaHDRWithKToken.MatchString(low) {
+		return true
+	}
 	if strings.Contains(low, "1080p") || strings.Contains(low, "2160p") || strings.Contains(low, "720p") {
 		return true
 	}
@@ -5840,6 +5973,9 @@ func isLikelyMetaBracketText(s string) bool {
 		return true
 	}
 	if up == "BDMV" {
+		return true
+	}
+	if up == "BDBOX" || up == "BD-BOX" {
 		return true
 	}
 	// Common combined language tags like "CHS&JPN" / "CHT&JPN" / "CHS&CHT&JPN".
@@ -8309,6 +8445,8 @@ func compactWideBracketSpaces(s string) string {
 
 var reSpacedUnderscore = regexp.MustCompile(`\s+_\s+`)
 var reTrailingUnderscore = regexp.MustCompile(`\s+_\s*$`)
+var reUnderscoreRun = regexp.MustCompile(`_+`)
+var reMultiSpace = regexp.MustCompile(`\s+`)
 
 func normalizeSpacedUnderscore(s string) string {
 	s = strings.TrimSpace(s)
@@ -8320,6 +8458,8 @@ func normalizeSpacedUnderscore(s string) string {
 	}
 	s = reSpacedUnderscore.ReplaceAllString(s, "_")
 	s = reTrailingUnderscore.ReplaceAllString(s, "")
+	s = reUnderscoreRun.ReplaceAllString(s, " ")
+	s = reMultiSpace.ReplaceAllString(s, " ")
 	return strings.TrimSpace(s)
 }
 

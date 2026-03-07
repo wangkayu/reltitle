@@ -161,6 +161,53 @@ entries:
         remove: true
         confidence: 0.75
 
+  - id: platform_region_ita_bd
+    any_of:
+      - scope: plain
+        tokens: ["ita", "-", "bd"]
+        emit:
+          - type: platform_region
+            normalized: "ITA"
+            token_index: 0
+          - type: source_type
+            normalized: "BD"
+            token_index: 2
+        remove: true
+        confidence: 0.75
+      - scope: plain
+        tokens: ["ita", "bd"]
+        emit:
+          - type: platform_region
+            normalized: "ITA"
+            token_index: 0
+          - type: source_type
+            normalized: "BD"
+            token_index: 1
+        remove: true
+        confidence: 0.75
+      - scope: bracket
+        tokens: ["ita", "-", "bd"]
+        emit:
+          - type: platform_region
+            normalized: "ITA"
+            token_index: 0
+          - type: source_type
+            normalized: "BD"
+            token_index: 2
+        remove: true
+        confidence: 0.75
+      - scope: bracket
+        tokens: ["ita", "bd"]
+        emit:
+          - type: platform_region
+            normalized: "ITA"
+            token_index: 0
+          - type: source_type
+            normalized: "BD"
+            token_index: 1
+        remove: true
+        confidence: 0.75
+
   - id: source_type_dvdrip
     any_of:
       - tokens: ["dvdrip"]
@@ -292,6 +339,49 @@ entries:
         token_index: -1
     remove: true
     confidence: 0.7
+
+  - id: note_hdr_4k_combo
+    any_of:
+      - tokens: ["4k_hdr"]
+        emit:
+          - type: resolution
+            normalized: "2160p"
+            token_index: -1
+          - type: note
+            normalized: "HDR"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["4k", "_", "hdr"]
+        emit:
+          - type: resolution
+            normalized: "2160p"
+            token_index: 0
+          - type: note
+            normalized: "HDR"
+            token_index: 2
+        remove: true
+        confidence: 0.8
+      - tokens: ["4k-hdr"]
+        emit:
+          - type: resolution
+            normalized: "2160p"
+            token_index: -1
+          - type: note
+            normalized: "HDR"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["4k", "hdr"]
+        emit:
+          - type: resolution
+            normalized: "2160p"
+            token_index: 0
+          - type: note
+            normalized: "HDR"
+            token_index: 1
+        remove: true
+        confidence: 0.8
 
   - id: note_lang_tag_pt_br
     scope: bracket
@@ -1565,6 +1655,49 @@ entries:
     remove: true
     confidence: 0.7
 
+  - id: sub_esp_tag
+    any_of:
+      - tokens: ["sub_esp"]
+        emit:
+          - type: sub_flag
+            normalized: "SUBS"
+            token_index: -1
+          - type: sub_lang
+            normalized: "SPA"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["sub", "_", "esp"]
+        emit:
+          - type: sub_flag
+            normalized: "SUBS"
+            token_index: -1
+          - type: sub_lang
+            normalized: "SPA"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["sub", "esp"]
+        emit:
+          - type: sub_flag
+            normalized: "SUBS"
+            token_index: -1
+          - type: sub_lang
+            normalized: "SPA"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["sub-esp"]
+        emit:
+          - type: sub_flag
+            normalized: "SUBS"
+            token_index: -1
+          - type: sub_lang
+            normalized: "SPA"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+
   - id: audio_arabic_dub
     any_of:
       - tokens: ["arabicdub"]
@@ -2388,6 +2521,29 @@ entries:
 
   - id: hdr_dovi
     any_of:
+      - scope: bracket
+        tokens: ["dv"]
+        emit:
+          - type: hdr
+            normalized: "DOLBY_VISION"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - scope: paren
+        tokens: ["dv"]
+        emit:
+          - type: hdr
+            normalized: "DOLBY_VISION"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["dolbyvision"]
+        emit:
+          - type: hdr
+            normalized: "DOLBY_VISION"
+            token_index: -1
+        remove: true
+        confidence: 0.7
       - tokens: ["dovi"]
         emit:
           - type: hdr
@@ -2466,6 +2622,53 @@ entries:
         token_index: -1
     remove: true
     confidence: 0.75
+
+  - id: source_type_bd_box
+    any_of:
+      - scope: plain
+        tokens: ["bd", "-", "box"]
+        emit:
+          - type: source_type
+            normalized: "BD"
+            token_index: 0
+          - type: note
+            normalized: "BD-BOX"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - scope: bracket
+        tokens: ["bd", "-", "box"]
+        emit:
+          - type: source_type
+            normalized: "BD"
+            token_index: 0
+          - type: note
+            normalized: "BD-BOX"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - scope: plain
+        tokens: ["bd-box"]
+        emit:
+          - type: source_type
+            normalized: "BD"
+            token_index: -1
+          - type: note
+            normalized: "BD-BOX"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - scope: bracket
+        tokens: ["bd-box"]
+        emit:
+          - type: source_type
+            normalized: "BD"
+            token_index: -1
+          - type: note
+            normalized: "BD-BOX"
+            token_index: -1
+        remove: true
+        confidence: 0.75
 
   - id: note_bd_short
     any_of:
@@ -4951,6 +5154,15 @@ entries:
         token_index: -1
     remove: true
     confidence: 0.75
+
+  - id: platform_muse
+    tokens: ["muse"]
+    emit:
+      - type: platform
+        normalized: "MUSE"
+        token_index: -1
+    remove: true
+    confidence: 0.8
 
   - id: platform_iqiyi
     any_of:

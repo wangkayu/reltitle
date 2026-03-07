@@ -1874,6 +1874,9 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 		epslot = nil
 		ctx.AudioSlot = nil
 	}
+	finalTitle := finalTitleValueFromAttributes(attrs, title)
+	finalAliases := finalTitleAliasValuesFromAttributes(attrs)
+	p.consumeAliasChainTokensByFinalAliases(tokens, groupSpan, finalTitle, finalAliases, episodeIdx, episodeRangeIdx, seasonIdx, attrs)
 
 	res := &model.ParseResult{
 		RawTitle:           originalRawTitle,
@@ -8771,6 +8774,223 @@ func firstTechTokenIndexFromAttrs(attrs []model.Attribute) (int, bool) {
 		return -1, false
 	}
 	return minIdx, true
+}
+
+func aliasChainSemanticKey(s string) string {
+	s = normalizeTitleMain(cleanAliasToken(strings.TrimSpace(s)))
+	if s == "" {
+		return ""
+	}
+	s = strings.ToLower(s)
+	var b strings.Builder
+	b.Grow(len(s))
+	for _, r := range s {
+		if unicode.IsLetter(r) || unicode.IsNumber(r) {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
+}
+
+func aliasChainKeysContain(keys map[string]struct{}, key string) bool {
+	if key == "" || len(keys) == 0 {
+		return false
+	}
+	if _, ok := keys[key]; ok {
+		return true
+	}
+	for k := range keys {
+		if k == "" {
+			continue
+		}
+		if k == key {
+			return true
+		}
+		if len(k) >= 5 && len(key) >= 5 {
+			if strings.Contains(k, key) || strings.Contains(key, k) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func finalTitleValueFromAttributes(attrs []model.Attribute, fallback string) string {
+	for i := len(attrs) - 1; i >= 0; i-- {
+		if attrs[i].Type != model.AttrTitle {
+			continue
+		}
+		v := strings.TrimSpace(attrs[i].Normalized)
+		if v != "" {
+			return v
+		}
+	}
+	return strings.TrimSpace(fallback)
+}
+
+func finalTitleAliasValuesFromAttributes(attrs []model.Attribute) []string {
+	if len(attrs) == 0 {
+		return nil
+	}
+	seen := make(map[string]struct{}, 4)
+	out := make([]string, 0, 4)
+	for _, a := range attrs {
+		if a.Type != model.AttrTitleAlias {
+			continue
+		}
+		v := strings.TrimSpace(a.Normalized)
+		if v == "" {
+			continue
+		}
+		key := aliasSemanticKey(v)
+		if key == "" {
+			key = strings.ToLower(v)
+		}
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		out = append(out, v)
+	}
+	return out
+}
+
+func (p *Parser) consumeAliasChainTokensByFinalAliases(tokens []model.Token, groupSpan [2]int, title string, aliases []string, episodeIdx int, episodeRangeIdx int, seasonIdx int, attrs []model.Attribute) {
+	if len(tokens) == 0 || strings.TrimSpace(title) == "" || len(aliases) == 0 {
+		return
+	}
+	scanStart := titleStartAfterLeadingEmptyBracketBlocks(tokens)
+	if len(groupSpan) == 2 && groupSpan[1] > scanStart {
+		scanStart = groupSpan[1]
+	}
+	if scanStart < 0 {
+		scanStart = 0
+	}
+	scanEnd := len(tokens)
+	if episodeRangeIdx >= scanStart && episodeRangeIdx < scanEnd {
+		scanEnd = episodeRangeIdx
+	}
+	if episodeIdx >= scanStart && episodeIdx < scanEnd {
+		scanEnd = episodeIdx
+	}
+	if seasonIdx >= scanStart && seasonIdx < scanEnd {
+		scanEnd = seasonIdx
+	}
+	if techStart, ok := firstTechTokenIndexFromAttrs(attrs); ok && techStart >= 0 && techStart < scanEnd {
+		if techStart > scanStart {
+			scanEnd = techStart
+		}
+	}
+	if scanStart >= scanEnd {
+		return
+	}
+
+	firstDelim := -1
+	lastDelim := -1
+	for i := scanStart; i < scanEnd; i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		if isInBracket(tokens, i) || isInParen(tokens, i) {
+			continue
+		}
+		if !isAliasChainDelimiterToken(tokens[i].Text) {
+			continue
+		}
+		if firstDelim < 0 {
+			firstDelim = i
+		}
+		lastDelim = i
+	}
+	if firstDelim < 0 || lastDelim < firstDelim {
+		return
+	}
+
+	type seg struct {
+		from int
+		to   int
+		key  string
+	}
+	segments := make([]seg, 0, 4)
+	cur := scanStart
+	for i := scanStart; i <= scanEnd; i++ {
+		isSplit := i == scanEnd
+		if !isSplit && !tokens[i].Removed && !isInBracket(tokens, i) && !isInParen(tokens, i) && isAliasChainDelimiterToken(tokens[i].Text) {
+			isSplit = true
+		}
+		if !isSplit {
+			continue
+		}
+		if cur < i {
+			txt := extractTitleFromSpanAllowRemoved(tokens, cur, i, false)
+			key := aliasChainSemanticKey(txt)
+			if key != "" {
+				segments = append(segments, seg{from: cur, to: i, key: key})
+			}
+		}
+		cur = i + 1
+	}
+	if len(segments) < 2 {
+		return
+	}
+
+	titleKey := aliasChainSemanticKey(title)
+	if titleKey == "" {
+		return
+	}
+	aliasKeys := make(map[string]struct{}, len(aliases))
+	for _, a := range aliases {
+		k := aliasChainSemanticKey(a)
+		if k == "" {
+			continue
+		}
+		aliasKeys[k] = struct{}{}
+	}
+	if len(aliasKeys) == 0 {
+		return
+	}
+
+	titleSegIdx := -1
+	titleScore := -1
+	for i, s := range segments {
+		score := -1
+		if s.key == titleKey {
+			score = 100 + len(titleKey)
+		} else if len(s.key) >= 5 && len(titleKey) >= 5 {
+			if strings.Contains(s.key, titleKey) || strings.Contains(titleKey, s.key) {
+				score = len(s.key)
+			}
+		}
+		if score > titleScore {
+			titleScore = score
+			titleSegIdx = i
+		}
+	}
+
+	matched := false
+	for i, s := range segments {
+		if i == titleSegIdx {
+			continue
+		}
+		if !aliasChainKeysContain(aliasKeys, s.key) {
+			continue
+		}
+		for k := s.from; k < s.to && k < len(tokens); k++ {
+			tokens[k].Removed = true
+		}
+		matched = true
+	}
+	if !matched {
+		return
+	}
+	for i := firstDelim; i <= lastDelim && i < len(tokens); i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		if isAliasChainDelimiterToken(tokens[i].Text) {
+			tokens[i].Removed = true
+		}
+	}
 }
 
 func (p *Parser) extractPreEpisodePipeAliasesAndConsume(tokens []model.Token, start int, end int) (string, []string, bool) {

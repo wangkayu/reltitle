@@ -1424,6 +1424,11 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	attrs = p.enrichBatchSourceTypeFromPackKind(attrs, contentKind)
 	attrs = dedupeAttributes(attrs)
 	epslot = pruneBatchEPSlotForConservativeOutput(epslot, contentKind, episode, episodeRange, spKind)
+	if isUnknownOutput(contentKind, templateID) {
+		attrs = pruneUnknownCoreAttributes(attrs)
+		epslot = nil
+		ctx.AudioSlot = nil
+	}
 
 	res := &model.ParseResult{
 		RawTitle:           originalRawTitle,
@@ -1458,6 +1463,30 @@ func pruneBatchEPSlotForConservativeOutput(epslot *model.EPSlot, contentKind str
 		return epslot
 	}
 	return nil
+}
+
+func isUnknownOutput(contentKind string, templateID string) bool {
+	if strings.EqualFold(strings.TrimSpace(contentKind), "UNKNOWN") {
+		return true
+	}
+	return strings.EqualFold(strings.TrimSpace(templateID), "TF_UNKNOWN_DEFAULT")
+}
+
+func pruneUnknownCoreAttributes(attrs []model.Attribute) []model.Attribute {
+	if len(attrs) == 0 {
+		return attrs
+	}
+	out := make([]model.Attribute, 0, len(attrs))
+	for _, a := range attrs {
+		switch a.Type {
+		case model.AttrGroup, model.AttrTitle, model.AttrTitleAlias:
+			if strings.TrimSpace(a.Normalized) == "" {
+				continue
+			}
+			out = append(out, a)
+		}
+	}
+	return dedupeAttributes(out)
 }
 
 var yearMonthShowTagPattern = regexp.MustCompile(`^(?:\d{4}年)?\d{1,2}月番$`)

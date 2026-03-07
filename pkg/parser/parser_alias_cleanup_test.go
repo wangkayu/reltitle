@@ -571,7 +571,7 @@ func TestParserNoiseWrapper_UnwrapTransportNestedBracket(t *testing.T) {
 	}
 }
 
-func TestParserSingleVersionToken_Extracted(t *testing.T) {
+func TestParserSingleVersionToken_UnknownCoreOnly(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {
 		t.Fatalf("load config: %v", err)
@@ -583,9 +583,13 @@ func TestParserSingleVersionToken_Extracted(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse failed: %v", err)
 	}
-	version := canonicalVersion(res)
-	if version != "v1" {
-		t.Fatalf("version=%q want=%q", version, "v1")
+	if res.ContentKind != "UNKNOWN" {
+		t.Fatalf("content_kind=%q want UNKNOWN", res.ContentKind)
+	}
+	for _, a := range res.Attributes {
+		if a.Type != model.AttrGroup && a.Type != model.AttrTitle && a.Type != model.AttrTitleAlias {
+			t.Fatalf("unknown output leaked non-core attr: %+v", a)
+		}
 	}
 }
 

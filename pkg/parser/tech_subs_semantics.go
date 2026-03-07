@@ -14,6 +14,12 @@ func extractTechSubsSemanticsAndRemoveFromTokens(tokens []model.Token, attrs *[]
 	if !hasTechStart {
 		techStart = 0
 	}
+	headGroupStart := -1
+	headGroupEnd := -1
+	if g, span := extractHeadBracketGroup(tokens); strings.TrimSpace(g) != "" {
+		headGroupStart = span[0]
+		headGroupEnd = span[1]
+	}
 
 	addAttr := func(t model.AttrType, val string, start int, end int, conf float64) {
 		val = strings.TrimSpace(val)
@@ -362,6 +368,10 @@ func extractTechSubsSemanticsAndRemoveFromTokens(tokens []model.Token, attrs *[]
 				}
 			}
 			if end >= 0 {
+				if i == headGroupStart && end+1 == headGroupEnd {
+					i = end
+					continue
+				}
 				_ = emitFromSegment(i, end+1, 0.75)
 				i = end
 				continue

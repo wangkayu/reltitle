@@ -165,6 +165,66 @@ func TestEditionToken_DirectorsCut(t *testing.T) {
 	}
 }
 
+func TestEditionToken_UncutVer(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Group] Example Show [Uncut Ver.] - 01 [1080p AVC AAC]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if canonicalEpisode(res) != "1" {
+		t.Fatalf("episode=%q want=1", canonicalEpisode(res))
+	}
+	if !hasParseAttrValue(res, model.AttrNote, "UNCUT_VER") {
+		t.Fatalf("expected note UNCUT_VER")
+	}
+}
+
+func TestEditionToken_ExtendedCut(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Group] Example Show [Extended Cut] - 01 [1080p AVC AAC]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if canonicalEpisode(res) != "1" {
+		t.Fatalf("episode=%q want=1", canonicalEpisode(res))
+	}
+	if !hasParseAttrValue(res, model.AttrNote, "EXTENDED_CUT") {
+		t.Fatalf("expected note EXTENDED_CUT")
+	}
+}
+
+func TestEditionToken_RemasteredVer(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Group] Example Show [Remastered Ver.] - 01 [1080p AVC AAC]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if canonicalEpisode(res) != "1" {
+		t.Fatalf("episode=%q want=1", canonicalEpisode(res))
+	}
+	if !hasParseAttrValue(res, model.AttrNote, "REMASTERED_VER") {
+		t.Fatalf("expected note REMASTERED_VER")
+	}
+}
+
 func hasParseAttrValue(res *model.ParseResult, typ model.AttrType, normalized string) bool {
 	for _, a := range res.Attributes {
 		if a.Type != typ {

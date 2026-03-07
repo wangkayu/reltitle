@@ -5409,6 +5409,7 @@ func titleStartAfterLeadingEmptyBracketBlocks(tokens []model.Token) int {
 
 var reMonthNewShow = regexp.MustCompile(`^\d{1,2}月新番$`)
 var reMetaHDRWithKToken = regexp.MustCompile(`(?i)(?:4k|8k).*hdr|hdr.*(?:4k|8k)`)
+var reEditionMetaText = regexp.MustCompile(`(?i)\b(?:uncut(?:\s*(?:ver|version)\.?)?|uncensored(?:\s*(?:ver|version)\.?)?|director'?s\s*cut|extended\s*cut|remaster(?:ed)?(?:\s*(?:ver|version)\.?)?|audio[_ -]?commentary(?:\s*(?:ver|version)\.?)?|encode\s*ver)\b`)
 
 func looksLikeLeadingTitleMeta(s string) bool {
 	s = strings.TrimSpace(s)
@@ -5994,6 +5995,9 @@ func isLikelyMetaBracketText(s string) bool {
 		return true
 	}
 	if strings.Contains(s, "分角色") {
+		return true
+	}
+	if reEditionMetaText.MatchString(trim) {
 		return true
 	}
 	return false
@@ -7484,8 +7488,11 @@ func extractEditionAttrsAndRemoveFromTokens(tokens []model.Token, out *[]model.A
 		return
 	}
 	extractAudioCommentaryEditionAttrsAndRemoveFromTokens(tokens, out, allowUnderscoreRoute)
+	extractUncutEditionAttrsAndRemoveFromTokens(tokens, out)
+	extractExtendedCutEditionAttrsAndRemoveFromTokens(tokens, out)
 	extractUncensoredEditionAttrsAndRemoveFromTokens(tokens, out)
 	extractDirectorsCutEditionAttrsAndRemoveFromTokens(tokens, out)
+	extractRemasteredEditionAttrsAndRemoveFromTokens(tokens, out)
 	extractEncodeVerEditionAttrsAndRemoveFromTokens(tokens, out)
 }
 
@@ -7660,6 +7667,46 @@ func extractUncensoredEditionAttrsAndRemoveFromTokens(tokens []model.Token, out 
 	}
 }
 
+func extractUncutEditionAttrsAndRemoveFromTokens(tokens []model.Token, out *[]model.Attribute) {
+	if out == nil || len(tokens) == 0 {
+		return
+	}
+	for i := 0; i < len(tokens); i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		if compactEditionWord(tokens[i].Text) != "uncut" {
+			continue
+		}
+		if !isInBracket(tokens, i) && !isInParen(tokens, i) {
+			continue
+		}
+		end := i
+		norm := "UNCUT"
+		if j := nextAliveToken(tokens, i+1); j >= 0 {
+			ver := normalizeEditionToken(tokens[j].Text, false)
+			if ver == "ver" || ver == "version" {
+				end = j
+				norm = "UNCUT_VER"
+				if n := nextAliveToken(tokens, j+1); n >= 0 && strings.TrimSpace(tokens[n].Text) == "." {
+					end = n
+				}
+			}
+		}
+		*out = append(*out, model.Attribute{
+			Type:       model.AttrNote,
+			Normalized: norm,
+			TokenStart: i,
+			TokenEnd:   end + 1,
+			Confidence: 0.72,
+			Source:     "edition_token",
+		})
+		for k := i; k <= end; k++ {
+			tokens[k].Removed = true
+		}
+	}
+}
+
 func extractDirectorsCutEditionAttrsAndRemoveFromTokens(tokens []model.Token, out *[]model.Attribute) {
 	if out == nil || len(tokens) == 0 {
 		return
@@ -7692,6 +7739,78 @@ func extractDirectorsCutEditionAttrsAndRemoveFromTokens(tokens []model.Token, ou
 		})
 		tokens[i].Removed = true
 		tokens[j].Removed = true
+	}
+}
+
+func extractExtendedCutEditionAttrsAndRemoveFromTokens(tokens []model.Token, out *[]model.Attribute) {
+	if out == nil || len(tokens) == 0 {
+		return
+	}
+	for i := 0; i < len(tokens); i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		if compactEditionWord(tokens[i].Text) != "extended" {
+			continue
+		}
+		if !isInBracket(tokens, i) && !isInParen(tokens, i) {
+			continue
+		}
+		j := nextAliveToken(tokens, i+1)
+		if j < 0 || compactEditionWord(tokens[j].Text) != "cut" {
+			continue
+		}
+		*out = append(*out, model.Attribute{
+			Type:       model.AttrNote,
+			Normalized: "EXTENDED_CUT",
+			TokenStart: i,
+			TokenEnd:   j + 1,
+			Confidence: 0.72,
+			Source:     "edition_token",
+		})
+		tokens[i].Removed = true
+		tokens[j].Removed = true
+	}
+}
+
+func extractRemasteredEditionAttrsAndRemoveFromTokens(tokens []model.Token, out *[]model.Attribute) {
+	if out == nil || len(tokens) == 0 {
+		return
+	}
+	for i := 0; i < len(tokens); i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		cur := compactEditionWord(tokens[i].Text)
+		if cur != "remaster" && cur != "remastered" {
+			continue
+		}
+		if !isInBracket(tokens, i) && !isInParen(tokens, i) {
+			continue
+		}
+		end := i
+		norm := "REMASTERED"
+		if j := nextAliveToken(tokens, i+1); j >= 0 {
+			ver := normalizeEditionToken(tokens[j].Text, false)
+			if ver == "ver" || ver == "version" {
+				end = j
+				norm = "REMASTERED_VER"
+				if n := nextAliveToken(tokens, j+1); n >= 0 && strings.TrimSpace(tokens[n].Text) == "." {
+					end = n
+				}
+			}
+		}
+		*out = append(*out, model.Attribute{
+			Type:       model.AttrNote,
+			Normalized: norm,
+			TokenStart: i,
+			TokenEnd:   end + 1,
+			Confidence: 0.72,
+			Source:     "edition_token",
+		})
+		for k := i; k <= end; k++ {
+			tokens[k].Removed = true
+		}
 	}
 }
 

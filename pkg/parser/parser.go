@@ -3185,7 +3185,7 @@ var reTitleTrimTVSeasonTail = regexp.MustCompile(`(?i)\s+(?:tv|tb|тv|тв)\s*[-
 var reTitleTrimTVTail = regexp.MustCompile(`(?i)\s+(?:tv|tb|тv|тв)\s*$`)
 var reTitleTrimTVSeriesTail = regexp.MustCompile(`(?i)\s+tv\s+series\s*$`)
 var reTitleTrimTVEpisodeListTail = regexp.MustCompile(`(?i)\s+tv\s+[\d,，\-~\s]{2,}\s*$`)
-var reTitleTrimSpecialTail = regexp.MustCompile(`(?i)\s+(?:ncop|nced|pv|cm)(?:\d{1,3})?\s*$`)
+var reTitleTrimSpecialTail = regexp.MustCompile(`(?i)\s+(?:ncop|nced|pv)(?:\d{1,3})?\s*$`)
 var reTitleStripTVAnimeSegmentPrefix = regexp.MustCompile(`(?i)(^|/\s*)tv\s*(?:アニメ|anime|animation)\s+`)
 var reTitleTrimEpisodeWordTail = regexp.MustCompile(`(?i)\s+(?:ep|episode)\s*$`)
 var reTitleTrimPackSpecialTail = regexp.MustCompile(`(?i)\s+pack(?:\s*\+\s*(?:sp[eé]ciaux|specials?|sp|ova|oad|ona|ex))+(?:\s+(?:web|webrip|web[- ]?dl))?\s*$`)
@@ -6733,7 +6733,7 @@ var embeddedChineseEpisodeSuffixPattern = regexp.MustCompile(`第(\d{1,4})(?:集
 var yearPattern = regexp.MustCompile(`^(?:19|20)\d{2}$`)
 var starEpisodeEmbeddedPattern = regexp.MustCompile(`(?:★|☆)(\d{1,4})(?:★|☆)`)
 var dateYMDPattern = regexp.MustCompile(`(?i)(?:\b(?:19|20)\d{2}[./-](?:0?[1-9]|1[0-2])[./-](?:0?[1-9]|[12]\d|3[01])\b)`)
-var spKindEpisodePattern = regexp.MustCompile(`(?i)^(?:sp|ova|oad|ona|ex|ncop|nced|pv|cm)0*(\d{1,3})$`)
+var spKindEpisodePattern = regexp.MustCompile(`(?i)^(?:sp|ova|oad|ona|ex|ncop|nced|pv)0*(\d{1,3})$`)
 var episodeWithVersionPattern = regexp.MustCompile(`(?i)^(?:(?:e|ep|第))?(\d{1,4})(?:\.(\d{1,2}))?[vV](\d{1,2})$`)
 var episodeEndSuffixPattern = regexp.MustCompile(`(?i)^(\d{1,4})(end|fin|final)$`)
 var standaloneVersionPattern = regexp.MustCompile(`(?i)^v(\d{1,2})$`)
@@ -8761,11 +8761,11 @@ func detectPackKind(cfg *config.Config, rawTitle string) string {
 	return ""
 }
 
-var spKindPattern = regexp.MustCompile(`(?i)^(sp|ova|oad|ona|ex|ncop|nced|pv|cm)(\d{1,3})?$`)
+var spKindPattern = regexp.MustCompile(`(?i)^(sp|ova|oad|ona|ex|ncop|nced|pv)(\d{1,3})?$`)
 
 func detectSPKind(tokens []model.Token) string {
 	for i := 0; i < len(tokens); i++ {
-		if m := regexp.MustCompile(`(?i)^0?\d{1,3}\s*(?:&|＆)\s*(sp|ova|oad|ona|ex|ncop|nced|pv|cm)\b`).FindStringSubmatch(strings.TrimSpace(tokens[i].Text)); len(m) == 2 {
+		if m := regexp.MustCompile(`(?i)^0?\d{1,3}\s*(?:&|＆)\s*(sp|ova|oad|ona|ex|ncop|nced|pv)\b`).FindStringSubmatch(strings.TrimSpace(tokens[i].Text)); len(m) == 2 {
 			return strings.ToUpper(m[1])
 		}
 		m := spKindPattern.FindStringSubmatch(tokens[i].Text)

@@ -214,6 +214,23 @@ func TestParserSpecial_NCOPNCEDNotAsTailGroup(t *testing.T) {
 	}
 }
 
+func TestParserSpecial_CMNotDetectedFromLengthUnit(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Lilith-Raws] 無論何時我們的戀情都是10厘米。 / Itsudatte Bokura no Koi wa 10 cm Datta [01-06][Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalSPKind(res); got == "CM" {
+		t.Fatalf("cm length unit must not be detected as sp_kind, raw=%q", raw)
+	}
+}
+
 func TestParserAliasCleanup_BracketTitleFallbackWhenMainTitleEmpty(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

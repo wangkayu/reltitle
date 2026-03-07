@@ -152,6 +152,7 @@ func extractWxHResolutionAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[
 
 var stableTechResolutionPattern = regexp.MustCompile(`(?i)^(\d{3,4})p$`)
 var stableTechBitDepthPattern = regexp.MustCompile(`(?i)^(8|10|12)\s*bit$`)
+var stableTechCodecBitDepthPattern = regexp.MustCompile(`(?i)^(hevc|x265|h265|x264|h264)\s*[-_ ]?\s*0*(8|10|12)(?:bit|b)?$`)
 var looseBitDepthPattern = regexp.MustCompile(`(?i)^0*(8|10|12)\s*(?:-|_)?\s*bit[\.,，:：;；!?]?$`)
 var stableTechSplitPattern = regexp.MustCompile(`[+_/\.]`)
 
@@ -321,6 +322,15 @@ func (p *Parser) inferStableTechTokenAttrs(raw string, idx int) ([]model.Attribu
 		if mm := stableTechBitDepthPattern.FindStringSubmatch(low); len(mm) == 2 {
 			out = append(out, model.Attribute{Type: model.AttrBitDepth, Normalized: mm[1] + "bit", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.74, Source: "tech_combo_span"})
 			continue
+		}
+		if mm := stableTechCodecBitDepthPattern.FindStringSubmatch(low); len(mm) == 3 {
+			if norm, ok := p.normalizeVideoCodecToken(mm[1]); ok {
+				out = append(out,
+					model.Attribute{Type: model.AttrVideoCodec, Normalized: norm, TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"},
+					model.Attribute{Type: model.AttrBitDepth, Normalized: mm[2] + "bit", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.74, Source: "tech_combo_span"},
+				)
+				continue
+			}
 		}
 		if low == "remux" {
 			out = append(out, model.Attribute{Type: model.AttrType("remux"), Normalized: "REMUX", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.74, Source: "tech_combo_span"})
@@ -1333,6 +1343,9 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	}
 	// PackKind may be refined/overridden by parse passes (e.g. contents markers like TV+OAD).
 	packKind = strings.TrimSpace(ctx.PackKind)
+	if hasAttrNormalized(attrs, model.AttrNote, "TV_PACK") {
+		packKind = "TV_PACK"
+	}
 	season := ctx.Season
 	seasonIdx := ctx.SeasonIdx
 	seasonRange = ctx.SeasonRange
@@ -2431,7 +2444,7 @@ func isMovieExcludedByPackKind(packKind string) bool {
 		return false
 	}
 	switch pk {
-	case "batch", "complete", "collection", "boxset", "box set", "全集", "合集", "全话", "全話", "完结", "完結", "mixed_pack":
+	case "batch", "complete", "collection", "boxset", "box set", "全集", "合集", "全话", "全話", "完结", "完結", "mixed_pack", "tv_pack":
 		return true
 	default:
 		return false
@@ -3140,6 +3153,22 @@ func detectTailParenBlock(tokens []model.Token) string {
 func hasAttrType(attrs []model.Attribute, t model.AttrType) bool {
 	for _, a := range attrs {
 		if a.Type == t {
+			return true
+		}
+	}
+	return false
+}
+
+func hasAttrNormalized(attrs []model.Attribute, t model.AttrType, normalized string) bool {
+	want := strings.TrimSpace(normalized)
+	if want == "" {
+		return false
+	}
+	for _, a := range attrs {
+		if a.Type != t {
+			continue
+		}
+		if strings.EqualFold(strings.TrimSpace(a.Normalized), want) {
 			return true
 		}
 	}
@@ -8714,8 +8743,13 @@ func isTailGroupLike(s string) bool {
 	return false
 }
 
+var tvPackKeywordPattern = regexp.MustCompile(`(?i)tv\s*(全集|全话|全話)`)
+
 func detectPackKind(cfg *config.Config, rawTitle string) string {
 	lower := strings.ToLower(rawTitle)
+	if tvPackKeywordPattern.MatchString(rawTitle) {
+		return "TV_PACK"
+	}
 
 	keywords := make([]string, 0, 16)
 	for _, r := range cfg.Inference.ContentTypeInference {

@@ -300,8 +300,8 @@ func TestParserBatchTemplateRangePack_TVQuanJiUsesPackKindNotContents(t *testing
 	if got := canonicalEpisodeRange(res); got != "1-24" {
 		t.Fatalf("episode_range=%q want=%q", got, "1-24")
 	}
-	if got := firstAttrValue(res, model.AttrPackKind); got != "全集" {
-		t.Fatalf("pack_kind=%q want=%q", got, "全集")
+	if got := firstAttrValue(res, model.AttrPackKind); got != "TV_PACK" {
+		t.Fatalf("pack_kind=%q want=%q", got, "TV_PACK")
 	}
 	if vals := attrValues(res, model.AttrContents); len(vals) > 0 {
 		t.Fatalf("contents should be empty for TV全集 batch flag, got=%v", vals)
@@ -390,8 +390,8 @@ func TestParserBatchTemplateRangePack_TVQuanJiWithExtrasStillKeepsRange(t *testi
 	if got := canonicalEpisodeRange(res); got != "1-12" {
 		t.Fatalf("episode_range=%q want=%q", got, "1-12")
 	}
-	if got := firstAttrValue(res, model.AttrPackKind); got != "全集" {
-		t.Fatalf("pack_kind=%q want=%q", got, "全集")
+	if got := firstAttrValue(res, model.AttrPackKind); got != "TV_PACK" {
+		t.Fatalf("pack_kind=%q want=%q", got, "TV_PACK")
 	}
 }
 

@@ -299,6 +299,9 @@ func TestParserEpisodeRange_TVPackSuffixSplit(t *testing.T) {
 	if !hasAttrValue(attrValues(res, model.AttrNote), "TV_PACK") {
 		t.Fatalf("expected note=TV_PACK")
 	}
+	if got := canonicalPackKind(res); got != "TV_PACK" {
+		t.Fatalf("pack_kind=%q want=TV_PACK", got)
+	}
 	for _, tok := range res.Tokens {
 		if strings.EqualFold(strings.TrimSpace(tok.Text), "12TV") && !tok.Removed {
 			t.Fatalf("12TV should be consumed, tokens=%v", res.Tokens)
@@ -619,6 +622,31 @@ func TestParserStableTechSpanCombo_CommaSeparatedCodecBlock(t *testing.T) {
 	}
 	if !foundDual {
 		t.Fatalf("expected DUAL_AUDIO from stable tech span combo, got attrs=%v", res.Attributes)
+	}
+}
+
+func TestParserStableTechSpanCombo_GluedCodecBitDepth(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[诸神字幕组][NHK][古罗马街道 穿越时空的旅行 阿庇亚大道 贯穿意大利580公里][1080P HEVC10 MKV]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrVideoCodec), "HEVC") {
+		t.Fatalf("expected video_codec=HEVC, got=%v", attrValues(res, model.AttrVideoCodec))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrBitDepth), "10bit") {
+		t.Fatalf("expected bit_depth=10bit, got=%v", attrValues(res, model.AttrBitDepth))
+	}
+	for _, tok := range res.Tokens {
+		if strings.EqualFold(strings.TrimSpace(tok.Text), "HEVC10") && !tok.Removed {
+			t.Fatalf("HEVC10 should be consumed, tokens=%v", res.Tokens)
+		}
 	}
 }
 

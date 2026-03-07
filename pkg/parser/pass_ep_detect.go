@@ -316,6 +316,39 @@ func passDetectEpisodeRangeAndEpisode(tokens []model.Token, attrs *[]model.Attri
 					}
 				}
 			}
+			// Split TV tagged range case: tokens like [ "TV", "01", "-", "101", ... ].
+			if strings.EqualFold(text, "tv") {
+				if i+3 < len(tokens) {
+					lraw := strings.TrimSpace(tokens[i+1].Text)
+					sep := strings.TrimSpace(tokens[i+2].Text)
+					rawR := strings.TrimSpace(tokens[i+3].Text)
+					if (sep == "-" || sep == "~") && episodeOfTotalPattern.MatchString(lraw) {
+						mm := regexp.MustCompile(`(?i)^(\d{1,4})(fin|final)?$`).FindStringSubmatch(rawR)
+						if len(mm) >= 2 {
+							l := strings.TrimLeft(lraw, "0")
+							if l == "" {
+								l = lraw
+							}
+							r := strings.TrimLeft(strings.TrimSpace(mm[1]), "0")
+							if r == "" {
+								r = strings.TrimSpace(mm[1])
+							}
+							if l != "" && r != "" {
+								taggedRange = l + "-" + r
+								taggedRangeIdx = i
+								tokens[i].Text = "TV:" + taggedRange
+								tokens[i+1].Removed = true
+								tokens[i+2].Removed = true
+								tokens[i+3].Removed = true
+								if len(mm) >= 3 && strings.TrimSpace(mm[2]) != "" {
+									*attrs = append(*attrs, model.Attribute{Type: model.AttrNote, Normalized: "FIN", TokenStart: i, TokenEnd: i + 1, Confidence: 0.7, Source: "tv_range_fin"})
+								}
+								continue
+							}
+						}
+					}
+				}
+			}
 			// Tokenizer-split case: ["总集篇01", "_", "12", ".", "5"].
 			if m := summarySpecialLeadPattern.FindStringSubmatch(text); len(m) == 3 {
 				// Require a separator.

@@ -443,8 +443,14 @@ func TestParserMovieRoute_TVMovieMixedRangeNoSingleIndex(t *testing.T) {
 	if got := firstAttrValue(res, model.AttrMovieIndexRange); got != "1-4" {
 		t.Fatalf("movie_index_range=%q want=%q", got, "1-4")
 	}
+	if got := firstAttrValue(res, model.AttrEpisodeRange); got != "1-101" {
+		t.Fatalf("episode_range=%q want=%q", got, "1-101")
+	}
 	if got := firstAttrValue(res, model.AttrMovieIndex); got != "" {
 		t.Fatalf("movie_index=%q want empty", got)
+	}
+	if got := firstAttrValue(res, model.AttrEpisode); got != "" {
+		t.Fatalf("episode=%q want empty", got)
 	}
 }
 

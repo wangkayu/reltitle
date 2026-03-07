@@ -32,6 +32,8 @@ canonical:
     - ADN
     - VIUTV
     - YTB
+    - LNTV
+    - YUZUKITV
 
   sub_flag:
     - SUBS
@@ -77,6 +79,7 @@ canonical:
     - HEVC
     - AVC
     - AV1
+    - MPEG2
     - XVID
 
   audio_codec:
@@ -97,6 +100,7 @@ canonical:
     - MKV
     - MP4
     - AVI
+    - TS
 
   note_whitelist:
     # 仅保留在 note 的业务备注（示例）

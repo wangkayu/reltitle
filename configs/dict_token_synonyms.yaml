@@ -184,6 +184,20 @@ rules:
       normalized: YTB
     priority: 90
 
+  - id: platform_lntv
+    raw_tokens: ["lntv"]
+    emit:
+      type: platform
+      normalized: LNTV
+    priority: 90
+
+  - id: platform_yuzukitv
+    raw_tokens: ["yuzukitv"]
+    emit:
+      type: platform
+      normalized: YUZUKITV
+    priority: 90
+
   - id: video_codec_avc
     raw_tokens: ["avc", "h264", "x264", "h.264", "x.264"]
     emit:
@@ -204,6 +218,13 @@ rules:
       type: video_codec
       normalized: AV1
     priority: 100
+
+  - id: video_codec_mpeg2
+    raw_tokens: ["mpeg2", "mpeg-2"]
+    emit:
+      type: video_codec
+      normalized: MPEG2
+    priority: 90
 
   - id: audio_codec_aac
     raw_tokens: ["aac"]

@@ -1388,12 +1388,18 @@ entries:
           - type: note
             normalized: "TS"
             token_index: 1
+          - type: container
+            normalized: "TS"
+            token_index: 1
         remove: true
         confidence: 0.7
       - scope: bracket
         tokens: ["ts"]
         emit:
           - type: note
+            normalized: "TS"
+            token_index: -1
+          - type: container
             normalized: "TS"
             token_index: -1
         remove: true
@@ -4419,6 +4425,30 @@ entries:
         remove: true
         confidence: 0.75
 
+  - id: video_codec_mpeg2
+    any_of:
+      - tokens: ["mpeg2"]
+        emit:
+          - type: video_codec
+            normalized: "MPEG2"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["mpeg", "2"]
+        emit:
+          - type: video_codec
+            normalized: "MPEG2"
+            token_index: 0
+        remove: true
+        confidence: 0.8
+      - tokens: ["mpeg", "-", "2"]
+        emit:
+          - type: video_codec
+            normalized: "MPEG2"
+            token_index: 0
+        remove: true
+        confidence: 0.8
+
   - id: bit_depth_10bit
     any_of:
       - tokens: ["10bit"]
@@ -4886,6 +4916,41 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.75
+
+  - id: platform_atx
+    any_of:
+      - tokens: ["at-x"]
+        emit:
+          - type: platform
+            normalized: "AT-X"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["at", "-", "x"]
+        emit:
+          - type: platform
+            normalized: "AT-X"
+            token_index: 0
+        remove: true
+        confidence: 0.8
+
+  - id: platform_lntv
+    tokens: ["lntv"]
+    emit:
+      - type: platform
+        normalized: "LNTV"
+        token_index: -1
+    remove: true
+    confidence: 0.75
+
+  - id: platform_yuzukitv
+    tokens: ["yuzukitv"]
+    emit:
+      - type: platform
+        normalized: "YUZUKITV"
+        token_index: -1
+    remove: true
+    confidence: 0.75
 
   - id: platform_iqiyi
     any_of:

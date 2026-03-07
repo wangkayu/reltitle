@@ -429,3 +429,81 @@ func TestParserEpisodeList_ConanDoubleEpisodeBracket(t *testing.T) {
 		t.Fatalf("epslot.primary.episode_list=%q want=%q", got, "804,805")
 	}
 }
+
+func TestParserBatchTemplate_YangirePackSpecialsCleanTitleAndPlatform(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "Wata-nare - There's No Freaking Way I'll Be Your Lover! Unless... PACK (S01+SPÉCIAUX) VOSTFR 1080p WEB AV1 AAC - Yangire-Raws (YUZUKITV)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "BATCH" {
+		t.Fatalf("content_kind=%q want=%q", got, "BATCH")
+	}
+	if got := firstAttrValue(res, model.AttrSeason); got != "1" {
+		t.Fatalf("season=%q want=%q", got, "1")
+	}
+	if got := firstAttrValue(res, model.AttrPlatform); got != "YUZUKITV" {
+		t.Fatalf("platform=%q want=%q", got, "YUZUKITV")
+	}
+	if got := canonicalTitle(res); strings.Contains(strings.ToLower(got), "pack") || strings.Contains(strings.ToLower(got), "spéciaux") {
+		t.Fatalf("title=%q should drop trailing pack/special meta", got)
+	}
+}
+
+func TestParserBatchTemplate_CatTalesLNTVPlatformExtracted(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "Cat.Tales.S01E20.1080p.LNTV.WEB-DL.JPN.AAC2.0.H.264.MSubs-ToonsHub.mkv"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "TV_EP" {
+		t.Fatalf("content_kind=%q want=%q", got, "TV_EP")
+	}
+	if got := firstAttrValue(res, model.AttrSeason); got != "1" {
+		t.Fatalf("season=%q want=%q", got, "1")
+	}
+	if got := firstAttrValue(res, model.AttrEpisode); got != "20" {
+		t.Fatalf("episode=%q want=%q", got, "20")
+	}
+	if got := firstAttrValue(res, model.AttrPlatform); got != "LNTV" {
+		t.Fatalf("platform=%q want=%q", got, "LNTV")
+	}
+}
+
+func TestParserBatchTemplate_ATXMpeg2AndTSContainerExtracted(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[shincaps] SI-VIS ~The Sound of Heroes~ - 08 (AT-X 1440x1080 MPEG2 AAC).ts"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "TV_EP" {
+		t.Fatalf("content_kind=%q want=%q", got, "TV_EP")
+	}
+	if got := firstAttrValue(res, model.AttrPlatform); got != "AT-X" {
+		t.Fatalf("platform=%q want=%q", got, "AT-X")
+	}
+	if got := firstAttrValue(res, model.AttrVideoCodec); got != "MPEG2" {
+		t.Fatalf("video_codec=%q want=%q", got, "MPEG2")
+	}
+	if got := firstAttrValue(res, model.AttrContainer); got != "TS" {
+		t.Fatalf("container=%q want=%q", got, "TS")
+	}
+}

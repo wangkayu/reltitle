@@ -3121,6 +3121,7 @@ var reTitleTrimTVTail = regexp.MustCompile(`(?i)\s+(?:tv|tb|тv|тв)\s*$`)
 var reTitleTrimTVSeriesTail = regexp.MustCompile(`(?i)\s+tv\s+series\s*$`)
 var reTitleTrimTVEpisodeListTail = regexp.MustCompile(`(?i)\s+tv\s+[\d,，\-~\s]{2,}\s*$`)
 var reTitleStripTVAnimeSegmentPrefix = regexp.MustCompile(`(?i)(^|/\s*)tv\s*(?:アニメ|anime|animation)\s+`)
+var reTitleTrimPackSpecialTail = regexp.MustCompile(`(?i)\s+pack(?:\s*\+\s*(?:sp[eé]ciaux|specials?|sp|ova|oad|ona|ex))+(?:\s+(?:web|webrip|web[- ]?dl))?\s*$`)
 var reTitleTrimMetaTail = regexp.MustCompile(`(?i)\s+(?:hd|sd|fhd|uhd|retail|webrip|web[- ]?dl|bdrip|bluray|blu-ray|remux|dvd|hdtv|mkv|mp4|avi|x26[45]|h\.?26[45]|hevc|av1|aac|ac3|e-?ac-?3|flac|dts(?:-?hd|-?hdma)?|hdma|truehd|ma\d{1,2}p|10[- ]?bit|8[- ]?bit)\s*$`)
 var reTitleTrimVolTail = regexp.MustCompile(`(?i)\s+(?:vol\.?(?:\s*\d{1,3})?|volume\s*\d{1,3})\s*$`)
 var reTitleTrimDVDBundleTail = regexp.MustCompile(`(?i)\s+(?:dvd(?:\s*[- ]?\s*isos?)?|dvd\s*set)\s*$`)
@@ -3792,6 +3793,7 @@ func sanitizePrimaryTitleForOutput(title string) string {
 		s = reTitleTrimTVEpisodeListTail.ReplaceAllString(s, "")
 		s = reTitleTrimTVSeasonTail.ReplaceAllString(s, "")
 		s = reTitleTrimTVTail.ReplaceAllString(s, "")
+		s = reTitleTrimPackSpecialTail.ReplaceAllString(s, "")
 		s = reTitleTrimMetaTail.ReplaceAllString(s, "")
 		s = reTitleTrimVolTail.ReplaceAllString(s, "")
 		s = reTitleTrimDVDBundleTail.ReplaceAllString(s, "")
@@ -4902,7 +4904,7 @@ func normalizeParenContentMarkerToken(s string) (string, bool) {
 	switch low {
 	case "movie", "movies", "film", "films", "eiga", "gekijouban", "劇場版", "剧场版", "電影", "电影":
 		return "MOVIE", true
-	case "special", "specials", "sp", "特典", "特别篇", "特別篇":
+	case "special", "specials", "sp", "spéciaux", "speciaux", "特典", "特别篇", "特別篇":
 		return "SPECIAL", true
 	case "ova":
 		return "OVA", true

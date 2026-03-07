@@ -1615,6 +1615,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	if strings.HasPrefix(routeID, "streaming_release_") {
 		p.applyStreamingReleaseRouteV1(tailParenBlock, &aliases, &attrs)
 	}
+	title = trimMovieRangeStartTailFromTitle(rawTitle, title, movieIndexRange, episode, episodeRange)
 	origTitle := title
 	title = sanitizePrimaryTitleForOutput(title)
 	aliases = p.sanitizeAliasesForOutput(aliases, title)
@@ -2287,6 +2288,40 @@ func trimMovieDashEpisodeTailFromTitle(rawTitle string, title string, episode st
 	out := strings.TrimSpace(title)
 	out = regexp.MustCompile(`(?:\s*[-:：]\s*)?0*\d{1,3}\s*$`).ReplaceAllString(out, "")
 	out = strings.TrimSpace(strings.Trim(out, "-:： "))
+	if out == "" {
+		return title
+	}
+	return out
+}
+
+func trimMovieRangeStartTailFromTitle(rawTitle string, title string, movieIndexRange string, episode string, episodeRange string) string {
+	if strings.TrimSpace(title) == "" {
+		return title
+	}
+	if strings.TrimSpace(movieIndexRange) == "" {
+		return title
+	}
+	if strings.TrimSpace(episode) != "" || strings.TrimSpace(episodeRange) != "" {
+		return title
+	}
+	rng := strings.SplitN(strings.TrimSpace(movieIndexRange), "-", 2)
+	if len(rng) != 2 {
+		return title
+	}
+	start := strings.TrimLeft(strings.TrimSpace(rng[0]), "0")
+	end := strings.TrimLeft(strings.TrimSpace(rng[1]), "0")
+	if start == "" || end == "" {
+		return title
+	}
+	if start == "0" || end == "0" {
+		return title
+	}
+	ctxPattern := regexp.MustCompile(`(?i)(?:movie|film|劇場版|剧场版)\s*0*` + regexp.QuoteMeta(start) + `\s*[-~]\s*0*` + regexp.QuoteMeta(end) + `\b`)
+	if !ctxPattern.MatchString(rawTitle) {
+		return title
+	}
+	out := regexp.MustCompile(`(?i)((?:movie|film|劇場版|剧场版)\s*)0*` + regexp.QuoteMeta(start) + `\s*$`).ReplaceAllString(strings.TrimSpace(title), "$1")
+	out = strings.TrimSpace(strings.Trim(out, "-:：_ "))
 	if out == "" {
 		return title
 	}

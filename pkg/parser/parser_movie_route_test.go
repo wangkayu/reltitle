@@ -455,6 +455,9 @@ func TestParserMovieRoute_PlainMovieRangeIsBatchWithoutEpisode(t *testing.T) {
 	if got := firstAttrValue(res, model.AttrEpisode); got != "" {
 		t.Fatalf("episode=%q want empty", got)
 	}
+	if got := canonicalTitle(res); got == "" || strings.HasSuffix(got, " 01") {
+		t.Fatalf("title=%q should not carry movie range start tail", got)
+	}
 }
 
 func TestParserMovieRoute_TVMovieMixedRangeNoSingleIndex(t *testing.T) {

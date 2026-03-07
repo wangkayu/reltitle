@@ -4990,6 +4990,7 @@ var sxxExxPattern = regexp.MustCompile(`(?i)^s(\d{1,2})e(\d{1,4})(?:v\d+)?(?:[^0
 var seasonOnlyPattern = regexp.MustCompile(`(?i)^s(\d{1,2})$`)
 var seasonEmbeddedPattern = regexp.MustCompile(`(?i)^s(\d{1,2})[^0-9a-z].*$`)
 var seasonWordPattern = regexp.MustCompile(`(?i)^season$`)
+var seasonWordLoosePattern = regexp.MustCompile(`(?i)^(season|saison)$`)
 var seasonOrdinalPattern = regexp.MustCompile(`(?i)^(\d{1,2})(?:st|nd|rd|th)$`)
 var seasonCJKPattern = regexp.MustCompile(`^第?([一二三四五六七八九十0-9]{1,3})季$`)
 
@@ -5057,7 +5058,7 @@ func detectSeasonKeyword(tokens []model.Token) (season string, tokenIdx int) {
 		}
 
 		// Season 3
-		if seasonWordPattern.MatchString(text) {
+		if seasonWordLoosePattern.MatchString(text) {
 			if i+1 < len(tokens) {
 				next := strings.TrimSpace(tokens[i+1].Text)
 				if v := parseSmallSeasonNumberToken(next); v != "" {

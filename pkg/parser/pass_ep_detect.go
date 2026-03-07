@@ -62,6 +62,15 @@ func detectSeasonFromAttrs(attrs []model.Attribute) (season string, tokenIdx int
 }
 
 func passDetectSeasonSPMovie(tokens []model.Token, attrs *[]model.Attribute, ctx *parseContext) {
+	if ctx.SeasonRange == "" {
+		if sr, s, idx := detectSeasonRangeByKeyword(tokens); sr != "" {
+			ctx.SeasonRange = sr
+			if ctx.Season == "" && s != "" {
+				ctx.Season = s
+				ctx.SeasonIdx = idx
+			}
+		}
+	}
 	if ctx.Season == "" && attrs != nil {
 		if s, idx := detectSeasonFromAttrs(*attrs); s != "" {
 			ctx.Season = s

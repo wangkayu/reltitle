@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -10,6 +11,71 @@ import (
 
 var dashSeasonEpisodePattern = regexp.MustCompile(`^\d{1,2}$`)
 var dashEpisodeTokenPattern = regexp.MustCompile(`^\d{1,4}$`)
+var seasonRangeCompactConnectorPattern = regexp.MustCompile(`^\s*(\d{1,2})\s*(?:&|＆|\+|＋|and|et|to)\s*(\d{1,2})\s*$`)
+
+func detectSeasonRangeByKeyword(tokens []model.Token) (seasonRange string, season string, tokenIdx int) {
+	for i := 0; i < len(tokens); i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		if isInBracket(tokens, i) || isInParen(tokens, i) {
+			continue
+		}
+		key := strings.TrimSpace(tokens[i].Text)
+		if !seasonWordLoosePattern.MatchString(key) {
+			continue
+		}
+		if i+1 >= len(tokens) || tokens[i+1].Removed {
+			continue
+		}
+		// Compact: Season 1&2 / saison 1+2
+		if m := seasonRangeCompactConnectorPattern.FindStringSubmatch(strings.TrimSpace(tokens[i+1].Text)); len(m) == 3 {
+			a := strings.TrimLeft(strings.TrimSpace(m[1]), "0")
+			b := strings.TrimLeft(strings.TrimSpace(m[2]), "0")
+			if a == "" {
+				a = "0"
+			}
+			if b == "" {
+				b = "0"
+			}
+			if a != "0" && b != "0" {
+				tokens[i].Removed = true
+				tokens[i+1].Removed = true
+				return fmt.Sprintf("S%s-S%s", a, b), a, i
+			}
+		}
+		// Split: Season 1 & 2 / saison 1 et 2
+		if i+3 >= len(tokens) || tokens[i+2].Removed || tokens[i+3].Removed {
+			continue
+		}
+		l := strings.TrimSpace(tokens[i+1].Text)
+		sep := strings.ToLower(strings.TrimSpace(tokens[i+2].Text))
+		r := strings.TrimSpace(tokens[i+3].Text)
+		if !regexp.MustCompile(`^\d{1,2}$`).MatchString(l) || !regexp.MustCompile(`^\d{1,2}$`).MatchString(r) {
+			continue
+		}
+		if !(sep == "&" || sep == "＆" || sep == "+" || sep == "＋" || sep == "and" || sep == "et" || sep == "to") {
+			continue
+		}
+		a := strings.TrimLeft(l, "0")
+		b := strings.TrimLeft(r, "0")
+		if a == "" {
+			a = "0"
+		}
+		if b == "" {
+			b = "0"
+		}
+		if a == "0" || b == "0" {
+			continue
+		}
+		tokens[i].Removed = true
+		tokens[i+1].Removed = true
+		tokens[i+2].Removed = true
+		tokens[i+3].Removed = true
+		return fmt.Sprintf("S%s-S%s", a, b), a, i
+	}
+	return "", "", -1
+}
 
 func detectSeasonOnlyLoose(tokens []model.Token) (season string, tokenIdx int) {
 	for i := 0; i < len(tokens); i++ {
@@ -88,7 +154,7 @@ func removeSeasonTokens(tokens []model.Token, seasonIdx int) {
 	tokens[seasonIdx].Removed = true
 
 	// Season 3 => remove "Season" and the next small number token.
-	if seasonWordPattern.MatchString(text) {
+	if seasonWordLoosePattern.MatchString(text) {
 		if seasonIdx+1 < len(tokens) {
 			next := strings.TrimSpace(tokens[seasonIdx+1].Text)
 			if parseSmallSeasonNumberToken(next) != "" {

@@ -92,6 +92,52 @@ func TestParserBatchSourceType_DVDRipPack(t *testing.T) {
 	}
 }
 
+func TestParserBatchSeasonRange_FromSeasonKeywordAndConnector(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[AI-Raws] Tomorrow's Joe あしたのジョー TV Season 1&2 BDRip 1080p MKV"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "BATCH" {
+		t.Fatalf("content_kind=%q want=%q", got, "BATCH")
+	}
+	if got := firstAttrValue(res, model.AttrSeasonRange); got != "S1-S2" {
+		t.Fatalf("season_range=%q want=%q", got, "S1-S2")
+	}
+	if got := firstAttrValue(res, model.AttrEpisode); got != "" {
+		t.Fatalf("episode=%q want empty", got)
+	}
+	if got := firstAttrValue(res, model.AttrEpisodeList); got != "" {
+		t.Fatalf("episode_list=%q want empty", got)
+	}
+}
+
+func TestParserBatchSeasonRange_FrenchSaisonRange(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[MECHAPOULPE] Solo Leveling Henshū saison 1 & 2"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "BATCH" {
+		t.Fatalf("content_kind=%q want=%q", got, "BATCH")
+	}
+	if got := firstAttrValue(res, model.AttrSeasonRange); got != "S1-S2" {
+		t.Fatalf("season_range=%q want=%q", got, "S1-S2")
+	}
+}
+
 func TestParserBatchMovieKeyword_TVMoviePackStaysBatch(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

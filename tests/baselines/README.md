@@ -16,6 +16,13 @@ This folder stores pinned regression inputs and baseline outputs for v2, so futu
   - Authoritative v2 baseline updated for current parser/tokenization
   - When evaluating override proposals that contain `title_start/title_end` token spans, the baseline used to generate proposals must match the parser version used to apply overrides; otherwise tokenization drift may cause spans to point at the wrong tokens (e.g. `]`), making results misleading.
 
+- `baseline.v25.20260307.regression_set_v1.jsonl`
+  - Authoritative v2.5 canonical baseline (pure parser)
+  - Includes current normalization contracts:
+    - `EP_RANGE + TV全集(+extras)` -> `episode_range + pack_kind`
+    - `12END/12FIN` -> `episode + endflag(note)` (not batch trigger)
+    - multi-episode token (`804&805`) -> `epslot.kind=EP_LIST`, `episode_list`
+
 - `baseline.v2+onnx.debug.20260118.regression_set_v1.jsonl`
   - v2 baseline with ONNX debug output enabled (`token_onnx`)
   - Feature-flagged by `TITLEPARSER_TOKEN_ONNX=1`
@@ -62,6 +69,10 @@ go run ./cmd/parse_batch -- -config configs \
   -in tests/baselines/regression_set_v1.titles.txt \
   -out tests/baselines/baseline.v2.20260122.regression_set_v1.jsonl
 
+go run ./cmd/parse_batch -- -config configs \
+  -in tests/baselines/regression_set_v1.titles.txt \
+  -out tests/baselines/baseline.v25.20260307.regression_set_v1.jsonl
+
 # 2b) Run v2 batch parse with ONNX debug output
 TITLEPARSER_TOKEN_ONNX=1 go run ./cmd/parse_batch -- -config configs \
   -in tests/baselines/regression_set_v1.titles.txt \
@@ -76,6 +87,9 @@ go run ./cmd/regression_check -- -config configs \
 
 go run ./cmd/regression_check -- -config configs \
   -base tests/baselines/baseline.v2.20260122.regression_set_v1.jsonl
+
+go run ./cmd/regression_check -- -config configs \
+  -base tests/baselines/baseline.v25.20260307.regression_set_v1.jsonl
 
 # 5) Generate RSS titles baseline
 python3 - <<'PY'

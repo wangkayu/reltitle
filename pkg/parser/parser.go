@@ -1386,6 +1386,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 			titleEnd = ctx.ForcedTitleEnd
 		}
 	}
+	title = trimMovieDashEpisodeTailFromTitle(rawTitle, title, episode, movieIndex)
 	if titleStart >= 0 && titleEnd > titleStart {
 		techStart, hasTechStart := firstTechTokenIndexFromAttrs(attrs)
 		if hasTechStart {
@@ -1532,6 +1533,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	contentKind, contentConf := inferContentKind(p.cfg, episode, episodeRange, season, seasonRange, packKind, spKind, movieIndex, hasTech, hasMovieKeyword, hasYear, movieRouteHardExcluded, movieContentSignal)
 	if ep2, mi2, epIdx2, miIdx2, changed := normalizeMovieEpisodeSignals(rawTitle, contentKind, episode, episodeRange, season, seasonRange, packKind, hasMovieKeyword, movieIndex, episodeIdx, movieIndexIdx); changed {
 		episode, movieIndex, episodeIdx, movieIndexIdx = ep2, mi2, epIdx2, miIdx2
+		title = trimMovieDashEpisodeTailFromTitle(rawTitle, title, episode, movieIndex)
 		epslot = nil
 		attrs = removeAttributeType(attrs, model.AttrEpisode)
 		movieRouteHardExcluded = hasMovieRouteHardExclusion(rawTitle, attrs, episodeRange, season, seasonRange, packKind)
@@ -1574,6 +1576,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	contentKind, contentConf = inferContentKind(p.cfg, episode, episodeRange, season, seasonRange, packKind, spKind, movieIndex, hasTech, hasMovieKeyword, hasYear, movieRouteHardExcluded, movieContentSignal)
 	if ep2, mi2, epIdx2, miIdx2, changed := normalizeMovieEpisodeSignals(rawTitle, contentKind, episode, episodeRange, season, seasonRange, packKind, hasMovieKeyword, movieIndex, episodeIdx, movieIndexIdx); changed {
 		episode, movieIndex, episodeIdx, movieIndexIdx = ep2, mi2, epIdx2, miIdx2
+		title = trimMovieDashEpisodeTailFromTitle(rawTitle, title, episode, movieIndex)
 		epslot = nil
 		attrs = removeAttributeType(attrs, model.AttrEpisode)
 		movieRouteHardExcluded = hasMovieRouteHardExclusion(rawTitle, attrs, episodeRange, season, seasonRange, packKind)
@@ -2210,6 +2213,25 @@ func normalizeMovieEpisodeSignals(rawTitle string, contentKind string, episode s
 		}
 	}
 	return "", newMovieIndex, -1, movieIndexIdx, true
+}
+
+func trimMovieDashEpisodeTailFromTitle(rawTitle string, title string, episode string, movieIndex string) string {
+	if strings.TrimSpace(title) == "" {
+		return title
+	}
+	if strings.TrimSpace(episode) != "" || strings.TrimSpace(movieIndex) == "" {
+		return title
+	}
+	if !movieDashEpisodePattern.MatchString(rawTitle) {
+		return title
+	}
+	out := strings.TrimSpace(title)
+	out = regexp.MustCompile(`(?:\s*[-:：]\s*)?0*\d{1,3}\s*$`).ReplaceAllString(out, "")
+	out = strings.TrimSpace(strings.Trim(out, "-:： "))
+	if out == "" {
+		return title
+	}
+	return out
 }
 
 func hasMovieRouteHardExclusion(rawTitle string, attrs []model.Attribute, episodeRange string, season string, seasonRange string, packKind string) bool {
@@ -8123,6 +8145,7 @@ var movieShortIndexPattern = regexp.MustCompile(`(?i)^m0*(\d{1,3})$`)
 var moviePartSignalPattern = regexp.MustCompile(`(?i)\b(?:part|day|chapter)\s*[-:：]?\s*0*(\d{1,3})\b|(?:第\s*0*(\d{1,3})\s*部)|(?:前篇|後篇|后篇|完结篇|完結篇)`)
 var movieBracketEpisodePattern = regexp.MustCompile(`[\[【(（]\s*0*(\d{1,3})\s*[\]】)）]`)
 var rawMovieTagPattern = regexp.MustCompile(`(?i)[\[【(（]\s*(?:movie|film|電影|电影)\s*[\]】)）]`)
+var movieDashEpisodePattern = regexp.MustCompile(`(?i)\b(?:movie|film)\s*0*\d{1,3}\s*[-:：]\s*0*\d{1,3}\b`)
 
 func isMovieKeywordText(text string) bool {
 	lt := strings.ToLower(strings.TrimSpace(text))

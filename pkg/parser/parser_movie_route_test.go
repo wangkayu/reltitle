@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"strings"
 	"testing"
 
 	"title-parser/pkg/config"
@@ -222,5 +223,31 @@ func TestParserMovieRoute_TrailingMovieNumberDemotedToMovieIndex(t *testing.T) {
 	}
 	if got := firstAttrValue(res, model.AttrMovieIndex); got != "2" {
 		t.Fatalf("movie_index=%q want=%q", got, "2")
+	}
+}
+
+func TestParserMovieRoute_MovieDashEpisodeTailNotInTitle(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[DBD-Raws] Scary Movie 31 - 01 [1080P][BDRip][HEVC-10bit][AAC][MKV]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "MOVIE" {
+		t.Fatalf("content_kind=%q want=%q", got, "MOVIE")
+	}
+	if got := firstAttrValue(res, model.AttrMovieIndex); got != "31" {
+		t.Fatalf("movie_index=%q want=%q", got, "31")
+	}
+	if got := firstAttrValue(res, model.AttrEpisode); got != "" {
+		t.Fatalf("episode=%q want empty", got)
+	}
+	if got := canonicalTitle(res); got == "" || strings.HasSuffix(got, " 01") {
+		t.Fatalf("title=%q should not carry demoted dash-episode tail", got)
 	}
 }

@@ -5784,7 +5784,7 @@ func isGroupCandidateText(s string) bool {
 		if ('A' <= r && r <= 'Z') || ('a' <= r && r <= 'z') || ('0' <= r && r <= '9') {
 			continue
 		}
-		if r == ' ' || r == '_' || r == '-' || r == '.' || r == '&' || r == '＆' {
+		if r == ' ' || r == '_' || r == '-' || r == '.' || r == '&' || r == '＆' || r == ',' || r == '，' || r == '@' {
 			continue
 		}
 		if r > 127 {
@@ -6340,6 +6340,7 @@ func normalizeEpisodeRangeText(s string) string {
 
 var groupHyphenSpacePattern = regexp.MustCompile(`([A-Za-z0-9])\s*-\s*([A-Za-z0-9])`)
 var groupAmpSpacePattern = regexp.MustCompile(`\s*[&＆]\s*`)
+var groupCommaSpacePattern = regexp.MustCompile(`\s*[,，]\s*`)
 
 func normalizeGroupText(s string) string {
 	s = strings.TrimSpace(s)
@@ -6350,6 +6351,8 @@ func normalizeGroupText(s string) string {
 	s = groupHyphenSpacePattern.ReplaceAllString(s, `$1-$2`)
 	// Normalize '&' / '＆' without surrounding spaces.
 	s = groupAmpSpacePattern.ReplaceAllString(s, "&")
+	// Normalize ',' / '，' without surrounding spaces.
+	s = groupCommaSpacePattern.ReplaceAllString(s, ",")
 	return s
 }
 

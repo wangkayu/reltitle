@@ -126,6 +126,58 @@ func TestParserMovieRoute_BatchRangePackTemplatePreferred(t *testing.T) {
 	}
 }
 
+func TestParserMovieRoute_CommaGroupRangePackTemplatePreferred(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[雪飘工作室,WBX-SUB][ワッチャプリマジ！/Waccha_Primagi!/哇恰美妙魔法！][BDrip][01-12](检索:/美妙旋律/美妙天堂/美妙频道)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "BATCH" {
+		t.Fatalf("content_kind=%q want=%q", got, "BATCH")
+	}
+	if got := firstAttrValue(res, model.AttrGroup); got == "" {
+		t.Fatalf("group should not be empty")
+	}
+	if got := firstAttrValue(res, model.AttrEpisodeRange); got != "1-12" {
+		t.Fatalf("episode_range=%q want=%q", got, "1-12")
+	}
+	if got := res.TemplateID; got != "TF_BATCH_RANGE_PACK_01" {
+		t.Fatalf("template_id=%q want=%q", got, "TF_BATCH_RANGE_PACK_01")
+	}
+}
+
+func TestParserMovieRoute_AtGroupRangePackTemplatePreferred(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Jsum@U2][2.43 清阴高中男子排球社][2.43 Seiin Koukou Danshi Volley Bu][2.43 清陰高校男子バレー部][BDRip][1920x1080][TV 01-12 Fin+SP][H264 FLAC MKV]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "BATCH" {
+		t.Fatalf("content_kind=%q want=%q", got, "BATCH")
+	}
+	if got := firstAttrValue(res, model.AttrGroup); got != "Jsum@U2" {
+		t.Fatalf("group=%q want=%q", got, "Jsum@U2")
+	}
+	if got := firstAttrValue(res, model.AttrEpisodeRange); got != "1-12" {
+		t.Fatalf("episode_range=%q want=%q", got, "1-12")
+	}
+	if got := res.TemplateID; got != "TF_BATCH_RANGE_PACK_01" {
+		t.Fatalf("template_id=%q want=%q", got, "TF_BATCH_RANGE_PACK_01")
+	}
+}
+
 func TestParserMovieRoute_DashCodecNumberNotEpisode(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

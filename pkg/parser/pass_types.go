@@ -3,9 +3,9 @@ package parser
 import "title-parser/pkg/model"
 
 type parseContext struct {
-	RawTitle       string
-	Group          string
-	AliasValidFunc func(string) bool
+	RawTitle        string
+	Group           string
+	AliasValidFunc  func(string) bool
 	GroupSlot2Rules []groupSlot2PlatformRule
 
 	PackKind       string
@@ -20,10 +20,12 @@ type parseContext struct {
 	EpisodeFromSxxExx string
 	SxxExxIdx         int
 
-	SPKind          string
-	MovieIndex      string
-	MovieIndexIdx   int
-	HasMovieKeyword bool
+	SPKind             string
+	MovieIndex         string
+	MovieIndexIdx      int
+	MovieIndexRange    string
+	MovieIndexRangeIdx int
+	HasMovieKeyword    bool
 
 	EpisodeRange    string
 	EpisodeRangeIdx int
@@ -47,17 +49,18 @@ type parsePass func(tokens []model.Token, attrs *[]model.Attribute, ctx *parseCo
 
 func newParseContext(rawTitle string, packKind string, tailParenBlock string) *parseContext {
 	return &parseContext{
-		RawTitle:          rawTitle,
-		PackKind:          packKind,
-		TailParenBlock:    tailParenBlock,
-		ForcedTitleStart:  -1,
-		ForcedTitleEnd:    -1,
-		SeasonIdx:         -1,
-		SxxExxIdx:         -1,
-		MovieIndexIdx:     -1,
-		EpisodeIdx:        -1,
-		EpisodeRangeIdx:   -1,
-		EpisodeListIdx:    -1,
-		EpisodeVersionIdx: -1,
+		RawTitle:           rawTitle,
+		PackKind:           packKind,
+		TailParenBlock:     tailParenBlock,
+		ForcedTitleStart:   -1,
+		ForcedTitleEnd:     -1,
+		SeasonIdx:          -1,
+		SxxExxIdx:          -1,
+		MovieIndexIdx:      -1,
+		MovieIndexRangeIdx: -1,
+		EpisodeIdx:         -1,
+		EpisodeRangeIdx:    -1,
+		EpisodeListIdx:     -1,
+		EpisodeVersionIdx:  -1,
 	}
 }

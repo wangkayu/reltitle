@@ -12,6 +12,7 @@ var bracketStandaloneMovieIndexPattern = regexp.MustCompile(`(?i)^movie\s*0*(\d{
 var bracketStandaloneNumericIndexPattern = regexp.MustCompile(`^0*(\d{1,3})$`)
 var bracketInlineMovieRangePattern = regexp.MustCompile(`(?i)\b(?:movie|film)\s*0*\d{1,3}\s*[-~+]\s*0*\d{1,3}\b`)
 var bracketInlineMovieIndexPattern = regexp.MustCompile(`(?i)\b(?:movie|film)\s*0*(\d{1,3})\b`)
+var bracketInlineMovieRangeCapturePattern = regexp.MustCompile(`(?i)\b(?:movie|film)\s*0*(\d{1,3})\s*[-~]\s*0*(\d{1,3})\b`)
 
 func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Attribute, aliasValid func(string) bool) (string, []string, int, int) {
 	if len(tokens) == 0 {
@@ -127,6 +128,22 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 			}
 		}
 		return "", false
+	}
+
+	parseInlineMovieIndexRange := func(s string) (string, bool) {
+		s = strings.TrimSpace(s)
+		if s == "" {
+			return "", false
+		}
+		m := bracketInlineMovieRangeCapturePattern.FindStringSubmatch(s)
+		if len(m) != 3 {
+			return "", false
+		}
+		left, ok := parseMovieRangeDigits(m[1], m[2])
+		if !ok {
+			return "", false
+		}
+		return left, true
 	}
 
 	parseContextualNumericMovieIndex := func(s string, hasMovieContext bool) (string, bool) {
@@ -545,6 +562,16 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 				TokenEnd:   end,
 				Confidence: 0.72,
 				Source:     "bracket_inline_movie_index",
+			})
+		}
+		if mr, ok := parseInlineMovieIndexRange(innerRaw); ok {
+			*attrs = append(*attrs, model.Attribute{
+				Type:       model.AttrMovieIndexRange,
+				Normalized: mr,
+				TokenStart: i + 1,
+				TokenEnd:   end,
+				Confidence: 0.72,
+				Source:     "bracket_inline_movie_index_range",
 			})
 		}
 		if looksLikeLeadingTitleMeta(inner) {

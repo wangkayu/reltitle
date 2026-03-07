@@ -118,9 +118,17 @@ func passDetectSeasonSPMovie(tokens []model.Token, attrs *[]model.Attribute, ctx
 		removeSeasonTokens(tokens, ctx.SeasonIdx)
 	}
 	ctx.SPKind = detectSPKind(tokens)
+	ctx.MovieIndexRange, ctx.MovieIndexRangeIdx, ctx.HasMovieKeyword = detectMovieIndexRangeAndKeyword(tokens)
 	ctx.MovieIndex, ctx.MovieIndexIdx, ctx.HasMovieKeyword = detectMovieIndexAndKeyword(tokens)
 	if attrs != nil {
 		ctx.HasMovieKeyword = ctx.HasMovieKeyword || detectMovieKeywordFromAttrs(*attrs)
+		if strings.TrimSpace(ctx.MovieIndexRange) == "" {
+			if mr, idx := detectMovieIndexRangeFromAttrs(*attrs); strings.TrimSpace(mr) != "" {
+				ctx.MovieIndexRange = strings.TrimSpace(mr)
+				ctx.MovieIndexRangeIdx = idx
+				ctx.HasMovieKeyword = true
+			}
+		}
 		if strings.TrimSpace(ctx.MovieIndex) == "" {
 			if mi, idx := detectMovieIndexFromAttrs(*attrs); strings.TrimSpace(mi) != "" {
 				ctx.MovieIndex = strings.TrimSpace(mi)
@@ -129,7 +137,11 @@ func passDetectSeasonSPMovie(tokens []model.Token, attrs *[]model.Attribute, ctx
 			}
 		}
 	}
-	if strings.TrimSpace(ctx.MovieIndex) == "" && ctx.HasMovieKeyword {
+	if strings.TrimSpace(ctx.MovieIndexRange) != "" {
+		ctx.MovieIndex = ""
+		ctx.MovieIndexIdx = -1
+	}
+	if strings.TrimSpace(ctx.MovieIndexRange) == "" && strings.TrimSpace(ctx.MovieIndex) == "" && ctx.HasMovieKeyword {
 		if mi, idx := detectMovieShortIndexWithContext(tokens); strings.TrimSpace(mi) != "" {
 			ctx.MovieIndex = strings.TrimSpace(mi)
 			ctx.MovieIndexIdx = idx
@@ -169,6 +181,27 @@ func detectMovieIndexFromAttrs(attrs []model.Attribute) (string, int) {
 	bestConf := -1.0
 	for _, a := range attrs {
 		if a.Type != model.AttrMovieIndex {
+			continue
+		}
+		v := strings.TrimSpace(a.Normalized)
+		if v == "" {
+			continue
+		}
+		if a.Confidence > bestConf {
+			bestConf = a.Confidence
+			best = v
+			bestIdx = a.TokenStart
+		}
+	}
+	return best, bestIdx
+}
+
+func detectMovieIndexRangeFromAttrs(attrs []model.Attribute) (string, int) {
+	best := ""
+	bestIdx := -1
+	bestConf := -1.0
+	for _, a := range attrs {
+		if a.Type != model.AttrMovieIndexRange {
 			continue
 		}
 		v := strings.TrimSpace(a.Normalized)

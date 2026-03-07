@@ -1290,6 +1290,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	spKind := ctx.SPKind
 	movieIndex := ctx.MovieIndex
 	movieIndexIdx := ctx.MovieIndexIdx
+	movieIndexRange := ctx.MovieIndexRange
 	hasMovieKeyword := ctx.HasMovieKeyword
 	episodeRange := ctx.EpisodeRange
 	episodeRangeIdx := ctx.EpisodeRangeIdx
@@ -1337,7 +1338,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 		}
 	}
 
-	if shouldDemoteEpisodeToMovieIndex(rawTitle, episode, episodeRange, season, seasonRange, packKind, hasMovieKeyword, movieIndex) {
+	if shouldDemoteEpisodeToMovieIndex(rawTitle, episode, episodeRange, season, seasonRange, packKind, hasMovieKeyword, movieIndex, movieIndexRange) {
 		if strings.TrimSpace(movieIndex) == "" {
 			movieIndex = strings.TrimSpace(episode)
 			movieIndexIdx = episodeIdx
@@ -1531,7 +1532,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	movieContentSignal := hasMovieContentSignal(attrs, hasMovieKeyword, movieIndex, spKind)
 	epRoute := computeEpRoute(tokens, episode, episodeRange, season, seasonRange, spKind, movieIndex, hasMovieKeyword, movieRouteHardExcluded)
 	contentKind, contentConf := inferContentKind(p.cfg, episode, episodeRange, season, seasonRange, packKind, spKind, movieIndex, hasTech, hasMovieKeyword, hasYear, movieRouteHardExcluded, movieContentSignal)
-	if ep2, mi2, epIdx2, miIdx2, changed := normalizeMovieEpisodeSignals(rawTitle, contentKind, episode, episodeRange, season, seasonRange, packKind, hasMovieKeyword, movieIndex, episodeIdx, movieIndexIdx); changed {
+	if ep2, mi2, epIdx2, miIdx2, changed := normalizeMovieEpisodeSignals(rawTitle, contentKind, episode, episodeRange, season, seasonRange, packKind, hasMovieKeyword, movieIndex, movieIndexRange, episodeIdx, movieIndexIdx); changed {
 		episode, movieIndex, episodeIdx, movieIndexIdx = ep2, mi2, epIdx2, miIdx2
 		title = trimMovieDashEpisodeTailFromTitle(rawTitle, title, episode, movieIndex)
 		epslot = nil
@@ -1574,7 +1575,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	movieContentSignal = hasMovieContentSignal(attrs, hasMovieKeyword, movieIndex, spKind)
 	epRoute = computeEpRoute(tokens, episode, episodeRange, season, seasonRange, spKind, movieIndex, hasMovieKeyword, movieRouteHardExcluded)
 	contentKind, contentConf = inferContentKind(p.cfg, episode, episodeRange, season, seasonRange, packKind, spKind, movieIndex, hasTech, hasMovieKeyword, hasYear, movieRouteHardExcluded, movieContentSignal)
-	if ep2, mi2, epIdx2, miIdx2, changed := normalizeMovieEpisodeSignals(rawTitle, contentKind, episode, episodeRange, season, seasonRange, packKind, hasMovieKeyword, movieIndex, episodeIdx, movieIndexIdx); changed {
+	if ep2, mi2, epIdx2, miIdx2, changed := normalizeMovieEpisodeSignals(rawTitle, contentKind, episode, episodeRange, season, seasonRange, packKind, hasMovieKeyword, movieIndex, movieIndexRange, episodeIdx, movieIndexIdx); changed {
 		episode, movieIndex, episodeIdx, movieIndexIdx = ep2, mi2, epIdx2, miIdx2
 		title = trimMovieDashEpisodeTailFromTitle(rawTitle, title, episode, movieIndex)
 		epslot = nil
@@ -1676,6 +1677,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	attrs = upsertScalarAttribute(attrs, model.AttrPackProfile, packProfile, "canonical")
 	attrs = upsertScalarAttribute(attrs, model.AttrSPKind, spKind, "canonical")
 	attrs = upsertScalarAttribute(attrs, model.AttrMovieIndex, movieIndex, "canonical")
+	attrs = upsertScalarAttribute(attrs, model.AttrMovieIndexRange, movieIndexRange, "canonical")
 	attrs = appendTitleAliasAttributes(attrs, aliases, title, "canonical")
 	attrs = p.promoteNoteAttributes(attrs)
 	p.normalizePlatformAttrs(attrs)
@@ -2158,8 +2160,11 @@ func hasMovieKeywordInRawTitle(raw string) bool {
 	return rawMovieTagPattern.MatchString(raw)
 }
 
-func shouldDemoteEpisodeToMovieIndex(rawTitle string, episode string, episodeRange string, season string, seasonRange string, packKind string, hasMovieKeyword bool, movieIndex string) bool {
+func shouldDemoteEpisodeToMovieIndex(rawTitle string, episode string, episodeRange string, season string, seasonRange string, packKind string, hasMovieKeyword bool, movieIndex string, movieIndexRange string) bool {
 	if strings.TrimSpace(episode) == "" {
+		return false
+	}
+	if strings.TrimSpace(movieIndexRange) != "" {
 		return false
 	}
 	if strings.TrimSpace(episodeRange) != "" || strings.TrimSpace(season) != "" || strings.TrimSpace(seasonRange) != "" {
@@ -2184,8 +2189,11 @@ func shouldDemoteEpisodeToMovieIndex(rawTitle string, episode string, episodeRan
 	return false
 }
 
-func normalizeMovieEpisodeSignals(rawTitle string, contentKind string, episode string, episodeRange string, season string, seasonRange string, packKind string, hasMovieKeyword bool, movieIndex string, episodeIdx int, movieIndexIdx int) (string, string, int, int, bool) {
+func normalizeMovieEpisodeSignals(rawTitle string, contentKind string, episode string, episodeRange string, season string, seasonRange string, packKind string, hasMovieKeyword bool, movieIndex string, movieIndexRange string, episodeIdx int, movieIndexIdx int) (string, string, int, int, bool) {
 	if !strings.EqualFold(strings.TrimSpace(contentKind), "MOVIE") {
+		return episode, movieIndex, episodeIdx, movieIndexIdx, false
+	}
+	if strings.TrimSpace(movieIndexRange) != "" {
 		return episode, movieIndex, episodeIdx, movieIndexIdx, false
 	}
 	ep := strings.TrimSpace(episode)
@@ -8142,6 +8150,9 @@ var movieIndexPattern = regexp.MustCompile(`(?i)^(?:movie)?\s*(\d{1,3})$`)
 var jpMovieIndexPattern = regexp.MustCompile(`(?i)(?:劇場版|剧场版)(?:第)?(\d{1,3})(?:部)?`)
 var filmIndexPattern = regexp.MustCompile(`(?i)^film[\s._-]?(\d{1,3})$`)
 var movieShortIndexPattern = regexp.MustCompile(`(?i)^m0*(\d{1,3})$`)
+var movieShortRangePattern = regexp.MustCompile(`(?i)^m0*(\d{1,3})\s*[-~]\s*m?0*(\d{1,3})$`)
+var movieRangeTokenPattern = regexp.MustCompile(`(?i)^(?:movie|film)\s*0*(\d{1,3})\s*[-~]\s*0*(\d{1,3})$`)
+var movieRangeDigitPattern = regexp.MustCompile(`^0*(\d{1,3})$`)
 var moviePartSignalPattern = regexp.MustCompile(`(?i)\b(?:part|day|chapter)\s*[-:：]?\s*0*(\d{1,3})\b|(?:第\s*0*(\d{1,3})\s*部)|(?:前篇|後篇|后篇|完结篇|完結篇)`)
 var movieBracketEpisodePattern = regexp.MustCompile(`[\[【(（]\s*0*(\d{1,3})\s*[\]】)）]`)
 var rawMovieTagPattern = regexp.MustCompile(`(?i)[\[【(（]\s*(?:movie|film|電影|电影)\s*[\]】)）]`)
@@ -8178,6 +8189,85 @@ func hasMovieContextAround(tokens []model.Token, idx int) bool {
 	return false
 }
 
+func isMovieRangeSepToken(text string) bool {
+	text = strings.TrimSpace(text)
+	return text == "-" || text == "~"
+}
+
+func parseMovieRangeDigits(left string, right string) (string, bool) {
+	lm := movieRangeDigitPattern.FindStringSubmatch(strings.TrimSpace(left))
+	rm := movieRangeDigitPattern.FindStringSubmatch(strings.TrimSpace(right))
+	if len(lm) != 2 || len(rm) != 2 {
+		return "", false
+	}
+	ls := strings.TrimLeft(strings.TrimSpace(lm[1]), "0")
+	rs := strings.TrimLeft(strings.TrimSpace(rm[1]), "0")
+	if ls == "" {
+		ls = "0"
+	}
+	if rs == "" {
+		rs = "0"
+	}
+	if ls == "0" || rs == "0" {
+		return "", false
+	}
+	li, lerr := strconv.Atoi(ls)
+	ri, rerr := strconv.Atoi(rs)
+	if lerr != nil || rerr != nil {
+		return "", false
+	}
+	if li > ri {
+		return "", false
+	}
+	return ls + "-" + rs, true
+}
+
+func detectMovieIndexRangeAndKeyword(tokens []model.Token) (movieIndexRange string, tokenIdx int, hasMovieKeyword bool) {
+	for i := 0; i < len(tokens); i++ {
+		text := strings.TrimSpace(tokens[i].Text)
+		lt := strings.ToLower(text)
+		if text == "" {
+			continue
+		}
+		removed := tokens[i].Removed
+		if removed && !isMovieKeywordText(text) && lt != "movie" && lt != "film" {
+			continue
+		}
+		if m := movieRangeTokenPattern.FindStringSubmatch(text); len(m) == 3 {
+			rng, ok := parseMovieRangeDigits(m[1], m[2])
+			if ok {
+				return rng, i, true
+			}
+		}
+		if m := movieShortRangePattern.FindStringSubmatch(text); len(m) == 3 {
+			if !removed && (hasMovieKeyword || hasMovieContextAround(tokens, i)) {
+				rng, ok := parseMovieRangeDigits(m[1], m[2])
+				if ok {
+					return rng, i, true
+				}
+			}
+		}
+		if isMovieKeywordText(text) || lt == "movie" || lt == "film" {
+			hasMovieKeyword = true
+			j := i + 1
+			for j < len(tokens) {
+				next := strings.TrimSpace(tokens[j].Text)
+				if next == "." || next == "_" || next == "-" {
+					j++
+					continue
+				}
+				break
+			}
+			if j+2 < len(tokens) && isMovieRangeSepToken(tokens[j+1].Text) {
+				if rng, ok := parseMovieRangeDigits(tokens[j].Text, tokens[j+2].Text); ok {
+					return rng, j, true
+				}
+			}
+		}
+	}
+	return "", -1, hasMovieKeyword
+}
+
 func detectMovieIndexAndKeyword(tokens []model.Token) (movieIndex string, tokenIdx int, hasMovieKeyword bool) {
 	for i := 0; i < len(tokens); i++ {
 		if tokens[i].Removed {
@@ -8196,13 +8286,20 @@ func detectMovieIndexAndKeyword(tokens []model.Token) (movieIndex string, tokenI
 		if lt == "film" {
 			hasMovieKeyword = true
 			j := i + 1
-			if j < len(tokens) {
+			for j < len(tokens) {
 				next := strings.TrimSpace(tokens[j].Text)
 				if next == "." || next == "_" || next == "-" {
 					j++
+					continue
 				}
+				break
 			}
 			if j < len(tokens) {
+				if j+2 < len(tokens) && isMovieRangeSepToken(tokens[j+1].Text) {
+					if _, ok := parseMovieRangeDigits(tokens[j].Text, tokens[j+2].Text); ok {
+						continue
+					}
+				}
 				next := strings.TrimSpace(tokens[j].Text)
 				m := movieIndexPattern.FindStringSubmatch(next)
 				if len(m) == 2 {
@@ -8213,13 +8310,20 @@ func detectMovieIndexAndKeyword(tokens []model.Token) (movieIndex string, tokenI
 		if isMovieKeywordText(text) {
 			hasMovieKeyword = true
 			j := i + 1
-			if j < len(tokens) {
+			for j < len(tokens) {
 				next := strings.TrimSpace(tokens[j].Text)
 				if next == "." || next == "_" || next == "-" {
 					j++
+					continue
 				}
+				break
 			}
 			if j < len(tokens) {
+				if j+2 < len(tokens) && isMovieRangeSepToken(tokens[j+1].Text) {
+					if _, ok := parseMovieRangeDigits(tokens[j].Text, tokens[j+2].Text); ok {
+						continue
+					}
+				}
 				m := movieIndexPattern.FindStringSubmatch(tokens[j].Text)
 				if len(m) == 2 {
 					return strings.TrimLeft(m[1], "0"), j, true

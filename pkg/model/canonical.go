@@ -94,6 +94,10 @@ func (r *ParseResult) CanonicalMovieIndex() string {
 	return r.firstAttrValue(AttrMovieIndex)
 }
 
+func (r *ParseResult) CanonicalMovieIndexRange() string {
+	return r.firstAttrValue(AttrMovieIndexRange)
+}
+
 func (r *ParseResult) CanonicalEpRoute() string {
 	if r == nil || r.EPSlot == nil || r.EPSlot.Primary == nil {
 		// Fallback for list-like packs where epslot may not have primary.

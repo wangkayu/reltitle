@@ -408,6 +408,46 @@ func TestParserMovieRoute_BracketEpisodeAsMovieIndexWithMovieContext(t *testing.
 	}
 }
 
+func TestParserMovieRoute_MovieRangeBracketExtracted(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[SweetSub][剧场版回转企鹅罐 RE:cycle of the PENGUINDRUM][Movie 01-02 合集][BDRip][1080P][AVC 8bit][简日双语]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := firstAttrValue(res, model.AttrMovieIndexRange); got != "1-2" {
+		t.Fatalf("movie_index_range=%q want=%q", got, "1-2")
+	}
+	if got := firstAttrValue(res, model.AttrMovieIndex); got != "" {
+		t.Fatalf("movie_index=%q want empty", got)
+	}
+}
+
+func TestParserMovieRoute_TVMovieMixedRangeNoSingleIndex(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[LoliHouse] 灌篮高手 / SLAM DUNK [TV 01-101 + Movie 01-04 Fin][BDRip 720p HEVC-10bit AAC]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := firstAttrValue(res, model.AttrMovieIndexRange); got != "1-4" {
+		t.Fatalf("movie_index_range=%q want=%q", got, "1-4")
+	}
+	if got := firstAttrValue(res, model.AttrMovieIndex); got != "" {
+		t.Fatalf("movie_index=%q want empty", got)
+	}
+}
+
 func TestParserMovieRoute_TitleMNumberNotMovieIndex(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

@@ -14,6 +14,7 @@ var summarySpecialPattern = regexp.MustCompile(`^(总集篇)0*(\d{1,3})[_-](\d{1
 var summarySpecialLeadPattern = regexp.MustCompile(`^(总集篇)0*(\d{1,3})$`)
 var episodeListPattern = regexp.MustCompile(`(?i)^\s*\d{1,4}(?:\s*(?:&|＆|\+|＋|/|／|,|，|、)\s*\d{1,4})+\s*$`)
 var episodeListDigitsPattern = regexp.MustCompile(`\d{1,4}`)
+var episodeRangeTVPackRightPattern = regexp.MustCompile(`(?i)^0*(\d{1,4})\s*tv(?:全集|全话|全話)?$`)
 
 func detectSeasonFromAttrs(attrs []model.Attribute) (season string, tokenIdx int) {
 	bestIdx := -1
@@ -415,6 +416,9 @@ func passDetectEpisodeRangeAndEpisode(tokens []model.Token, attrs *[]model.Attri
 		ctx.EpisodeRange = taggedRange
 		ctx.EpisodeRangeIdx = taggedRangeIdx
 	}
+	if strings.TrimSpace(ctx.EpisodeRange) != "" && ctx.EpisodeRangeIdx >= 0 {
+		normalizeEpisodeRangeTVPackSuffix(tokens, attrs, ctx.EpisodeRangeIdx)
+	}
 	ctx.EpisodeList = ""
 	ctx.EpisodeListIdx = -1
 	ctx.Episode = ""
@@ -539,6 +543,44 @@ func passDetectEpisodeRangeAndEpisode(tokens []model.Token, attrs *[]model.Attri
 		ctx.EpisodeListIdx = -1
 	}
 	finalizeEPSlotPrimary(ctx.EPSlot, ctx.Season, ctx.Episode, ctx.EpisodeRange, ctx.EpisodeList, ctx.SPKind, ctx.EpisodeIdx, ctx.EpisodeRangeIdx, ctx.EpisodeListIdx, ctx.SxxExxIdx)
+}
+
+func normalizeEpisodeRangeTVPackSuffix(tokens []model.Token, attrs *[]model.Attribute, rangeIdx int) {
+	if rangeIdx < 0 || rangeIdx+2 >= len(tokens) {
+		return
+	}
+	left := strings.TrimSpace(tokens[rangeIdx].Text)
+	sep := strings.TrimSpace(tokens[rangeIdx+1].Text)
+	right := strings.TrimSpace(tokens[rangeIdx+2].Text)
+	if left == "" || right == "" {
+		return
+	}
+	if sep != "-" && sep != "~" {
+		return
+	}
+	if !episodeOfTotalPattern.MatchString(left) {
+		return
+	}
+	m := episodeRangeTVPackRightPattern.FindStringSubmatch(right)
+	if len(m) != 2 {
+		return
+	}
+	n := strings.TrimLeft(strings.TrimSpace(m[1]), "0")
+	if n == "" {
+		n = "0"
+	}
+	tokens[rangeIdx+2].Text = n
+	tokens[rangeIdx+2].Removed = true
+	if attrs != nil {
+		*attrs = append(*attrs, model.Attribute{
+			Type:       model.AttrNote,
+			Normalized: "TV_PACK",
+			TokenStart: rangeIdx + 2,
+			TokenEnd:   rangeIdx + 3,
+			Confidence: 0.7,
+			Source:     "episode_range_tvpack",
+		})
+	}
 }
 
 func detectEpisodeList(tokens []model.Token) (episodeList string, firstEpisode string, tokenIdx int) {

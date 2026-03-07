@@ -281,6 +281,31 @@ func TestParserLexicon_RecruitmentAndBonusMetaTokensAreConsumed(t *testing.T) {
 	}
 }
 
+func TestParserEpisodeRange_TVPackSuffixSplit(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[1080P][DBD-Raws][极限女孩/UG*Ultimate Girls/UG☆アルティメットガール][01-12TV全集][HEVC-10bit][简繁外挂][FLAC][MKV]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalEpisodeRange(res); got != "1-12" {
+		t.Fatalf("episode_range=%q want=1-12", got)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrNote), "TV_PACK") {
+		t.Fatalf("expected note=TV_PACK")
+	}
+	for _, tok := range res.Tokens {
+		if strings.EqualFold(strings.TrimSpace(tok.Text), "12TV") && !tok.Removed {
+			t.Fatalf("12TV should be consumed, tokens=%v", res.Tokens)
+		}
+	}
+}
+
 func TestParserAliasCleanup_BracketTitleFallbackWhenMainTitleEmpty(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

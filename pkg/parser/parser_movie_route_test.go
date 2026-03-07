@@ -388,6 +388,26 @@ func TestParserMovieRoute_ParenInlineMovieNumberExtracted(t *testing.T) {
 	}
 }
 
+func TestParserMovieRoute_BracketEpisodeAsMovieIndexWithMovieContext(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "【喵萌Production】[LoveLive! 虹咲学园学园偶像同好会 完结篇 / Love Live! Nijigasaki Movie][01][BDRip][1080p][简日双语]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := firstAttrValue(res, model.AttrMovieIndex); got != "1" {
+		t.Fatalf("movie_index=%q want=%q", got, "1")
+	}
+	if got := firstAttrValue(res, model.AttrEpisode); got != "" {
+		t.Fatalf("episode=%q want empty", got)
+	}
+}
+
 func TestParserMovieRoute_TitleMNumberNotMovieIndex(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

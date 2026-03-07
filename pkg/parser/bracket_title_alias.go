@@ -9,6 +9,7 @@ import (
 
 var bracketStandaloneMIndexPattern = regexp.MustCompile(`(?i)^m0*(\d{1,3})$`)
 var bracketStandaloneMovieIndexPattern = regexp.MustCompile(`(?i)^movie\s*0*(\d{1,3})$`)
+var bracketStandaloneNumericIndexPattern = regexp.MustCompile(`^0*(\d{1,3})$`)
 var bracketInlineMovieRangePattern = regexp.MustCompile(`(?i)\b(?:movie|film)\s*0*\d{1,3}\s*[-~+]\s*0*\d{1,3}\b`)
 var bracketInlineMovieIndexPattern = regexp.MustCompile(`(?i)\b(?:movie|film)\s*0*(\d{1,3})\b`)
 
@@ -126,6 +127,43 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 			}
 		}
 		return "", false
+	}
+
+	parseContextualNumericMovieIndex := func(s string, hasMovieContext bool) (string, bool) {
+		if !hasMovieContext {
+			return "", false
+		}
+		s = strings.TrimSpace(s)
+		if s == "" {
+			return "", false
+		}
+		if strings.ContainsAny(s, "+-/~") {
+			return "", false
+		}
+		if m := bracketStandaloneNumericIndexPattern.FindStringSubmatch(s); len(m) == 2 {
+			n := strings.TrimLeft(strings.TrimSpace(m[1]), "0")
+			if n == "" {
+				n = "0"
+			}
+			if n != "0" {
+				return n, true
+			}
+		}
+		return "", false
+	}
+
+	hasMovieKeyword := func(s string) bool {
+		s = strings.TrimSpace(s)
+		if s == "" {
+			return false
+		}
+		if bracketInlineMovieIndexPattern.FindStringIndex(s) != nil {
+			return true
+		}
+		if strings.Contains(s, "劇場版") || strings.Contains(s, "剧场版") || strings.Contains(s, "映画") || strings.Contains(s, "大电影") || strings.Contains(s, "大電影") {
+			return true
+		}
+		return false
 	}
 
 	containsEpisodeMarker := func(s string) bool {
@@ -548,6 +586,43 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 				i = end
 				continue
 			}
+		}
+		hasMovieContext := false
+		for bi := 0; bi < len(blocks); bi++ {
+			if hasMovieKeyword(blocks[bi].inner) {
+				hasMovieContext = true
+				break
+			}
+		}
+		if !hasMovieContext {
+			for _, a := range *attrs {
+				if a.Type != model.AttrNote && a.Type != model.AttrTitle {
+					continue
+				}
+				if hasMovieKeyword(a.Normalized) {
+					hasMovieContext = true
+					break
+				}
+				if strings.EqualFold(strings.TrimSpace(a.Normalized), "MOVIE") || strings.EqualFold(strings.TrimSpace(a.Normalized), "THEMOVIE") {
+					hasMovieContext = true
+					break
+				}
+			}
+		}
+		if mi, ok := parseContextualNumericMovieIndex(innerRaw, hasMovieContext); ok {
+			*attrs = append(*attrs, model.Attribute{
+				Type:       model.AttrMovieIndex,
+				Normalized: mi,
+				TokenStart: i + 1,
+				TokenEnd:   end,
+				Confidence: 0.72,
+				Source:     "bracket_movie_context_index",
+			})
+			for k := i; k <= end && k >= 0 && k < len(tokens); k++ {
+				tokens[k].Removed = true
+			}
+			i = end
+			continue
 		}
 		if isLikelyTechLike(inner) {
 			break

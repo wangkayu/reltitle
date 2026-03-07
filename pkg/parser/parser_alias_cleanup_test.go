@@ -1243,6 +1243,34 @@ func TestGroupSlot2PlatformInfer_JibaketaTVBYue(t *testing.T) {
 	}
 }
 
+func TestGroupRouteOverride_JibaketaStripsSlot2PrefixFromTitle(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[jibaketa合成&音頻壓制][TVB粵語]閃躍吧！星夢☆頻道 / 美妙☆频道 / Kiratto Pri-chan - 01 [粵日雙語+內封繁體中文字幕][WEB 1920x1080 x264 AACx2 SRT TVB CHT]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	if !hasAttrValue(attrValues(res, model.AttrPlatform), "TVB") {
+		t.Fatalf("expected platform TVB, got=%v", attrValues(res, model.AttrPlatform))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "YUE") {
+		t.Fatalf("expected audio_lang YUE, got=%v", attrValues(res, model.AttrAudioLang))
+	}
+	title := canonicalTitle(res)
+	if strings.HasPrefix(strings.ToUpper(strings.TrimSpace(title)), "TVB") {
+		t.Fatalf("title should strip TVB slot2 prefix, got=%q", title)
+	}
+	if !strings.Contains(title, "閃躍吧！星夢") {
+		t.Fatalf("title core should be kept, got=%q", title)
+	}
+}
+
 func TestGroupSlot2PlatformInfer_JibaketaDistributorNoPlatform(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

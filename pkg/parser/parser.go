@@ -3478,6 +3478,22 @@ func (p *Parser) isValidAliasToken(s string) bool {
 	if strings.Contains(low, "1080p") || strings.Contains(low, "2160p") || strings.Contains(low, "720p") || strings.Contains(low, "480p") || strings.Contains(low, "4k") {
 		return false
 	}
+	if regexp.MustCompile(`(?i)^\d{3,4}p$`).MatchString(s) {
+		return false
+	}
+	if regexp.MustCompile(`(?i)^(?:bd|web|hdtv|dvd|tv|hd|uhd|fhd)\d{3,4}p$`).MatchString(s) {
+		return false
+	}
+	if regexp.MustCompile(`(?i)^(?:bd|web|hdtv|dvd|tv|vcd|ld|uhd|fhd)[-_.]?(?:rip|remux|iso)$`).MatchString(low) {
+		return false
+	}
+	if regexp.MustCompile(`(?i)^(?:multi[-_ ]?sub|multisub|dual[-_ ]?audio|multi[-_ ]?audio)$`).MatchString(low) {
+		return false
+	}
+	// Common language/subtitle markers (CN/JP/EN/Cantonese style) should not be aliases.
+	if regexp.MustCompile(`(?i)(?:中字|无字|無字|双语|雙語|内封|內封|内嵌|內嵌|粤语|粵語|日语|日語|英语|英語|国粤|國粵|简中|繁中|中英|中日|简日|繁日|字幕)`).MatchString(s) {
+		return false
+	}
 	if episodeOfTotalPattern.MatchString(s) {
 		return false
 	}

@@ -160,3 +160,26 @@ func TestParserHeadGroupFallback_AfterLeadingParenMeta(t *testing.T) {
 		t.Fatalf("group=%q want=%q", got, "R-Archive-loroid")
 	}
 }
+
+func TestParserUnknownOutput_DropsTechAndLangMetaAliases(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[PorterRAWS]去吧！稻中桌球社 / 去吧！稻中乒團/ Ping Pong Club[360P][VCDRip][粤语中字]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	aliases := canonicalAliases(res)
+	for _, a := range aliases {
+		if a == "360P" || a == "VCDRip" || a == "粤语中字" {
+			t.Fatalf("alias should drop tech/lang meta token, aliases=%v", aliases)
+		}
+	}
+	if !containsAlias(aliases, "去吧！稻中乒團") || !containsAlias(aliases, "Ping Pong Club") {
+		t.Fatalf("expected title aliases retained, got=%v", aliases)
+	}
+}

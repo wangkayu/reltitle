@@ -270,6 +270,21 @@ func passDetectEpisodeRangeAndEpisode(tokens []model.Token, attrs *[]model.Attri
 		ctx.EpisodeRangeIdx = taggedRangeIdx
 	}
 	ctx.Episode, ctx.EpisodeIdx, ctx.EpisodeVersion, ctx.EpisodeVersionIdx = detectEpisodeWithVersion(tokens)
+	if attrs != nil && ctx.EpisodeIdx >= 0 && ctx.EpisodeIdx < len(tokens) {
+		if m := episodeEndSuffixPattern.FindStringSubmatch(strings.TrimSpace(tokens[ctx.EpisodeIdx].Text)); len(m) == 3 {
+			flag := strings.ToUpper(strings.TrimSpace(m[2]))
+			if flag != "" {
+				*attrs = append(*attrs, model.Attribute{
+					Type:       model.AttrNote,
+					Normalized: flag,
+					TokenStart: ctx.EpisodeIdx,
+					TokenEnd:   ctx.EpisodeIdx + 1,
+					Confidence: 0.75,
+					Source:     "episode_endflag",
+				})
+			}
+		}
+	}
 	if strings.TrimSpace(ctx.EpisodeRange) == "" && (strings.TrimSpace(ctx.Episode) == "" || ctx.EpisodeIdx < 0) {
 		if strings.TrimSpace(taggedEpisode) != "" && taggedEpisodeIdx >= 0 {
 			ctx.Episode = taggedEpisode

@@ -218,3 +218,41 @@ func TestParserBatchTemplateRangePack_TVQuanJiUsesPackKindNotContents(t *testing
 		}
 	}
 }
+
+func TestParserEpisodeCompactEndFlag_NotBatch(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[TestGroup][Sample Title][12END][1080p][WEB-DL][AAC][MKV]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "TV_EP" {
+		t.Fatalf("content_kind=%q want=%q", got, "TV_EP")
+	}
+	if got := canonicalEpisode(res); got != "12" {
+		t.Fatalf("episode=%q want=%q", got, "12")
+	}
+	if got := firstAttrValue(res, model.AttrPackKind); got != "" {
+		t.Fatalf("pack_kind=%q want empty", got)
+	}
+	if got := firstAttrValue(res, model.AttrEpisodeRange); got != "" {
+		t.Fatalf("episode_range=%q want empty", got)
+	}
+	notes := attrValues(res, model.AttrNote)
+	hasEndFlag := false
+	for _, n := range notes {
+		up := strings.ToUpper(strings.TrimSpace(n))
+		if up == "END" || up == "FIN" || up == "FINAL" {
+			hasEndFlag = true
+			break
+		}
+	}
+	if !hasEndFlag {
+		t.Fatalf("expected endflag note from compact episode token, notes=%v", notes)
+	}
+}

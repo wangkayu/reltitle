@@ -5628,6 +5628,7 @@ var starEpisodeEmbeddedPattern = regexp.MustCompile(`(?:★|☆)(\d{1,4})(?:★|
 var dateYMDPattern = regexp.MustCompile(`(?i)(?:\b(?:19|20)\d{2}[./-](?:0?[1-9]|1[0-2])[./-](?:0?[1-9]|[12]\d|3[01])\b)`)
 var spKindEpisodePattern = regexp.MustCompile(`(?i)^(?:sp|ova|oad|ona|ex)0*(\d{1,3})$`)
 var episodeWithVersionPattern = regexp.MustCompile(`(?i)^(?:(?:e|ep|第))?(\d{1,4})(?:\.(\d{1,2}))?[vV](\d{1,2})$`)
+var episodeEndSuffixPattern = regexp.MustCompile(`(?i)^(\d{1,4})(end|fin|final)$`)
 var standaloneVersionPattern = regexp.MustCompile(`(?i)^v(\d{1,2})$`)
 var regionHKMOTWEmbeddedPattern = regexp.MustCompile(`(?i)(?:仅限港澳台地区|僅限港澳台地區)`)
 var regionHKMOTWRemovalPattern = regexp.MustCompile(`(?i)[(（]?\s*(?:仅限港澳台地区|僅限港澳台地區)\s*[)）]?`)
@@ -6064,6 +6065,23 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 				bestIdx = i
 				best = n
 				bestVer = "v" + ver
+			}
+			continue
+		}
+		// Compact end-flag episode token, e.g. "12END"/"12FIN".
+		if mm := episodeEndSuffixPattern.FindStringSubmatch(strings.TrimSpace(tokens[i].Text)); len(mm) == 3 {
+			n := strings.TrimLeft(mm[1], "0")
+			if n == "" {
+				n = "0"
+			}
+			if n != "0" {
+				score := len(mm[1]) + 96
+				if score > bestScore {
+					bestScore = score
+					bestIdx = i
+					best = n
+					bestVer = ""
+				}
 			}
 			continue
 		}

@@ -6,6 +6,7 @@ type Config struct {
 	Inference       InferenceRulesConfig  `json:"inference"`
 	GroupList       GroupListConfig       `json:"group_list"`
 	GroupRoute      GroupRouteConfig      `json:"group_route,omitempty"`
+	GroupSlot2Platform GroupSlot2PlatformConfig `json:"group_slot2_platform,omitempty"`
 
 	DictCanonicalValues     DictCanonicalValuesConfig     `json:"dict_canonical_values,omitempty"`
 	DictTokenSynonyms       DictTokenSynonymsConfig       `json:"dict_token_synonyms,omitempty"`
@@ -245,4 +246,46 @@ type GroupRouteOutput struct {
 	ForceTemplateID  string `yaml:"force_template_id" json:"force_template_id"`
 	ForceContentKind string `yaml:"force_content_kind" json:"force_content_kind"`
 	ForceRouteID     string `yaml:"force_route_id" json:"force_route_id"`
+}
+
+type GroupSlot2PlatformConfig struct {
+	Version     string                         `yaml:"version" json:"version"`
+	UpdatedAt   string                         `yaml:"updated_at" json:"updated_at"`
+	Description string                         `yaml:"description" json:"description"`
+	Rules       []GroupSlot2PlatformRuleConfig `yaml:"rules" json:"rules"`
+}
+
+type GroupSlot2PlatformRuleConfig struct {
+	ID        string                              `yaml:"id" json:"id"`
+	Enabled   bool                                `yaml:"enabled" json:"enabled"`
+	Priority  int                                 `yaml:"priority" json:"priority"`
+	Match     GroupSlot2PlatformMatchConfig       `yaml:"match" json:"match"`
+	Keywords  GroupSlot2PlatformKeywordsConfig    `yaml:"keywords" json:"keywords"`
+	Whitelist []GroupSlot2PlatformWhitelistConfig `yaml:"platform_whitelist" json:"platform_whitelist"`
+	Output    GroupSlot2PlatformOutputConfig      `yaml:"output" json:"output"`
+}
+
+type GroupSlot2PlatformMatchConfig struct {
+	GroupIn    []string `yaml:"group_in" json:"group_in"`
+	GroupRegex string   `yaml:"group_regex" json:"group_regex"`
+	SlotIndex  int      `yaml:"slot_index" json:"slot_index"`
+}
+
+type GroupSlot2PlatformKeywordsConfig struct {
+	Yue          []string `yaml:"yue" json:"yue"`
+	Distributor  []string `yaml:"distributor" json:"distributor"`
+	LanguageMeta []string `yaml:"language_meta" json:"language_meta"`
+	TrimForInfer []string `yaml:"trim_for_infer" json:"trim_for_infer"`
+}
+
+type GroupSlot2PlatformWhitelistConfig struct {
+	ContainsAny []string `yaml:"contains_any" json:"contains_any"`
+	Normalized  string   `yaml:"normalized" json:"normalized"`
+}
+
+type GroupSlot2PlatformOutputConfig struct {
+	EmitAudioLang             string  `yaml:"emit_audio_lang" json:"emit_audio_lang"`
+	NoteOnDistributor         string  `yaml:"note_on_distributor" json:"note_on_distributor"`
+	InferUnknownPlatform      bool    `yaml:"infer_unknown_platform" json:"infer_unknown_platform"`
+	UnknownPlatformConfidence float64 `yaml:"unknown_platform_confidence" json:"unknown_platform_confidence"`
 }

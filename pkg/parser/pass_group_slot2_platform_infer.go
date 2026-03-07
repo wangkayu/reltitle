@@ -7,32 +7,16 @@ import (
 	"title-parser/pkg/model"
 )
 
-var (
-	reJibaketaGroup             = regexp.MustCompile(`(?i)^jibaketa`)
-	reYueToken                  = regexp.MustCompile(`(?i)(粤语|粵語|cantonese)`)
-	reDistributorToken          = regexp.MustCompile(`(?i)(代理商|發行商|发行商)`)
-	reLanguageMetaToken         = regexp.MustCompile(`(?i)(雙語|双语|字幕|內封|内封|中字|中文|繁體|简体|簡體|ch[st]|jpn|eng|\\+)`)
-	reTrimYueSuffix             = regexp.MustCompile(`(?i)(粤语|粵語|cantonese)`)
-	reCompactPlatformCharFilter = regexp.MustCompile(`(?i)[^a-z0-9\\p{Han}]`)
-)
+var reGroupSlot2PlatformCompactFilter = regexp.MustCompile(`(?i)[^a-z0-9\p{Han}]`)
 
 func passGroupSlot2PlatformInfer(tokens []model.Token, attrs *[]model.Attribute, ctx *parseContext) {
-	if attrs == nil || ctx == nil {
+	if attrs == nil || ctx == nil || len(ctx.GroupSlot2Rules) == 0 {
 		return
 	}
-	g := strings.TrimSpace(ctx.Group)
-	if g == "" || !reJibaketaGroup.MatchString(strings.ToLower(g)) {
+	groupLower := strings.ToLower(strings.TrimSpace(ctx.Group))
+	if groupLower == "" {
 		return
 	}
-
-	slot2 := extractSecondBracketSlot(ctx.RawTitle)
-	if slot2 == "" {
-		return
-	}
-
-	slotLower := strings.ToLower(slot2)
-	hasYue := reYueToken.MatchString(slot2)
-
 	addAttr := func(t model.AttrType, val string, conf float64, src string) {
 		val = strings.TrimSpace(val)
 		if val == "" {
@@ -48,65 +32,101 @@ func passGroupSlot2PlatformInfer(tokens []model.Token, attrs *[]model.Attribute,
 		})
 	}
 
-	if strings.Contains(slotLower, "tvb") {
-		addAttr(model.AttrPlatform, "TVB", 0.9, "group_slot2_platform")
-		if hasYue {
-			addAttr(model.AttrAudioLang, "YUE", 0.9, "group_slot2_platform")
+	for _, r := range ctx.GroupSlot2Rules {
+		if !groupSlot2RuleMatchesGroup(r, groupLower, ctx.Group) {
+			continue
 		}
-		return
-	}
-	if strings.Contains(slotLower, "viutv") {
-		addAttr(model.AttrPlatform, "VIUTV", 0.9, "group_slot2_platform")
-		if hasYue {
-			addAttr(model.AttrAudioLang, "YUE", 0.9, "group_slot2_platform")
+		slotText := extractBracketSlot(ctx.RawTitle, r.slotIndex)
+		if slotText == "" {
+			continue
 		}
-		return
-	}
-	if strings.Contains(slotLower, "hoy") {
-		addAttr(model.AttrPlatform, "HOY", 0.9, "group_slot2_platform")
-		if hasYue {
-			addAttr(model.AttrAudioLang, "YUE", 0.9, "group_slot2_platform")
-		}
-		return
-	}
-	if strings.Contains(slotLower, "rthk") {
-		addAttr(model.AttrPlatform, "RTHK", 0.9, "group_slot2_platform")
-		if hasYue {
-			addAttr(model.AttrAudioLang, "YUE", 0.9, "group_slot2_platform")
-		}
-		return
-	}
+		slotLower := strings.ToLower(slotText)
+		hasYue := containsAnyKeyword(slotLower, r.yueKeywords)
 
-	if hasYue {
-		addAttr(model.AttrAudioLang, "YUE", 0.85, "group_slot2_platform")
-	}
-	if reDistributorToken.MatchString(slot2) {
-		addAttr(model.AttrNote, "CHANNEL_DISTRIBUTOR", 0.75, "group_slot2_platform")
-		return
-	}
-	if !hasYue {
-		return
-	}
-	if reLanguageMetaToken.MatchString(slot2) {
-		return
-	}
+		for _, w := range r.platformWhitelist {
+			if !containsAnyKeyword(slotLower, w.containsAny) {
+				continue
+			}
+			addAttr(model.AttrPlatform, w.normalized, 0.9, "group_slot2_platform")
+			if hasYue {
+				addAttr(model.AttrAudioLang, r.emitAudioLang, 0.9, "group_slot2_platform")
+			}
+			return
+		}
 
-	compact := strings.TrimSpace(reTrimYueSuffix.ReplaceAllString(slot2, ""))
-	compact = strings.TrimSpace(reCompactPlatformCharFilter.ReplaceAllString(compact, ""))
-	if compact == "" {
+		if hasYue {
+			addAttr(model.AttrAudioLang, r.emitAudioLang, 0.85, "group_slot2_platform")
+		}
+		if containsAnyKeyword(slotLower, r.distributorKeywords) {
+			addAttr(model.AttrNote, r.noteOnDistributor, 0.75, "group_slot2_platform")
+			return
+		}
+		if !hasYue {
+			return
+		}
+		if containsAnyKeyword(slotLower, r.languageMetaKeywords) {
+			return
+		}
+		if !r.inferUnknownPlatform {
+			return
+		}
+
+		compact := slotText
+		for _, kw := range r.trimForInfer {
+			if strings.TrimSpace(kw) == "" {
+				continue
+			}
+			re := regexp.MustCompile(`(?i)` + regexp.QuoteMeta(kw))
+			compact = re.ReplaceAllString(compact, "")
+		}
+		compact = strings.TrimSpace(reGroupSlot2PlatformCompactFilter.ReplaceAllString(compact, ""))
+		if compact == "" {
+			return
+		}
+		addAttr(model.AttrPlatform, strings.ToUpper(compact), r.unknownPlatformConfidence, "group_slot2_platform_infer_unknown")
 		return
 	}
-	addAttr(model.AttrPlatform, strings.ToUpper(compact), 0.6, "group_slot2_platform_infer_unknown")
 }
 
-func extractSecondBracketSlot(raw string) string {
+func groupSlot2RuleMatchesGroup(r groupSlot2PlatformRule, groupLower string, groupRaw string) bool {
+	if len(r.groups) > 0 {
+		if _, ok := r.groups[groupLower]; !ok {
+			return false
+		}
+	}
+	if r.groupRegex != nil && !r.groupRegex.MatchString(strings.TrimSpace(groupRaw)) {
+		return false
+	}
+	return true
+}
+
+func containsAnyKeyword(textLower string, keywords []string) bool {
+	if strings.TrimSpace(textLower) == "" || len(keywords) == 0 {
+		return false
+	}
+	for _, kw := range keywords {
+		kk := strings.TrimSpace(strings.ToLower(kw))
+		if kk == "" {
+			continue
+		}
+		if strings.Contains(textLower, kk) {
+			return true
+		}
+	}
+	return false
+}
+
+func extractBracketSlot(raw string, slotIndex int) string {
 	if strings.TrimSpace(raw) == "" {
 		return ""
 	}
+	if slotIndex <= 0 {
+		slotIndex = 2
+	}
 	ms := bracketSegmentPattern.FindAllStringSubmatch(raw, -1)
-	if len(ms) < 2 {
+	if len(ms) < slotIndex {
 		return ""
 	}
-	return strings.TrimSpace(ms[1][1])
+	return strings.TrimSpace(ms[slotIndex-1][1])
 }
 

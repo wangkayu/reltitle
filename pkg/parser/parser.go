@@ -23,6 +23,7 @@ type Parser struct {
 	aliasNoisePatterns    []*regexp.Regexp
 	notePromotionRules    []notePromotionRule
 	groupRouteRules       []groupRouteRule
+	groupSlot2Rules       []groupSlot2PlatformRule
 	sourceTypeCanonical   map[string]string
 	platformCanonical     map[string]string
 	videoCodecCanonical   map[string]string
@@ -56,6 +57,28 @@ type groupRouteRule struct {
 	forceTemplateID         string
 	forceContentKind        string
 	forceRouteID            string
+}
+
+type groupSlot2PlatformRule struct {
+	id                        string
+	priority                  int
+	groups                    map[string]struct{}
+	groupRegex                *regexp.Regexp
+	slotIndex                 int
+	yueKeywords               []string
+	distributorKeywords       []string
+	languageMetaKeywords      []string
+	trimForInfer              []string
+	platformWhitelist         []groupSlot2PlatformWhitelist
+	emitAudioLang             string
+	noteOnDistributor         string
+	inferUnknownPlatform      bool
+	unknownPlatformConfidence float64
+}
+
+type groupSlot2PlatformWhitelist struct {
+	containsAny []string
+	normalized  string
 }
 
 var wxhResolutionPattern = regexp.MustCompile(`(?i)^(\d{2,5})\s*[x×X]\s*(\d{2,5})$`)
@@ -783,6 +806,101 @@ func New(cfg *config.Config) *Parser {
 		return p.groupRouteRules[i].priority > p.groupRouteRules[j].priority
 	})
 
+	for _, r := range cfg.GroupSlot2Platform.Rules {
+		if !r.Enabled {
+			continue
+		}
+		id := strings.TrimSpace(r.ID)
+		if id == "" {
+			continue
+		}
+		groupSet := make(map[string]struct{}, len(r.Match.GroupIn))
+		for _, g := range r.Match.GroupIn {
+			gg := strings.ToLower(strings.TrimSpace(g))
+			if gg == "" {
+				continue
+			}
+			groupSet[gg] = struct{}{}
+		}
+		var groupRegex *regexp.Regexp
+		if ss := strings.TrimSpace(r.Match.GroupRegex); ss != "" {
+			if re, err := regexp.Compile(ss); err == nil {
+				groupRegex = re
+			}
+		}
+		slotIndex := r.Match.SlotIndex
+		if slotIndex <= 0 {
+			slotIndex = 2
+		}
+		toLowerList := func(in []string) []string {
+			out := make([]string, 0, len(in))
+			for _, s := range in {
+				ss := strings.ToLower(strings.TrimSpace(s))
+				if ss == "" {
+					continue
+				}
+				out = append(out, ss)
+			}
+			return out
+		}
+		yueKeywords := toLowerList(r.Keywords.Yue)
+		distributorKeywords := toLowerList(r.Keywords.Distributor)
+		languageMetaKeywords := toLowerList(r.Keywords.LanguageMeta)
+		trimForInfer := toLowerList(r.Keywords.TrimForInfer)
+		if len(yueKeywords) == 0 {
+			yueKeywords = []string{"粤语", "粵語", "cantonese"}
+		}
+		if len(distributorKeywords) == 0 {
+			distributorKeywords = []string{"代理商", "發行商", "发行商"}
+		}
+		platformWhitelist := make([]groupSlot2PlatformWhitelist, 0, len(r.Whitelist))
+		for _, w := range r.Whitelist {
+			norm := strings.TrimSpace(w.Normalized)
+			if norm == "" {
+				continue
+			}
+			containsAny := toLowerList(w.ContainsAny)
+			if len(containsAny) == 0 {
+				continue
+			}
+			platformWhitelist = append(platformWhitelist, groupSlot2PlatformWhitelist{
+				containsAny: containsAny,
+				normalized:  norm,
+			})
+		}
+		emitAudioLang := strings.TrimSpace(r.Output.EmitAudioLang)
+		if emitAudioLang == "" {
+			emitAudioLang = "YUE"
+		}
+		noteOnDistributor := strings.TrimSpace(r.Output.NoteOnDistributor)
+		if noteOnDistributor == "" {
+			noteOnDistributor = "CHANNEL_DISTRIBUTOR"
+		}
+		unknownConf := r.Output.UnknownPlatformConfidence
+		if unknownConf <= 0 {
+			unknownConf = 0.6
+		}
+		p.groupSlot2Rules = append(p.groupSlot2Rules, groupSlot2PlatformRule{
+			id:                        id,
+			priority:                  r.Priority,
+			groups:                    groupSet,
+			groupRegex:                groupRegex,
+			slotIndex:                 slotIndex,
+			yueKeywords:               yueKeywords,
+			distributorKeywords:       distributorKeywords,
+			languageMetaKeywords:      languageMetaKeywords,
+			trimForInfer:              trimForInfer,
+			platformWhitelist:         platformWhitelist,
+			emitAudioLang:             emitAudioLang,
+			noteOnDistributor:         noteOnDistributor,
+			inferUnknownPlatform:      r.Output.InferUnknownPlatform,
+			unknownPlatformConfidence: unknownConf,
+		})
+	}
+	sort.SliceStable(p.groupSlot2Rules, func(i, j int) bool {
+		return p.groupSlot2Rules[i].priority > p.groupSlot2Rules[j].priority
+	})
+
 	return p
 }
 
@@ -1063,6 +1181,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	packKind := detectPackKind(p.cfg, rawTitle)
 	ctx := newParseContext(rawTitle, packKind, tailParenBlock)
 	ctx.AliasValidFunc = p.isValidAliasToken
+	ctx.GroupSlot2Rules = p.groupSlot2Rules
 	ctx.SeasonRange = seasonRange
 	ctx.Group = group
 	for _, pass := range defaultParsePasses() {

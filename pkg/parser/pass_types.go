@@ -6,6 +6,7 @@ type parseContext struct {
 	RawTitle       string
 	Group          string
 	AliasValidFunc func(string) bool
+	GroupSlot2Rules []groupSlot2PlatformRule
 
 	PackKind       string
 	TailParenBlock string

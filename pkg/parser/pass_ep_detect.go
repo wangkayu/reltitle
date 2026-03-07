@@ -121,6 +121,19 @@ func passDetectSeasonSPMovie(tokens []model.Token, attrs *[]model.Attribute, ctx
 	ctx.MovieIndex, ctx.MovieIndexIdx, ctx.HasMovieKeyword = detectMovieIndexAndKeyword(tokens)
 	if attrs != nil {
 		ctx.HasMovieKeyword = ctx.HasMovieKeyword || detectMovieKeywordFromAttrs(*attrs)
+		if strings.TrimSpace(ctx.MovieIndex) == "" {
+			if mi, idx := detectMovieIndexFromAttrs(*attrs); strings.TrimSpace(mi) != "" {
+				ctx.MovieIndex = strings.TrimSpace(mi)
+				ctx.MovieIndexIdx = idx
+				ctx.HasMovieKeyword = true
+			}
+		}
+	}
+	if strings.TrimSpace(ctx.MovieIndex) == "" && ctx.HasMovieKeyword {
+		if mi, idx := detectMovieShortIndexWithContext(tokens); strings.TrimSpace(mi) != "" {
+			ctx.MovieIndex = strings.TrimSpace(mi)
+			ctx.MovieIndexIdx = idx
+		}
 	}
 	if ctx.MovieIndex != "" && ctx.MovieIndexIdx >= 0 {
 		removeMovieIndexTokens(tokens, ctx.MovieIndexIdx)
@@ -148,6 +161,61 @@ func detectMovieKeywordFromAttrs(attrs []model.Attribute) bool {
 		}
 	}
 	return false
+}
+
+func detectMovieIndexFromAttrs(attrs []model.Attribute) (string, int) {
+	best := ""
+	bestIdx := -1
+	bestConf := -1.0
+	for _, a := range attrs {
+		if a.Type != model.AttrMovieIndex {
+			continue
+		}
+		v := strings.TrimSpace(a.Normalized)
+		if v == "" {
+			continue
+		}
+		if a.Confidence > bestConf {
+			bestConf = a.Confidence
+			best = v
+			bestIdx = a.TokenStart
+		}
+	}
+	return best, bestIdx
+}
+
+func detectMovieShortIndexWithContext(tokens []model.Token) (string, int) {
+	for i := 0; i < len(tokens); i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		text := strings.TrimSpace(tokens[i].Text)
+		m := movieShortIndexPattern.FindStringSubmatch(text)
+		if len(m) != 2 {
+			continue
+		}
+		// Exclude range/list forms like M1-M4 / M1+M2.
+		if i+2 < len(tokens) {
+			sep := strings.TrimSpace(tokens[i+1].Text)
+			right := strings.TrimSpace(tokens[i+2].Text)
+			if (sep == "-" || sep == "~" || sep == "+" || sep == "＋") && movieShortIndexPattern.MatchString(right) {
+				continue
+			}
+		}
+		if i-2 >= 0 {
+			left := strings.TrimSpace(tokens[i-2].Text)
+			sep := strings.TrimSpace(tokens[i-1].Text)
+			if (sep == "-" || sep == "~" || sep == "+" || sep == "＋") && movieShortIndexPattern.MatchString(left) {
+				continue
+			}
+		}
+		v := strings.TrimLeft(strings.TrimSpace(m[1]), "0")
+		if v == "" {
+			v = "0"
+		}
+		return v, i
+	}
+	return "", -1
 }
 
 func passDetectEpisodeRangeAndEpisode(tokens []model.Token, attrs *[]model.Attribute, ctx *parseContext) {

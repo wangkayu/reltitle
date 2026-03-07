@@ -7,6 +7,9 @@ import (
 	"title-parser/pkg/model"
 )
 
+var bracketStandaloneMIndexPattern = regexp.MustCompile(`(?i)^m0*(\d{1,3})$`)
+var bracketStandaloneMovieIndexPattern = regexp.MustCompile(`(?i)^movie\s*0*(\d{1,3})$`)
+
 func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Attribute, aliasValid func(string) bool) (string, []string, int, int) {
 	if len(tokens) == 0 {
 		return "", nil, -1, -1
@@ -76,6 +79,31 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 		s = regexp.MustCompile(`\b(\d{1,4})\s*-\s*(\d{1,4})\b`).ReplaceAllString(s, "$1-$2")
 		s = regexp.MustCompile(`\s+`).ReplaceAllString(s, " ")
 		return strings.TrimSpace(s)
+	}
+
+	parseStandaloneMovieIndex := func(s string) (string, bool) {
+		s = strings.TrimSpace(s)
+		if s == "" {
+			return "", false
+		}
+		if strings.ContainsAny(s, "+-/~") {
+			return "", false
+		}
+		if m := bracketStandaloneMIndexPattern.FindStringSubmatch(s); len(m) == 2 {
+			n := strings.TrimLeft(strings.TrimSpace(m[1]), "0")
+			if n == "" {
+				n = "0"
+			}
+			return n, true
+		}
+		if m := bracketStandaloneMovieIndexPattern.FindStringSubmatch(s); len(m) == 2 {
+			n := strings.TrimLeft(strings.TrimSpace(m[1]), "0")
+			if n == "" {
+				n = "0"
+			}
+			return n, true
+		}
+		return "", false
 	}
 
 	containsEpisodeMarker := func(s string) bool {
@@ -462,6 +490,25 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 		compactSP := regexp.MustCompile(`[^0-9A-Za-z]+`).ReplaceAllString(inner, "")
 		if compactSP != "" {
 			if m := spKindPattern.FindStringSubmatch(compactSP); len(m) >= 2 {
+				i = end
+				continue
+			}
+		}
+		if mi, ok := parseStandaloneMovieIndex(inner); ok {
+			// [M21] / [Movie 21] after title blocks should be treated as movie_index.
+			// Keep title/alias extraction deterministic and avoid leaking Mxx as alias.
+			if len(blocks) > 0 {
+				*attrs = append(*attrs, model.Attribute{
+					Type:       model.AttrMovieIndex,
+					Normalized: mi,
+					TokenStart: i + 1,
+					TokenEnd:   end,
+					Confidence: 0.8,
+					Source:     "bracket_m_index",
+				})
+				for k := i; k <= end && k >= 0 && k < len(tokens); k++ {
+					tokens[k].Removed = true
+				}
 				i = end
 				continue
 			}

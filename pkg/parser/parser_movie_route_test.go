@@ -314,3 +314,59 @@ func TestParserMovieRoute_MShortIndexWithoutMovieContextIgnored(t *testing.T) {
 		t.Fatalf("episode=%q want=%q", got, "3")
 	}
 }
+
+func TestParserMovieRoute_BracketMIndexExtractedFromRealSample(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[LDP-Embed][名侦探柯南•唐红的恋歌][M21][BDRIP][1080P][CHS][台日双轨].mkv"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := firstAttrValue(res, model.AttrMovieIndex); got != "21" {
+		t.Fatalf("movie_index=%q want=%q", got, "21")
+	}
+	for _, a := range canonicalAliases(res) {
+		if strings.EqualFold(strings.TrimSpace(a), "M21") {
+			t.Fatalf("alias should not keep standalone movie index block, aliases=%v", canonicalAliases(res))
+		}
+	}
+}
+
+func TestParserMovieRoute_InlineMIndexWithMovieContextExtracted(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[银色子弹字幕组&VCB-Studio] 名侦探柯南 M24 绯色的子弹 / Detective Conan The Scarlet Bullet 10-bit 1080p HEVC BDRip [MOVIE]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := firstAttrValue(res, model.AttrMovieIndex); got != "24" {
+		t.Fatalf("movie_index=%q want=%q", got, "24")
+	}
+}
+
+func TestParserMovieRoute_TitleMNumberNotMovieIndex(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[VCB-Studio] M3 ~黑钢~ / M3 Sono Kuroki Hagane / M3〜ソノ黒キ鋼〜 10-bit 1080p HEVC BDRip [Fin]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := firstAttrValue(res, model.AttrMovieIndex); got != "" {
+		t.Fatalf("movie_index=%q want empty", got)
+	}
+}

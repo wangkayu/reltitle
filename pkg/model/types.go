@@ -37,12 +37,13 @@ type EPSlot struct {
 // stable, so we can support composite epslot without encoding semantics into
 // Attribute.Normalized strings.
 type EPEntity struct {
-	Kind         string `json:"kind,omitempty"` // EP | RANGE | SP
+	Kind         string `json:"kind,omitempty"` // EP | EP_LIST | RANGE | SP
 	Axis         string `json:"axis,omitempty"` // SE | ABS | TV | OVA | SP | UNKNOWN
 	Season       string `json:"season,omitempty"`
 	Episode      string `json:"episode,omitempty"`
 	EpisodeRange string `json:"episode_range,omitempty"`
-	SPKind       string `json:"sp_kind,omitempty"` // OVA/OAD/ONA/EX/SP
+	EpisodeList  string `json:"episode_list,omitempty"` // comma-separated list, e.g. "804,805"
+	SPKind       string `json:"sp_kind,omitempty"`      // OVA/OAD/ONA/EX/SP
 	TokenStart   int    `json:"token_start,omitempty"`
 	TokenEnd     int    `json:"token_end,omitempty"`
 	Source       string `json:"source,omitempty"` // sxxexx/episode/episode_range/sp_kind/etc
@@ -68,6 +69,7 @@ const (
 	AttrSearchHint   AttrType = "search_hint"
 	AttrGroup        AttrType = "group"
 	AttrEpisode      AttrType = "episode"
+	AttrEpisodeList  AttrType = "episode_list"
 	AttrEpisodeRange AttrType = "episode_range"
 	AttrSeason       AttrType = "season"
 	AttrSeasonRange  AttrType = "season_range"

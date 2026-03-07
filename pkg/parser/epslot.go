@@ -10,11 +10,11 @@ import (
 
 var taggedRangePattern = regexp.MustCompile(`(?i)^(abs|se|tv|ova|sp)[:_ -]?(\d{1,4}(?:\.\d{1,2})?(?:[-~]\d{1,4}(?:\.\d{1,2})?)?)$`)
 
-func buildEPSlotCandidates(tokens []model.Token, season string, seasonIdx int, episodeFromSxxExx string, sxxExxIdx int, episode string, episodeIdx int, episodeRange string, episodeRangeIdx int, spKind string) *model.EPSlot {
+func buildEPSlotCandidates(tokens []model.Token, season string, seasonIdx int, episodeFromSxxExx string, sxxExxIdx int, episode string, episodeIdx int, episodeRange string, episodeRangeIdx int, episodeList string, episodeListIdx int, spKind string) *model.EPSlot {
 	cands := make([]model.EPEntity, 0, 8)
 	seen := map[string]bool{}
 	add := func(e model.EPEntity) {
-		k := strings.TrimSpace(e.Kind) + "|" + strings.TrimSpace(e.Axis) + "|" + strings.TrimSpace(e.Season) + "|" + strings.TrimSpace(e.Episode) + "|" + strings.TrimSpace(e.EpisodeRange) + "|" + strings.TrimSpace(e.SPKind) + "|" + strconv.Itoa(e.TokenStart) + ":" + strconv.Itoa(e.TokenEnd)
+		k := strings.TrimSpace(e.Kind) + "|" + strings.TrimSpace(e.Axis) + "|" + strings.TrimSpace(e.Season) + "|" + strings.TrimSpace(e.Episode) + "|" + strings.TrimSpace(e.EpisodeRange) + "|" + strings.TrimSpace(e.EpisodeList) + "|" + strings.TrimSpace(e.SPKind) + "|" + strconv.Itoa(e.TokenStart) + ":" + strconv.Itoa(e.TokenEnd)
 		if seen[k] {
 			return
 		}
@@ -34,6 +34,15 @@ func buildEPSlotCandidates(tokens []model.Token, season string, seasonIdx int, e
 	}
 	if strings.TrimSpace(episodeRange) != "" && episodeRangeIdx >= 0 {
 		add(model.EPEntity{Kind: "RANGE", Axis: axisSE, Season: season, EpisodeRange: episodeRange, TokenStart: episodeRangeIdx, TokenEnd: episodeRangeIdx + 1, Source: "episode_range"})
+	}
+	if strings.TrimSpace(episodeList) != "" && episodeListIdx >= 0 {
+		first := strings.TrimSpace(episode)
+		if first == "" {
+			if parts := strings.Split(strings.TrimSpace(episodeList), ","); len(parts) > 0 {
+				first = strings.TrimSpace(parts[0])
+			}
+		}
+		add(model.EPEntity{Kind: "EP_LIST", Axis: axisSE, Season: season, Episode: first, EpisodeList: strings.TrimSpace(episodeList), TokenStart: episodeListIdx, TokenEnd: episodeListIdx + 1, Source: "episode_list"})
 	}
 	if strings.TrimSpace(spKind) != "" {
 		ax := strings.ToUpper(strings.TrimSpace(spKind))
@@ -158,7 +167,7 @@ func buildEPSlotCandidates(tokens []model.Token, season string, seasonIdx int, e
 	return &model.EPSlot{Candidates: cands}
 }
 
-func finalizeEPSlotPrimary(epslot *model.EPSlot, season string, episode string, episodeRange string, spKind string, episodeIdx int, episodeRangeIdx int, sxxExxIdx int) {
+func finalizeEPSlotPrimary(epslot *model.EPSlot, season string, episode string, episodeRange string, episodeList string, spKind string, episodeIdx int, episodeRangeIdx int, episodeListIdx int, sxxExxIdx int) {
 	if epslot == nil {
 		return
 	}
@@ -187,6 +196,25 @@ func finalizeEPSlotPrimary(epslot *model.EPSlot, season string, episode string, 
 			return
 		}
 		epslot.Primary = &model.EPEntity{Kind: "RANGE", Axis: axisSE, Season: season, EpisodeRange: episodeRange, TokenStart: episodeRangeIdx, TokenEnd: episodeRangeIdx + 1, Source: "episode_range_final"}
+		return
+	}
+	if strings.TrimSpace(episodeList) != "" && episodeListIdx >= 0 {
+		first := strings.TrimSpace(episode)
+		if first == "" {
+			if parts := strings.Split(strings.TrimSpace(episodeList), ","); len(parts) > 0 {
+				first = strings.TrimSpace(parts[0])
+			}
+		}
+		epslot.Primary = &model.EPEntity{
+			Kind:        "EP_LIST",
+			Axis:        axisSE,
+			Season:      season,
+			Episode:     first,
+			EpisodeList: strings.TrimSpace(episodeList),
+			TokenStart:  episodeListIdx,
+			TokenEnd:    episodeListIdx + 1,
+			Source:      "episode_list_final",
+		}
 		return
 	}
 	if strings.TrimSpace(episode) != "" && episodeIdx >= 0 {

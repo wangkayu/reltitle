@@ -91,6 +91,10 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 		if regexp.MustCompile(`(?i)^0?\d{1,4}\s*[-~]\s*0?\d{1,4}(?:\.\d{1,2})?.*$`).MatchString(s) {
 			return true
 		}
+		// Multi-episode list forms: "804&805", "07+08".
+		if regexp.MustCompile(`(?i)^\d{1,4}(?:\s*(?:&|＆|\+|＋|/|／|,|，|、)\s*\d{1,4})+$`).MatchString(s) {
+			return true
+		}
 		// Any embedded episode marker like "第687集" (even with extra words) should be kept
 		// for episode detection and should not be used as main title/alias.
 		if regexp.MustCompile(`第\d{1,4}(?:集|话|話)`).FindStringIndex(s) != nil {
@@ -149,6 +153,9 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 			return false
 		}
 		if regexp.MustCompile(`(?i)^0?\d{1,4}\s*(?:end|fin|final)$`).MatchString(s) {
+			return true
+		}
+		if regexp.MustCompile(`(?i)^\d{1,4}(?:\s*(?:&|＆|\+|＋|/|／|,|，|、)\s*\d{1,4})+$`).MatchString(s) {
 			return true
 		}
 		// Composite EP + special index like "07+ES07" / "07 + ES07".

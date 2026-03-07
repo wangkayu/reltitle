@@ -1052,6 +1052,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	hasMovieKeyword := ctx.HasMovieKeyword
 	episodeRange := ctx.EpisodeRange
 	episodeRangeIdx := ctx.EpisodeRangeIdx
+	episodeList := ctx.EpisodeList
 	episode := ctx.Episode
 	episodeIdx := ctx.EpisodeIdx
 	epslot := ctx.EPSlot
@@ -1065,13 +1066,16 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 			// Keep range empty when overriding a single episode.
 			episodeRange = ""
 			episodeRangeIdx = -1
+			episodeList = ""
 			ctx.Episode = episode
 			ctx.EpisodeIdx = episodeIdx
 			ctx.EpisodeRange = ""
 			ctx.EpisodeRangeIdx = -1
+			ctx.EpisodeList = ""
+			ctx.EpisodeListIdx = -1
 			// Rebuild EPSlot for consistency.
-			ctx.EPSlot = buildEPSlotCandidates(tokens, ctx.Season, ctx.SeasonIdx, ctx.EpisodeFromSxxExx, ctx.SxxExxIdx, ctx.Episode, ctx.EpisodeIdx, ctx.EpisodeRange, ctx.EpisodeRangeIdx, ctx.SPKind)
-			finalizeEPSlotPrimary(ctx.EPSlot, ctx.Season, ctx.Episode, ctx.EpisodeRange, ctx.SPKind, ctx.EpisodeIdx, ctx.EpisodeRangeIdx, ctx.SxxExxIdx)
+			ctx.EPSlot = buildEPSlotCandidates(tokens, ctx.Season, ctx.SeasonIdx, ctx.EpisodeFromSxxExx, ctx.SxxExxIdx, ctx.Episode, ctx.EpisodeIdx, ctx.EpisodeRange, ctx.EpisodeRangeIdx, ctx.EpisodeList, ctx.EpisodeListIdx, ctx.SPKind)
+			finalizeEPSlotPrimary(ctx.EPSlot, ctx.Season, ctx.Episode, ctx.EpisodeRange, ctx.EpisodeList, ctx.SPKind, ctx.EpisodeIdx, ctx.EpisodeRangeIdx, ctx.EpisodeListIdx, ctx.SxxExxIdx)
 			epslot = ctx.EPSlot
 		}
 		if hints.OverrideTitleStart >= 0 && hints.OverrideTitleEnd > hints.OverrideTitleStart {
@@ -1405,6 +1409,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	attrs = upsertTitleAttribute(attrs, title, "canonical")
 	attrs = upsertGroupAttribute(attrs, group, "canonical")
 	attrs = upsertScalarAttribute(attrs, model.AttrEpisode, episode, "canonical")
+	attrs = upsertScalarAttribute(attrs, model.AttrEpisodeList, episodeList, "canonical")
 	attrs = upsertScalarAttribute(attrs, model.AttrEpisodeRange, episodeRange, "canonical")
 	attrs = upsertScalarAttribute(attrs, model.AttrSeason, season, "canonical")
 	attrs = upsertScalarAttribute(attrs, model.AttrSeasonRange, seasonRange, "canonical")

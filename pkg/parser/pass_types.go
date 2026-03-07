@@ -26,6 +26,8 @@ type parseContext struct {
 
 	EpisodeRange    string
 	EpisodeRangeIdx int
+	EpisodeList     string
+	EpisodeListIdx  int
 
 	Episode           string
 	EpisodeIdx        int
@@ -54,6 +56,7 @@ func newParseContext(rawTitle string, packKind string, tailParenBlock string) *p
 		MovieIndexIdx:     -1,
 		EpisodeIdx:        -1,
 		EpisodeRangeIdx:   -1,
+		EpisodeListIdx:    -1,
 		EpisodeVersionIdx: -1,
 	}
 }

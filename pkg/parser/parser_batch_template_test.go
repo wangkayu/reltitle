@@ -279,3 +279,38 @@ func TestParserBatchTemplateRangePack_TVQuanJiWithExtrasStillKeepsRange(t *testi
 		t.Fatalf("pack_kind=%q want=%q", got, "全集")
 	}
 }
+
+func TestParserEpisodeList_ConanDoubleEpisodeBracket(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[DBD-Raws][名侦探柯南/Detective Conan/名探偵コナン][804&805][柯南与海老藏 歌舞伎十八番之谜/コナンと海老蔵 歌舞伎十八番ミステリー][1080P][BDRip][HEVC-10bit][FLAC][MKV]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "TV_EP" {
+		t.Fatalf("content_kind=%q want=%q", got, "TV_EP")
+	}
+	if got := canonicalEpisode(res); got != "804" {
+		t.Fatalf("episode=%q want=%q", got, "804")
+	}
+	if got := firstAttrValue(res, model.AttrEpisodeList); got != "804,805" {
+		t.Fatalf("episode_list=%q want=%q", got, "804,805")
+	}
+	if got := firstAttrValue(res, model.AttrEpisodeRange); got != "" {
+		t.Fatalf("episode_range=%q want empty", got)
+	}
+	if res.EPSlot == nil || res.EPSlot.Primary == nil {
+		t.Fatalf("epslot.primary should exist")
+	}
+	if got := strings.ToUpper(strings.TrimSpace(res.EPSlot.Primary.Kind)); got != "EP_LIST" {
+		t.Fatalf("epslot.primary.kind=%q want=%q", got, "EP_LIST")
+	}
+	if got := strings.TrimSpace(res.EPSlot.Primary.EpisodeList); got != "804,805" {
+		t.Fatalf("epslot.primary.episode_list=%q want=%q", got, "804,805")
+	}
+}

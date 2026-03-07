@@ -2,6 +2,7 @@ package parser
 
 import (
 	"regexp"
+	"strconv"
 	"strings"
 
 	"title-parser/pkg/model"
@@ -11,6 +12,8 @@ var specialIndexTokenPattern = regexp.MustCompile(`(?i)^(es|sp|ova|oad|ona|ex)0*
 var episodePlusSpecialPattern = regexp.MustCompile(`(?i)^(\d{1,4})\s*\+\s*(es|sp|ova|oad|ona|ex)0*(\d{1,3})$`)
 var summarySpecialPattern = regexp.MustCompile(`^(总集篇)0*(\d{1,3})[_-](\d{1,4}(?:\.\d{1,2})?)$`)
 var summarySpecialLeadPattern = regexp.MustCompile(`^(总集篇)0*(\d{1,3})$`)
+var episodeListPattern = regexp.MustCompile(`(?i)^\s*\d{1,4}(?:\s*(?:&|＆|\+|＋|/|／|,|，|、)\s*\d{1,4})+\s*$`)
+var episodeListDigitsPattern = regexp.MustCompile(`\d{1,4}`)
 
 func detectSeasonFromAttrs(attrs []model.Attribute) (season string, tokenIdx int) {
 	bestIdx := -1
@@ -269,7 +272,33 @@ func passDetectEpisodeRangeAndEpisode(tokens []model.Token, attrs *[]model.Attri
 		ctx.EpisodeRange = taggedRange
 		ctx.EpisodeRangeIdx = taggedRangeIdx
 	}
-	ctx.Episode, ctx.EpisodeIdx, ctx.EpisodeVersion, ctx.EpisodeVersionIdx = detectEpisodeWithVersion(tokens)
+	ctx.EpisodeList = ""
+	ctx.EpisodeListIdx = -1
+	ctx.Episode = ""
+	ctx.EpisodeIdx = -1
+	ctx.EpisodeVersion = ""
+	ctx.EpisodeVersionIdx = -1
+	if strings.TrimSpace(ctx.EpisodeRange) == "" {
+		if epList, firstEp, idx := detectEpisodeList(tokens); epList != "" && idx >= 0 {
+			ctx.EpisodeList = epList
+			ctx.EpisodeListIdx = idx
+			ctx.Episode = firstEp
+			ctx.EpisodeIdx = idx
+			if attrs != nil {
+				*attrs = append(*attrs, model.Attribute{
+					Type:       model.AttrEpisodeList,
+					Normalized: epList,
+					TokenStart: idx,
+					TokenEnd:   idx + 1,
+					Confidence: 0.75,
+					Source:     "episode_list",
+				})
+			}
+		}
+	}
+	if strings.TrimSpace(ctx.Episode) == "" || ctx.EpisodeIdx < 0 {
+		ctx.Episode, ctx.EpisodeIdx, ctx.EpisodeVersion, ctx.EpisodeVersionIdx = detectEpisodeWithVersion(tokens)
+	}
 	if attrs != nil && ctx.EpisodeIdx >= 0 && ctx.EpisodeIdx < len(tokens) {
 		if m := episodeEndSuffixPattern.FindStringSubmatch(strings.TrimSpace(tokens[ctx.EpisodeIdx].Text)); len(m) == 3 {
 			flag := strings.ToUpper(strings.TrimSpace(m[2]))
@@ -349,18 +378,81 @@ func passDetectEpisodeRangeAndEpisode(tokens []model.Token, attrs *[]model.Attri
 			}
 		}
 	}
-	ctx.EPSlot = buildEPSlotCandidates(tokens, ctx.Season, ctx.SeasonIdx, ctx.EpisodeFromSxxExx, ctx.SxxExxIdx, ctx.Episode, ctx.EpisodeIdx, ctx.EpisodeRange, ctx.EpisodeRangeIdx, ctx.SPKind)
+	ctx.EPSlot = buildEPSlotCandidates(tokens, ctx.Season, ctx.SeasonIdx, ctx.EpisodeFromSxxExx, ctx.SxxExxIdx, ctx.Episode, ctx.EpisodeIdx, ctx.EpisodeRange, ctx.EpisodeRangeIdx, ctx.EpisodeList, ctx.EpisodeListIdx, ctx.SPKind)
 	if ctx.EpisodeRangeIdx >= 0 && ctx.EpisodeRange != "" {
 		ctx.Episode = ""
 		ctx.EpisodeIdx = -1
 		ctx.EpisodeVersion = ""
 		ctx.EpisodeVersionIdx = -1
+		ctx.EpisodeList = ""
+		ctx.EpisodeListIdx = -1
 	}
 	if ctx.EpisodeFromSxxExx != "" {
 		ctx.Episode = ctx.EpisodeFromSxxExx
 		ctx.EpisodeIdx = ctx.SxxExxIdx
 		ctx.EpisodeVersion = ""
 		ctx.EpisodeVersionIdx = -1
+		ctx.EpisodeList = ""
+		ctx.EpisodeListIdx = -1
 	}
-	finalizeEPSlotPrimary(ctx.EPSlot, ctx.Season, ctx.Episode, ctx.EpisodeRange, ctx.SPKind, ctx.EpisodeIdx, ctx.EpisodeRangeIdx, ctx.SxxExxIdx)
+	finalizeEPSlotPrimary(ctx.EPSlot, ctx.Season, ctx.Episode, ctx.EpisodeRange, ctx.EpisodeList, ctx.SPKind, ctx.EpisodeIdx, ctx.EpisodeRangeIdx, ctx.EpisodeListIdx, ctx.SxxExxIdx)
+}
+
+func detectEpisodeList(tokens []model.Token) (episodeList string, firstEpisode string, tokenIdx int) {
+	parseEpisodeListText := func(s string) (string, string, bool) {
+		txt := strings.TrimSpace(s)
+		if txt == "" || !episodeListPattern.MatchString(txt) {
+			return "", "", false
+		}
+		rawNums := episodeListDigitsPattern.FindAllString(txt, -1)
+		if len(rawNums) < 2 {
+			return "", "", false
+		}
+		nums := make([]string, 0, len(rawNums))
+		allYearLike := true
+		for _, rn := range rawNums {
+			nn := strings.TrimLeft(strings.TrimSpace(rn), "0")
+			if nn == "" {
+				nn = "0"
+			}
+			nums = append(nums, nn)
+			nv, err := strconv.Atoi(nn)
+			if err != nil || nv < 1900 || nv > 2099 {
+				allYearLike = false
+			}
+		}
+		if allYearLike {
+			return "", "", false
+		}
+		return strings.Join(nums, ","), nums[0], true
+	}
+
+	for i := 0; i < len(tokens); i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		if isInParen(tokens, i) {
+			continue
+		}
+		if list, first, ok := parseEpisodeListText(tokens[i].Text); ok {
+			return list, first, i
+		}
+		if !isInBracket(tokens, i) {
+			continue
+		}
+		openIdx, closeIdx, ok := bracketBoundsAt(tokens, i)
+		if !ok {
+			continue
+		}
+		firstIdx, _ := firstMeaningfulTokenInRange(tokens, openIdx+1, closeIdx)
+		if firstIdx != i {
+			continue
+		}
+		if inner := bracketBlockInnerText(tokens, i); inner != "" {
+			if list, first, ok := parseEpisodeListText(inner); ok {
+				return list, first, i
+			}
+		}
+	}
+	return "", "", -1
 }

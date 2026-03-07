@@ -2973,7 +2973,14 @@ func (p *Parser) isAliasMetaOnlyToken(s string) bool {
 		return false
 	}
 	switch ss {
-	case "tv", "audio", "sub", "subs":
+	case "tv", "audio", "sub", "subs", "srt", "ass", "pgs", "mkv", "mp4", "avi":
+		return true
+	}
+	if reAliasResolutionToken.MatchString(ss) ||
+		reAliasResolutionMetaPhrase.MatchString(ss) ||
+		reAliasSourceResolutionPhrase.MatchString(ss) ||
+		reAliasSourceMetaPhrase.MatchString(ss) ||
+		reAliasSubtitleMetaPhrase.MatchString(ss) {
 		return true
 	}
 	if p == nil {
@@ -3168,6 +3175,11 @@ var reAliasTrimSeasonWordTail = regexp.MustCompile(`(?i)\s+(?:season|saison)\s*$
 var reAliasTrimEpisodeWordTail = regexp.MustCompile(`(?i)\s+(?:ep|episode)\s*$`)
 var reAliasTVContentPhrase = regexp.MustCompile(`(?i)\btv\b.*(?:season|series|ver(?:sion)?|reproduction|release|ova|oad|ona|movie|sp|s\d{1,2}|剪辑版|剪輯版|版|系列)`)
 var reAliasMovieIndexSingle = regexp.MustCompile(`(?i)^m\d{1,3}$`)
+var reAliasResolutionToken = regexp.MustCompile(`(?i)^(?:\d{3,4}p|[248]k|fhd|uhd|hd|sd)$`)
+var reAliasResolutionMetaPhrase = regexp.MustCompile(`(?i)^(?:[248]k|fhd|uhd|hd|sd)(?:\s*(?:ver(?:sion)?|reproduction|restore(?:d)?|remaster(?:ed)?|upscal(?:e|ed)|收藏级画质|收藏級畫質|修复版|修復版|畫質|画质))?$`)
+var reAliasSourceResolutionPhrase = regexp.MustCompile(`(?i)^(?:ld|jdvd|dvd|bd|bdrip|webrip|web[- ]?dl)\s+\d{3,4}p$`)
+var reAliasSourceMetaPhrase = regexp.MustCompile(`(?i)^(?:b[-_ ]?)?(?:j[-_ ]?dvd|dvd|bd|bdrip|bluray|blu[-_ ]?ray|webrip|web[-_ ]?dl)(?:\s+raw)?$`)
+var reAliasSubtitleMetaPhrase = regexp.MustCompile(`(?i)^(?:srt|ass|pgs)(?:\b|[\s\-_/+].*)$`)
 var reAliasTrailingEpisodeTail = regexp.MustCompile(`(?i)^(.*?)(?:\s*[-:：]\s*0*(\d{1,4}))$`)
 var reTitleTrimTVSeasonTail = regexp.MustCompile(`(?i)\s+(?:tv|tb|тv|тв)\s*[-_ ]?\s*\d{1,3}\s*$`)
 var reTitleTrimTVTail = regexp.MustCompile(`(?i)\s+(?:tv|tb|тv|тв)\s*$`)
@@ -4134,7 +4146,7 @@ func (p *Parser) isValidAliasToken(s string) bool {
 	return true
 }
 
-var reAliasMetaTokenSplit = regexp.MustCompile(`[\s,./+_|&:;()\[\]{}]+`)
+var reAliasMetaTokenSplit = regexp.MustCompile(`[\s,./+_|&:;()\[\]{}-]+`)
 
 func (p *Parser) hasAliasMetaFromDictionary(s string) bool {
 	ss := strings.TrimSpace(strings.ToLower(s))

@@ -129,6 +129,42 @@ func TestParserAliasCleanup_DelicosSlashTitleNotMerged(t *testing.T) {
 	}
 }
 
+func TestParserAliasCleanup_DropsResolutionMetaAliases(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	cases := []string{
+		"(WHIM) Deltora Quest (2007) [480p JDVD] [H265] [Opus 2.0]",
+		"[AI-Raws] 羅小黒戦記 ぼくが選ぶ未来 / 罗小黑战记 / The Legend of Hei [4K Reproduction] [MKV]",
+		"[Moozzi2] Girls Band Cry [ 4K Ver. ]",
+		"[Techmod Raws] Get Ride AMDriver (J-DVD RAW)",
+		"[芝士动物朋友] 盒中之海 [B-WebDl][1716p(4K)+6ch][AVC+EAC3][简英内嵌]",
+		"【合集】[bilibili]处刑少女的生存之道／処刑少女の生きる道[第一季—全][WebRip_1080P_AVC-HiL5+HEVC_MaL5_AAC_MKV][SRT-简繁内挂]",
+	}
+	for _, raw := range cases {
+		res, err := p.Parse(raw)
+		if err != nil {
+			t.Fatalf("parse failed for %q: %v", raw, err)
+		}
+		for _, a := range canonicalAliases(res) {
+			la := strings.ToLower(strings.TrimSpace(a))
+			if strings.Contains(la, "4k") ||
+				strings.Contains(la, "480p") ||
+				strings.Contains(la, "fhd") ||
+				strings.Contains(la, "srt") ||
+				strings.Contains(la, "webdl") ||
+				strings.Contains(la, "webrip") ||
+				strings.Contains(la, "j-dvd") ||
+				strings.Contains(la, "dvd raw") {
+				t.Fatalf("meta alias leaked for %q: %v", raw, canonicalAliases(res))
+			}
+		}
+	}
+}
+
 func TestParserAliasCleanup_BracketTitleFallbackWhenMainTitleEmpty(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

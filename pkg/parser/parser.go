@@ -1217,6 +1217,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	extractGuardedDVDRIPReleaseTagAttrsAndRemoveFromTokens(tokens, &attrs)
 	extractPlatformRegionAttrsAndRemoveFromTokens(tokens, &attrs)
 	version := extractVersionAttrsAndRemoveFromTokens(tokens, &attrs)
+	extractEditionAttrsAndRemoveFromTokens(tokens, &attrs, shouldUseUnderscoreEditionRoute(rawTitle))
 	extractSearchHintIndexAttrsAndRemoveFromTokens(tokens, &attrs)
 	extractSeasonShowTagAttrsAndRemoveFromTokens(tokens, &attrs)
 	p.applyLexicon(tokens, &attrs)
@@ -7340,6 +7341,306 @@ func extractVersionAttrsAndRemoveFromTokens(tokens []model.Token, out *[]model.A
 		}
 	}
 	return best
+}
+
+func extractEditionAttrsAndRemoveFromTokens(tokens []model.Token, out *[]model.Attribute, allowUnderscoreRoute bool) {
+	if out == nil || len(tokens) == 0 {
+		return
+	}
+	extractAudioCommentaryEditionAttrsAndRemoveFromTokens(tokens, out, allowUnderscoreRoute)
+	extractUncensoredEditionAttrsAndRemoveFromTokens(tokens, out)
+	extractDirectorsCutEditionAttrsAndRemoveFromTokens(tokens, out)
+	extractEncodeVerEditionAttrsAndRemoveFromTokens(tokens, out)
+}
+
+func extractAudioCommentaryEditionAttrsAndRemoveFromTokens(tokens []model.Token, out *[]model.Attribute, allowUnderscoreRoute bool) {
+	if out == nil || len(tokens) == 0 {
+		return
+	}
+	for i := 0; i+2 < len(tokens); i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		curNorm := normalizeEditionToken(tokens[i].Text, false)
+		if curNorm != "audio" {
+			// Underscore / hyphen collapsed route is intentionally gated to specific groups
+			// to avoid polluting generic parsing.
+			if !(allowUnderscoreRoute && normalizeEditionToken(tokens[i].Text, true) == "audiocommentary") {
+				continue
+			}
+		}
+
+		j := -1
+		if curNorm == "audio" {
+			j = nextAliveToken(tokens, i+1)
+			if j < 0 {
+				continue
+			}
+			if normalizeEditionToken(tokens[j].Text, false) != "commentary" {
+				if allowUnderscoreRoute {
+					if txt := strings.TrimSpace(tokens[j].Text); txt == "_" || txt == "-" {
+						j2 := nextAliveToken(tokens, j+1)
+						if j2 >= 0 && normalizeEditionToken(tokens[j2].Text, false) == "commentary" {
+							j = j2
+						} else {
+							continue
+						}
+					} else {
+						continue
+					}
+				} else {
+					continue
+				}
+			}
+		} else {
+			// audio_commentary / audio-commentary (group-routed only)
+			j = i
+		}
+
+		k := nextAliveToken(tokens, j+1)
+		if k < 0 {
+			continue
+		}
+		ver := normalizeEditionToken(tokens[k].Text, false)
+		if ver != "ver" && ver != "version" {
+			continue
+		}
+
+		end := k
+		if n := nextAliveToken(tokens, end+1); n >= 0 {
+			norm := strings.TrimSpace(tokens[n].Text)
+			if norm == "." || norm == "~" {
+				end = n
+			}
+		}
+		if n := nextAliveToken(tokens, end+1); n >= 0 {
+			norm := strings.TrimSpace(tokens[n].Text)
+			if norm == "~" {
+				end = n
+			}
+		}
+
+		start := i
+		if i-1 >= 0 {
+			prev := strings.TrimSpace(tokens[i-1].Text)
+			if prev == "~" {
+				start = i - 1
+			}
+		}
+
+		*out = append(*out, model.Attribute{
+			Type:       model.AttrNote,
+			Normalized: "AUDIO_COMMENTARY",
+			TokenStart: i,
+			TokenEnd:   k + 1,
+			Confidence: 0.75,
+			Source:     "edition_token",
+		})
+
+		for idx := start; idx <= end; idx++ {
+			tokens[idx].Removed = true
+		}
+	}
+}
+
+func extractEncodeVerEditionAttrsAndRemoveFromTokens(tokens []model.Token, out *[]model.Attribute) {
+	if out == nil || len(tokens) == 0 {
+		return
+	}
+	for i := 0; i < len(tokens); i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		ver := normalizeEditionToken(tokens[i].Text, false)
+		if ver != "ver" && ver != "version" {
+			continue
+		}
+		if !isInBracket(tokens, i) && !isInParen(tokens, i) {
+			continue
+		}
+		prev := prevAliveToken(tokens, i-1)
+		if prev < 0 {
+			continue
+		}
+		prevNorm := normalizeEditionToken(tokens[prev].Text, true)
+		if !isLikelyEncodeEditionAnchor(prevNorm) {
+			continue
+		}
+		end := i
+		if n := nextAliveToken(tokens, i+1); n >= 0 && strings.TrimSpace(tokens[n].Text) == "." {
+			end = n
+		}
+		*out = append(*out, model.Attribute{
+			Type:       model.AttrNote,
+			Normalized: "ENCODE_VER",
+			TokenStart: i,
+			TokenEnd:   end + 1,
+			Confidence: 0.7,
+			Source:     "edition_token",
+		})
+		for idx := i; idx <= end; idx++ {
+			tokens[idx].Removed = true
+		}
+	}
+}
+
+func extractUncensoredEditionAttrsAndRemoveFromTokens(tokens []model.Token, out *[]model.Attribute) {
+	if out == nil || len(tokens) == 0 {
+		return
+	}
+	for i := 0; i < len(tokens); i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		if compactEditionWord(tokens[i].Text) != "uncensored" {
+			continue
+		}
+		if !isInBracket(tokens, i) && !isInParen(tokens, i) {
+			continue
+		}
+		j := nextAliveToken(tokens, i+1)
+		if j < 0 {
+			continue
+		}
+		ver := normalizeEditionToken(tokens[j].Text, false)
+		if ver != "ver" && ver != "version" {
+			continue
+		}
+		end := j
+		if n := nextAliveToken(tokens, j+1); n >= 0 && strings.TrimSpace(tokens[n].Text) == "." {
+			end = n
+		}
+		*out = append(*out, model.Attribute{
+			Type:       model.AttrNote,
+			Normalized: "UNCENSORED_VER",
+			TokenStart: i,
+			TokenEnd:   end + 1,
+			Confidence: 0.72,
+			Source:     "edition_token",
+		})
+		for k := i; k <= end; k++ {
+			tokens[k].Removed = true
+		}
+	}
+}
+
+func extractDirectorsCutEditionAttrsAndRemoveFromTokens(tokens []model.Token, out *[]model.Attribute) {
+	if out == nil || len(tokens) == 0 {
+		return
+	}
+	for i := 0; i < len(tokens); i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		left := compactEditionWord(tokens[i].Text)
+		if left != "directors" && left != "director" {
+			continue
+		}
+		if !isInBracket(tokens, i) && !isInParen(tokens, i) {
+			continue
+		}
+		j := nextAliveToken(tokens, i+1)
+		if j < 0 {
+			continue
+		}
+		if compactEditionWord(tokens[j].Text) != "cut" {
+			continue
+		}
+		*out = append(*out, model.Attribute{
+			Type:       model.AttrNote,
+			Normalized: "DIRECTORS_CUT",
+			TokenStart: i,
+			TokenEnd:   j + 1,
+			Confidence: 0.72,
+			Source:     "edition_token",
+		})
+		tokens[i].Removed = true
+		tokens[j].Removed = true
+	}
+}
+
+func isLikelyEncodeEditionAnchor(norm string) bool {
+	if norm == "" {
+		return false
+	}
+	switch norm {
+	case "x264", "x265", "h264", "h265", "hevc", "avc", "mpeg2", "av1":
+		return true
+	}
+	if strings.HasSuffix(norm, "bit") {
+		n := strings.TrimSuffix(norm, "bit")
+		return n == "8" || n == "10" || n == "12"
+	}
+	return false
+}
+
+func normalizeEditionToken(raw string, foldConnectors bool) string {
+	s := strings.TrimSpace(raw)
+	s = strings.TrimFunc(s, func(r rune) bool {
+		if unicode.IsLetter(r) || unicode.IsNumber(r) {
+			return false
+		}
+		return true
+	})
+	s = strings.ToLower(s)
+	if foldConnectors {
+		s = strings.ReplaceAll(s, "_", "")
+		s = strings.ReplaceAll(s, "-", "")
+	}
+	return s
+}
+
+func compactEditionWord(raw string) string {
+	s := strings.TrimSpace(strings.ToLower(raw))
+	if s == "" {
+		return ""
+	}
+	var b strings.Builder
+	b.Grow(len(s))
+	for _, r := range s {
+		if unicode.IsLetter(r) || unicode.IsNumber(r) {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
+}
+
+func nextAliveToken(tokens []model.Token, from int) int {
+	for i := from; i < len(tokens); i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		if strings.TrimSpace(tokens[i].Text) == "" {
+			continue
+		}
+		return i
+	}
+	return -1
+}
+
+func prevAliveToken(tokens []model.Token, from int) int {
+	for i := from; i >= 0; i-- {
+		if tokens[i].Removed {
+			continue
+		}
+		txt := strings.TrimSpace(tokens[i].Text)
+		if txt == "" {
+			continue
+		}
+		if txt == "-" || txt == "_" || txt == "/" || txt == "." || txt == "|" || txt == "｜" {
+			continue
+		}
+		return i
+	}
+	return -1
+}
+
+func shouldUseUnderscoreEditionRoute(rawTitle string) bool {
+	toks := tokenize.Tokenize(rawTitle)
+	if len(toks) < 3 || toks[0] != "[" || toks[2] != "]" {
+		return false
+	}
+	return strings.EqualFold(strings.TrimSpace(toks[1]), "shincaps")
 }
 
 // Backward compatible wrapper.

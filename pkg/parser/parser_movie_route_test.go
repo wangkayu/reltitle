@@ -127,6 +127,9 @@ func TestParserMovieRoute_DayIndexDemotedToMovieIndex(t *testing.T) {
 	if got := firstAttrValue(res, model.AttrMovieIndex); got != "1" {
 		t.Fatalf("movie_index=%q want=%q", got, "1")
 	}
+	if got := canonicalTitle(res); strings.HasSuffix(strings.ToLower(strings.TrimSpace(got)), "day 1") {
+		t.Fatalf("title=%q should not keep trailing day-index segment", got)
+	}
 }
 
 func TestParserMovieRoute_SeasonPartTvEpisodeNotDemoted(t *testing.T) {
@@ -249,5 +252,28 @@ func TestParserMovieRoute_MovieDashEpisodeTailNotInTitle(t *testing.T) {
 	}
 	if got := canonicalTitle(res); got == "" || strings.HasSuffix(got, " 01") {
 		t.Fatalf("title=%q should not carry demoted dash-episode tail", got)
+	}
+}
+
+func TestParserMovieRoute_PartIndexTailNotInTitle(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Group] Sample Movie - Part 2 [1080p][WEB][AAC]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "MOVIE" {
+		t.Fatalf("content_kind=%q want=%q", got, "MOVIE")
+	}
+	if got := firstAttrValue(res, model.AttrMovieIndex); got != "2" {
+		t.Fatalf("movie_index=%q want=%q", got, "2")
+	}
+	if got := canonicalTitle(res); strings.HasSuffix(strings.ToLower(strings.TrimSpace(got)), "part 2") {
+		t.Fatalf("title=%q should not keep trailing part-index segment", got)
 	}
 }

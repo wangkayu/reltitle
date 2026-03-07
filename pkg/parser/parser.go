@@ -2222,11 +2222,19 @@ func trimMovieDashEpisodeTailFromTitle(rawTitle string, title string, episode st
 	if strings.TrimSpace(episode) != "" || strings.TrimSpace(movieIndex) == "" {
 		return title
 	}
-	if !movieDashEpisodePattern.MatchString(rawTitle) {
+	hasDashPattern := movieDashEpisodePattern.MatchString(rawTitle)
+	hasPartPattern := moviePartSignalPattern.MatchString(rawTitle)
+	if !hasDashPattern && !hasPartPattern {
 		return title
 	}
 	out := strings.TrimSpace(title)
-	out = regexp.MustCompile(`(?:\s*[-:：]\s*)?0*\d{1,3}\s*$`).ReplaceAllString(out, "")
+	if hasDashPattern {
+		out = regexp.MustCompile(`(?:\s*[-:：]\s*)?0*\d{1,3}\s*$`).ReplaceAllString(out, "")
+	}
+	if hasPartPattern {
+		out = movieTrailingPartIndexPattern.ReplaceAllString(out, "")
+		out = movieTrailingCnPartPattern.ReplaceAllString(out, "")
+	}
 	out = strings.TrimSpace(strings.Trim(out, "-:： "))
 	if out == "" {
 		return title
@@ -8146,6 +8154,8 @@ var moviePartSignalPattern = regexp.MustCompile(`(?i)\b(?:part|day|chapter)\s*[-
 var movieBracketEpisodePattern = regexp.MustCompile(`[\[【(（]\s*0*(\d{1,3})\s*[\]】)）]`)
 var rawMovieTagPattern = regexp.MustCompile(`(?i)[\[【(（]\s*(?:movie|film|電影|电影)\s*[\]】)）]`)
 var movieDashEpisodePattern = regexp.MustCompile(`(?i)\b(?:movie|film)\s*0*\d{1,3}\s*[-:：]\s*0*\d{1,3}\b`)
+var movieTrailingPartIndexPattern = regexp.MustCompile(`(?i)(?:\s*[-:：]\s*)?(?:day|part|chapter)\s*[-:：]?\s*0*\d{1,3}\s*$`)
+var movieTrailingCnPartPattern = regexp.MustCompile(`(?:\s*[-:：]\s*)?第\s*0*\d{1,3}\s*部\s*$`)
 
 func isMovieKeywordText(text string) bool {
 	lt := strings.ToLower(strings.TrimSpace(text))

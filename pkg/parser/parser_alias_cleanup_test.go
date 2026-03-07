@@ -632,6 +632,23 @@ func TestParserEpisodePriority_KeywordEpisodeStillWorks(t *testing.T) {
 	}
 }
 
+func TestParserEpisodePriority_DashBitDepthTokenNotEpisode(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Fansub] Sample Show - 24 Bit Remaster - 01 [1080p][WEB]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalEpisode(res); got != "1" {
+		t.Fatalf("episode=%q want=%q", got, "1")
+	}
+}
+
 func TestParserEpisodeZero_DashZeroStyle(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

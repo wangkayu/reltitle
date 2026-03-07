@@ -555,6 +555,11 @@ func looksLikeLowercaseLatinWordToken(s string) bool {
 	return true
 }
 
+func looksLikeBitDepthWordToken(s string) bool {
+	low := strings.ToLower(strings.TrimSpace(s))
+	return low == "bit" || low == "bits"
+}
+
 func looksLikeAudioCodecTokenSimple(s string) bool {
 	s = strings.TrimSpace(s)
 	if s == "" {
@@ -7078,7 +7083,7 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 						if !inBracket {
 							if i+1 < len(tokens) {
 								nextWord := strings.TrimSpace(tokens[i+1].Text)
-								if !rightBoundary && looksLikeLowercaseLatinWordToken(nextWord) {
+								if !rightBoundary && (looksLikeLowercaseLatinWordToken(nextWord) || looksLikeBitDepthWordToken(nextWord)) {
 									ok = false
 								}
 							}

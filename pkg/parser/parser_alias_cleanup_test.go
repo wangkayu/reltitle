@@ -650,6 +650,31 @@ func TestParserStableTechSpanCombo_GluedCodecBitDepth(t *testing.T) {
 	}
 }
 
+func TestParserStableTechSpanCombo_GluedCodecBitDepthWithP60(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[诸神字幕组][NHK纪录片][历史秘话之EVA][2020-04-14][1080P60 HEVC10 MKV]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrVideoCodec), "HEVC") {
+		t.Fatalf("expected video_codec=HEVC, got=%v", attrValues(res, model.AttrVideoCodec))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrBitDepth), "10bit") {
+		t.Fatalf("expected bit_depth=10bit, got=%v", attrValues(res, model.AttrBitDepth))
+	}
+	for _, tok := range res.Tokens {
+		if strings.EqualFold(strings.TrimSpace(tok.Text), "HEVC10") && !tok.Removed {
+			t.Fatalf("HEVC10 should be consumed, tokens=%v", res.Tokens)
+		}
+	}
+}
+
 func TestParserEpisodePriority_BracketTitleLeadingNumberSweetSub(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

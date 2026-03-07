@@ -413,6 +413,73 @@ func extractLooseBitDepthAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[
 	}
 }
 
+func (p *Parser) extractLooseCodecBitDepthAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Attribute) {
+	if attrs == nil || len(tokens) == 0 || p == nil {
+		return
+	}
+	seenVideo := make(map[string]struct{}, 2)
+	seenBit := make(map[string]struct{}, 2)
+	for _, a := range *attrs {
+		if a.Type == model.AttrVideoCodec {
+			n := strings.ToLower(strings.TrimSpace(a.Normalized))
+			if n != "" {
+				seenVideo[n] = struct{}{}
+			}
+			continue
+		}
+		if a.Type == model.AttrBitDepth {
+			n := strings.ToLower(strings.TrimSpace(a.Normalized))
+			if n != "" {
+				seenBit[n] = struct{}{}
+			}
+		}
+	}
+	for i := 0; i < len(tokens); i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		txt := strings.ToLower(strings.TrimSpace(tokens[i].Text))
+		if txt == "" {
+			continue
+		}
+		if !isInBracket(tokens, i) && !isInParen(tokens, i) {
+			continue
+		}
+		mm := stableTechCodecBitDepthPattern.FindStringSubmatch(txt)
+		if len(mm) != 3 {
+			continue
+		}
+		vcodec, ok := p.normalizeVideoCodecToken(mm[1])
+		if !ok || strings.TrimSpace(vcodec) == "" {
+			continue
+		}
+		bit := mm[2] + "bit"
+		if _, ok := seenVideo[strings.ToLower(vcodec)]; !ok {
+			*attrs = append(*attrs, model.Attribute{
+				Type:       model.AttrVideoCodec,
+				Normalized: vcodec,
+				TokenStart: i,
+				TokenEnd:   i + 1,
+				Confidence: 0.74,
+				Source:     "tech_combo_token",
+			})
+			seenVideo[strings.ToLower(vcodec)] = struct{}{}
+		}
+		if _, ok := seenBit[strings.ToLower(bit)]; !ok {
+			*attrs = append(*attrs, model.Attribute{
+				Type:       model.AttrBitDepth,
+				Normalized: bit,
+				TokenStart: i,
+				TokenEnd:   i + 1,
+				Confidence: 0.72,
+				Source:     "tech_combo_token",
+			})
+			seenBit[strings.ToLower(bit)] = struct{}{}
+		}
+		tokens[i].Removed = true
+	}
+}
+
 func extractYearAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Attribute, hasTech bool) {
 	if attrs == nil || len(tokens) == 0 {
 		return
@@ -1279,6 +1346,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	extractSeasonShowTagAttrsAndRemoveFromTokens(tokens, &attrs)
 	p.applyLexicon(tokens, &attrs)
 	p.extractStableTechSpanComboAttrsAndRemoveFromTokens(tokens, &attrs)
+	p.extractLooseCodecBitDepthAttrsAndRemoveFromTokens(tokens, &attrs)
 	extractLooseBitDepthAttrsAndRemoveFromTokens(tokens, &attrs)
 	promoteFrenchMultiNoteToAudioFlag(attrs)
 	p.normalizePlatformAttrs(attrs)

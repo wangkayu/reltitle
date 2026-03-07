@@ -716,6 +716,39 @@ func TestLexiconDict_ConfigFirst_StandaloneYueAudioLang(t *testing.T) {
 	}
 }
 
+func TestLexiconDict_ConfigFirst_YuePhraseVariants(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	cases := []struct {
+		name string
+		raw  string
+	}{
+		{name: "yue_dub_cn", raw: "[TestGroup] Sample Show - 01 [粤语配音][MP4]"},
+		{name: "yue_no_sub_cn", raw: "[TestGroup] Sample Show - 01 [粤语无字][MP4]"},
+		{name: "yue_version_tw", raw: "[TestGroup] Sample Show - 01 [粵語版][MP4]"},
+		{name: "cantonese_dub_en", raw: "[TestGroup] Sample Show - 01 [CantoneseDub][WEB-DL][1080p]"},
+		{name: "yue_eng_dual_cn", raw: "[TestGroup] Sample Show - 01 [粤英双语中字][MP4]"},
+		{name: "yue_tag_tvb_cn", raw: "[TestGroup] Sample Show - 01 [TVB+發行商粵語][MP4]"},
+		{name: "yue_reissue_cn", raw: "[TestGroup] Sample Show - 01 [代理商再版粵語][MP4]"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			res, err := p.Parse(tc.raw)
+			if err != nil {
+				t.Fatalf("parse failed: %v", err)
+			}
+			if !hasAttrValue(attrValues(res, model.AttrAudioLang), "YUE") {
+				t.Fatalf("expected audio_lang YUE, got=%v", attrValues(res, model.AttrAudioLang))
+			}
+		})
+	}
+}
+
 func TestTagCodeAudioLang_CAUsesYUE(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

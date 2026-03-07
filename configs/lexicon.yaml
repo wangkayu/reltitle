@@ -1781,6 +1781,200 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.7
+      - tokens: ["粤语版"]
+        emit:
+          - type: audio_lang
+            normalized: "YUE"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["粵語版"]
+        emit:
+          - type: audio_lang
+            normalized: "YUE"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["粤语配音"]
+        emit:
+          - type: audio_lang
+            normalized: "YUE"
+            token_index: -1
+          - type: audio_flag
+            normalized: "DUB"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["粵語配音"]
+        emit:
+          - type: audio_lang
+            normalized: "YUE"
+            token_index: -1
+          - type: audio_flag
+            normalized: "DUB"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["粤语配音电影"]
+        emit:
+          - type: audio_lang
+            normalized: "YUE"
+            token_index: -1
+          - type: audio_flag
+            normalized: "DUB"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["粤语配音中字"]
+        emit:
+          - type: audio_lang
+            normalized: "YUE"
+            token_index: -1
+          - type: audio_flag
+            normalized: "DUB"
+            token_index: -1
+          - type: sub_flag
+            normalized: "中字"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["粵語配音中字"]
+        emit:
+          - type: audio_lang
+            normalized: "YUE"
+            token_index: -1
+          - type: audio_flag
+            normalized: "DUB"
+            token_index: -1
+          - type: sub_flag
+            normalized: "中字"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["粤语无字"]
+        emit:
+          - type: audio_lang
+            normalized: "YUE"
+            token_index: -1
+          - type: sub_flag
+            normalized: "NO_SUB"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["粵語無字"]
+        emit:
+          - type: audio_lang
+            normalized: "YUE"
+            token_index: -1
+          - type: sub_flag
+            normalized: "NO_SUB"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["粤英双语中字"]
+        emit:
+          - type: audio_lang
+            normalized: "YUE"
+            token_index: -1
+          - type: audio_lang
+            normalized: "ENG"
+            token_index: -1
+          - type: sub_flag
+            normalized: "中字"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["粵英雙語中字"]
+        emit:
+          - type: audio_lang
+            normalized: "YUE"
+            token_index: -1
+          - type: audio_lang
+            normalized: "ENG"
+            token_index: -1
+          - type: sub_flag
+            normalized: "中字"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["粵日雙語"]
+        emit:
+          - type: audio_lang
+            normalized: "YUE"
+            token_index: -1
+          - type: audio_lang
+            normalized: "JPN"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["代理商再版粵語"]
+        emit:
+          - type: audio_lang
+            normalized: "YUE"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["tvb+發行商粵語"]
+        emit:
+          - type: audio_lang
+            normalized: "YUE"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["tvb", "+", "發行商粵語"]
+        emit:
+          - type: audio_lang
+            normalized: "YUE"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["gotv粤语无字"]
+        emit:
+          - type: audio_lang
+            normalized: "YUE"
+            token_index: -1
+          - type: sub_flag
+            normalized: "NO_SUB"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["爱子粤语"]
+        emit:
+          - type: audio_lang
+            normalized: "YUE"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["cantonese", "dub"]
+        emit:
+          - type: audio_lang
+            normalized: "YUE"
+            token_index: -1
+          - type: audio_flag
+            normalized: "DUB"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["cantonese-dub"]
+        emit:
+          - type: audio_lang
+            normalized: "YUE"
+            token_index: -1
+          - type: audio_flag
+            normalized: "DUB"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["cantonesedub"]
+        emit:
+          - type: audio_lang
+            normalized: "YUE"
+            token_index: -1
+          - type: audio_flag
+            normalized: "DUB"
+            token_index: -1
+        remove: true
+        confidence: 0.75
 
   - id: audio_sub_cantonese_chinese_subs
     any_of:

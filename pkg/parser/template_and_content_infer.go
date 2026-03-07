@@ -190,6 +190,7 @@ func matchTemplate(cfg *config.Config, epRoute string, contentKind string, group
 	}
 
 	admitStreaming := isStreamingRelease(tokens, attrs)
+	isBatchContent := strings.EqualFold(strings.TrimSpace(contentKind), "BATCH")
 	selectBest := func(tpls []config.TemplateDef, enforceEpRoute bool) (string, float64, string) {
 		if len(tpls) == 0 {
 			return "", 0, ""
@@ -198,6 +199,7 @@ func matchTemplate(cfg *config.Config, epRoute string, contentKind string, group
 		bestConf := 0.0
 		bestRoute := ""
 		bestSpec := -1
+		bestSigSpec := -1
 		for _, t := range tpls {
 			if strings.TrimSpace(t.RouteID) == "streaming_release_v1" {
 				if !admitStreaming {
@@ -223,7 +225,20 @@ func matchTemplate(cfg *config.Config, epRoute string, contentKind string, group
 				continue
 			}
 			spec := templateConditionSpecificity(t.Conditions)
-			if spec > bestSpec || (spec == bestSpec && t.Confidence > bestConf) {
+			sigSpec := templateSignatureSpecificity(t.Signature)
+			replace := false
+			if isBatchContent {
+				if sigSpec > bestSigSpec ||
+					(sigSpec == bestSigSpec && (spec > bestSpec || (spec == bestSpec && t.Confidence > bestConf))) {
+					replace = true
+				}
+			} else {
+				if spec > bestSpec || (spec == bestSpec && t.Confidence > bestConf) {
+					replace = true
+				}
+			}
+			if replace {
+				bestSigSpec = sigSpec
 				bestSpec = spec
 				bestConf = t.Confidence
 				bestID = t.ID
@@ -503,4 +518,21 @@ func signatureSatisfiable(sig string, group string, episode string, episodeRange
 	}
 
 	return true
+}
+
+func templateSignatureSpecificity(sig string) int {
+	fields := strings.Fields(strings.TrimSpace(sig))
+	if len(fields) == 0 {
+		return 0
+	}
+	score := 0
+	for _, f := range fields {
+		switch f {
+		case "T", "CONTENTS":
+			continue
+		default:
+			score++
+		}
+	}
+	return score
 }

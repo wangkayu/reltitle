@@ -103,6 +103,29 @@ func TestParserMovieRoute_BatchContentPrefersBatchTemplateOverTVSP(t *testing.T)
 	}
 }
 
+func TestParserMovieRoute_BatchRangePackTemplatePreferred(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[DBD-Raws][Blood-C/血战-C/ブラッドシー][01-12TV全集+剧场版+特典映像][1080P][BDRip][HEVC-10bit][简繁外挂][FLAC][MKV]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "BATCH" {
+		t.Fatalf("content_kind=%q want=%q", got, "BATCH")
+	}
+	if got := firstAttrValue(res, model.AttrEpisodeRange); got != "1-12" {
+		t.Fatalf("episode_range=%q want=%q", got, "1-12")
+	}
+	if got := res.TemplateID; got != "TF_BATCH_RANGE_PACK_01" {
+		t.Fatalf("template_id=%q want=%q", got, "TF_BATCH_RANGE_PACK_01")
+	}
+}
+
 func TestParserMovieRoute_DashCodecNumberNotEpisode(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

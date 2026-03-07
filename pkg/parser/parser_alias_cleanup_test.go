@@ -699,6 +699,54 @@ func TestLexiconDict_ConfigFirst_VCDRipAndYueSubs(t *testing.T) {
 	}
 }
 
+func TestLexiconDict_ConfigFirst_GluedSourceResolutionVariants(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	cases := []struct {
+		name       string
+		raw        string
+		wantSource string
+		wantRes    string
+	}{
+		{
+			name:       "web720p",
+			raw:        "[TestGroup] Sample Show - 01 [WEB720P][AAC][MKV]",
+			wantSource: "WEBRip",
+			wantRes:    "720p",
+		},
+		{
+			name:       "web2160p",
+			raw:        "[TestGroup] Sample Show - 01 [WEB2160P][AAC][MKV]",
+			wantSource: "WEBRip",
+			wantRes:    "2160p",
+		},
+		{
+			name:       "bd720p",
+			raw:        "[TestGroup] Sample Show - 01 [BD720P][AAC][MKV]",
+			wantSource: "BD",
+			wantRes:    "720p",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			res, err := p.Parse(tc.raw)
+			if err != nil {
+				t.Fatalf("parse failed: %v", err)
+			}
+			if !hasAttrValue(attrValues(res, model.AttrSourceType), tc.wantSource) {
+				t.Fatalf("source_type got=%v want=%q", attrValues(res, model.AttrSourceType), tc.wantSource)
+			}
+			if !hasAttrValue(attrValues(res, model.AttrResolution), tc.wantRes) {
+				t.Fatalf("resolution got=%v want=%q", attrValues(res, model.AttrResolution), tc.wantRes)
+			}
+		})
+	}
+}
+
 func hasAttrValue(got []string, want string) bool {
 	for _, v := range got {
 		if strings.EqualFold(strings.TrimSpace(v), strings.TrimSpace(want)) {

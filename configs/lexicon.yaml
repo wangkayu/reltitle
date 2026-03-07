@@ -192,6 +192,42 @@ entries:
     remove: true
     confidence: 0.75
 
+  - id: source_type_resolution_web720p_glued
+    tokens: ["web720p"]
+    emit:
+      - type: source_type
+        normalized: "WEBRip"
+        token_index: -1
+      - type: resolution
+        normalized: "720p"
+        token_index: -1
+    remove: true
+    confidence: 0.75
+
+  - id: source_type_resolution_web2160p_glued
+    tokens: ["web2160p"]
+    emit:
+      - type: source_type
+        normalized: "WEBRip"
+        token_index: -1
+      - type: resolution
+        normalized: "2160p"
+        token_index: -1
+    remove: true
+    confidence: 0.75
+
+  - id: source_type_resolution_bd720p_glued
+    tokens: ["bd720p"]
+    emit:
+      - type: source_type
+        normalized: "BD"
+        token_index: -1
+      - type: resolution
+        normalized: "720p"
+        token_index: -1
+    remove: true
+    confidence: 0.75
+
   - id: note_hdr
     tokens: ["hdr"]
     emit:

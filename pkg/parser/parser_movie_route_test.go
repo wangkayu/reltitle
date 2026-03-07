@@ -250,6 +250,9 @@ func TestParserMovieRoute_MovieDashEpisodeTailNotInTitle(t *testing.T) {
 	if got := canonicalTitle(res); got == "" || strings.HasSuffix(got, " 01") {
 		t.Fatalf("title=%q should not carry demoted dash-episode tail", got)
 	}
+	if got := canonicalTitle(res); !strings.EqualFold(strings.TrimSpace(got), "Scary Movie") {
+		t.Fatalf("title=%q want=%q", got, "Scary Movie")
+	}
 }
 
 func TestParserMovieRoute_PartIndexCanStayInTitle(t *testing.T) {

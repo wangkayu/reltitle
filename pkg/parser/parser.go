@@ -2288,6 +2288,15 @@ func trimMovieDashEpisodeTailFromTitle(rawTitle string, title string, episode st
 	out := strings.TrimSpace(title)
 	out = regexp.MustCompile(`(?:\s*[-:：]\s*)?0*\d{1,3}\s*$`).ReplaceAllString(out, "")
 	out = strings.TrimSpace(strings.Trim(out, "-:： "))
+	if out != "" && !isMovieKeywordText(out) {
+		base := strings.TrimSpace(movieIndex)
+		if base != "" {
+			movieWordPattern := regexp.MustCompile(`(?i)\b` + regexp.QuoteMeta(out) + `\s+movie\s*0*` + regexp.QuoteMeta(base) + `\s*[-:：]\s*0*\d{1,3}\b`)
+			if movieWordPattern.MatchString(rawTitle) {
+				out = strings.TrimSpace(out + " Movie")
+			}
+		}
+	}
 	if out == "" {
 		return title
 	}

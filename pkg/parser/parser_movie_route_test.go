@@ -83,6 +83,26 @@ func TestParserMovieRoute_MoviesRangePlusOVA_StaysBatch(t *testing.T) {
 	}
 }
 
+func TestParserMovieRoute_BatchContentPrefersBatchTemplateOverTVSP(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[AI-Raws] Baribari Legend バリバリ伝説 OVA+Movie BDRip 720p MKV"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "BATCH" {
+		t.Fatalf("content_kind=%q want=%q", got, "BATCH")
+	}
+	if got := res.TemplateID; !strings.HasPrefix(got, "TF_BATCH_") {
+		t.Fatalf("template_id=%q want TF_BATCH_*", got)
+	}
+}
+
 func TestParserMovieRoute_DashCodecNumberNotEpisode(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

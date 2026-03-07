@@ -189,55 +189,64 @@ func matchTemplate(cfg *config.Config, epRoute string, contentKind string, group
 		}
 	}
 
+	admitStreaming := isStreamingRelease(tokens, attrs)
+	selectBest := func(tpls []config.TemplateDef, enforceEpRoute bool) (string, float64, string) {
+		if len(tpls) == 0 {
+			return "", 0, ""
+		}
+		bestID := ""
+		bestConf := 0.0
+		bestRoute := ""
+		bestSpec := -1
+		for _, t := range tpls {
+			if strings.TrimSpace(t.RouteID) == "streaming_release_v1" {
+				if !admitStreaming {
+					continue
+				}
+			}
+			if enforceEpRoute && epRoute == "SXXEXX" {
+				sigUp := strings.ToUpper(strings.TrimSpace(t.Signature))
+				if !strings.Contains(sigUp, " SE") {
+					continue
+				}
+			}
+			if !signatureSatisfiable(t.Signature, group, episode, episodeRange, season, packKind, spKind, movieIndex, hasTech, hasMovieKeyword) {
+				continue
+			}
+			if enforceEpRoute && epRoute == "SP_ONLY" {
+				sigUp := strings.ToUpper(strings.TrimSpace(t.Signature))
+				if !(strings.Contains(sigUp, " SP") || strings.Contains(sigUp, " OVA") || strings.Contains(sigUp, " OAD") || strings.Contains(sigUp, " ONA") || strings.Contains(sigUp, " EX")) {
+					continue
+				}
+			}
+			if !templateConditionsSatisfiable(t.Conditions, attrs, tokens) {
+				continue
+			}
+			spec := templateConditionSpecificity(t.Conditions)
+			if spec > bestSpec || (spec == bestSpec && t.Confidence > bestConf) {
+				bestSpec = spec
+				bestConf = t.Confidence
+				bestID = t.ID
+				bestRoute = strings.TrimSpace(t.RouteID)
+			}
+		}
+		return bestID, bestConf, bestRoute
+	}
+
+	if strings.EqualFold(strings.TrimSpace(contentKind), "BATCH") {
+		if id, conf, route := selectBest(cfg.TemplateCatalog.BatchTemplates, false); strings.TrimSpace(id) != "" {
+			return id, conf, route
+		}
+	}
+
 	tpls := templatesByEpRoute(cfg, epRoute)
 	if len(tpls) == 0 {
 		tpls = templatesByContentKind(cfg, contentKind)
 	}
-	if len(tpls) == 0 {
-		return "TF_UNKNOWN_DEFAULT", 0, ""
+	if id, conf, route := selectBest(tpls, true); strings.TrimSpace(id) != "" {
+		return id, conf, route
 	}
-
-	bestID := ""
-	bestConf := 0.0
-	bestRoute := ""
-	bestSpec := -1
-	admitStreaming := isStreamingRelease(tokens, attrs)
-	for _, t := range tpls {
-		if strings.TrimSpace(t.RouteID) == "streaming_release_v1" {
-			if !admitStreaming {
-				continue
-			}
-		}
-		if epRoute == "SXXEXX" {
-			sigUp := strings.ToUpper(strings.TrimSpace(t.Signature))
-			if !strings.Contains(sigUp, " SE") {
-				continue
-			}
-		}
-		if !signatureSatisfiable(t.Signature, group, episode, episodeRange, season, packKind, spKind, movieIndex, hasTech, hasMovieKeyword) {
-			continue
-		}
-		if epRoute == "SP_ONLY" {
-			sigUp := strings.ToUpper(strings.TrimSpace(t.Signature))
-			if !(strings.Contains(sigUp, " SP") || strings.Contains(sigUp, " OVA") || strings.Contains(sigUp, " OAD") || strings.Contains(sigUp, " ONA") || strings.Contains(sigUp, " EX")) {
-				continue
-			}
-		}
-		if !templateConditionsSatisfiable(t.Conditions, attrs, tokens) {
-			continue
-		}
-		spec := templateConditionSpecificity(t.Conditions)
-		if spec > bestSpec || (spec == bestSpec && t.Confidence > bestConf) {
-			bestSpec = spec
-			bestConf = t.Confidence
-			bestID = t.ID
-			bestRoute = strings.TrimSpace(t.RouteID)
-		}
-	}
-	if strings.TrimSpace(bestID) == "" {
-		return "TF_UNKNOWN_DEFAULT", 0, ""
-	}
-	return bestID, bestConf, bestRoute
+	return "TF_UNKNOWN_DEFAULT", 0, ""
 }
 
 func templatesByEpRoute(cfg *config.Config, epRoute string) []config.TemplateDef {

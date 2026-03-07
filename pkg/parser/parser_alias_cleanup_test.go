@@ -309,6 +309,47 @@ func TestParserTailParenAlias_TokensConsumedAfterExtraction(t *testing.T) {
 	}
 }
 
+func TestParserPreEpisodePipeAliases_AreExtractedAndConsumed(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "Ansatsusha de Aru Ore no Status ga Yuusha yori mo Akiraka ni Tsuyoi Nodaga | My Status as an Assassin Obviously Exceeds the Hero's | Мoй стaтус убийцы oчeвиднo прeвoсхoдит гeрoйский [2025] [01 of 12] [WEBRip] [1080p] [RUS + JAP]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	aliases := canonicalAliases(res)
+	if len(aliases) < 2 {
+		t.Fatalf("expected pipe aliases extracted, got=%v", aliases)
+	}
+	if !containsAlias(aliases, "My Status as an Assassin Obviously Exceeds the Hero's") {
+		t.Fatalf("missing english alias, got=%v", aliases)
+	}
+	hasNonLatinAlias := false
+	for _, a := range aliases {
+		for _, r := range a {
+			if (r >= 0x0400 && r <= 0x052F) || (r >= 0x2DE0 && r <= 0x2DFF) || (r >= 0xA640 && r <= 0xA69F) {
+				hasNonLatinAlias = true
+				break
+			}
+		}
+		if hasNonLatinAlias {
+			break
+		}
+	}
+	if !hasNonLatinAlias {
+		t.Fatalf("missing non-latin alias, got=%v", aliases)
+	}
+	for _, tok := range res.Tokens {
+		if strings.TrimSpace(tok.Text) == "|" && !tok.Removed {
+			t.Fatalf("pipe delimiters should be consumed after alias extraction")
+		}
+	}
+}
+
 func TestParserLexicon_RecruitmentAndBonusMetaTokensAreConsumed(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

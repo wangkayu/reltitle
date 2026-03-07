@@ -57,6 +57,8 @@ type groupRouteRule struct {
 	forceTemplateID         string
 	forceContentKind        string
 	forceRouteID            string
+	titleStripPrefixes      []string
+	aliasStripPrefixes      []string
 }
 
 type groupSlot2PlatformRule struct {
@@ -786,6 +788,22 @@ func New(cfg *config.Config) *Parser {
 			}
 			rawContains = append(rawContains, ss)
 		}
+		titleStripPrefixes := make([]string, 0, len(r.Output.TitleStripPrefixes))
+		for _, s := range r.Output.TitleStripPrefixes {
+			ss := strings.TrimSpace(s)
+			if ss == "" {
+				continue
+			}
+			titleStripPrefixes = append(titleStripPrefixes, ss)
+		}
+		aliasStripPrefixes := make([]string, 0, len(r.Output.AliasStripPrefixes))
+		for _, s := range r.Output.AliasStripPrefixes {
+			ss := strings.TrimSpace(s)
+			if ss == "" {
+				continue
+			}
+			aliasStripPrefixes = append(aliasStripPrefixes, ss)
+		}
 		p.groupRouteRules = append(p.groupRouteRules, groupRouteRule{
 			id:                      id,
 			priority:                r.Priority,
@@ -800,6 +818,8 @@ func New(cfg *config.Config) *Parser {
 			forceTemplateID:         strings.TrimSpace(r.Output.ForceTemplateID),
 			forceContentKind:        strings.TrimSpace(r.Output.ForceContentKind),
 			forceRouteID:            strings.TrimSpace(r.Output.ForceRouteID),
+			titleStripPrefixes:      titleStripPrefixes,
+			aliasStripPrefixes:      aliasStripPrefixes,
 		})
 	}
 	sort.SliceStable(p.groupRouteRules, func(i, j int) bool {
@@ -1855,6 +1875,20 @@ func (p *Parser) applyGroupRouteOverride(
 		if strings.TrimSpace(r.forceRouteID) != "" {
 			outRouteID = r.forceRouteID
 		}
+		if len(r.titleStripPrefixes) > 0 {
+			outTitle = stripConfiguredPrefixes(outTitle, r.titleStripPrefixes)
+		}
+		if len(r.aliasStripPrefixes) > 0 && len(outAliases) > 0 {
+			cleaned := make([]string, 0, len(outAliases))
+			for _, a := range outAliases {
+				c := stripConfiguredPrefixes(a, r.aliasStripPrefixes)
+				if strings.TrimSpace(c) == "" {
+					continue
+				}
+				cleaned = append(cleaned, c)
+			}
+			outAliases = cleaned
+		}
 
 		// Safe fallback: if override cannot produce required core fields, skip it.
 		if strings.TrimSpace(outGroup) == "" || strings.TrimSpace(outTitle) == "" {
@@ -1867,6 +1901,47 @@ func (p *Parser) applyGroupRouteOverride(
 		return outGroup, outTitle, outAliases, outTemplateID, outContentKind, outRouteID, true
 	}
 	return group, title, aliases, templateID, contentKind, routeID, false
+}
+
+func stripConfiguredPrefixes(s string, prefixes []string) string {
+	out := strings.TrimSpace(s)
+	if out == "" || len(prefixes) == 0 {
+		return out
+	}
+	for {
+		changed := false
+		for _, p := range prefixes {
+			pp := strings.TrimSpace(p)
+			if pp == "" {
+				continue
+			}
+			rest, ok := trimPrefixFold(out, pp)
+			if !ok {
+				continue
+			}
+			out = strings.TrimSpace(strings.TrimLeft(rest, "-_—–:：|/·+~. "))
+			changed = true
+			break
+		}
+		if !changed {
+			break
+		}
+	}
+	return strings.TrimSpace(out)
+}
+
+func trimPrefixFold(s, prefix string) (string, bool) {
+	if prefix == "" {
+		return s, false
+	}
+	if len(s) < len(prefix) {
+		return s, false
+	}
+	head := s[:len(prefix)]
+	if !strings.EqualFold(head, prefix) {
+		return s, false
+	}
+	return s[len(prefix):], true
 }
 
 var bracketSegmentPattern = regexp.MustCompile(`\[(.*?)\]`)

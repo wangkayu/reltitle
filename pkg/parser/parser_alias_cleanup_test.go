@@ -284,6 +284,100 @@ func TestParserGroupRouteOverride_GroupEPRouteMarukoNotMovie(t *testing.T) {
 	}
 }
 
+func TestParserGroupRouteOverride_FurretarDubPrefixCleanup(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Furretar] 台配 - 入间同学入魔了！ (Mairimashita! Iruma-kun) (Season 1) (Mandarin Chinese Dub) (Matching Soft Subs) [國語][国语][中文配音][中配版] (入間同學入魔了！)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	title := canonicalTitle(res)
+	if strings.HasPrefix(title, "台配") || strings.HasPrefix(title, "中台配") {
+		t.Fatalf("furretar title prefix should be cleaned, got=%q", title)
+	}
+	if title != "入间同学入魔了！" {
+		t.Fatalf("title=%q want=%q", title, "入间同学入魔了！")
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "CHN") {
+		t.Fatalf("expected audio_lang CHN, got=%v", attrValues(res, model.AttrAudioLang))
+	}
+}
+
+func TestParserGroupRouteOverride_FurretarCleanupNoGlobalDrift(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[TestGroup] 台配 - 入间同学入魔了！ (Season 1)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	title := canonicalTitle(res)
+	if !strings.HasPrefix(title, "台配") {
+		t.Fatalf("non-furretar title should keep prefix, got=%q", title)
+	}
+}
+
+func TestParserAliasCleanup_FurretarDropsMovieMetaAlias(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	cases := []struct {
+		name     string
+		raw      string
+		notAlias []string
+	}{
+		{
+			name: "[Movie] should not leak",
+			raw:  "[Furretar] 台配 - 阿基拉 (AKIRA) (Movie) (Mandarin Chinese Dub) (Matching Soft Subs) [國語][国语][中文配音][中配版]",
+			notAlias: []string{
+				"Movie",
+			},
+		},
+		{
+			name: "(Movies + Specials) should not leak",
+			raw:  "[Furretar] 台配 - 名侦探柯南 (Detective Conan) (Movies + Specials) (Mandarin Chinese Dub) (Matching Soft Subs) [國語][国语][中文配音][中配版] (Case Closed) (Meitantei Conan)",
+			notAlias: []string{
+				"Movies + Specials",
+			},
+		},
+		{
+			name: "(Season x + Movie) fragment should not leak",
+			raw:  "[Furretar] 台配 - 关于我转生变成史莱姆这档事 (Tensei Shitara Slime Datta Ken) (Season 1-3 + Movie) (Mandarin Chinese Dub) (Matching Soft Subs) [國語][国语][中文配音][中配版] (關於我轉生變成史萊姆這檔事)",
+			notAlias: []string{
+				"3 + Movie",
+				"Season 1-3 + Movie",
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			res, err := p.Parse(tc.raw)
+			if err != nil {
+				t.Fatalf("parse failed: %v", err)
+			}
+			aliases := canonicalAliases(res)
+			for _, ban := range tc.notAlias {
+				if containsAlias(aliases, ban) {
+					t.Fatalf("forbidden alias leaked: %q aliases=%v", ban, aliases)
+				}
+			}
+		})
+	}
+}
+
 func TestParserStableTechSpanCombo_CommaSeparatedCodecBlock(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

@@ -47,3 +47,30 @@ overrides:
     output:
       force_content_kind: "TV_EP"
       force_route_id: "group_epseg_maruko_v1"
+
+  - id: "furretar_dub_prefix_cleanup"
+    enabled: true
+    priority: 92
+    match:
+      group_in: ["Furretar"]
+      raw_must_contain_any: ["台配", "中台配", "台粤配", "台粵配", "中台粤配", "中台粵配"]
+    output:
+      force_route_id: "group_furretar_dub_prefix_v1"
+      title_strip_prefixes:
+        - "台配"
+        - "中台配"
+        - "台粤配"
+        - "台粵配"
+        - "中台粤配"
+        - "中台粵配"
+        - "中文配"
+        - "中文配音"
+      alias_strip_prefixes:
+        - "台配"
+        - "中台配"
+        - "台粤配"
+        - "台粵配"
+        - "中台粤配"
+        - "中台粵配"
+        - "中文配"
+        - "中文配音"

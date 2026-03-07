@@ -240,12 +240,14 @@ type GroupRouteMatch struct {
 }
 
 type GroupRouteOutput struct {
-	ForceGroup       string `yaml:"force_group" json:"force_group"`
-	ForceTitle       string `yaml:"force_title" json:"force_title"`
-	ClearAliases     bool   `yaml:"clear_aliases" json:"clear_aliases"`
-	ForceTemplateID  string `yaml:"force_template_id" json:"force_template_id"`
-	ForceContentKind string `yaml:"force_content_kind" json:"force_content_kind"`
-	ForceRouteID     string `yaml:"force_route_id" json:"force_route_id"`
+	ForceGroup         string   `yaml:"force_group" json:"force_group"`
+	ForceTitle         string   `yaml:"force_title" json:"force_title"`
+	ClearAliases       bool     `yaml:"clear_aliases" json:"clear_aliases"`
+	ForceTemplateID    string   `yaml:"force_template_id" json:"force_template_id"`
+	ForceContentKind   string   `yaml:"force_content_kind" json:"force_content_kind"`
+	ForceRouteID       string   `yaml:"force_route_id" json:"force_route_id"`
+	TitleStripPrefixes []string `yaml:"title_strip_prefixes" json:"title_strip_prefixes"`
+	AliasStripPrefixes []string `yaml:"alias_strip_prefixes" json:"alias_strip_prefixes"`
 }
 
 type GroupSlot2PlatformConfig struct {

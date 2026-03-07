@@ -699,6 +699,40 @@ func TestLexiconDict_ConfigFirst_VCDRipAndYueSubs(t *testing.T) {
 	}
 }
 
+func TestLexiconDict_ConfigFirst_StandaloneYueAudioLang(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[TestGroup] Sample Show - 01 [粤语][MP4]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "YUE") {
+		t.Fatalf("expected audio_lang YUE, got=%v", attrValues(res, model.AttrAudioLang))
+	}
+}
+
+func TestTagCodeAudioLang_CAUsesYUE(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Erai-raws] Sample Show - 01 (CA) [WEB-DL][1080p]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "YUE") {
+		t.Fatalf("expected tag code CA => audio_lang YUE, got=%v", attrValues(res, model.AttrAudioLang))
+	}
+}
+
 func TestLexiconDict_ConfigFirst_GluedSourceResolutionVariants(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

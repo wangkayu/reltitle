@@ -1765,6 +1765,23 @@ entries:
         remove: true
         confidence: 0.65
 
+  - id: audio_lang_yue_cn
+    any_of:
+      - tokens: ["粤语"]
+        emit:
+          - type: audio_lang
+            normalized: "YUE"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["粵語"]
+        emit:
+          - type: audio_lang
+            normalized: "YUE"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+
   - id: audio_sub_cantonese_chinese_subs
     any_of:
       - tokens: ["粤语中字"]

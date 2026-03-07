@@ -226,6 +226,9 @@ func extractPackAudioSubMetaAndRemoveFromTokens(tokens []model.Token) []model.At
 		if strings.Contains(low, "华语") || strings.Contains(low, "華語") || strings.Contains(low, "国语") || strings.Contains(low, "國語") || strings.Contains(low, "中文") {
 			codes = append(codes, "CHN")
 		}
+		if strings.Contains(low, "粤语") || strings.Contains(low, "粵語") || strings.Contains(low, "cantonese") {
+			codes = append(codes, "YUE")
+		}
 		if strings.Contains(low, "韩语") || strings.Contains(low, "韓語") || strings.Contains(low, "韩文") || strings.Contains(low, "韓文") {
 			codes = append(codes, "KOR")
 		}
@@ -239,6 +242,8 @@ func extractPackAudioSubMetaAndRemoveFromTokens(tokens []model.Token) []model.At
 				codes = append(codes, "ENG")
 			case '韩', '韓':
 				codes = append(codes, "KOR")
+			case '粤', '粵':
+				codes = append(codes, "YUE")
 			}
 		}
 		return normLangCodes(codes)

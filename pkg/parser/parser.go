@@ -4831,6 +4831,9 @@ func (p *Parser) inferTailAliasesFromParens(tokens []model.Token, attrs *[]model
 			}
 			aliases = append(aliases, c)
 		}
+		for k := i; k <= closeIdx && k < len(tokens); k++ {
+			tokens[k].Removed = true
+		}
 		i = closeIdx
 	}
 	if len(aliases) == 0 {
@@ -4959,6 +4962,26 @@ func splitAliasCandidatesFromParenContent(content string) ([]string, bool, strin
 		"，", ",",
 		"、", ",",
 	).Replace(content)
+	if !allowComma && strings.Contains(norm, ",") {
+		commaParts := strings.Split(norm, ",")
+		validAliasParts := 0
+		for _, p := range commaParts {
+			pp := strings.TrimSpace(p)
+			if pp == "" {
+				continue
+			}
+			if isLikelyMetaBracketText(pp) || isStreamMetaText(pp) {
+				validAliasParts = 0
+				break
+			}
+			if len([]rune(pp)) >= 4 {
+				validAliasParts++
+			}
+		}
+		if validAliasParts >= 2 {
+			allowComma = true
+		}
+	}
 	parts := strings.FieldsFunc(norm, func(r rune) bool {
 		if r == ',' {
 			return allowComma

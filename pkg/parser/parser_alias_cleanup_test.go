@@ -255,6 +255,60 @@ func TestParserLexicon_CommaLanguageTokensAreConsumed(t *testing.T) {
 	}
 }
 
+func TestParserTailParenAlias_CommaSeparatedListSplit(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "Dragon Raja -The Blazing Dawn- (Japanese ver.) S02E01 VOSTFR 1080p WEB x264 AAC -Tsundere-Raws (CR) (Long Zu II: Daowangzhe Zhi Tong,Dragon Raja II: The Mourner's Eyes)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	aliases := canonicalAliases(res)
+	if len(aliases) < 2 {
+		t.Fatalf("expected split aliases, got=%v", aliases)
+	}
+	foundLongZu := false
+	foundDragonRaja := false
+	for _, a := range aliases {
+		la := strings.ToLower(a)
+		if strings.Contains(la, "long zu ii") {
+			foundLongZu = true
+		}
+		if strings.Contains(la, "dragon raja ii") {
+			foundDragonRaja = true
+		}
+		if strings.Contains(a, ",") {
+			t.Fatalf("comma list should be split into separate aliases, got=%v", aliases)
+		}
+	}
+	if !foundLongZu || !foundDragonRaja {
+		t.Fatalf("missing expected split aliases, got=%v", aliases)
+	}
+}
+
+func TestParserTailParenAlias_TokensConsumedAfterExtraction(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "A Star Brighter Than the Sun S01E01 MULTi 1080p WEB H.264 E-AC-3 -Tsundere-Raws (AMZN) (VF, FRENCH, VOSTFR, Taiyou yori mo Mabushii Hoshi)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	for _, tok := range res.Tokens {
+		if strings.EqualFold(strings.TrimSpace(tok.Text), "yori") && !tok.Removed {
+			t.Fatalf("tail paren alias token should be consumed, tokens=%v", res.Tokens)
+		}
+	}
+}
+
 func TestParserLexicon_RecruitmentAndBonusMetaTokensAreConsumed(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

@@ -9,6 +9,7 @@ canonical:
     - BluRay
     - BD
     - DVDRip
+    - VCDRip
     - HDTV
     - HDRip
     - DVD
@@ -60,6 +61,7 @@ canonical:
 
   audio_lang:
     - CHN
+    - YUE
     - JPN
     - ENG
     - FRA

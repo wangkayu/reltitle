@@ -48,6 +48,8 @@ alias_noise:
     - 先行版
     - 先行版本
     # common full tokens in unknown aliases
+    - WEB
+    - 1080P
     - WEB1080P
     - WEB720P
     - WEB2160P

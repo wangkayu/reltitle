@@ -129,6 +129,30 @@ entries:
         remove: true
         confidence: 0.7
 
+  - id: source_type_vcdrip
+    any_of:
+      - tokens: ["vcdrip"]
+        emit:
+          - type: source_type
+            normalized: "VCDRip"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["vcd-rip"]
+        emit:
+          - type: source_type
+            normalized: "VCDRip"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["vcd", "rip"]
+        emit:
+          - type: source_type
+            normalized: "VCDRip"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+
   - id: note_bdrip
     tokens: ["bdrip"]
     emit:
@@ -149,6 +173,18 @@ entries:
         token_index: -1
       - type: source_type
         normalized: "BDRip"
+        token_index: -1
+      - type: resolution
+        normalized: "1080p"
+        token_index: -1
+    remove: true
+    confidence: 0.75
+
+  - id: source_type_resolution_web1080p_glued
+    tokens: ["web1080p"]
+    emit:
+      - type: source_type
+        normalized: "WEBRip"
         token_index: -1
       - type: resolution
         normalized: "1080p"
@@ -1692,6 +1728,41 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.65
+
+  - id: audio_sub_cantonese_chinese_subs
+    any_of:
+      - tokens: ["粤语中字"]
+        emit:
+          - type: audio_lang
+            normalized: "YUE"
+            token_index: -1
+          - type: sub_lang
+            normalized: "CHS"
+            token_index: -1
+          - type: sub_lang
+            normalized: "CHT"
+            token_index: -1
+          - type: sub_flag
+            normalized: "中字"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["粵語中字"]
+        emit:
+          - type: audio_lang
+            normalized: "YUE"
+            token_index: -1
+          - type: sub_lang
+            normalized: "CHS"
+            token_index: -1
+          - type: sub_lang
+            normalized: "CHT"
+            token_index: -1
+          - type: sub_flag
+            normalized: "中字"
+            token_index: -1
+        remove: true
+        confidence: 0.75
 
   - id: audio_chinese_dub
     any_of:

@@ -648,6 +648,66 @@ func TestTemplateSignalTechStrict_DoesNotInferPreTitleTechAsCodec(t *testing.T) 
 	}
 }
 
+func TestLexiconDict_ConfigFirst_WEB1080PAndCNSubFlags(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[TestGroup] Sample Show - 01 [WEB1080P][简繁内封][AAC][MKV]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	if !hasAttrValue(attrValues(res, model.AttrSourceType), "WEBRip") {
+		t.Fatalf("expected source_type WEBRip, got=%v", attrValues(res, model.AttrSourceType))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrResolution), "1080p") {
+		t.Fatalf("expected resolution 1080p, got=%v", attrValues(res, model.AttrResolution))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "内封") {
+		t.Fatalf("expected sub_flag 内封, got=%v", attrValues(res, model.AttrSubFlag))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSubLang), "CHS") || !hasAttrValue(attrValues(res, model.AttrSubLang), "CHT") {
+		t.Fatalf("expected sub_lang CHS/CHT, got=%v", attrValues(res, model.AttrSubLang))
+	}
+}
+
+func TestLexiconDict_ConfigFirst_VCDRipAndYueSubs(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[TestGroup] Sample Show - 01 [VCDRip][粤语中字][MP4]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	if !hasAttrValue(attrValues(res, model.AttrSourceType), "VCDRip") {
+		t.Fatalf("expected source_type VCDRip, got=%v", attrValues(res, model.AttrSourceType))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "YUE") {
+		t.Fatalf("expected audio_lang YUE, got=%v", attrValues(res, model.AttrAudioLang))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "中字") {
+		t.Fatalf("expected sub_flag 中字, got=%v", attrValues(res, model.AttrSubFlag))
+	}
+}
+
+func hasAttrValue(got []string, want string) bool {
+	for _, v := range got {
+		if strings.EqualFold(strings.TrimSpace(v), strings.TrimSpace(want)) {
+			return true
+		}
+	}
+	return false
+}
+
 func containsAlias(aliases []string, want string) bool {
 	for _, a := range aliases {
 		if strings.EqualFold(strings.TrimSpace(a), strings.TrimSpace(want)) {

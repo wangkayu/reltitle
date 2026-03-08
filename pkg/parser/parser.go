@@ -804,7 +804,10 @@ func extractCRCAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Att
 			// Avoid consuming plain numeric dates like 20260103.
 			continue
 		}
-		if !isInBracket(tokens, i) && !isInParen(tokens, i) && !hasNearbyTechContext(tokens, i, 4) && i < len(tokens)-4 {
+		if !isInBracket(tokens, i) && !isInParen(tokens, i) {
+			continue
+		}
+		if !hasNearbyTechContext(tokens, i, 10) && i < len(tokens)-6 {
 			continue
 		}
 		norm := strings.ToUpper(raw)

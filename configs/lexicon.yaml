@@ -3940,6 +3940,42 @@ entries:
     remove: true
     confidence: 0.75
 
+  - id: audio_ac3_truehd_combo
+    tokens: ["ac3&truehd"]
+    emit:
+      - type: audio_codec
+        normalized: "AC3"
+        token_index: -1
+      - type: audio_codec
+        normalized: "TRUEHD"
+        token_index: -1
+    remove: true
+    confidence: 0.75
+
+  - id: audio_eac3_aac_combo
+    tokens: ["eac3&aac"]
+    emit:
+      - type: audio_codec
+        normalized: "EAC3"
+        token_index: -1
+      - type: audio_codec
+        normalized: "AAC"
+        token_index: -1
+    remove: true
+    confidence: 0.75
+
+  - id: audio_aac_atmos_combo
+    tokens: ["aac&atmos"]
+    emit:
+      - type: audio_codec
+        normalized: "AAC"
+        token_index: -1
+      - type: audio_object
+        normalized: "ATMOS"
+        token_index: -1
+    remove: true
+    confidence: 0.75
+
   - id: audio_opus_20
     tokens: ["opus", "2.0"]
     emit:
@@ -3995,6 +4031,47 @@ entries:
         token_index: -1
     remove: true
     confidence: 0.75
+
+  - id: audio_flac5_51_split
+    any_of:
+      - tokens: ["flac5", ".", "1"]
+        emit:
+          - type: audio_codec
+            normalized: "FLAC"
+            token_index: 0
+          - type: audio_channels
+            normalized: "5.1"
+            token_index: 2
+        remove: true
+        confidence: 0.9
+      - tokens: ["flac5", "1"]
+        emit:
+          - type: audio_codec
+            normalized: "FLAC"
+            token_index: 0
+          - type: audio_channels
+            normalized: "5.1"
+            token_index: 1
+        remove: true
+        confidence: 0.85
+
+  - id: audio_flac5_token
+    tokens: ["flac5"]
+    emit:
+      - type: audio_codec
+        normalized: "FLAC"
+        token_index: -1
+    remove: true
+    confidence: 0.75
+
+  - id: audio_flac_trailing_comma
+    tokens: ["flac,"]
+    emit:
+      - type: audio_codec
+        normalized: "FLAC"
+        token_index: -1
+    remove: true
+    confidence: 0.7
 
   - id: audio_ac3_51
     tokens: ["ac3", "5.1"]
@@ -4083,6 +4160,50 @@ entries:
         token_index: -1
     remove: true
     confidence: 0.75
+
+  - id: audio_aac_ac3_comma
+    tokens: ["aac,ac3"]
+    emit:
+      - type: audio_codec
+        normalized: "AAC"
+        token_index: -1
+      - type: audio_codec
+        normalized: "AC3"
+        token_index: -1
+    remove: true
+    confidence: 0.75
+
+  - id: audio_ac3_aac_comma
+    tokens: ["ac3,aac"]
+    emit:
+      - type: audio_codec
+        normalized: "AC3"
+        token_index: -1
+      - type: audio_codec
+        normalized: "AAC"
+        token_index: -1
+    remove: true
+    confidence: 0.75
+
+  - id: audio_aac_times_2
+    any_of:
+      - tokens: ["aac×2"]
+        emit:
+          - type: audio_codec
+            normalized: "AAC"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["aac", "×", "2"]
+        emit:
+          - type: audio_codec
+            normalized: "AAC"
+            token_index: 0
+          - type: audio_flag
+            normalized: "DUAL"
+            token_index: 2
+        remove: true
+        confidence: 0.7
 
   - id: audio_aacx2_token
     tokens: ["aacx2"]

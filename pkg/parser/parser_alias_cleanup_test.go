@@ -2258,6 +2258,72 @@ func TestLexiconDict_GluedTechTokensShouldBeConsumed(t *testing.T) {
 				model.AttrAudioChannels: "5.1",
 			},
 		},
+		{
+			name:  "eac3_aac_combo",
+			raw:   "[Prejudice-Studio] 我们不可能成为恋人！绝对不行。〜再次闪耀！〜 Watanare 〜Next Sunshine〜 - OVA02 [WebRip 1080P HEVC 10bit EAC3&AAC MKV][简繁内封]",
+			token: "EAC3&AAC",
+			expectAttrs: map[model.AttrType]string{
+				model.AttrAudioCodec: "EAC3",
+			},
+		},
+		{
+			name:  "ac3_truehd_combo",
+			raw:   "[DBD-Raws][龙珠Z/Dragonball Z/ドラゴンボール Z][S3][075-107+特典映像][1080P][BDRip][HEVC-10bit][AC3&TrueHD][MKV]",
+			token: "AC3&TrueHD",
+			expectAttrs: map[model.AttrType]string{
+				model.AttrAudioCodec: "TRUEHD",
+			},
+		},
+		{
+			name:  "aac_ac3_comma_combo",
+			raw:   "[Anime Time] Dragon Ball Z Complete Series (Colour Corrected) [DVD] [Dual Audio] [480p][HEVC 10bit x265][AAC,AC3][Eng Sub] [Batch]",
+			token: "AAC,AC3",
+			expectAttrs: map[model.AttrType]string{
+				model.AttrAudioCodec: "AC3",
+			},
+		},
+		{
+			name:  "ac3_aac_comma_combo",
+			raw:   "[Anime Time] Tate No Yūsha No Nariagari (The Rising Of The Shield Hero) (Season 1,2,3) [BD] [1080p][HEVC 10bit x265][AC3,AAC][Dual Audio][ENG Subs] [Batch]",
+			token: "AC3,AAC",
+			expectAttrs: map[model.AttrType]string{
+				model.AttrAudioCodec: "AAC",
+			},
+		},
+		{
+			name:  "aac_atmos_combo",
+			raw:   "[EuphoniumSub] 超级马力欧兄弟大电影 / The Super Mario Bros. Movie [Webrip][1080p][HEVC_AAC&Atmos][中英双语]",
+			token: "AAC&Atmos",
+			expectAttrs: map[model.AttrType]string{
+				model.AttrAudioCodec:  "AAC",
+				model.AttrAudioObject: "ATMOS",
+			},
+		},
+		{
+			name:  "flac5",
+			raw:   "[MOMIJI] Detective Conan: One-eyed Flashback (2025) (BD REMUX 1080p AVC FLAC 5.1) | Detective.Conan.One-eyed.Flashback.2025.1080p.BluRay.Remux.AVC.FLAC5.1-MOMIJI.mkv",
+			token: "FLAC5",
+			expectAttrs: map[model.AttrType]string{
+				model.AttrAudioCodec:    "FLAC",
+				model.AttrAudioChannels: "5.1",
+			},
+		},
+		{
+			name:  "flac_trailing_comma",
+			raw:   "[MirrorNova] Doraemon - Nobita and the Steel Troops (1986) [1080p WEB-DL, Dual-Audio, FLAC, AVC]",
+			token: "FLAC,",
+			expectAttrs: map[model.AttrType]string{
+				model.AttrAudioCodec: "FLAC",
+			},
+		},
+		{
+			name:  "aac_times_2",
+			raw:   "[北宇治字幕组] 蓦然回首 / Look Back [Movie v2][WebRip][HEVC_AAC×2][简繁日内封]",
+			token: "AAC×2",
+			expectAttrs: map[model.AttrType]string{
+				model.AttrAudioCodec: "AAC",
+			},
+		},
 	}
 
 	for _, tc := range cases {

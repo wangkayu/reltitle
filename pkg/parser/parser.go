@@ -775,6 +775,54 @@ func (p *Parser) extractStandaloneMaProfileBitDepthAttrsAndRemoveFromTokens(toke
 	}
 }
 
+var crc8HexTokenPattern = regexp.MustCompile(`(?i)^[0-9a-f]{8}$`)
+
+func extractCRCAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Attribute) {
+	if attrs == nil || len(tokens) == 0 {
+		return
+	}
+	seen := make(map[string]struct{}, 4)
+	for _, a := range *attrs {
+		if a.Type != model.AttrCRC {
+			continue
+		}
+		n := strings.ToUpper(strings.TrimSpace(a.Normalized))
+		if n != "" {
+			seen[n] = struct{}{}
+		}
+	}
+	for i := 0; i < len(tokens); i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		raw := strings.TrimSpace(tokens[i].Text)
+		if !crc8HexTokenPattern.MatchString(raw) {
+			continue
+		}
+		low := strings.ToLower(raw)
+		if !strings.ContainsAny(low, "abcdef") {
+			// Avoid consuming plain numeric dates like 20260103.
+			continue
+		}
+		if !isInBracket(tokens, i) && !isInParen(tokens, i) && !hasNearbyTechContext(tokens, i, 4) && i < len(tokens)-4 {
+			continue
+		}
+		norm := strings.ToUpper(raw)
+		if _, ok := seen[norm]; !ok {
+			*attrs = append(*attrs, model.Attribute{
+				Type:       model.AttrCRC,
+				Normalized: norm,
+				TokenStart: i,
+				TokenEnd:   i + 1,
+				Confidence: 0.82,
+				Source:     "crc_token",
+			})
+			seen[norm] = struct{}{}
+		}
+		tokens[i].Removed = true
+	}
+}
+
 var volumeWordPattern = regexp.MustCompile(`(?i)^vol(?:ume)?\.?$`)
 var shortNumericPattern = regexp.MustCompile(`^\d{1,3}$`)
 var numericRangeTokenPattern = regexp.MustCompile(`^\d{1,4}\s*[-~～−–]\s*\d{1,4}$`)
@@ -1888,6 +1936,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	p.extractStandaloneMaProfileBitDepthAttrsAndRemoveFromTokens(tokens, &attrs)
 	p.extractStandaloneSourceTypeAttrsAndRemoveFromTokens(tokens, &attrs)
 	p.extractStandaloneAudioCodecAttrsAndRemoveFromTokens(tokens, &attrs)
+	extractCRCAttrsAndRemoveFromTokens(tokens, &attrs)
 	p.extractVolumeEpisodeMetaMarkersAndRemoveFromTokens(tokens, &attrs)
 	extractLooseBitDepthAttrsAndRemoveFromTokens(tokens, &attrs)
 	promoteFrenchMultiNoteToAudioFlag(attrs)

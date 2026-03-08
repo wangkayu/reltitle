@@ -1069,6 +1069,14 @@ func TestParserStableTechSpanCombo_CommaSeparatedCodecBlock(t *testing.T) {
 	if !foundDual {
 		t.Fatalf("expected DUAL_AUDIO from stable tech span combo, got attrs=%v", res.Attributes)
 	}
+	if !hasAttrValue(attrValues(res, model.AttrCRC), "001EC424") {
+		t.Fatalf("expected crc=001EC424, got=%v", attrValues(res, model.AttrCRC))
+	}
+	for _, tok := range res.Tokens {
+		if strings.EqualFold(strings.TrimSpace(tok.Text), "001EC424") && !tok.Removed {
+			t.Fatalf("crc token should be consumed, tokens=%v", res.Tokens)
+		}
+	}
 }
 
 func TestParserStableTechSpanCombo_GluedCodecBitDepth(t *testing.T) {
@@ -1890,6 +1898,14 @@ func TestParserTechCombo_BitDepthWithTrailingComma(t *testing.T) {
 	}
 	if !hasAttrValue(attrValues(res, model.AttrBitDepth), "8bit") {
 		t.Fatalf("expected bit_depth=8bit, got=%v", attrValues(res, model.AttrBitDepth))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrCRC), "819BADDB") {
+		t.Fatalf("expected crc=819BADDB, got=%v", attrValues(res, model.AttrCRC))
+	}
+	for _, tok := range res.Tokens {
+		if strings.EqualFold(strings.TrimSpace(tok.Text), "819BADDB") && !tok.Removed {
+			t.Fatalf("crc token should be consumed, tokens=%v", res.Tokens)
+		}
 	}
 }
 

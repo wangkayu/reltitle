@@ -493,7 +493,11 @@ func isLikelyTechContextToken(s string) bool {
 		"BD", "BDRIP", "BLURAY", "UHD",
 		"X264", "X265", "H264", "H265", "AVC", "HEVC",
 		"AAC", "AC3", "EAC3", "DDP", "FLAC",
-		"MKV", "MP4", "AVI", "TS", "M2TS":
+		"MKV", "MP4", "AVI", "TS", "M2TS",
+		"MULTI", "CUSTOM", "VOSTFR", "VOSTEN", "VF", "DUAL",
+		"REMUX", "OVA", "OAD", "ONA",
+		"SET", "ISO", "ISOS", "NTSC", "PAL", "BOOTLEG",
+		"AUDIO", "LATINO", "R2J":
 		return true
 	default:
 		return false
@@ -605,8 +609,8 @@ func extractDashedAudioCodecAttrsAndRemoveFromTokens(tokens []model.Token, attrs
 	}
 }
 
-func extractStandaloneWebSourceAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Attribute) {
-	if attrs == nil || len(tokens) == 0 {
+func (p *Parser) extractStandaloneSourceTypeAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Attribute) {
+	if p == nil || attrs == nil || len(tokens) == 0 || len(p.sourceTypeCanonical) == 0 {
 		return
 	}
 	hasSource := hasSourceTypeAttr(*attrs)
@@ -620,15 +624,20 @@ func extractStandaloneWebSourceAttrsAndRemoveFromTokens(tokens []model.Token, at
 		}
 		matched := false
 		spanEnd := i + 1
-		switch txt {
-		case "WEB", "WEBRIP", "WEBDL", "WEB-DL":
+		norm := ""
+		if v, ok := p.sourceTypeCanonical[strings.ToLower(txt)]; ok && strings.TrimSpace(v) != "" {
+			norm = strings.TrimSpace(v)
 			matched = true
-		}
-		if !matched {
-			continue
 		}
 		if txt == "WEB" && i+2 < len(tokens) && strings.TrimSpace(tokens[i+1].Text) == "-" && strings.EqualFold(strings.TrimSpace(tokens[i+2].Text), "DL") {
 			spanEnd = i + 3
+			if v, ok := p.sourceTypeCanonical["web-dl"]; ok && strings.TrimSpace(v) != "" {
+				norm = strings.TrimSpace(v)
+				matched = true
+			}
+		}
+		if !matched || norm == "" {
+			continue
 		}
 		if !isInBracket(tokens, i) && !isInParen(tokens, i) && !hasNearbyTechContext(tokens, i, 4) {
 			continue
@@ -636,18 +645,14 @@ func extractStandaloneWebSourceAttrsAndRemoveFromTokens(tokens []model.Token, at
 		if !hasSource {
 			*attrs = append(*attrs, model.Attribute{
 				Type:       model.AttrSourceType,
-				Normalized: "WEBRip",
+				Normalized: norm,
 				TokenStart: i,
 				TokenEnd:   spanEnd,
 				Confidence: 0.72,
-				Source:     "source_web_standalone",
+				Source:     "source_standalone",
 			})
 			hasSource = true
 		}
-		for k := i; k < spanEnd; k++ {
-			tokens[k].Removed = true
-		}
-		i = spanEnd - 1
 	}
 }
 
@@ -1555,7 +1560,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	p.extractStableTechSpanComboAttrsAndRemoveFromTokens(tokens, &attrs)
 	p.extractLooseCodecBitDepthAttrsAndRemoveFromTokens(tokens, &attrs)
 	extractDashedAudioCodecAttrsAndRemoveFromTokens(tokens, &attrs)
-	extractStandaloneWebSourceAttrsAndRemoveFromTokens(tokens, &attrs)
+	p.extractStandaloneSourceTypeAttrsAndRemoveFromTokens(tokens, &attrs)
 	extractLooseBitDepthAttrsAndRemoveFromTokens(tokens, &attrs)
 	promoteFrenchMultiNoteToAudioFlag(attrs)
 	p.normalizePlatformAttrs(attrs)

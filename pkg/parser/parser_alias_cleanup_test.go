@@ -343,6 +343,50 @@ func TestParserStandaloneWebSource_InferredAndConsumed(t *testing.T) {
 	}
 }
 
+func TestParserStandaloneDVDSource_InferredAndConsumed(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "Aishite Knight (Lucille, amour et rock 'n roll) MULTI DVD CUSTOM VF/VOSTFR"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSourceType), "DVD") {
+		t.Fatalf("expected source_type=DVD, got=%v", attrValues(res, model.AttrSourceType))
+	}
+	for _, tok := range res.Tokens {
+		if strings.EqualFold(strings.TrimSpace(tok.Text), "DVD") && !tok.Removed {
+			t.Fatalf("standalone DVD token should be consumed, tokens=%v", res.Tokens)
+		}
+	}
+}
+
+func TestParserStandaloneDVDSource_RemuxTail(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "(SKMD) Oh My Goddess-The Movie DVD Remux"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSourceType), "DVD") {
+		t.Fatalf("expected source_type=DVD, got=%v", attrValues(res, model.AttrSourceType))
+	}
+	for _, tok := range res.Tokens {
+		if strings.EqualFold(strings.TrimSpace(tok.Text), "DVD") && !tok.Removed {
+			t.Fatalf("DVD token should be consumed in remux tail, tokens=%v", res.Tokens)
+		}
+	}
+}
+
 func TestParserPreEpisodePipeAliases_AreExtractedAndConsumed(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

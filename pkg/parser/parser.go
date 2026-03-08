@@ -480,6 +480,161 @@ func (p *Parser) extractLooseCodecBitDepthAttrsAndRemoveFromTokens(tokens []mode
 	}
 }
 
+func isLikelyTechContextToken(s string) bool {
+	s = strings.TrimSpace(strings.ToUpper(s))
+	if s == "" {
+		return false
+	}
+	if regexp.MustCompile(`^\d{3,4}P$`).MatchString(s) {
+		return true
+	}
+	switch s {
+	case "WEB", "WEBRIP", "WEB-DL", "WEBDL",
+		"BD", "BDRIP", "BLURAY", "UHD",
+		"X264", "X265", "H264", "H265", "AVC", "HEVC",
+		"AAC", "AC3", "EAC3", "DDP", "FLAC",
+		"MKV", "MP4", "AVI", "TS", "M2TS":
+		return true
+	default:
+		return false
+	}
+}
+
+func hasNearbyTechContext(tokens []model.Token, center int, radius int) bool {
+	if len(tokens) == 0 {
+		return false
+	}
+	if radius < 1 {
+		radius = 1
+	}
+	start := center - radius
+	if start < 0 {
+		start = 0
+	}
+	end := center + radius + 1
+	if end > len(tokens) {
+		end = len(tokens)
+	}
+	for i := start; i < end; i++ {
+		if i == center {
+			continue
+		}
+		if tokens[i].Removed {
+			continue
+		}
+		if isLikelyTechContextToken(tokens[i].Text) {
+			return true
+		}
+	}
+	return false
+}
+
+func hasAudioCodecAttrNorm(attrs []model.Attribute, norm string) bool {
+	norm = strings.ToUpper(strings.TrimSpace(norm))
+	if norm == "" {
+		return false
+	}
+	for _, a := range attrs {
+		if a.Type != model.AttrAudioCodec {
+			continue
+		}
+		if strings.ToUpper(strings.TrimSpace(a.Normalized)) == norm {
+			return true
+		}
+	}
+	return false
+}
+
+func extractDashedAudioCodecAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Attribute) {
+	if attrs == nil || len(tokens) < 3 {
+		return
+	}
+	for i := 0; i < len(tokens); i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		// E-AC-3 => EAC3
+		if i+4 < len(tokens) &&
+			strings.EqualFold(strings.TrimSpace(tokens[i].Text), "E") &&
+			strings.TrimSpace(tokens[i+1].Text) == "-" &&
+			strings.EqualFold(strings.TrimSpace(tokens[i+2].Text), "AC") &&
+			strings.TrimSpace(tokens[i+3].Text) == "-" &&
+			strings.EqualFold(strings.TrimSpace(tokens[i+4].Text), "3") {
+			if !hasAudioCodecAttrNorm(*attrs, "EAC3") {
+				*attrs = append(*attrs, model.Attribute{
+					Type:       model.AttrAudioCodec,
+					Normalized: "EAC3",
+					TokenStart: i,
+					TokenEnd:   i + 5,
+					Confidence: 0.74,
+					Source:     "codec_dashed",
+				})
+			}
+			for k := i; k <= i+4; k++ {
+				tokens[k].Removed = true
+			}
+			i += 4
+			continue
+		}
+		// AC-3 => AC3
+		if i+2 < len(tokens) &&
+			strings.EqualFold(strings.TrimSpace(tokens[i].Text), "AC") &&
+			strings.TrimSpace(tokens[i+1].Text) == "-" &&
+			strings.EqualFold(strings.TrimSpace(tokens[i+2].Text), "3") {
+			if !hasAudioCodecAttrNorm(*attrs, "AC3") {
+				*attrs = append(*attrs, model.Attribute{
+					Type:       model.AttrAudioCodec,
+					Normalized: "AC3",
+					TokenStart: i,
+					TokenEnd:   i + 3,
+					Confidence: 0.74,
+					Source:     "codec_dashed",
+				})
+			}
+			for k := i; k <= i+2; k++ {
+				tokens[k].Removed = true
+			}
+			i += 2
+		}
+	}
+}
+
+func isTechTokenConsumeAttrType(t model.AttrType) bool {
+	switch t {
+	case model.AttrResolution,
+		model.AttrSourceType,
+		model.AttrVideoCodec,
+		model.AttrAudioCodec,
+		model.AttrBitDepth,
+		model.AttrContainer,
+		model.AttrPlatform:
+		return true
+	default:
+		return false
+	}
+}
+
+func consumeTokensByTechAttrSpans(tokens []model.Token, attrs []model.Attribute) {
+	if len(tokens) == 0 || len(attrs) == 0 {
+		return
+	}
+	for _, a := range attrs {
+		if !isTechTokenConsumeAttrType(a.Type) {
+			continue
+		}
+		if a.TokenStart < 0 || a.TokenEnd <= a.TokenStart || a.TokenStart >= len(tokens) {
+			continue
+		}
+		end := a.TokenEnd
+		if end > len(tokens) {
+			end = len(tokens)
+		}
+		for i := a.TokenStart; i < end; i++ {
+			tokens[i].Removed = true
+		}
+	}
+}
+
 func extractYearAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Attribute, hasTech bool) {
 	if attrs == nil || len(tokens) == 0 {
 		return
@@ -1347,6 +1502,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	p.applyLexicon(tokens, &attrs)
 	p.extractStableTechSpanComboAttrsAndRemoveFromTokens(tokens, &attrs)
 	p.extractLooseCodecBitDepthAttrsAndRemoveFromTokens(tokens, &attrs)
+	extractDashedAudioCodecAttrsAndRemoveFromTokens(tokens, &attrs)
 	extractLooseBitDepthAttrsAndRemoveFromTokens(tokens, &attrs)
 	promoteFrenchMultiNoteToAudioFlag(attrs)
 	p.normalizePlatformAttrs(attrs)
@@ -1874,6 +2030,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 		epslot = nil
 		ctx.AudioSlot = nil
 	}
+	consumeTokensByTechAttrSpans(tokens, attrs)
 	finalTitle := finalTitleValueFromAttributes(attrs, title)
 	finalAliases := finalTitleAliasValuesFromAttributes(attrs)
 	p.consumeAliasChainTokensByFinalAliases(tokens, groupSpan, finalTitle, finalAliases, episodeIdx, episodeRangeIdx, seasonIdx, attrs)

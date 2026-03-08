@@ -307,6 +307,15 @@ func TestParserTailParenAlias_TokensConsumedAfterExtraction(t *testing.T) {
 			t.Fatalf("tail paren alias token should be consumed, tokens=%v", res.Tokens)
 		}
 	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioCodec), "EAC3") {
+		t.Fatalf("expected audio_codec=EAC3 from dashed token, got=%v", attrValues(res, model.AttrAudioCodec))
+	}
+	for _, tok := range res.Tokens {
+		txt := strings.ToUpper(strings.TrimSpace(tok.Text))
+		if (txt == "WEB" || txt == "E" || txt == "AC" || txt == "3") && !tok.Removed {
+			t.Fatalf("tech token should be consumed in post-process, token=%q", tok.Text)
+		}
+	}
 }
 
 func TestParserPreEpisodePipeAliases_AreExtractedAndConsumed(t *testing.T) {

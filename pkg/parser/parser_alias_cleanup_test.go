@@ -260,6 +260,25 @@ func TestParserAliasCleanup_DashBridge_NoSeasonSignalNotForced(t *testing.T) {
 	}
 }
 
+func TestParserAliasCleanup_DashBridge_SeasonMarkerConsumedInTitleGap(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[ANi] AMAIM Warrior at the Borderline S2 - 境界戰機 第二部 - 15 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	for _, tok := range res.Tokens {
+		if strings.TrimSpace(tok.Text) == "第二部" && !tok.Removed {
+			t.Fatalf("season marker in title-gap should be consumed, tokens=%v", res.Tokens)
+		}
+	}
+}
+
 func TestParserSpecialMarker_WithEpisode_PrefersEpisodePrimary(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

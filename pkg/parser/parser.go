@@ -2487,6 +2487,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	consumeTokensByTechAttrSpans(tokens, attrs)
 	finalTitle := finalTitleValueFromAttributes(attrs, title)
 	finalAliases := finalTitleAliasValuesFromAttributes(attrs)
+	p.consumeTitleGapSeasonBridgeMarkers(tokens, titleEnd, episodeIdx, episodeRangeIdx, attrs)
 	p.consumeAliasChainTokensByFinalAliases(tokens, groupSpan, finalTitle, finalAliases, episodeIdx, episodeRangeIdx, seasonIdx, attrs)
 	p.consumeGroupSpecificTitleChainDelimiters(tokens, groupSpan, group, episodeIdx, episodeRangeIdx, attrs)
 
@@ -10353,6 +10354,39 @@ func (p *Parser) consumeAliasChainTokensByFinalAliases(tokens []model.Token, gro
 			continue
 		}
 		if isAliasChainDelimiterToken(tokens[i].Text) {
+			tokens[i].Removed = true
+		}
+	}
+}
+
+func (p *Parser) consumeTitleGapSeasonBridgeMarkers(tokens []model.Token, titleEnd int, episodeIdx int, episodeRangeIdx int, attrs []model.Attribute) {
+	if len(tokens) == 0 || titleEnd < 0 || titleEnd >= len(tokens) {
+		return
+	}
+	scanStart := titleEnd
+	scanEnd := len(tokens)
+	if episodeRangeIdx >= scanStart && episodeRangeIdx < scanEnd {
+		scanEnd = episodeRangeIdx
+	}
+	if episodeIdx >= scanStart && episodeIdx < scanEnd {
+		scanEnd = episodeIdx
+	}
+	if techStart, ok := firstTechTokenIndexFromAttrs(attrs); ok && techStart > scanStart && techStart < scanEnd {
+		scanEnd = techStart
+	}
+	if scanStart >= scanEnd {
+		return
+	}
+
+	for i := scanStart; i < scanEnd; i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		txt := strings.TrimSpace(tokens[i].Text)
+		if txt == "" {
+			continue
+		}
+		if isSingleSlashSeasonSignalToken(txt) {
 			tokens[i].Removed = true
 		}
 	}

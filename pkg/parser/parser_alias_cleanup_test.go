@@ -201,6 +201,24 @@ func TestParserAliasCleanup_SingleSlashNoSeasonSignalNotForced(t *testing.T) {
 	}
 }
 
+func TestParserAliasCleanup_SingleSlashSpecialBridgeAddsAlias(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[GJ.Y] 我內心的糟糕念頭 [特別篇] / Boku no Kokoro no Yabai Yatsu - 01 (Baha 1920x1080 AVC AAC MP4)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	aliases := canonicalAliases(res)
+	if !containsAlias(aliases, "Boku no Kokoro no Yabai Yatsu") {
+		t.Fatalf("expected special-bridge slash alias extracted, got=%v", aliases)
+	}
+}
+
 func TestParserAliasCleanup_ParenAliasKeepsInnerClosingParen(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

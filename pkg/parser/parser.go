@@ -10522,6 +10522,7 @@ var singleSlashAliasSeasonSignalPattern = regexp.MustCompile(`(?i)^(?:s\d{1,2}|s
 var singleSlashAliasSeasonSignalCJKPattern = regexp.MustCompile(`^第?[一二三四五六七八九十0-9]{1,3}(?:季|期|部)$`)
 var singleSlashAliasSeasonPhrasePattern = regexp.MustCompile(`(?i)^season\s*\d{1,2}$`)
 var singleSlashAliasEmbeddedSeasonCJKPattern = regexp.MustCompile(`^第?[一二三四五六七八九十0-9]{1,3}(?:季|期|部).*$`)
+var singleSlashAliasBridgeTokenPattern = regexp.MustCompile(`(?i)^(?:special|ova|oad|ona|sp|dub|audio|dual|sub|subs|subtitle|uncut|version)$`)
 
 func (p *Parser) inferTitleGapSingleSlashAlias(tokens []model.Token, title string, titleEnd int, episodeIdx int, episodeRangeIdx int) []string {
 	if len(tokens) == 0 || titleEnd < 0 || titleEnd >= len(tokens) {
@@ -10554,7 +10555,7 @@ func (p *Parser) inferTitleGapSingleSlashAlias(tokens []model.Token, title strin
 	if slashIdx < 0 || slashIdx+1 >= end {
 		return nil
 	}
-	if !hasSeasonSignalAroundSingleSlash(tokens, titleEnd, end, slashIdx) {
+	if !hasSingleSlashBridgeSignal(tokens, titleEnd, end, slashIdx) {
 		return nil
 	}
 
@@ -10575,10 +10576,13 @@ func (p *Parser) inferTitleGapSingleSlashAlias(tokens []model.Token, title strin
 	return []string{right}
 }
 
-func hasSeasonSignalAroundSingleSlash(tokens []model.Token, start int, end int, slashIdx int) bool {
+func hasSingleSlashBridgeSignal(tokens []model.Token, start int, end int, slashIdx int) bool {
 	left := lastVisibleTokenText(tokens, start, slashIdx)
 	right := nextVisibleTokenText(tokens, slashIdx+1, end)
 	if isSingleSlashSeasonSignalToken(left) || isSingleSlashSeasonSignalToken(right) {
+		return true
+	}
+	if isSingleSlashBridgeToken(left) || isSingleSlashBridgeToken(right) {
 		return true
 	}
 
@@ -10596,6 +10600,9 @@ func hasSeasonSignalAroundSingleSlash(tokens []model.Token, start int, end int, 
 			continue
 		}
 		if isSingleSlashSeasonSignalToken(txt) {
+			return true
+		}
+		if isSingleSlashBridgeToken(txt) {
 			return true
 		}
 	}
@@ -10617,6 +10624,24 @@ func isSingleSlashSeasonSignalToken(t string) bool {
 		return true
 	}
 	if singleSlashAliasEmbeddedSeasonCJKPattern.MatchString(s) {
+		return true
+	}
+	return false
+}
+
+func isSingleSlashBridgeToken(t string) bool {
+	s := strings.TrimSpace(t)
+	if s == "" {
+		return false
+	}
+	if singleSlashAliasBridgeTokenPattern.MatchString(s) {
+		return true
+	}
+	ls := strings.ToLower(s)
+	if strings.Contains(ls, "special") || strings.Contains(ls, "dub") || strings.Contains(ls, "audio") {
+		return true
+	}
+	if strings.Contains(s, "特別篇") || strings.Contains(s, "特别篇") || strings.Contains(s, "年齡限制版") || strings.Contains(s, "年龄限制版") || strings.Contains(s, "日配版") || strings.Contains(s, "中文配音") {
 		return true
 	}
 	return false

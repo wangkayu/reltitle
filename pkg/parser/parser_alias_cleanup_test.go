@@ -387,6 +387,92 @@ func TestParserStandaloneDVDSource_RemuxTail(t *testing.T) {
 	}
 }
 
+func TestParserStandaloneAudioCodec_FLACInTechContext(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "I Got a Cheat Skill in Another World and Became Unrivaled in The Real World, Too S01E13 German DL FLAC 1080p BluRay x264"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioCodec), "FLAC") {
+		t.Fatalf("expected audio_codec=FLAC, got=%v", attrValues(res, model.AttrAudioCodec))
+	}
+	for _, tok := range res.Tokens {
+		if strings.EqualFold(strings.TrimSpace(tok.Text), "FLAC") && !tok.Removed {
+			t.Fatalf("standalone FLAC token should be consumed, tokens=%v", res.Tokens)
+		}
+	}
+}
+
+func TestParserStandaloneAudioCodec_TrueHDBracket(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[anime4life.] [2016] Kizumonogatari Part 1: Tekketsu [1080p] [BluRay] [x264] [Dolby TrueHD] [Dual Audio]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioCodec), "TRUEHD") {
+		t.Fatalf("expected audio_codec=TRUEHD, got=%v", attrValues(res, model.AttrAudioCodec))
+	}
+	for _, tok := range res.Tokens {
+		if strings.EqualFold(strings.TrimSpace(tok.Text), "TrueHD") && !tok.Removed {
+			t.Fatalf("standalone TrueHD token should be consumed, tokens=%v", res.Tokens)
+		}
+	}
+}
+
+func TestParserStandaloneAudioCodec_DTSHDMABracket(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Niconeiko Works] Colorful Stage! The Movie A Miku Who Can`t Sing [Ma10p] [FLAC] [DTS-HDMA]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioCodec), "FLAC") {
+		t.Fatalf("expected audio_codec=FLAC, got=%v", attrValues(res, model.AttrAudioCodec))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioCodec), "DTSHDMA") && !hasAttrValue(attrValues(res, model.AttrAudioCodec), "DTS-HDMA") {
+		t.Fatalf("expected audio_codec DTSHDMA, got=%v", attrValues(res, model.AttrAudioCodec))
+	}
+	if hasAttrValue(attrValues(res, model.AttrAudioCodec), "DTS") {
+		t.Fatalf("base DTS should be collapsed when DTSHDMA exists, got=%v", attrValues(res, model.AttrAudioCodec))
+	}
+	if res.AudioSlot != nil {
+		hasDTSHDMA := false
+		for _, tr := range res.AudioSlot.Tracks {
+			if strings.EqualFold(strings.TrimSpace(tr.Codec), "DTS") {
+				t.Fatalf("audio_slot should drop base DTS when DTSHDMA exists, tracks=%+v", res.AudioSlot.Tracks)
+			}
+			if strings.EqualFold(strings.TrimSpace(tr.Codec), "DTSHDMA") || strings.EqualFold(strings.TrimSpace(tr.Codec), "DTS-HDMA") {
+				hasDTSHDMA = true
+			}
+		}
+		if !hasDTSHDMA {
+			t.Fatalf("audio_slot should contain DTSHDMA track, tracks=%+v", res.AudioSlot.Tracks)
+		}
+	}
+	for _, tok := range res.Tokens {
+		if strings.EqualFold(strings.TrimSpace(tok.Text), "DTS-HDMA") && !tok.Removed {
+			t.Fatalf("standalone DTS-HDMA token should be consumed, tokens=%v", res.Tokens)
+		}
+	}
+}
+
 func TestParserPreEpisodePipeAliases_AreExtractedAndConsumed(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

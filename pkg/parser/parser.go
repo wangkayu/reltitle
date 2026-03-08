@@ -530,6 +530,42 @@ func hasNearbyTechContext(tokens []model.Token, center int, radius int) bool {
 	return false
 }
 
+func (p *Parser) hasNearbyAudioCodecToken(tokens []model.Token, center int, radius int) bool {
+	if p == nil || len(tokens) == 0 {
+		return false
+	}
+	if radius < 1 {
+		radius = 1
+	}
+	start := center - radius
+	if start < 0 {
+		start = 0
+	}
+	end := center + radius + 1
+	if end > len(tokens) {
+		end = len(tokens)
+	}
+	for i := start; i < end; i++ {
+		if i == center || tokens[i].Removed {
+			continue
+		}
+		base := strings.TrimSpace(tokens[i].Text)
+		if base == "" {
+			continue
+		}
+		if _, ok := p.normalizeAudioCodecToken(base); ok {
+			return true
+		}
+		if i+2 < len(tokens) && !tokens[i+1].Removed && !tokens[i+2].Removed && strings.TrimSpace(tokens[i+1].Text) == "-" {
+			combined := strings.TrimSpace(tokens[i].Text) + "-" + strings.TrimSpace(tokens[i+2].Text)
+			if _, ok := p.normalizeAudioCodecToken(combined); ok {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func hasAudioCodecAttrNorm(attrs []model.Attribute, norm string) bool {
 	norm = strings.ToUpper(strings.TrimSpace(norm))
 	if norm == "" {
@@ -652,6 +688,55 @@ func (p *Parser) extractStandaloneSourceTypeAttrsAndRemoveFromTokens(tokens []mo
 				Source:     "source_standalone",
 			})
 			hasSource = true
+		}
+	}
+}
+
+func (p *Parser) extractStandaloneAudioCodecAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Attribute) {
+	if p == nil || attrs == nil || len(tokens) == 0 || len(p.audioCodecCanonical) == 0 {
+		return
+	}
+	for i := 0; i < len(tokens); i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		base := strings.TrimSpace(tokens[i].Text)
+		if base == "" {
+			continue
+		}
+		spanEnd := i + 1
+		norm := ""
+		if i+2 < len(tokens) && !tokens[i+1].Removed && !tokens[i+2].Removed && strings.TrimSpace(tokens[i+1].Text) == "-" {
+			combined := strings.TrimSpace(tokens[i].Text) + "-" + strings.TrimSpace(tokens[i+2].Text)
+			if v, ok := p.normalizeAudioCodecToken(combined); ok && strings.TrimSpace(v) != "" {
+				norm = strings.TrimSpace(v)
+				spanEnd = i + 3
+			}
+		}
+		if norm == "" {
+			if v, ok := p.normalizeAudioCodecToken(base); ok && strings.TrimSpace(v) != "" {
+				norm = strings.TrimSpace(v)
+			}
+		}
+		if norm == "" {
+			continue
+		}
+		if !isInBracket(tokens, i) && !isInParen(tokens, i) && !hasNearbyTechContext(tokens, i, 4) && !p.hasNearbyAudioCodecToken(tokens, i, 4) {
+			continue
+		}
+		if hasAudioCodecAttrNorm(*attrs, norm) {
+			continue
+		}
+		*attrs = append(*attrs, model.Attribute{
+			Type:       model.AttrAudioCodec,
+			Normalized: norm,
+			TokenStart: i,
+			TokenEnd:   spanEnd,
+			Confidence: 0.72,
+			Source:     "audio_codec_standalone",
+		})
+		for k := i; k < spanEnd && k < len(tokens); k++ {
+			tokens[k].Removed = true
 		}
 	}
 }
@@ -1561,6 +1646,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	p.extractLooseCodecBitDepthAttrsAndRemoveFromTokens(tokens, &attrs)
 	extractDashedAudioCodecAttrsAndRemoveFromTokens(tokens, &attrs)
 	p.extractStandaloneSourceTypeAttrsAndRemoveFromTokens(tokens, &attrs)
+	p.extractStandaloneAudioCodecAttrsAndRemoveFromTokens(tokens, &attrs)
 	extractLooseBitDepthAttrsAndRemoveFromTokens(tokens, &attrs)
 	promoteFrenchMultiNoteToAudioFlag(attrs)
 	p.normalizePlatformAttrs(attrs)
@@ -2083,6 +2169,8 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	p.normalizeSourceTypeAttrs(attrs)
 	attrs = p.enrichBatchSourceTypeFromPackKind(attrs, contentKind)
 	attrs = dedupeAttributes(attrs)
+	attrs = collapseOverlappingSpecificAudioCodecs(attrs)
+	ctx.AudioSlot = reconcileAudioSlotWithAttributes(ctx.AudioSlot, attrs)
 	epslot = pruneBatchEPSlotForConservativeOutput(epslot, contentKind, episode, episodeRange, spKind)
 	if isUnknownOutput(contentKind, templateID) {
 		attrs = pruneUnknownCoreAttributes(attrs)
@@ -2261,6 +2349,125 @@ func dedupeAttributes(attrs []model.Attribute) []model.Attribute {
 		}
 	}
 	return out
+}
+
+func audioCodecSpecificityRank(norm string) int {
+	n := strings.ToUpper(strings.ReplaceAll(strings.TrimSpace(norm), "-", ""))
+	switch n {
+	case "DTSHDMA":
+		return 5
+	case "DTSHD", "TRUEHD":
+		return 4
+	case "EAC3":
+		return 3
+	case "DTS", "AC3", "AAC", "FLAC", "OPUS", "PCM", "MP3":
+		return 2
+	default:
+		return 1
+	}
+}
+
+func collapseOverlappingSpecificAudioCodecs(attrs []model.Attribute) []model.Attribute {
+	if len(attrs) <= 1 {
+		return attrs
+	}
+	drop := make([]bool, len(attrs))
+	for i, a := range attrs {
+		if a.Type != model.AttrAudioCodec {
+			continue
+		}
+		if a.TokenStart < 0 || a.TokenEnd <= a.TokenStart {
+			continue
+		}
+		ra := audioCodecSpecificityRank(a.Normalized)
+		for j, b := range attrs {
+			if i == j || b.Type != model.AttrAudioCodec {
+				continue
+			}
+			if b.TokenStart < 0 || b.TokenEnd <= b.TokenStart {
+				continue
+			}
+			rb := audioCodecSpecificityRank(b.Normalized)
+			if rb <= ra {
+				continue
+			}
+			if b.TokenStart <= a.TokenStart && b.TokenEnd >= a.TokenEnd {
+				drop[i] = true
+				break
+			}
+		}
+	}
+	kept := make([]model.Attribute, 0, len(attrs))
+	for i, a := range attrs {
+		if drop[i] {
+			continue
+		}
+		kept = append(kept, a)
+	}
+	return kept
+}
+
+func reconcileAudioSlotWithAttributes(slot *model.AudioSlot, attrs []model.Attribute) *model.AudioSlot {
+	if slot == nil || len(slot.Tracks) == 0 || len(attrs) == 0 {
+		return slot
+	}
+	canonCodec := func(s string) string {
+		return strings.ToUpper(strings.ReplaceAll(strings.TrimSpace(s), "-", ""))
+	}
+	audioAttrs := make([]model.Attribute, 0, len(attrs))
+	for _, a := range attrs {
+		if a.Type != model.AttrAudioCodec {
+			continue
+		}
+		if a.TokenStart < 0 || a.TokenEnd <= a.TokenStart {
+			continue
+		}
+		audioAttrs = append(audioAttrs, a)
+	}
+	if len(audioAttrs) == 0 {
+		return slot
+	}
+	out := make([]model.AudioTrack, 0, len(slot.Tracks))
+	for _, tr := range slot.Tracks {
+		if tr.TokenStart < 0 || tr.TokenEnd <= tr.TokenStart {
+			out = append(out, tr)
+			continue
+		}
+		keep := true
+		trackRank := audioCodecSpecificityRank(tr.Codec)
+		for _, a := range audioAttrs {
+			if a.TokenStart <= tr.TokenStart && a.TokenEnd >= tr.TokenEnd && audioCodecSpecificityRank(a.Normalized) > trackRank {
+				keep = false
+				break
+			}
+		}
+		if keep {
+			out = append(out, tr)
+		}
+	}
+	for _, a := range audioAttrs {
+		found := false
+		for _, tr := range out {
+			if canonCodec(tr.Codec) == canonCodec(a.Normalized) && tr.TokenStart == a.TokenStart && tr.TokenEnd == a.TokenEnd {
+				found = true
+				break
+			}
+		}
+		if found {
+			continue
+		}
+		out = append(out, model.AudioTrack{
+			Codec:      a.Normalized,
+			TokenStart: a.TokenStart,
+			TokenEnd:   a.TokenEnd,
+			Source:     "audio_slot_reconcile",
+		})
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	slot.Tracks = out
+	return slot
 }
 
 func (p *Parser) promoteNoteAttributes(attrs []model.Attribute) []model.Attribute {

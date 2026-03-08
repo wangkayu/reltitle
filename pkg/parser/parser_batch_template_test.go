@@ -522,6 +522,49 @@ func TestParserBatchTemplate_FODPlatformExtracted(t *testing.T) {
 	}
 }
 
+func TestParserBatchTemplate_BStationPlatformExtracted(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Group] Sample Show - 01 [WEB-DL][1080p][BSTATION][AAC AVC]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "TV_EP" {
+		t.Fatalf("content_kind=%q want=%q", got, "TV_EP")
+	}
+	if got := firstAttrValue(res, model.AttrPlatform); got != "BILIBILI" {
+		t.Fatalf("platform=%q want=%q", got, "BILIBILI")
+	}
+}
+
+func TestParserBatchTemplate_ZhJpBilingualSubFlagExtracted(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Group] Sample Show - 01 [中日雙語][1080p][WEB-DL][AAC AVC]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "TV_EP" {
+		t.Fatalf("content_kind=%q want=%q", got, "TV_EP")
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "双语") {
+		t.Fatalf("expected sub_flag=双语, got=%v", attrValues(res, model.AttrSubFlag))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSubLang), "CHS") || !hasAttrValue(attrValues(res, model.AttrSubLang), "JPN") {
+		t.Fatalf("expected sub_lang CHS+JPN, got=%v", attrValues(res, model.AttrSubLang))
+	}
+}
+
 func TestParserBatchTemplate_ATXMpeg2AndTSContainerExtracted(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

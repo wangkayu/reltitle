@@ -94,10 +94,17 @@ rules:
     priority: 100
 
   - id: platform_bilibili
-    raw_tokens: ["bilibili", "bili", "bilibili_global"]
+    raw_tokens: ["bilibili", "bili", "bilibili_global", "b-global", "bglobal", "bstation"]
     emit:
       type: platform
       normalized: BILIBILI
+    priority: 100
+
+  - id: platform_fod
+    raw_tokens: ["fod"]
+    emit:
+      type: platform
+      normalized: FOD
     priority: 100
 
   - id: platform_amzn

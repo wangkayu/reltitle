@@ -1370,13 +1370,21 @@ entries:
 
   - id: note_simp_trad_hardsub
     scope: bracket
-    tokens: ["简繁内挂"]
-    emit:
-      - type: note
-        normalized: "简繁内挂"
-        token_index: -1
-    remove: true
-    confidence: 0.7
+    any_of:
+      - tokens: ["简繁内挂"]
+        emit:
+          - type: note
+            normalized: "简繁内挂"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["簡繁內掛"]
+        emit:
+          - type: note
+            normalized: "简繁内挂"
+            token_index: -1
+        remove: true
+        confidence: 0.7
 
   - id: note_multi_subs_zh
     any_of:
@@ -3843,6 +3851,34 @@ entries:
         confidence: 0.75
       - scope: bracket
         tokens: ["簡日雙語"]
+        emit:
+          - type: sub_flag
+            normalized: "双语"
+            token_index: 0
+          - type: sub_lang
+            normalized: "CHS"
+            token_index: 0
+          - type: sub_lang
+            normalized: "JPN"
+            token_index: 0
+        remove: true
+        confidence: 0.75
+      - scope: bracket
+        tokens: ["中日双语"]
+        emit:
+          - type: sub_flag
+            normalized: "双语"
+            token_index: 0
+          - type: sub_lang
+            normalized: "CHS"
+            token_index: 0
+          - type: sub_lang
+            normalized: "JPN"
+            token_index: 0
+        remove: true
+        confidence: 0.75
+      - scope: bracket
+        tokens: ["中日雙語"]
         emit:
           - type: sub_flag
             normalized: "双语"
@@ -6348,6 +6384,15 @@ entries:
     emit:
       - type: platform
         normalized: "LNTV"
+        token_index: -1
+    remove: true
+    confidence: 0.75
+
+  - id: platform_bstation
+    tokens: ["bstation"]
+    emit:
+      - type: platform
+        normalized: "BILIBILI"
         token_index: -1
     remove: true
     confidence: 0.75

@@ -16,6 +16,7 @@ Options:
   --min-cluster-size N          Default: 10
   --min-group-diversity N       Default: 2
   --min-single-group-size N     Default: 20
+  --allow-empty-actionable      Do not fail when actionable_rows == 0
 
 Examples:
   $(basename "$0") \
@@ -28,6 +29,7 @@ RUN_PREFIX="rule_queue_gate"
 MIN_CLUSTER_SIZE=10
 MIN_GROUP_DIVERSITY=2
 MIN_SINGLE_GROUP_SIZE=20
+ALLOW_EMPTY_ACTIONABLE=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -54,6 +56,10 @@ while [[ $# -gt 0 ]]; do
     --min-single-group-size)
       MIN_SINGLE_GROUP_SIZE="$2"
       shift 2
+      ;;
+    --allow-empty-actionable)
+      ALLOW_EMPTY_ACTIONABLE=1
+      shift 1
       ;;
     -h|--help)
       usage
@@ -101,19 +107,22 @@ python3 "$QUALIFIER" \
   --min-cluster-size "$MIN_CLUSTER_SIZE" \
   --min-group-diversity "$MIN_GROUP_DIVERSITY" \
   --min-single-group-size "$MIN_SINGLE_GROUP_SIZE" \
-  --non-target-pattern '(?i)\b(?:apk|app|xapk|ipa)\b' \
-  --non-target-pattern '(?i)\b(?:windows|android|ios|mod)\b'
+  --non-target-cluster 'C_APP_PACKAGE' \
+  --non-target-pattern '(?i)(?:官方)?(?:x?apk|ipa)' \
+  --non-target-pattern '(?i)(?:windows|android|ios|mod|破解|安装包|installer|setup)' \
+  --force-holdout-cluster 'C_OTHER_UNKNOWN'
 
-python3 - "$report" <<'PY'
+python3 - "$report" "$ALLOW_EMPTY_ACTIONABLE" <<'PY'
 import json, sys
 p = sys.argv[1]
+allow_empty = bool(int(sys.argv[2]))
 r = json.load(open(p, encoding='utf-8'))
 failed = []
 if r.get("total_rows", 0) <= 0:
     failed.append("empty_input")
 if r.get("target_rows", 0) <= 0:
     failed.append("no_target_rows")
-if r.get("actionable_rows", 0) <= 0:
+if (not allow_empty) and r.get("actionable_rows", 0) <= 0:
     failed.append("no_actionable_rows")
 
 print(json.dumps({

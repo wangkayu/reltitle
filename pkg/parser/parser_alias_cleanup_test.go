@@ -160,6 +160,79 @@ func TestParserAliasCleanup_DelicosNoSlashKeepsFullTitle(t *testing.T) {
 	}
 }
 
+func TestParserAliasCleanup_ParenAliasKeepsInnerClosingParen(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[桜都字幕组] 我怎么可能成为你的恋人，不行不行！（※不是不可能！？） / Watashi ga Koibito ni Nareru Wakenai jan, Muri Muri！（Muri ja Nakatta！？） [01][1080p][简体内嵌]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	aliases := canonicalAliases(res)
+	if len(aliases) == 0 {
+		t.Fatalf("expected alias, got none")
+	}
+	found := false
+	for _, a := range aliases {
+		if strings.Contains(a, "Nakatta！？）") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("inner closing paren should be kept, aliases=%v", aliases)
+	}
+}
+
+func TestParserAliasCleanup_SearchHintParenPromotedToSearchHint(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[雪飘工作室][キミとアイドルプリキュア♪/You and Idol Precure♪/与你同为 偶像光之美少女♪][1080p][38（下周停播）][简繁外挂](检索:Q娃)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	aliases := canonicalAliases(res)
+	for _, a := range aliases {
+		la := strings.ToLower(a)
+		if strings.Contains(la, "检索") || strings.Contains(la, "q 娃") || strings.Contains(la, "q娃") {
+			t.Fatalf("search hint should not stay in alias: aliases=%v", aliases)
+		}
+	}
+	hints := attrValues(res, model.AttrSearchHint)
+	if len(hints) == 0 {
+		t.Fatalf("expected search_hint attr from paren hint, got none")
+	}
+}
+
+func TestParserAliasCleanup_DropsSeasonOnlyAliasSuffix(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[ANi] To Your Eternity S03 /  給不滅的你 第三季 - 01 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	aliases := canonicalAliases(res)
+	for _, a := range aliases {
+		if strings.EqualFold(strings.TrimSpace(a), "To Your Eternity S03") {
+			t.Fatalf("season suffix should be stripped from alias: %v", aliases)
+		}
+	}
+}
+
 func TestParserAliasCleanup_DropsResolutionMetaAliases(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

@@ -390,7 +390,6 @@ func inferPostEpisodeSearchHintAliasesFromParens(tokens []model.Token, episodeId
 	if epStart < 0 || epStart >= len(tokens) {
 		return nil
 	}
-	aliases := make([]string, 0, 4)
 	for i := epStart; i < len(tokens); i++ {
 		if tokens[i].Removed {
 			continue
@@ -423,21 +422,9 @@ func inferPostEpisodeSearchHintAliasesFromParens(tokens []model.Token, episodeId
 			if c == "" {
 				continue
 			}
-			if isLikelyMetaBracketText(c) {
-				continue
-			}
-			if !hasCJK(c) && len([]rune(c)) < 3 {
-				continue
-			}
-			if len([]rune(c)) > 80 {
-				continue
-			}
-			aliases = append(aliases, c)
+			appendSearchHintAttribute(attrs, c, "ep_tail_search_hint")
 		}
 		i = closeIdx
 	}
-	if len(aliases) == 0 {
-		return nil
-	}
-	return aliases
+	return nil
 }

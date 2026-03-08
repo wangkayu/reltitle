@@ -4059,6 +4059,8 @@ var reStreamMetaFlag = regexp.MustCompile(`(?i)\b(?:multi[-_ ]?subs?|multisub|du
 var reTailMetaToken = regexp.MustCompile(`(?i)^(?:weekly|batch|reseed|complete|fin|end|final\s+season|season|season\s*\d{1,2}|s\d{1,2}|\d{1,2}(?:st|nd|rd|th))$`)
 
 var reHintPrefix = regexp.MustCompile(`(?i)^(检索用|检索|檢索用|檢索|索引|搜索用|搜尋用|搜索|搜尋|search)\s*[:：]\s*(.+)$`)
+var reSearchHintKeyword = regexp.MustCompile(`(?i)(?:检索|檢索|索引|搜索|搜尋|search|网盘|網盤|下載|下载|download|招募|招校对|附\d+|下载地址|下載地址)`)
+var reAliasMetaSemanticOnly = regexp.MustCompile(`(?i)^(?:全集|合集|特典(?:映像)?|正片(?:\s*[+＋]\s*特典(?:映像)?)?|第[一二三四五六七八九十0-9]+季|season\s*\d{1,2}|s\d{1,2}|movie|movies|specials?|sp(?:é|e)ciaux|tv\s*全集)$`)
 
 var reAliasTrimTVSeasonTail = regexp.MustCompile(`(?i)(?:^|\s+)(?:tv|tb|тv|тв)\s*[-_ ]\s*\d{1,2}\s*$`)
 var reAliasTrimPlatformTail = regexp.MustCompile(`(?i)\s+(?:b-?global(?:\s+donghua)?|baha|abema|cr|amzn|amazon|netflix|nf|unext|at-?x|bs11|bs-?ntv|bs-?fuji|france\s*tv|tv)\s*$`)
@@ -4245,6 +4247,7 @@ func stripSeasonOrPartSuffix(s string) string {
 	out := s
 	out = regexp.MustCompile(`(?i)\b\d{1,2}(?:st|nd|rd|th)?\s*season\b`).ReplaceAllString(out, "")
 	out = regexp.MustCompile(`(?i)\bseason\s*\d{1,2}\b`).ReplaceAllString(out, "")
+	out = regexp.MustCompile(`(?i)\bs\s*\d{1,2}\b`).ReplaceAllString(out, "")
 	out = regexp.MustCompile(`第\s*[一二三四五六七八九十0-9]{1,3}\s*(?:季|期|部)`).ReplaceAllString(out, "")
 	out = strings.TrimSpace(out)
 	// Remove common sequel suffixes at end.
@@ -4282,6 +4285,9 @@ func looksLikeSeasonOrPartSuffix(s string) bool {
 	}
 	// Common patterns: title + " 2" / " II" / "贰" / "第2季" etc.
 	if regexp.MustCompile(`(?i)\bseason\b`).MatchString(s) {
+		return true
+	}
+	if regexp.MustCompile(`(?i)\bs\d{1,2}\b`).MatchString(s) {
 		return true
 	}
 	if regexp.MustCompile(`(?i)\b\d{1,2}(?:st|nd|rd|th)?\s*season\b`).MatchString(s) {
@@ -4583,13 +4589,67 @@ func hasLatin(s string) bool {
 	return false
 }
 
+func trimOuterWrappedPair(s string, open rune, close rune) (string, bool) {
+	rs := []rune(strings.TrimSpace(s))
+	if len(rs) < 2 || rs[0] != open || rs[len(rs)-1] != close {
+		return s, false
+	}
+	depth := 0
+	for i, r := range rs {
+		if r == open {
+			depth++
+		} else if r == close {
+			depth--
+			if depth < 0 {
+				return s, false
+			}
+			if depth == 0 && i < len(rs)-1 {
+				// Outer wrapper closes before the end => do not strip.
+				return s, false
+			}
+		}
+	}
+	if depth != 0 {
+		return s, false
+	}
+	return strings.TrimSpace(string(rs[1 : len(rs)-1])), true
+}
+
+func trimOuterWrappedBrackets(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return ""
+	}
+	pairs := [][2]rune{
+		{'[', ']'},
+		{'(', ')'},
+		{'{', '}'},
+		{'【', '】'},
+		{'（', '）'},
+		{'「', '」'},
+		{'『', '』'},
+	}
+	for {
+		changed := false
+		for _, p := range pairs {
+			if inner, ok := trimOuterWrappedPair(s, p[0], p[1]); ok {
+				s = inner
+				changed = true
+			}
+		}
+		if !changed {
+			break
+		}
+	}
+	return strings.TrimSpace(s)
+}
+
 func cleanAliasToken(s string) string {
 	s = strings.TrimSpace(s)
 	if s == "" {
 		return ""
 	}
-	s = strings.Trim(s, "[](){}【】（）『』「」")
-	s = strings.TrimSpace(s)
+	s = trimOuterWrappedBrackets(s)
 	s = normalizeTitleMain(s)
 	s = stripFileExtSuffix(s)
 	return strings.TrimSpace(s)
@@ -4753,8 +4813,14 @@ func (p *Parser) sanitizeAliasesForOutput(aliases []string, title string, episod
 	for _, a := range aliases {
 		a = normalizeAliasTrailingAbsoluteEpisode(a, episode, season)
 		a = p.normalizeAliasCandidateForOutput(a)
+		if stripped := stripExplicitSeasonSuffix(a); stripped != "" {
+			a = p.normalizeAliasCandidateForOutput(stripped)
+		}
 		a = normalizeAliasTrailingAbsoluteEpisode(a, episode, season)
 		if a == "" || !p.isValidAliasToken(a) {
+			continue
+		}
+		if isLikelySearchHintText(a) || isAliasMetaSemanticOnly(a) {
 			continue
 		}
 		if isStreamMetaText(a) || reTailMetaToken.MatchString(strings.TrimSpace(a)) {
@@ -5037,7 +5103,7 @@ func (p *Parser) isValidAliasToken(s string) bool {
 	if regexp.MustCompile(`(?i)^[0-9a-f]{8}$`).MatchString(low) {
 		return false
 	}
-	if strings.Contains(s, "招募") || strings.Contains(s, "仅限") || strings.Contains(s, "港澳") || strings.Contains(s, "臺") || strings.Contains(s, "台") {
+	if strings.Contains(s, "招募") || strings.Contains(s, "仅限") || strings.Contains(s, "港澳") || strings.Contains(s, "臺") || strings.Contains(s, "台") || strings.Contains(s, "停播") || strings.Contains(s, "停更") {
 		return false
 	}
 	// Obvious media/container metadata should not become aliases.
@@ -5486,30 +5552,28 @@ func (p *Parser) extractParenAliasesAndRemoveFromTitle(tokens []model.Token, tit
 		}
 		for _, c := range cands {
 			c = cleanAliasToken(c)
-			if isSearchHint {
-				if c == "" {
-					continue
-				}
-				if isLikelyMetaBracketText(c) {
-					continue
-				}
-				if !hasCJK(c) && len([]rune(c)) < 3 {
-					continue
-				}
-			} else {
+			if c == "" {
+				continue
+			}
+			if isSearchHint || isLikelySearchHintText(c) {
+				appendSearchHintAttribute(attrs, c, "paren_search_hint")
+				continue
+			}
+			if !p.isValidAliasToken(c) {
+				continue
+			}
+			if stripped := stripExplicitSeasonSuffix(c); stripped != "" {
+				c = stripped
 				if !p.isValidAliasToken(c) {
 					continue
 				}
-				if stripped := stripExplicitSeasonSuffix(c); stripped != "" {
-					c = stripped
-					if !p.isValidAliasToken(c) {
-						continue
-					}
+			}
+			if reTailMetaToken.MatchString(c) || isAliasMetaSemanticOnly(c) {
+				classifyAndEmitTailMetaNote(c, attrs)
+				if markers := extractParenContentMarkers(c); len(markers) > 0 {
+					emitContentsAttrs(attrs, markers, "alias_meta_demote")
 				}
-				if reTailMetaToken.MatchString(c) {
-					classifyAndEmitTailMetaNote(c, attrs)
-					continue
-				}
+				continue
 			}
 			aliases = append(aliases, c)
 		}
@@ -5608,34 +5672,32 @@ func (p *Parser) inferTailAliasesFromParens(tokens []model.Token, attrs *[]model
 		}
 		for _, c := range cands {
 			c = cleanAliasToken(c)
-			if isSearchHint {
-				if c == "" {
-					continue
-				}
-				if isLikelyMetaBracketText(c) {
-					continue
-				}
-				if !hasCJK(c) && len([]rune(c)) < 3 {
-					continue
-				}
-			} else {
+			if c == "" {
+				continue
+			}
+			if isSearchHint || isLikelySearchHintText(c) {
+				appendSearchHintAttribute(attrs, c, "tail_paren_search_hint")
+				continue
+			}
+			if !p.isValidAliasToken(c) {
+				continue
+			}
+			if stripped := stripExplicitSeasonSuffix(c); stripped != "" {
+				c = stripped
 				if !p.isValidAliasToken(c) {
 					continue
 				}
-				if stripped := stripExplicitSeasonSuffix(c); stripped != "" {
-					c = stripped
-					if !p.isValidAliasToken(c) {
-						continue
-					}
+			}
+			if isStreamMetaText(c) {
+				classifyAndEmitStreamMeta(c, attrs)
+				continue
+			}
+			if reTailMetaToken.MatchString(c) || isAliasMetaSemanticOnly(c) {
+				classifyAndEmitTailMetaNote(c, attrs)
+				if markers := extractParenContentMarkers(c); len(markers) > 0 {
+					emitContentsAttrs(attrs, markers, "alias_meta_demote")
 				}
-				if isStreamMetaText(c) {
-					classifyAndEmitStreamMeta(c, attrs)
-					continue
-				}
-				if reTailMetaToken.MatchString(c) {
-					classifyAndEmitTailMetaNote(c, attrs)
-					continue
-				}
+				continue
 			}
 			if len([]rune(c)) > 80 {
 				continue
@@ -5802,21 +5864,23 @@ func splitAliasCandidatesFromParenContent(content string) ([]string, bool, strin
 		}
 		return r == '/' || r == '|' || r == ';' || r == '\\'
 	})
-	// For search-hint text like "检索用: Princession Orchestra": do NOT split by whitespace.
-	// Only split when explicit delimiters like '/' '|' ';' '\\' ',' are present.
+	// Search-hint text: extract candidates for AttrSearchHint; do not keep as title_alias.
 	if searchHint {
-		// Search-hint lists (often slash-separated) are high-risk pollution; do not treat them as aliases.
-		if strings.ContainsAny(norm, "/|;\\,") {
-			return nil, searchHint, hintKeyword
+		if len(parts) > 0 {
+			out := make([]string, 0, len(parts))
+			for _, p := range parts {
+				p = strings.TrimSpace(p)
+				if p == "" {
+					continue
+				}
+				out = append(out, p)
+			}
+			if len(out) > 0 {
+				return out, searchHint, hintKeyword
+			}
 		}
 		cand := strings.TrimSpace(norm)
 		if cand == "" {
-			return nil, searchHint, hintKeyword
-		}
-		// Enforce a consistent minimal length for hint-derived aliases (after removing spaces),
-		// so short tokens like "Q 娃" are dropped.
-		compact := strings.ReplaceAll(cand, " ", "")
-		if len([]rune(compact)) < 4 {
 			return nil, searchHint, hintKeyword
 		}
 		return []string{cand}, searchHint, hintKeyword
@@ -5833,6 +5897,59 @@ func splitAliasCandidatesFromParenContent(content string) ([]string, bool, strin
 		return []string{content}, searchHint, hintKeyword
 	}
 	return out, searchHint, hintKeyword
+}
+
+func appendSearchHintAttribute(attrs *[]model.Attribute, value string, source string) {
+	if attrs == nil {
+		return
+	}
+	v := strings.TrimSpace(value)
+	if v == "" {
+		return
+	}
+	key := aliasSemanticKey(v)
+	for _, a := range *attrs {
+		if a.Type != model.AttrSearchHint {
+			continue
+		}
+		if aliasSemanticKey(a.Normalized) == key {
+			return
+		}
+	}
+	*attrs = append(*attrs, model.Attribute{
+		Type:       model.AttrSearchHint,
+		Normalized: v,
+		TokenStart: -1,
+		TokenEnd:   -1,
+		Confidence: 0.65,
+		Source:     source,
+	})
+}
+
+func isLikelySearchHintText(s string) bool {
+	ss := strings.TrimSpace(s)
+	if ss == "" {
+		return false
+	}
+	if reSearchHintKeyword.MatchString(ss) {
+		return true
+	}
+	return strings.HasPrefix(strings.ToLower(ss), "search:")
+}
+
+func isAliasMetaSemanticOnly(s string) bool {
+	ss := strings.TrimSpace(s)
+	if ss == "" {
+		return false
+	}
+	if reAliasMetaSemanticOnly.MatchString(ss) {
+		return true
+	}
+	// Content markers-only tokens should not remain as aliases.
+	if markers := extractParenContentMarkers(ss); len(markers) > 0 {
+		return true
+	}
+	return false
 }
 
 var reParenContentSeasonRange = regexp.MustCompile(`(?i)^season\s*\d{1,2}(?:\s*[-~]\s*\d{1,2})?$`)

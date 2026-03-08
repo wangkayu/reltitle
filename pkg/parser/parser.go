@@ -498,7 +498,7 @@ func isLikelyTechContextToken(s string) bool {
 		"MULTI", "CUSTOM", "VOSTFR", "VOSTEN", "VF", "DUAL",
 		"REMUX", "OVA", "OAD", "ONA",
 		"SET", "ISO", "ISOS", "NTSC", "PAL", "BOOTLEG",
-		"AUDIO", "LATINO", "R2J":
+		"AUDIO", "LATINO", "R2J", "TOKUTEN":
 		return true
 	default:
 		return false
@@ -525,6 +525,33 @@ func hasNearbyTechContext(tokens []model.Token, center int, radius int) bool {
 			continue
 		}
 		if isLikelyTechContextToken(tokens[i].Text) {
+			return true
+		}
+	}
+	return false
+}
+
+func hasNearbySpecialReleaseToken(tokens []model.Token, center int, radius int) bool {
+	if len(tokens) == 0 {
+		return false
+	}
+	if radius < 1 {
+		radius = 1
+	}
+	start := center - radius
+	if start < 0 {
+		start = 0
+	}
+	end := center + radius + 1
+	if end > len(tokens) {
+		end = len(tokens)
+	}
+	for i := start; i < end; i++ {
+		if i == center || tokens[i].Removed {
+			continue
+		}
+		switch strings.ToUpper(strings.TrimSpace(tokens[i].Text)) {
+		case "NCOP", "NCED", "PV", "CM", "OP", "ED":
 			return true
 		}
 	}
@@ -722,20 +749,30 @@ func (p *Parser) extractStandaloneSourceTypeAttrsAndRemoveFromTokens(tokens []mo
 			norm = strings.TrimSpace(v)
 			matched = true
 		}
-		if txt == "WEB" && i+2 < len(tokens) && strings.TrimSpace(tokens[i+1].Text) == "-" && strings.EqualFold(strings.TrimSpace(tokens[i+2].Text), "DL") {
-			spanEnd = i + 3
-			if v, ok := p.sourceTypeCanonical["web-dl"]; ok && strings.TrimSpace(v) != "" {
+		if i+2 < len(tokens) && !tokens[i+1].Removed && !tokens[i+2].Removed && strings.TrimSpace(tokens[i+1].Text) == "-" {
+			right := strings.TrimSpace(tokens[i+2].Text)
+			combinedKey := strings.ToLower(txt + "-" + right)
+			if v, ok := p.sourceTypeCanonical[combinedKey]; ok && strings.TrimSpace(v) != "" {
+				spanEnd = i + 3
 				norm = strings.TrimSpace(v)
 				matched = true
+			} else if strings.EqualFold(txt, "DVD") && (strings.EqualFold(right, "ISO") || strings.EqualFold(right, "ISOS") || strings.EqualFold(right, "REMUX")) {
+				if v, ok := p.sourceTypeCanonical["dvd"]; ok && strings.TrimSpace(v) != "" {
+					spanEnd = i + 3
+					norm = strings.TrimSpace(v)
+					matched = true
+				}
 			}
 		}
 		if !matched || norm == "" {
 			continue
 		}
-		if !isInBracket(tokens, i) && !isInParen(tokens, i) && !hasNearbyTechContext(tokens, i, 4) {
+		techCtx := isInBracket(tokens, i) || isInParen(tokens, i) || hasNearbyTechContext(tokens, i, 4)
+		specialCtx := hasNearbySpecialReleaseToken(tokens, i, 3)
+		if !techCtx && !specialCtx {
 			continue
 		}
-		if !hasSource {
+		if !hasSource && !specialCtx {
 			*attrs = append(*attrs, model.Attribute{
 				Type:       model.AttrSourceType,
 				Normalized: norm,
@@ -745,6 +782,9 @@ func (p *Parser) extractStandaloneSourceTypeAttrsAndRemoveFromTokens(tokens []mo
 				Source:     "source_standalone",
 			})
 			hasSource = true
+		}
+		for k := i; k < spanEnd && k < len(tokens); k++ {
+			tokens[k].Removed = true
 		}
 	}
 }
@@ -3802,7 +3842,7 @@ var reTitleTrimPlainPackTail = regexp.MustCompile(`(?i)\s+pack\s*$`)
 var reTitleTrimMetaTail = regexp.MustCompile(`(?i)\s+(?:hd|sd|fhd|uhd|retail|webrip|web[- ]?dl|bdrip|bluray|blu-ray|remux|dvd|hdtv|mkv|mp4|avi|x26[45]|h\.?26[45]|hevc|av1|aac|ac3|e-?ac-?3|flac|dts(?:-?hd|-?hdma)?|hdma|truehd|ma\d{1,2}p|10[- ]?bit|8[- ]?bit)\s*$`)
 var reTitleTrimVolTail = regexp.MustCompile(`(?i)\s+(?:vol\.?(?:\s*\d{1,3})?|volume\s*\d{1,3})\s*$`)
 var reTitleTrimDVDBundleTail = regexp.MustCompile(`(?i)\s+(?:dvd(?:\s*[- ]?\s*isos?)?|dvd\s*set)\s*$`)
-var reTitleTrimDVDEpisodesTail = regexp.MustCompile(`(?i)\s+(?:r\d+\s+)?dvd\s+episodes?\s*$`)
+var reTitleTrimDVDEpisodesTail = regexp.MustCompile(`(?i)\s+(?:(?:r\d+\s+)?dvd\s+)?episodes?\s*$`)
 var reAliasTechSingle = regexp.MustCompile(`(?i)^(?:aac(?:×\d+)?|ac3|e-?ac-?3|ddp|flac|opus|mp3|dts(?:-?hd|-?hdma)?|truehd|atmos|avc|hevc|x26[45]|h\.?26[45]|mkv|mp4|dual)$`)
 var reAliasTechList = regexp.MustCompile(`(?i)^(?:\.?\s*)?(?:aac(?:×\d+)?|ac3|e-?ac-?3|ddp|flac|opus|mp3|dts(?:-?hd|-?hdma)?|truehd|atmos|avc|hevc|x26[45]|h\.?26[45]|mkv|mp4|dual)(?:\s*[,/&+]\s*(?:aac(?:×\d+)?|ac3|e-?ac-?3|ddp|flac|opus|mp3|dts(?:-?hd|-?hdma)?|truehd|atmos|avc|hevc|x26[45]|h\.?26[45]|mkv|mp4|dual))+\.?$`)
 var reAliasUploaderName = regexp.MustCompile(`(?i)^[a-z0-9._-]{2,40}$`)

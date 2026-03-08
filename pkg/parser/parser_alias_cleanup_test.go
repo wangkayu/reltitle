@@ -189,6 +189,11 @@ func TestParserSpecial_NCOPRouteAndTitleCleanup(t *testing.T) {
 	if got := canonicalTitle(res); strings.Contains(strings.ToUpper(got), "NCOP") {
 		t.Fatalf("title should strip NCOP suffix, got=%q", got)
 	}
+	for _, tok := range res.Tokens {
+		if strings.EqualFold(strings.TrimSpace(tok.Text), "DVD") && !tok.Removed {
+			t.Fatalf("DVD token should be consumed in NCOP route, tokens=%v", res.Tokens)
+		}
+	}
 }
 
 func TestParserSpecial_NCOPNCEDNotAsTailGroup(t *testing.T) {
@@ -383,6 +388,52 @@ func TestParserStandaloneDVDSource_RemuxTail(t *testing.T) {
 	for _, tok := range res.Tokens {
 		if strings.EqualFold(strings.TrimSpace(tok.Text), "DVD") && !tok.Removed {
 			t.Fatalf("DVD token should be consumed in remux tail, tokens=%v", res.Tokens)
+		}
+	}
+}
+
+func TestParserStandaloneDVDSource_ReideenDVDISOsConsumed(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "Reideen DVD-ISOs (2014 US DVD)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSourceType), "DVD") {
+		t.Fatalf("expected source_type=DVD, got=%v", attrValues(res, model.AttrSourceType))
+	}
+	for _, tok := range res.Tokens {
+		low := strings.ToLower(strings.TrimSpace(tok.Text))
+		if (low == "dvd" || low == "isos") && !tok.Removed {
+			t.Fatalf("dvd-iso span should be consumed, tokens=%v", res.Tokens)
+		}
+	}
+}
+
+func TestParserStandaloneDVDSource_TokutenDVDSuffixConsumed(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Moozzi2] 咒术回战 第二季/Jujutsu Kaisen 2nd Season (BD 1920x1080 x265-10Bit Flac) - TV + Tokuten DVD"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	title := canonicalTitle(res)
+	if strings.Contains(strings.ToLower(title), "dvd") {
+		t.Fatalf("tokuten dvd suffix should not leak into title: %q", title)
+	}
+	for _, tok := range res.Tokens {
+		if strings.EqualFold(strings.TrimSpace(tok.Text), "DVD") && !tok.Removed {
+			t.Fatalf("tokuten dvd token should be consumed, tokens=%v", res.Tokens)
 		}
 	}
 }

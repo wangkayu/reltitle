@@ -2160,6 +2160,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	if titleStart >= 0 && titleEnd > titleStart {
 		attrs = append(attrs, model.Attribute{Type: model.AttrTitle, Normalized: title, TokenStart: titleStart, TokenEnd: titleEnd, Confidence: 0.7, Source: "heuristic"})
 		aliases = mergeAliases(aliases, p.inferAliasesFromAdjacentBrackets(tokens, titleEnd, episodeIdx, episodeRangeIdx))
+		aliases = mergeAliases(aliases, p.inferTitleGapSingleSlashAlias(tokens, title, titleEnd, episodeIdx, episodeRangeIdx))
 	}
 	aliases = mergeAliases(aliases, parenAliases)
 	aliases = mergeAliases(aliases, inferPostEpisodeSearchHintAliasesFromParens(tokens, episodeIdx, episodeRangeIdx, &attrs))
@@ -10515,6 +10516,110 @@ func (p *Parser) extractPreEpisodePipeAliasesAndConsume(tokens []model.Token, st
 	}
 
 	return main, aliases, true
+}
+
+var singleSlashAliasSeasonSignalPattern = regexp.MustCompile(`(?i)^(?:s\d{1,2}|season|saison|part|cour|\d{1,2}(?:st|nd|rd|th))$`)
+var singleSlashAliasSeasonSignalCJKPattern = regexp.MustCompile(`^第?[一二三四五六七八九十0-9]{1,3}(?:季|期|部)$`)
+var singleSlashAliasSeasonPhrasePattern = regexp.MustCompile(`(?i)^season\s*\d{1,2}$`)
+var singleSlashAliasEmbeddedSeasonCJKPattern = regexp.MustCompile(`^第?[一二三四五六七八九十0-9]{1,3}(?:季|期|部).*$`)
+
+func (p *Parser) inferTitleGapSingleSlashAlias(tokens []model.Token, title string, titleEnd int, episodeIdx int, episodeRangeIdx int) []string {
+	if len(tokens) == 0 || titleEnd < 0 || titleEnd >= len(tokens) {
+		return nil
+	}
+	end := len(tokens)
+	if episodeRangeIdx >= 0 && episodeRangeIdx < end {
+		end = episodeRangeIdx
+	}
+	if episodeIdx >= 0 && episodeIdx < end {
+		end = episodeIdx
+	}
+	if titleEnd >= end {
+		return nil
+	}
+	slashIdx := -1
+	for i := titleEnd; i < end; i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		t := strings.TrimSpace(tokens[i].Text)
+		if t == "/" || t == "／" {
+			if slashIdx >= 0 {
+				// multi-slash chains are handled by existing alias chain path.
+				return nil
+			}
+			slashIdx = i
+		}
+	}
+	if slashIdx < 0 || slashIdx+1 >= end {
+		return nil
+	}
+	if !hasSeasonSignalAroundSingleSlash(tokens, titleEnd, end, slashIdx) {
+		return nil
+	}
+
+	rightRaw := extractTitleFromSpanAllowRemoved(tokens, slashIdx+1, end, false)
+	right := cleanAliasToken(rightRaw)
+	if stripped := stripExplicitSeasonSuffix(right); stripped != "" {
+		right = stripped
+	}
+	right = strings.TrimSpace(right)
+	if right == "" || !p.isValidAliasToken(right) {
+		return nil
+	}
+	titleKey := aliasSemanticKey(title)
+	rightKey := aliasSemanticKey(right)
+	if rightKey == "" || (titleKey != "" && rightKey == titleKey) {
+		return nil
+	}
+	return []string{right}
+}
+
+func hasSeasonSignalAroundSingleSlash(tokens []model.Token, start int, end int, slashIdx int) bool {
+	left := lastVisibleTokenText(tokens, start, slashIdx)
+	right := nextVisibleTokenText(tokens, slashIdx+1, end)
+	if isSingleSlashSeasonSignalToken(left) || isSingleSlashSeasonSignalToken(right) {
+		return true
+	}
+
+	windowStart := slashIdx - 3
+	if windowStart < start {
+		windowStart = start
+	}
+	windowEnd := slashIdx + 4
+	if windowEnd > end {
+		windowEnd = end
+	}
+	for i := windowStart; i < windowEnd; i++ {
+		txt := strings.TrimSpace(tokens[i].Text)
+		if txt == "" {
+			continue
+		}
+		if isSingleSlashSeasonSignalToken(txt) {
+			return true
+		}
+	}
+	return false
+}
+
+func isSingleSlashSeasonSignalToken(t string) bool {
+	s := strings.TrimSpace(t)
+	if s == "" {
+		return false
+	}
+	if singleSlashAliasSeasonSignalPattern.MatchString(s) {
+		return true
+	}
+	if singleSlashAliasSeasonSignalCJKPattern.MatchString(s) {
+		return true
+	}
+	if singleSlashAliasSeasonPhrasePattern.MatchString(s) {
+		return true
+	}
+	if singleSlashAliasEmbeddedSeasonCJKPattern.MatchString(s) {
+		return true
+	}
+	return false
 }
 
 func isAliasChainDelimiterToken(s string) bool {

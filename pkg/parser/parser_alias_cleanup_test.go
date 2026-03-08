@@ -160,6 +160,47 @@ func TestParserAliasCleanup_DelicosNoSlashKeepsFullTitle(t *testing.T) {
 	}
 }
 
+func TestParserAliasCleanup_SingleSlashSeasonBridgeAddsAlias(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[ANi] Kingdom S06 / 王者天下 第六季 - 01 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	title := canonicalTitle(res)
+	aliases := canonicalAliases(res)
+
+	if title != "Kingdom" {
+		t.Fatalf("unexpected title: %q aliases=%v", title, aliases)
+	}
+	if !containsAlias(aliases, "王者天下") {
+		t.Fatalf("expected chinese alias extracted from single-slash season bridge, got=%v", aliases)
+	}
+}
+
+func TestParserAliasCleanup_SingleSlashNoSeasonSignalNotForced(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[TestGroup] Fate/Zero - 01 [1080p][WEB-DL]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	aliases := canonicalAliases(res)
+	if containsAlias(aliases, "Fate") {
+		t.Fatalf("single-slash fallback should not add left-side alias, aliases=%v", aliases)
+	}
+}
+
 func TestParserAliasCleanup_ParenAliasKeepsInnerClosingParen(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

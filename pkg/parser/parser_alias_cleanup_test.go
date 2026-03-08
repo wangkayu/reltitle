@@ -318,6 +318,31 @@ func TestParserTailParenAlias_TokensConsumedAfterExtraction(t *testing.T) {
 	}
 }
 
+func TestParserStandaloneWebSource_InferredAndConsumed(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "100 METERS (2025) MULTi 1080p WEB AV1 E-AC-3 -Tsundere-Raws (NF) (VF, FRENCH, VOSTFR, Hyakuemu.)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSourceType), "WEBRip") {
+		t.Fatalf("expected source_type=WEBRip, got=%v", attrValues(res, model.AttrSourceType))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioCodec), "EAC3") {
+		t.Fatalf("expected audio_codec=EAC3, got=%v", attrValues(res, model.AttrAudioCodec))
+	}
+	for _, tok := range res.Tokens {
+		if strings.EqualFold(strings.TrimSpace(tok.Text), "WEB") && !tok.Removed {
+			t.Fatalf("standalone WEB token should be consumed, tokens=%v", res.Tokens)
+		}
+	}
+}
+
 func TestParserPreEpisodePipeAliases_AreExtractedAndConsumed(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

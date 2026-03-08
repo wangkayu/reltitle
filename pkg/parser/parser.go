@@ -519,9 +519,6 @@ func hasNearbyTechContext(tokens []model.Token, center int, radius int) bool {
 		if i == center {
 			continue
 		}
-		if tokens[i].Removed {
-			continue
-		}
 		if isLikelyTechContextToken(tokens[i].Text) {
 			return true
 		}
@@ -539,6 +536,15 @@ func hasAudioCodecAttrNorm(attrs []model.Attribute, norm string) bool {
 			continue
 		}
 		if strings.ToUpper(strings.TrimSpace(a.Normalized)) == norm {
+			return true
+		}
+	}
+	return false
+}
+
+func hasSourceTypeAttr(attrs []model.Attribute) bool {
+	for _, a := range attrs {
+		if a.Type == model.AttrSourceType && strings.TrimSpace(a.Normalized) != "" {
 			return true
 		}
 	}
@@ -596,6 +602,52 @@ func extractDashedAudioCodecAttrsAndRemoveFromTokens(tokens []model.Token, attrs
 			}
 			i += 2
 		}
+	}
+}
+
+func extractStandaloneWebSourceAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Attribute) {
+	if attrs == nil || len(tokens) == 0 {
+		return
+	}
+	hasSource := hasSourceTypeAttr(*attrs)
+	for i := 0; i < len(tokens); i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		txt := strings.ToUpper(strings.TrimSpace(tokens[i].Text))
+		if txt == "" {
+			continue
+		}
+		matched := false
+		spanEnd := i + 1
+		switch txt {
+		case "WEB", "WEBRIP", "WEBDL", "WEB-DL":
+			matched = true
+		}
+		if !matched {
+			continue
+		}
+		if txt == "WEB" && i+2 < len(tokens) && strings.TrimSpace(tokens[i+1].Text) == "-" && strings.EqualFold(strings.TrimSpace(tokens[i+2].Text), "DL") {
+			spanEnd = i + 3
+		}
+		if !isInBracket(tokens, i) && !isInParen(tokens, i) && !hasNearbyTechContext(tokens, i, 4) {
+			continue
+		}
+		if !hasSource {
+			*attrs = append(*attrs, model.Attribute{
+				Type:       model.AttrSourceType,
+				Normalized: "WEBRip",
+				TokenStart: i,
+				TokenEnd:   spanEnd,
+				Confidence: 0.72,
+				Source:     "source_web_standalone",
+			})
+			hasSource = true
+		}
+		for k := i; k < spanEnd; k++ {
+			tokens[k].Removed = true
+		}
+		i = spanEnd - 1
 	}
 }
 
@@ -1503,6 +1555,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	p.extractStableTechSpanComboAttrsAndRemoveFromTokens(tokens, &attrs)
 	p.extractLooseCodecBitDepthAttrsAndRemoveFromTokens(tokens, &attrs)
 	extractDashedAudioCodecAttrsAndRemoveFromTokens(tokens, &attrs)
+	extractStandaloneWebSourceAttrsAndRemoveFromTokens(tokens, &attrs)
 	extractLooseBitDepthAttrsAndRemoveFromTokens(tokens, &attrs)
 	promoteFrenchMultiNoteToAudioFlag(attrs)
 	p.normalizePlatformAttrs(attrs)
@@ -1931,6 +1984,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	title = trimMovieRangeStartTailFromTitle(rawTitle, title, movieIndexRange, episode, episodeRange)
 	origTitle := title
 	title = sanitizePrimaryTitleForOutput(title)
+	title = trimTitleTailByPackKind(title, packKind)
 	aliases = p.sanitizeAliasesForOutput(aliases, title, episode, season)
 	if strings.TrimSpace(title) != "" && aliasSemanticKey(title) != aliasSemanticKey(origTitle) {
 		attrs = upsertTitleAttribute(attrs, title, "title_cleanup")
@@ -3474,6 +3528,7 @@ var reTitleTrimSpecialTail = regexp.MustCompile(`(?i)\s+(?:ncop|nced|pv)(?:\d{1,
 var reTitleStripTVAnimeSegmentPrefix = regexp.MustCompile(`(?i)(^|/\s*)tv\s*(?:アニメ|anime|animation)\s+`)
 var reTitleTrimEpisodeWordTail = regexp.MustCompile(`(?i)\s+(?:ep|episode)\s*$`)
 var reTitleTrimPackSpecialTail = regexp.MustCompile(`(?i)\s+pack(?:\s*\+\s*(?:sp[eé]ciaux|specials?|sp|ova|oad|ona|ex))+(?:\s+(?:web|webrip|web[- ]?dl))?\s*$`)
+var reTitleTrimPlainPackTail = regexp.MustCompile(`(?i)\s+pack\s*$`)
 var reTitleTrimMetaTail = regexp.MustCompile(`(?i)\s+(?:hd|sd|fhd|uhd|retail|webrip|web[- ]?dl|bdrip|bluray|blu-ray|remux|dvd|hdtv|mkv|mp4|avi|x26[45]|h\.?26[45]|hevc|av1|aac|ac3|e-?ac-?3|flac|dts(?:-?hd|-?hdma)?|hdma|truehd|ma\d{1,2}p|10[- ]?bit|8[- ]?bit)\s*$`)
 var reTitleTrimVolTail = regexp.MustCompile(`(?i)\s+(?:vol\.?(?:\s*\d{1,3})?|volume\s*\d{1,3})\s*$`)
 var reTitleTrimDVDBundleTail = regexp.MustCompile(`(?i)\s+(?:dvd(?:\s*[- ]?\s*isos?)?|dvd\s*set)\s*$`)
@@ -4203,6 +4258,21 @@ func sanitizePrimaryTitleForOutput(title string) string {
 		s = strings.TrimSpace(strings.Trim(s, "-_/;:,+ "))
 	}
 	return normalizeTitleMain(s)
+}
+
+func trimTitleTailByPackKind(title string, packKind string) string {
+	title = strings.TrimSpace(title)
+	if title == "" {
+		return ""
+	}
+	if strings.TrimSpace(packKind) == "" {
+		return title
+	}
+	t := strings.TrimSpace(reTitleTrimPlainPackTail.ReplaceAllString(title, ""))
+	if t == "" {
+		return title
+	}
+	return t
 }
 
 func upsertTitleAttribute(attrs []model.Attribute, title string, source string) []model.Attribute {

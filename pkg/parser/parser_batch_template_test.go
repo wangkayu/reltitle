@@ -482,6 +482,46 @@ func TestParserBatchTemplate_CatTalesLNTVPlatformExtracted(t *testing.T) {
 	}
 }
 
+func TestParserBatchTemplate_BGlobalSplitPlatformExtracted(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[ANi] Sample Show - 01 [1080p][B Global][WEB-DL][AAC AVC]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "TV_EP" {
+		t.Fatalf("content_kind=%q want=%q", got, "TV_EP")
+	}
+	if got := firstAttrValue(res, model.AttrPlatform); got != "BILIBILI" {
+		t.Fatalf("platform=%q want=%q", got, "BILIBILI")
+	}
+}
+
+func TestParserBatchTemplate_FODPlatformExtracted(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Group] Sample Show - 01 [WEB-DL][1080p][FOD][AAC AVC]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "TV_EP" {
+		t.Fatalf("content_kind=%q want=%q", got, "TV_EP")
+	}
+	if got := firstAttrValue(res, model.AttrPlatform); got != "FOD" {
+		t.Fatalf("platform=%q want=%q", got, "FOD")
+	}
+}
+
 func TestParserBatchTemplate_ATXMpeg2AndTSContainerExtracted(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

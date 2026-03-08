@@ -6048,6 +6048,20 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.8
+      - tokens: ["b", "-", "global"]
+        emit:
+          - type: platform
+            normalized: "BILIBILI_GLOBAL"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["b", "global"]
+        emit:
+          - type: platform
+            normalized: "BILIBILI_GLOBAL"
+            token_index: -1
+        remove: true
+        confidence: 0.8
       - tokens: ["bglobal"]
         emit:
           - type: platform
@@ -6079,6 +6093,7 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.8
+
       - tokens: ["巴哈"]
         emit:
           - type: platform
@@ -6100,6 +6115,15 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.8
+
+  - id: platform_fod
+    tokens: ["fod"]
+    emit:
+      - type: platform
+        normalized: "FOD"
+        token_index: -1
+    remove: true
+    confidence: 0.8
 
   - id: platform_amazon
     any_of:

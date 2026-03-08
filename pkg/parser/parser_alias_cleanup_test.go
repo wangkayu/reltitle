@@ -841,6 +841,49 @@ func TestParserLexicon_MediaToken_LaserDiscBoxConsumed(t *testing.T) {
 	}
 }
 
+func TestParserLexicon_LangMarker_RusBracketConsumed(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "City Hunter 1987 [Rus]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if title := canonicalTitle(res); strings.Contains(strings.ToLower(title), "rus") {
+		t.Fatalf("rus marker should not leak into title, got=%q", title)
+	}
+	for _, tok := range res.Tokens {
+		if strings.EqualFold(strings.TrimSpace(tok.Text), "Rus") && !tok.Removed {
+			t.Fatalf("rus token should be consumed, tokens=%v", res.Tokens)
+		}
+	}
+}
+
+func TestParserLexicon_LangMarker_EspanoloParenConsumed(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "Zetman (Españolo)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	aliases := canonicalAliases(res)
+	for _, a := range aliases {
+		la := strings.ToLower(strings.TrimSpace(a))
+		if strings.Contains(la, "español") || strings.Contains(la, "espanol") {
+			t.Fatalf("espanol marker should not stay in alias, aliases=%v", aliases)
+		}
+	}
+}
+
 func TestParserStandaloneDVDSource_TokutenDVDSuffixConsumed(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

@@ -1015,6 +1015,132 @@ entries:
         remove: true
         confidence: 0.65
 
+  - id: note_lang_tag_rus_single
+    any_of:
+      - scope: plain
+        tokens: ["rus"]
+        emit:
+          - type: note
+            normalized: "RUS"
+            token_index: -1
+        remove: true
+        confidence: 0.65
+      - scope: bracket
+        tokens: ["rus"]
+        emit:
+          - type: note
+            normalized: "RUS"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - scope: paren
+        tokens: ["rus"]
+        emit:
+          - type: note
+            normalized: "RUS"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+
+  - id: note_lang_tag_espanol_variants
+    any_of:
+      - scope: plain
+        tokens: ["español"]
+        emit:
+          - type: note
+            normalized: "ESP"
+            token_index: -1
+        remove: true
+        confidence: 0.62
+      - scope: plain
+        tokens: ["espanol"]
+        emit:
+          - type: note
+            normalized: "ESP"
+            token_index: -1
+        remove: true
+        confidence: 0.62
+      - scope: plain
+        tokens: ["españolo"]
+        emit:
+          - type: note
+            normalized: "ESP"
+            token_index: -1
+        remove: true
+        confidence: 0.6
+      - scope: plain
+        tokens: ["espanolo"]
+        emit:
+          - type: note
+            normalized: "ESP"
+            token_index: -1
+        remove: true
+        confidence: 0.6
+      - scope: bracket
+        tokens: ["español"]
+        emit:
+          - type: note
+            normalized: "ESP"
+            token_index: -1
+        remove: true
+        confidence: 0.68
+      - scope: bracket
+        tokens: ["espanol"]
+        emit:
+          - type: note
+            normalized: "ESP"
+            token_index: -1
+        remove: true
+        confidence: 0.68
+      - scope: bracket
+        tokens: ["españolo"]
+        emit:
+          - type: note
+            normalized: "ESP"
+            token_index: -1
+        remove: true
+        confidence: 0.65
+      - scope: bracket
+        tokens: ["espanolo"]
+        emit:
+          - type: note
+            normalized: "ESP"
+            token_index: -1
+        remove: true
+        confidence: 0.65
+      - scope: paren
+        tokens: ["español"]
+        emit:
+          - type: note
+            normalized: "ESP"
+            token_index: -1
+        remove: true
+        confidence: 0.68
+      - scope: paren
+        tokens: ["espanol"]
+        emit:
+          - type: note
+            normalized: "ESP"
+            token_index: -1
+        remove: true
+        confidence: 0.68
+      - scope: paren
+        tokens: ["españolo"]
+        emit:
+          - type: note
+            normalized: "ESP"
+            token_index: -1
+        remove: true
+        confidence: 0.65
+      - scope: paren
+        tokens: ["espanolo"]
+        emit:
+          - type: note
+            normalized: "ESP"
+            token_index: -1
+        remove: true
+        confidence: 0.65
+
   - id: note_br
     tokens: ["br"]
     emit:

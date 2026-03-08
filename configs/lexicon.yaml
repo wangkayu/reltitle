@@ -304,6 +304,20 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.75
+      - tokens: ["数码画质版"]
+        emit:
+          - type: note
+            normalized: "DIGITAL_REMASTER"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["數碼畫質版"]
+        emit:
+          - type: note
+            normalized: "DIGITAL_REMASTER"
+            token_index: -1
+        remove: true
+        confidence: 0.75
 
   - id: note_movie_bracket
     scope: bracket
@@ -1833,16 +1847,59 @@ entries:
             token_index: 0
         remove: true
         confidence: 0.7
+      - tokens: ["完"]
+        emit:
+          - type: note
+            normalized: "END"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["完结"]
+        emit:
+          - type: note
+            normalized: "END"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["完結"]
+        emit:
+          - type: note
+            normalized: "END"
+            token_index: -1
+        remove: true
+        confidence: 0.7
 
   - id: note_end_paren
     scope: paren
-    tokens: ["end"]
-    emit:
-      - type: note
-        normalized: "END"
-        token_index: -1
-    remove: true
-    confidence: 0.7
+    any_of:
+      - tokens: ["end"]
+        emit:
+          - type: note
+            normalized: "END"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["完"]
+        emit:
+          - type: note
+            normalized: "END"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["完结"]
+        emit:
+          - type: note
+            normalized: "END"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["完結"]
+        emit:
+          - type: note
+            normalized: "END"
+            token_index: -1
+        remove: true
+        confidence: 0.7
 
   - id: note_fin_bracket
     scope: bracket

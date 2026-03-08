@@ -2163,6 +2163,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 		aliases = mergeAliases(aliases, p.inferTitleGapSingleSlashAlias(tokens, title, titleEnd, episodeIdx, episodeRangeIdx))
 		aliases = mergeAliases(aliases, p.inferTitleGapDashAlias(tokens, title, titleEnd, episodeIdx, episodeRangeIdx))
 		aliases = mergeAliases(aliases, p.inferTitleGapBilingualRunAlias(tokens, title, titleEnd, episodeIdx, episodeRangeIdx))
+		title, aliases = p.promoteInlineBracketContinuationIntoTitle(tokens, title, aliases, titleEnd, episodeIdx, episodeRangeIdx, attrs)
 	}
 	aliases = mergeAliases(aliases, parenAliases)
 	aliases = mergeAliases(aliases, inferPostEpisodeSearchHintAliasesFromParens(tokens, episodeIdx, episodeRangeIdx, &attrs))
@@ -10888,6 +10889,110 @@ func (p *Parser) inferTitleGapBilingualRunAlias(tokens []model.Token, title stri
 		return nil
 	}
 	return []string{cand}
+}
+
+func (p *Parser) promoteInlineBracketContinuationIntoTitle(tokens []model.Token, title string, aliases []string, titleEnd int, episodeIdx int, episodeRangeIdx int, attrs []model.Attribute) (string, []string) {
+	title = strings.TrimSpace(title)
+	if len(tokens) == 0 || title == "" || titleEnd < 0 || titleEnd >= len(tokens) {
+		return title, aliases
+	}
+	// Conservative scope: latin primary title with inline bracket phrase + tail word run.
+	if !hasLatin(title) || hasCJK(title) {
+		return title, aliases
+	}
+
+	end := len(tokens)
+	if episodeRangeIdx >= 0 && episodeRangeIdx < end {
+		end = episodeRangeIdx
+	}
+	if episodeIdx >= 0 && episodeIdx < end {
+		end = episodeIdx
+	}
+	if techStart, ok := firstTechTokenIndexFromAttrs(attrs); ok && techStart > titleEnd && techStart < end {
+		end = techStart
+	}
+	if titleEnd >= end {
+		return title, aliases
+	}
+
+	openIdx := -1
+	for i := titleEnd; i < end; i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		t := strings.TrimSpace(tokens[i].Text)
+		if t == "[" || t == "【" || t == "(" || t == "（" {
+			openIdx = i
+			break
+		}
+		if isDashDelimiterToken(t) || t == "/" || t == "／" {
+			return title, aliases
+		}
+	}
+	if openIdx < 0 {
+		return title, aliases
+	}
+
+	open, close, ok := headAliasBracketPair(strings.TrimSpace(tokens[openIdx].Text))
+	if !ok {
+		return title, aliases
+	}
+	closeIdx := -1
+	depth := 0
+	for i := openIdx; i < end; i++ {
+		if strings.TrimSpace(tokens[i].Text) == open {
+			depth++
+			continue
+		}
+		if strings.TrimSpace(tokens[i].Text) == close {
+			if depth > 0 {
+				depth--
+				if depth == 0 {
+					closeIdx = i
+					break
+				}
+			}
+		}
+	}
+	if closeIdx <= openIdx+1 {
+		return title, aliases
+	}
+
+	inner := cleanAliasToken(extractTitleFromSpanAllowRemoved(tokens, openIdx+1, closeIdx, false))
+	inner = strings.Trim(inner, "\"'“”‘’")
+	inner = strings.TrimSpace(inner)
+	if inner == "" || isLikelyMetaBracketText(inner) || !p.isValidAliasToken(inner) {
+		return title, aliases
+	}
+
+	tailStart := closeIdx + 1
+	for tailStart < end {
+		txt := strings.TrimSpace(tokens[tailStart].Text)
+		if txt == "" || txt == "." || txt == "。" || txt == "!" || txt == "！" || txt == "?" || txt == "？" {
+			tailStart++
+			continue
+		}
+		break
+	}
+	if tailStart >= end {
+		return title, aliases
+	}
+	tailRaw := cleanAliasToken(extractTitleFromSpanAllowRemoved(tokens, tailStart, end, false))
+	tailRaw = strings.TrimSpace(strings.Trim(tailRaw, "-_/;:,+.。!！?？ "))
+	if tailRaw == "" || isLikelyMetaBracketText(tailRaw) {
+		return title, aliases
+	}
+	if isSingleSlashSeasonSignalToken(tailRaw) || isSingleSlashBridgeToken(tailRaw) {
+		return title, aliases
+	}
+
+	merged := sanitizePrimaryTitleForOutput(strings.TrimSpace(title + " " + inner + " " + tailRaw))
+	if merged == "" || aliasSemanticKey(merged) == aliasSemanticKey(title) {
+		return title, aliases
+	}
+
+	aliases = removeAliasBySemanticKey(aliases, aliasSemanticKey(inner))
+	return merged, aliases
 }
 
 func isDashDelimiterToken(t string) bool {

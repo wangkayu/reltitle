@@ -297,6 +297,46 @@ func TestParserAliasCleanup_TitleGapBilingualRunAlias_NoDelimiter(t *testing.T) 
 	}
 }
 
+func TestParserAliasCleanup_PromoteInlineBracketContinuationIntoTitle(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[shincaps] Futsuu no Joshikousei ga [Locodol] Yattemita. - 01 (AT-X 1440x1080 MPEG2 AAC).ts"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	title := canonicalTitle(res)
+	aliases := canonicalAliases(res)
+	if !strings.Contains(strings.ToLower(title), "locodol") || !strings.Contains(strings.ToLower(title), "yattemita") {
+		t.Fatalf("inline bracket continuation should be promoted into title, got title=%q aliases=%v", title, aliases)
+	}
+	if containsAlias(aliases, "Locodol") {
+		t.Fatalf("inline bracket token should be merged into title, not kept as alias: %v", aliases)
+	}
+}
+
+func TestParserAliasCleanup_InlineBracketMetaNotPromoted(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[FênixFansub] Nukitashi the Animation [BD][VOL-01][PT-BR]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	title := canonicalTitle(res)
+	if strings.Contains(strings.ToLower(title), "vol") || strings.Contains(strings.ToLower(title), "bd") {
+		t.Fatalf("meta bracket should not be promoted into title, got=%q", title)
+	}
+}
+
 func TestParserAliasCleanup_SingleSlashMiniAnimeBridgeAddsAlias(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

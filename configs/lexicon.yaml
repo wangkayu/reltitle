@@ -5164,6 +5164,16 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.9
+      - tokens: ["fhd"]
+        emit:
+          - type: resolution
+            normalized: "1080p"
+            token_index: -1
+          - type: note
+            normalized: "FHD"
+            token_index: -1
+        remove: true
+        confidence: 0.8
       - tokens: ["1080p@60fps"]
         emit:
           - type: resolution
@@ -5771,6 +5781,16 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.85
+      - tokens: ["hi10p"]
+        emit:
+          - type: bit_depth
+            normalized: "10bit"
+            token_index: -1
+          - type: note
+            normalized: "HI10P"
+            token_index: -1
+        remove: true
+        confidence: 0.8
       - tokens: ["10", "bit"]
         emit:
           - type: bit_depth

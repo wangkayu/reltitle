@@ -61,6 +61,8 @@ alias_noise:
     - BD720P
     - VCDRIP
     - LDRIP
+    - FHD
+    - HI10P
     - VHS
     - USBD
     - JPBD
@@ -100,6 +102,7 @@ alias_noise:
   regex_patterns:
     # simple tech words / containers / codecs
     - '(?i)^(1080p|2160p|720p|480p)$'
+    - '(?i)^(fhd|hi10p)$'
     - '(?i)^(hevc|avc|x264|x265|h264|h265|aac|ac3|flac|ddp|dts|atmos)$'
     - '(?i)^(mkv|mp4|avi)$'
     - '(?i)^(web-?dl|webrip|bdrip|bluray|hdtv|dvd|remux)$'
@@ -135,6 +138,8 @@ alias_noise:
     - SUB
     - SUBS
     - AUDIO
+    - FHD
+    - HI10P
     - VHS
     - USBD
     - JPBD

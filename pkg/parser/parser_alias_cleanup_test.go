@@ -2590,6 +2590,36 @@ func TestUnderscoreSceneStyle_NoRouteNeeded(t *testing.T) {
 	if !hasAttrValue(attrValues(res, model.AttrSubLang), "SPA") {
 		t.Fatalf("expected sub_lang SPA, got=%v", attrValues(res, model.AttrSubLang))
 	}
+	if !hasAttrValue(attrValues(res, model.AttrBitDepth), "10bit") {
+		t.Fatalf("expected bit_depth 10bit, got=%v", attrValues(res, model.AttrBitDepth))
+	}
+	for _, tok := range res.Tokens {
+		if strings.EqualFold(strings.TrimSpace(tok.Text), "HI10p") && !tok.Removed {
+			t.Fatalf("HI10p token should be consumed, tokens=%v", res.Tokens)
+		}
+	}
+}
+
+func TestLexiconDict_FHDTokenMappedAndConsumed(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[TestGroup] Sample Title - 01 [FHD][WEB-DL][AAC AVC]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrResolution), "1080p") {
+		t.Fatalf("expected resolution 1080p, got=%v", attrValues(res, model.AttrResolution))
+	}
+	for _, tok := range res.Tokens {
+		if strings.EqualFold(strings.TrimSpace(tok.Text), "FHD") && !tok.Removed {
+			t.Fatalf("FHD token should be consumed, tokens=%v", res.Tokens)
+		}
+	}
 }
 
 func TestLexiconDict_4KHDRComboShouldNotPolluteTitle(t *testing.T) {

@@ -2162,11 +2162,45 @@ func TestLexiconDict_GluedTechTokensShouldBeConsumed(t *testing.T) {
 			},
 		},
 		{
+			name:  "bd2160p",
+			raw:   "[PorterRAWS][生化危机：死亡岛2023/ バイオハザード：デスアイランド][BD2160P][英语中字]",
+			token: "BD2160P",
+			expectAttrs: map[model.AttrType]string{
+				model.AttrSourceType: "BD",
+				model.AttrResolution: "2160p",
+			},
+		},
+		{
+			name:  "dvd576p",
+			raw:   "[PorterRAWS]史上最大作弊战争 / 出猫斗一番 / That's Cunning! 史上最大作弊战争[DVD576P][日语中字]",
+			token: "DVD576P",
+			expectAttrs: map[model.AttrType]string{
+				model.AttrSourceType: "DVD",
+				model.AttrResolution: "576p",
+			},
+		},
+		{
+			name:  "360p",
+			raw:   "[PorterRAWS]去吧！稻中桌球社 / 去吧！稻中乒團/ Ping Pong Club[360P][VCDRip][粤语中字]",
+			token: "360P",
+			expectAttrs: map[model.AttrType]string{
+				model.AttrResolution: "360p",
+			},
+		},
+		{
 			name:  "xvid",
 			raw:   "Beet The Vandel Buster - WEBDL - VOSTFR - Xvid MP3 - ETF",
 			token: "Xvid",
 			expectAttrs: map[model.AttrType]string{
 				model.AttrVideoCodec: "XVID",
+			},
+		},
+		{
+			name:  "8bits",
+			raw:   "[WZF]FullMetal_Alchemist_-_Milos_no_Sei-Naru_Hoshi_(2011)[BD-1080p][8bits][x264-FLAC_6ch][1920x1080][Sub_Esp].mkv",
+			token: "8bits",
+			expectAttrs: map[model.AttrType]string{
+				model.AttrBitDepth: "8bit",
 			},
 		},
 		{

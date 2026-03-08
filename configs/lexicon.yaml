@@ -596,6 +596,30 @@ entries:
     remove: true
     confidence: 0.75
 
+  - id: source_type_resolution_bd2160p_glued
+    tokens: ["bd2160p"]
+    emit:
+      - type: source_type
+        normalized: "BD"
+        token_index: -1
+      - type: resolution
+        normalized: "2160p"
+        token_index: -1
+    remove: true
+    confidence: 0.75
+
+  - id: source_type_resolution_dvd576p_glued
+    tokens: ["dvd576p"]
+    emit:
+      - type: source_type
+        normalized: "DVD"
+        token_index: -1
+      - type: resolution
+        normalized: "576p"
+        token_index: -1
+    remove: true
+    confidence: 0.75
+
   - id: source_type_uhdbdrip_glued
     tokens: ["uhdbdrip"]
     emit:
@@ -4961,10 +4985,80 @@ entries:
 
   - id: resolution_custom_nonstandard_p
     any_of:
+      - tokens: ["240p"]
+        emit:
+          - type: resolution
+            normalized: "240p"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["264p"]
+        emit:
+          - type: resolution
+            normalized: "264p"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["288p"]
+        emit:
+          - type: resolution
+            normalized: "288p"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["352p"]
+        emit:
+          - type: resolution
+            normalized: "352p"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["360p"]
+        emit:
+          - type: resolution
+            normalized: "360p"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["384p"]
+        emit:
+          - type: resolution
+            normalized: "384p"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["396p"]
+        emit:
+          - type: resolution
+            normalized: "396p"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["408p"]
+        emit:
+          - type: resolution
+            normalized: "408p"
+            token_index: -1
+        remove: true
+        confidence: 0.75
       - tokens: ["576p"]
         emit:
           - type: resolution
             normalized: "576p"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["688p"]
+        emit:
+          - type: resolution
+            normalized: "688p"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["810p"]
+        emit:
+          - type: resolution
+            normalized: "810p"
             token_index: -1
         remove: true
         confidence: 0.75
@@ -5000,6 +5094,20 @@ entries:
         emit:
           - type: resolution
             normalized: "1008p"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["960p"]
+        emit:
+          - type: resolution
+            normalized: "960p"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["1040p"]
+        emit:
+          - type: resolution
+            normalized: "1040p"
             token_index: -1
         remove: true
         confidence: 0.75
@@ -5042,6 +5150,27 @@ entries:
         emit:
           - type: resolution
             normalized: "1636p"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["1604p"]
+        emit:
+          - type: resolution
+            normalized: "1604p"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["1716p"]
+        emit:
+          - type: resolution
+            normalized: "1716p"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["2072p"]
+        emit:
+          - type: resolution
+            normalized: "2072p"
             token_index: -1
         remove: true
         confidence: 0.75
@@ -5312,6 +5441,13 @@ entries:
           - type: bit_depth
             normalized: "8bit"
             token_index: 0
+        remove: true
+        confidence: 0.8
+      - tokens: ["8bits"]
+        emit:
+          - type: bit_depth
+            normalized: "8bit"
+            token_index: -1
         remove: true
         confidence: 0.8
 

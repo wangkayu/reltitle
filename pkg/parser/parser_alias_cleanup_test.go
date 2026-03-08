@@ -2079,6 +2079,103 @@ func TestLexiconDict_DVTokenToDolbyVisionHDR(t *testing.T) {
 	}
 }
 
+func TestLexiconDict_GluedTechTokensShouldBeConsumed(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	cases := []struct {
+		name        string
+		raw         string
+		token       string
+		expectAttrs map[model.AttrType]string
+	}{
+		{
+			name:  "uhdbdrip",
+			raw:   "[4K_HDR][DBD-Raws][剧场版 鬼灭之刃 无限列车篇/Kimetsu no Yaiba The Movie Mugen Ressha Hen][2160P][UHDBDRip][HEVC-10bit][简繁外挂][FLAC][MKV]",
+			token: "UHDBDRip",
+			expectAttrs: map[model.AttrType]string{
+				model.AttrSourceType: "BDRip",
+				model.AttrNote:       "UHD_BDRIP",
+			},
+		},
+		{
+			name:  "uhdrip",
+			raw:   "[AI-Raws] Future Boy Conan 未来少年コナン UHDRip 2160p MKV",
+			token: "UHDRip",
+			expectAttrs: map[model.AttrType]string{
+				model.AttrSourceType: "HDRip",
+				model.AttrNote:       "UHDRIP",
+			},
+		},
+		{
+			name:  "10bits",
+			raw:   "Aldnoah.Zero (2014) VOSTFR 1080p 10bits BluRay x265-GundamGuy",
+			token: "10bits",
+			expectAttrs: map[model.AttrType]string{
+				model.AttrBitDepth: "10bit",
+			},
+		},
+		{
+			name:  "hdtv720p",
+			raw:   "[PorterRAWS][殺手廢J/Killing Procedures][全8集+特別篇][HDTV720P][粵語中字]",
+			token: "HDTV720P",
+			expectAttrs: map[model.AttrType]string{
+				model.AttrSourceType: "HDTV",
+				model.AttrResolution: "720p",
+			},
+		},
+		{
+			name:  "dvd480p",
+			raw:   "[PorterRAWS] 火影忍者.NARUTO[E01-150][DVD480P][粤日国三语][HALFCD-NORM]",
+			token: "DVD480P",
+			expectAttrs: map[model.AttrType]string{
+				model.AttrSourceType: "DVD",
+				model.AttrResolution: "480p",
+			},
+		},
+		{
+			name:  "hdtc1080p",
+			raw:   "[PorterRAWS][AI超分画质]数码宝贝02：起源/数码暴龙/ デジモンアドベンチャー02 THE BEGINNING[HDTC1080P][TearsHD][粤语中字]",
+			token: "HDTC1080P",
+			expectAttrs: map[model.AttrType]string{
+				model.AttrSourceType: "HDTC",
+				model.AttrResolution: "1080p",
+			},
+		},
+		{
+			name:  "bd1080p",
+			raw:   "[DB] Dandadan 2nd Season | Dan Da Dan Season 2 [Dual Audio 10bit BD1080p][HEVC-x265]",
+			token: "BD1080p",
+			expectAttrs: map[model.AttrType]string{
+				model.AttrSourceType: "BD",
+				model.AttrResolution: "1080p",
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			res, err := p.Parse(tc.raw)
+			if err != nil {
+				t.Fatalf("parse failed: %v", err)
+			}
+			for typ, want := range tc.expectAttrs {
+				if !hasAttrValue(attrValues(res, typ), want) {
+					t.Fatalf("expected %s=%s, got=%v", typ, want, attrValues(res, typ))
+				}
+			}
+			for _, tok := range res.Tokens {
+				if strings.EqualFold(strings.TrimSpace(tok.Text), tc.token) && !tok.Removed {
+					t.Fatalf("token %q should be consumed, tokens=%v", tc.token, res.Tokens)
+				}
+			}
+		})
+	}
+}
+
 func hasAttrValue(got []string, want string) bool {
 	for _, v := range got {
 		if strings.EqualFold(strings.TrimSpace(v), strings.TrimSpace(want)) {

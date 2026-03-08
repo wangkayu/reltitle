@@ -492,6 +492,87 @@ entries:
     remove: true
     confidence: 0.75
 
+  - id: source_type_resolution_bd1080p_glued
+    tokens: ["bd1080p"]
+    emit:
+      - type: source_type
+        normalized: "BD"
+        token_index: -1
+      - type: resolution
+        normalized: "1080p"
+        token_index: -1
+    remove: true
+    confidence: 0.75
+
+  - id: source_type_resolution_hdtv720p_glued
+    tokens: ["hdtv720p"]
+    emit:
+      - type: source_type
+        normalized: "HDTV"
+        token_index: -1
+      - type: resolution
+        normalized: "720p"
+        token_index: -1
+    remove: true
+    confidence: 0.75
+
+  - id: source_type_resolution_dvd480p_glued
+    tokens: ["dvd480p"]
+    emit:
+      - type: source_type
+        normalized: "DVD"
+        token_index: -1
+      - type: resolution
+        normalized: "480p"
+        token_index: -1
+    remove: true
+    confidence: 0.75
+
+  - id: source_type_resolution_hdtc1080p_glued
+    tokens: ["hdtc1080p"]
+    emit:
+      - type: source_type
+        normalized: "HDTC"
+        token_index: -1
+      - type: resolution
+        normalized: "1080p"
+        token_index: -1
+    remove: true
+    confidence: 0.75
+
+  - id: source_type_uhdbdrip_glued
+    tokens: ["uhdbdrip"]
+    emit:
+      - type: source_type
+        normalized: "BDRip"
+        token_index: -1
+      - type: note
+        normalized: "UHD_BDRIP"
+        token_index: -1
+    remove: true
+    confidence: 0.75
+
+  - id: source_type_uhdrip_glued
+    tokens: ["uhdrip"]
+    emit:
+      - type: source_type
+        normalized: "HDRip"
+        token_index: -1
+      - type: note
+        normalized: "UHDRIP"
+        token_index: -1
+    remove: true
+    confidence: 0.75
+
+  - id: bit_depth_10bits_glued
+    tokens: ["10bits"]
+    emit:
+      - type: bit_depth
+        normalized: "10bit"
+        token_index: -1
+    remove: true
+    confidence: 0.75
+
   - id: note_hdr
     tokens: ["hdr"]
     emit:

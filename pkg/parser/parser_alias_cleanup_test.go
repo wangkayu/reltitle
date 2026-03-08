@@ -165,6 +165,89 @@ func TestParserAliasCleanup_DropsResolutionMetaAliases(t *testing.T) {
 	}
 }
 
+func TestParserAliasCleanup_DropsBitDepthAndSubtitleMetaAliases(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[4K数字修复／2K版][SUK字幕组][哥斯拉][1984][中日双语字幕][HDTVrip][AVC][10bit][1080P][MKV]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	aliases := canonicalAliases(res)
+	for _, a := range aliases {
+		la := strings.ToLower(strings.TrimSpace(a))
+		if la == "10bit" || strings.Contains(a, "字幕") || strings.Contains(a, "双语") || strings.Contains(a, "雙語") {
+			t.Fatalf("meta alias leaked: aliases=%v", aliases)
+		}
+	}
+}
+
+func TestParserMetaMarkerCleanup_ConsumesVolInDiscContext(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[BDMV] CITY THE ANIMATION Vol.1-2"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	for _, tok := range res.Tokens {
+		if strings.EqualFold(strings.TrimSpace(tok.Text), "Vol") && !tok.Removed {
+			t.Fatalf("vol token should be consumed in disc context, tokens=%v", res.Tokens)
+		}
+	}
+}
+
+func TestParserMetaMarkerCleanup_KeepsVolumeInTitleContext(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[神楽坂 まひろ] RWBY Volume 9 - 02 (CR 1920x1080 AVC AAC MKV)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	foundAlive := false
+	for _, tok := range res.Tokens {
+		if strings.EqualFold(strings.TrimSpace(tok.Text), "Volume") && !tok.Removed {
+			foundAlive = true
+			break
+		}
+	}
+	if !foundAlive {
+		t.Fatalf("volume token should remain in title context, tokens=%v", res.Tokens)
+	}
+}
+
+func TestParserMetaMarkerCleanup_ConsumesEpisodesRangePrefix(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[DVD Remux] Tetsuwan Atom Astro Boy (1963) Volume 1 R3 DVD Remux [English Sub] Episodes 1~5"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	for _, tok := range res.Tokens {
+		if strings.EqualFold(strings.TrimSpace(tok.Text), "Episodes") && !tok.Removed {
+			t.Fatalf("episodes token should be consumed when followed by numeric range, tokens=%v", res.Tokens)
+		}
+	}
+}
+
 func TestParserSpecial_NCOPRouteAndTitleCleanup(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {
@@ -551,6 +634,28 @@ func TestParserStandaloneAudioCodec_Ma10pFLACTailConsumed(t *testing.T) {
 		low := strings.ToLower(strings.TrimSpace(tok.Text))
 		if (low == "ma10p" || low == "_" || low == "flac") && !tok.Removed {
 			t.Fatalf("ma10p_flac tokens should be consumed, tokens=%v", res.Tokens)
+		}
+	}
+}
+
+func TestParserStandaloneBitDepth_Ma10pTailConsumed(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Niconeiko Works] Adachi to Shimamura 安达与岛村 1080P BDRip Ma10p FLAC"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrBitDepth), "10bit") {
+		t.Fatalf("expected bit_depth=10bit, got=%v", attrValues(res, model.AttrBitDepth))
+	}
+	for _, tok := range res.Tokens {
+		if strings.EqualFold(strings.TrimSpace(tok.Text), "Ma10p") && !tok.Removed {
+			t.Fatalf("ma10p token should be consumed, tokens=%v", res.Tokens)
 		}
 	}
 }

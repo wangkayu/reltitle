@@ -729,6 +729,148 @@ func (p *Parser) extractMaProfileAudioCodecAttrsAndRemoveFromTokens(tokens []mod
 	}
 }
 
+func (p *Parser) extractStandaloneMaProfileBitDepthAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Attribute) {
+	if attrs == nil || len(tokens) == 0 {
+		return
+	}
+	seenBit := make(map[string]struct{}, 2)
+	for _, a := range *attrs {
+		if a.Type != model.AttrBitDepth {
+			continue
+		}
+		n := strings.ToLower(strings.TrimSpace(a.Normalized))
+		if n != "" {
+			seenBit[n] = struct{}{}
+		}
+	}
+	for i := 0; i < len(tokens); i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		base := strings.TrimSpace(tokens[i].Text)
+		m := maProfileBitDepthPattern.FindStringSubmatch(base)
+		if len(m) != 2 {
+			continue
+		}
+		if !isInBracket(tokens, i) && !isInParen(tokens, i) && !hasNearbyTechContext(tokens, i, 4) && !(p != nil && p.hasNearbyAudioCodecToken(tokens, i, 4)) {
+			continue
+		}
+		bit := strings.TrimLeft(m[1], "0")
+		if bit == "" {
+			bit = m[1]
+		}
+		norm := bit + "bit"
+		if _, ok := seenBit[strings.ToLower(norm)]; !ok {
+			*attrs = append(*attrs, model.Attribute{
+				Type:       model.AttrBitDepth,
+				Normalized: norm,
+				TokenStart: i,
+				TokenEnd:   i + 1,
+				Confidence: 0.72,
+				Source:     "tech_combo_token",
+			})
+			seenBit[strings.ToLower(norm)] = struct{}{}
+		}
+		tokens[i].Removed = true
+	}
+}
+
+var volumeWordPattern = regexp.MustCompile(`(?i)^vol(?:ume)?\.?$`)
+var shortNumericPattern = regexp.MustCompile(`^\d{1,3}$`)
+var numericRangeTokenPattern = regexp.MustCompile(`^\d{1,4}\s*[-~～−–]\s*\d{1,4}$`)
+
+func hasDiscLikeSourceTypeAttr(attrs []model.Attribute) bool {
+	for _, a := range attrs {
+		if a.Type != model.AttrSourceType {
+			continue
+		}
+		n := strings.ToUpper(strings.TrimSpace(a.Normalized))
+		n = strings.ReplaceAll(n, "-", "")
+		n = strings.ReplaceAll(n, "_", "")
+		switch {
+		case strings.Contains(n, "BD"),
+			strings.Contains(n, "BLURAY"),
+			strings.Contains(n, "DVD"),
+			strings.Contains(n, "VHS"),
+			strings.Contains(n, "LASERDISC"),
+			strings.Contains(n, "LD"),
+			strings.Contains(n, "REMUX"):
+			return true
+		}
+	}
+	return false
+}
+
+func hasEpisodeRangeMarker(tokens []model.Token, idx int) bool {
+	next := nextAliveToken(tokens, idx+1)
+	if next < 0 {
+		return false
+	}
+	marker := strings.ToLower(strings.TrimSpace(tokens[next].Text))
+	switch marker {
+	case "-", "~", "～", "−", "–", "to", "&", "＆", ",", "，", "/", "／":
+		return true
+	default:
+		return false
+	}
+}
+
+func (p *Parser) extractVolumeEpisodeMetaMarkersAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Attribute) {
+	if len(tokens) == 0 {
+		return
+	}
+	hasDiscSource := false
+	if attrs != nil {
+		hasDiscSource = hasDiscLikeSourceTypeAttr(*attrs)
+	}
+	for i := 0; i < len(tokens); i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		cur := strings.TrimSpace(tokens[i].Text)
+		curLower := strings.ToLower(cur)
+
+		// Consume metadata prefixes like "Episodes 01-10" in package/tech context.
+		if curLower == "episode" || curLower == "episodes" {
+			j := nextAliveToken(tokens, i+1)
+			if j < 0 {
+				continue
+			}
+			next := strings.TrimSpace(tokens[j].Text)
+			if (shortNumericPattern.MatchString(next) || numericRangeTokenPattern.MatchString(next)) &&
+				(isInBracket(tokens, i) || isInParen(tokens, i) || hasEpisodeRangeMarker(tokens, j) || hasDiscSource) {
+				tokens[i].Removed = true
+			}
+			continue
+		}
+
+		// Consume volume marker word in clear disc/batch packaging context.
+		if !volumeWordPattern.MatchString(cur) {
+			continue
+		}
+		j := nextAliveToken(tokens, i+1)
+		dotIdx := -1
+		if j >= 0 && strings.TrimSpace(tokens[j].Text) == "." {
+			dotIdx = j
+			j = nextAliveToken(tokens, j+1)
+		}
+		if j < 0 {
+			continue
+		}
+		next := strings.TrimSpace(tokens[j].Text)
+		if !shortNumericPattern.MatchString(next) {
+			continue
+		}
+		if !(isInBracket(tokens, i) || isInParen(tokens, i) || hasDiscSource) {
+			continue
+		}
+		tokens[i].Removed = true
+		if dotIdx >= 0 {
+			tokens[dotIdx].Removed = true
+		}
+	}
+}
+
 func (p *Parser) extractStandaloneSourceTypeAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Attribute) {
 	if p == nil || attrs == nil || len(tokens) == 0 || len(p.sourceTypeCanonical) == 0 {
 		return
@@ -1743,8 +1885,10 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	p.extractLooseCodecBitDepthAttrsAndRemoveFromTokens(tokens, &attrs)
 	extractDashedAudioCodecAttrsAndRemoveFromTokens(tokens, &attrs)
 	p.extractMaProfileAudioCodecAttrsAndRemoveFromTokens(tokens, &attrs)
+	p.extractStandaloneMaProfileBitDepthAttrsAndRemoveFromTokens(tokens, &attrs)
 	p.extractStandaloneSourceTypeAttrsAndRemoveFromTokens(tokens, &attrs)
 	p.extractStandaloneAudioCodecAttrsAndRemoveFromTokens(tokens, &attrs)
+	p.extractVolumeEpisodeMetaMarkersAndRemoveFromTokens(tokens, &attrs)
 	extractLooseBitDepthAttrsAndRemoveFromTokens(tokens, &attrs)
 	promoteFrenchMultiNoteToAudioFlag(attrs)
 	p.normalizePlatformAttrs(attrs)
@@ -1797,6 +1941,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 			attrs = append(attrs, model.Attribute{Type: model.AttrGroup, Normalized: group, TokenStart: gIdx, TokenEnd: gIdx + 1, Confidence: 0.7, Source: "heuristic"})
 		}
 	}
+	attrs = pruneGroupSpanTechArtifacts(attrs, groupSpan)
 
 	packKind := detectPackKind(p.cfg, rawTitle)
 	ctx := newParseContext(rawTitle, packKind, tailParenBlock)
@@ -1807,6 +1952,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	for _, pass := range defaultParsePasses() {
 		pass(tokens, &attrs, ctx)
 	}
+	attrs = pruneGroupSpanTechArtifacts(attrs, groupSpan)
 	// PackKind may be refined/overridden by parse passes (e.g. contents markers like TV+OAD).
 	packKind = strings.TrimSpace(ctx.PackKind)
 	if hasAttrNormalized(attrs, model.AttrNote, "TV_PACK") {
@@ -2445,6 +2591,48 @@ func dedupeAttributes(attrs []model.Attribute) []model.Attribute {
 		if keep[i] {
 			out = append(out, attrs[i])
 		}
+	}
+	return out
+}
+
+func pruneGroupSpanTechArtifacts(attrs []model.Attribute, groupSpan [2]int) []model.Attribute {
+	if len(attrs) == 0 || groupSpan[1] <= groupSpan[0] {
+		return attrs
+	}
+	isGroupSpan := func(a model.Attribute) bool {
+		return a.TokenStart >= groupSpan[0] && a.TokenEnd > a.TokenStart && a.TokenEnd <= groupSpan[1]
+	}
+	shouldPrune := func(a model.Attribute) bool {
+		if !isGroupSpan(a) {
+			return false
+		}
+		switch a.Type {
+		case model.AttrSubFlag,
+			model.AttrSubLang,
+			model.AttrSubFormat,
+			model.AttrSubLangGroup,
+			model.AttrAudioLang,
+			model.AttrAudioFlag,
+			model.AttrAudioCodec,
+			model.AttrAudioChannels,
+			model.AttrAudioObject,
+			model.AttrSourceType,
+			model.AttrResolution,
+			model.AttrVideoCodec,
+			model.AttrContainer,
+			model.AttrPlatform,
+			model.AttrTech:
+			return true
+		default:
+			return false
+		}
+	}
+	out := make([]model.Attribute, 0, len(attrs))
+	for _, a := range attrs {
+		if shouldPrune(a) {
+			continue
+		}
+		out = append(out, a)
 	}
 	return out
 }
@@ -3613,7 +3801,10 @@ func (p *Parser) isAliasMetaOnlyToken(s string) bool {
 		reAliasResolutionMetaPhrase.MatchString(ss) ||
 		reAliasSourceResolutionPhrase.MatchString(ss) ||
 		reAliasSourceMetaPhrase.MatchString(ss) ||
-		reAliasSubtitleMetaPhrase.MatchString(ss) {
+		reAliasSubtitleMetaPhrase.MatchString(ss) ||
+		reAliasBitDepthMetaPhrase.MatchString(ss) ||
+		reAliasAudioCountMetaPhrase.MatchString(ss) ||
+		reAliasSubtitleCJKMetaPhrase.MatchString(strings.TrimSpace(s)) {
 		return true
 	}
 	if p == nil {
@@ -3829,6 +4020,9 @@ var reAliasResolutionMetaPhrase = regexp.MustCompile(`(?i)^(?:[248]k|fhd|uhd|hd|
 var reAliasSourceResolutionPhrase = regexp.MustCompile(`(?i)^(?:ld|jdvd|dvd|bd|bdrip|webrip|web[- ]?dl)\s+\d{3,4}p$`)
 var reAliasSourceMetaPhrase = regexp.MustCompile(`(?i)^(?:b[-_ ]?)?(?:j[-_ ]?dvd|dvd|bd|bdrip|bluray|blu[-_ ]?ray|webrip|web[-_ ]?dl)(?:\s+raw)?$`)
 var reAliasSubtitleMetaPhrase = regexp.MustCompile(`(?i)^(?:srt|ass|pgs)(?:\b|[\s\-_/+].*)$`)
+var reAliasBitDepthMetaPhrase = regexp.MustCompile(`(?i)^(?:ma(?:8|10|12)p|(?:8|10|12)\s*[-_ ]?bit)$`)
+var reAliasAudioCountMetaPhrase = regexp.MustCompile(`(?i)^(?:\d+\s*audio|audio\s*\d+)$`)
+var reAliasSubtitleCJKMetaPhrase = regexp.MustCompile(`(?i)^(?:[\p{Han}A-Za-z0-9&+／/\-_\s]*?(?:双语|雙語|中字|字幕|內封|内封|內嵌|内嵌|外挂|外掛))$`)
 var reAliasTrailingEpisodeTail = regexp.MustCompile(`(?i)^(.*?)(?:\s*[-:：]\s*0*(\d{1,4}))$`)
 var reTitleTrimTVSeasonTail = regexp.MustCompile(`(?i)\s+(?:tv|tb|тv|тв)\s*[-_ ]?\s*\d{1,3}\s*$`)
 var reTitleTrimTVTail = regexp.MustCompile(`(?i)\s+(?:tv|tb|тv|тв)\s*$`)
@@ -6359,16 +6553,27 @@ func extractHeadBracketGroup(tokens []model.Token) (string, [2]int) {
 	if len(tokens) < 3 {
 		return "", [2]int{0, 0}
 	}
-	open0, close0, ok0 := headGroupBracketPair(tokens[0].Text)
+	start := 0
+	for start < len(tokens) && tokens[start].Removed {
+		start++
+	}
+	if start >= len(tokens) {
+		return "", [2]int{0, 0}
+	}
+	open0, close0, ok0 := headGroupBracketPair(tokens[start].Text)
 	if !ok0 {
 		return "", [2]int{0, 0}
 	}
 
 	blocks := make([][3]int, 0, 4)
-	i := 0
+	i := start
 	_ = open0
 	_ = close0
 	for i < len(tokens) {
+		if tokens[i].Removed {
+			i++
+			continue
+		}
 		open, close, ok := headGroupBracketPair(tokens[i].Text)
 		if !ok {
 			break
@@ -6376,6 +6581,9 @@ func extractHeadBracketGroup(tokens []model.Token) (string, [2]int) {
 		end := -1
 		depth := 0
 		for j := i; j < len(tokens); j++ {
+			if tokens[j].Removed {
+				continue
+			}
 			if tokens[j].Text == open {
 				depth++
 			} else if tokens[j].Text == close {
@@ -6393,6 +6601,9 @@ func extractHeadBracketGroup(tokens []model.Token) (string, [2]int) {
 		}
 		blocks = append(blocks, [3]int{i, end + 1, end})
 		i = end + 1
+		for i < len(tokens) && tokens[i].Removed {
+			i++
+		}
 	}
 	if len(blocks) == 0 {
 		return "", [2]int{0, 0}
@@ -6401,6 +6612,9 @@ func extractHeadBracketGroup(tokens []model.Token) (string, [2]int) {
 	// Prefer first bracket block. If first block is clear meta (e.g. [1080P], [BDRip]),
 	// allow fallback to the first subsequent strong group candidate block.
 	for bi, b := range blocks {
+		if !headBracketBlockHasAliveToken(tokens, b) {
+			continue
+		}
 		g := headBracketBlockText(tokens, b)
 		if g == "" {
 			continue
@@ -6434,6 +6648,19 @@ func headBracketBlockText(tokens []model.Token, block [3]int) string {
 		parts = append(parts, tokens[k].Text)
 	}
 	return strings.TrimSpace(strings.Join(parts, " "))
+}
+
+func headBracketBlockHasAliveToken(tokens []model.Token, block [3]int) bool {
+	for k := block[0] + 1; k < block[1]-1; k++ {
+		if tokens[k].Removed {
+			continue
+		}
+		if strings.TrimSpace(tokens[k].Text) == "" {
+			continue
+		}
+		return true
+	}
+	return false
 }
 
 func areLeadingHeadBlocksMeta(tokens []model.Token, blocks [][3]int) bool {
@@ -8189,6 +8416,7 @@ func extractEditionAttrsAndRemoveFromTokens(tokens []model.Token, out *[]model.A
 	if out == nil || len(tokens) == 0 {
 		return
 	}
+	extractRestoreEditionAttrsAndRemoveFromTokens(tokens, out)
 	extractWebVersionEditionAttrsAndRemoveFromTokens(tokens, out)
 	extractAudioCommentaryEditionAttrsAndRemoveFromTokens(tokens, out, allowUnderscoreRoute)
 	extractUncutEditionAttrsAndRemoveFromTokens(tokens, out)
@@ -8197,6 +8425,92 @@ func extractEditionAttrsAndRemoveFromTokens(tokens []model.Token, out *[]model.A
 	extractDirectorsCutEditionAttrsAndRemoveFromTokens(tokens, out)
 	extractRemasteredEditionAttrsAndRemoveFromTokens(tokens, out)
 	extractEncodeVerEditionAttrsAndRemoveFromTokens(tokens, out)
+}
+
+func extractRestoreEditionAttrsAndRemoveFromTokens(tokens []model.Token, out *[]model.Attribute) {
+	if out == nil || len(tokens) == 0 {
+		return
+	}
+	findBlockEnd := func(start int, open, close string) int {
+		depth := 0
+		for j := start; j < len(tokens); j++ {
+			if tokens[j].Removed {
+				continue
+			}
+			cur := strings.TrimSpace(tokens[j].Text)
+			if cur == open {
+				depth++
+				continue
+			}
+			if cur == close {
+				depth--
+				if depth == 0 {
+					return j
+				}
+			}
+		}
+		return -1
+	}
+	reRestore := regexp.MustCompile(`(?i)(?:数字修复|數字修復|修复版|修復版|修复|修復|重制|重製|restore(?:d)?|remaster(?:ed)?)`)
+	for i := 0; i < len(tokens); i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		open := strings.TrimSpace(tokens[i].Text)
+		close := ""
+		switch open {
+		case "[":
+			close = "]"
+		case "【":
+			close = "】"
+		case "(":
+			close = ")"
+		case "（":
+			close = "）"
+		default:
+			continue
+		}
+		end := findBlockEnd(i, open, close)
+		if end <= i+1 {
+			continue
+		}
+		inner := make([]string, 0, end-i-1)
+		for k := i + 1; k < end; k++ {
+			if tokens[k].Removed {
+				continue
+			}
+			t := strings.TrimSpace(tokens[k].Text)
+			if t == "" {
+				continue
+			}
+			inner = append(inner, t)
+		}
+		if len(inner) == 0 {
+			continue
+		}
+		joined := strings.ToLower(strings.Join(inner, ""))
+		has4k := strings.Contains(joined, "4k")
+		has2k := strings.Contains(joined, "2k")
+		if !has4k || !reRestore.MatchString(strings.Join(inner, "")) {
+			continue
+		}
+		norm := "RESTORED_EDITION"
+		if has2k {
+			norm = "RESTORE_4K_2K_EDITION"
+		}
+		*out = append(*out, model.Attribute{
+			Type:       model.AttrNote,
+			Normalized: norm,
+			TokenStart: i,
+			TokenEnd:   end + 1,
+			Confidence: 0.74,
+			Source:     "edition_token",
+		})
+		for k := i; k <= end; k++ {
+			tokens[k].Removed = true
+		}
+		i = end
+	}
 }
 
 func extractWebVersionEditionAttrsAndRemoveFromTokens(tokens []model.Token, out *[]model.Attribute) {

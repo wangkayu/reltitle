@@ -274,6 +274,29 @@ func TestEditionToken_WebWordInTitleNotAsEdition(t *testing.T) {
 	}
 }
 
+func TestEditionToken_Restore4K2KHeadBlockConsumed(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[4K数字修复／2K版][SUK字幕组][哥斯拉][1984][中日双语字幕][HDTVrip][AVC][10bit][1080P][MKV]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasParseAttrValue(res, model.AttrNote, "RESTORE_4K_2K_EDITION") {
+		t.Fatalf("expected note RESTORE_4K_2K_EDITION, notes=%v", attrValues(res, model.AttrNote))
+	}
+	if g := canonicalGroup(res); !strings.Contains(strings.ToLower(strings.TrimSpace(g)), "suk") {
+		t.Fatalf("group=%q want contains SUK", g)
+	}
+	if title := canonicalTitle(res); title != "哥斯拉" {
+		t.Fatalf("title=%q want=%q", title, "哥斯拉")
+	}
+}
+
 func hasParseAttrValue(res *model.ParseResult, typ model.AttrType, normalized string) bool {
 	for _, a := range res.Attributes {
 		if a.Type != typ {

@@ -8873,9 +8873,6 @@ func (p *Parser) consumeAliasChainTokensByFinalAliases(tokens []model.Token, gro
 	if episodeIdx >= scanStart && episodeIdx < scanEnd {
 		scanEnd = episodeIdx
 	}
-	if seasonIdx >= scanStart && seasonIdx < scanEnd {
-		scanEnd = seasonIdx
-	}
 	if techStart, ok := firstTechTokenIndexFromAttrs(attrs); ok && techStart >= 0 && techStart < scanEnd {
 		if techStart > scanStart {
 			scanEnd = techStart
@@ -8981,7 +8978,30 @@ func (p *Parser) consumeAliasChainTokensByFinalAliases(tokens []model.Token, gro
 		matched = true
 	}
 	if !matched {
-		return
+		if titleSegIdx < 0 {
+			return
+		}
+		titleSegKey := segments[titleSegIdx].key
+		if titleSegKey == "" {
+			return
+		}
+		otherSegExists := false
+		for i, s := range segments {
+			if i == titleSegIdx {
+				continue
+			}
+			if s.key == "" || s.key == titleSegKey {
+				continue
+			}
+			otherSegExists = true
+			break
+		}
+		if !otherSegExists {
+			return
+		}
+		// Fallback: delimiter-only cleanup for bilingual title chains where
+		// aliases are not promoted but title is already finalized from one side.
+		matched = true
 	}
 	for i := firstDelim; i <= lastDelim && i < len(tokens); i++ {
 		if tokens[i].Removed {

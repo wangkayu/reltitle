@@ -1360,6 +1360,34 @@ func TestConsumeAliasChainTokensByFinalAliases_Jibaketa(t *testing.T) {
 	}
 }
 
+func TestConsumeAliasChainTokensByFinalAliases_JibaketaBilingualSlashOnly(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+	raw := "[jibaketa合成&二次壓制][TVB粵語]MIX 第二季~第二個夏天，邁向晴空~ / Mix - Meisei Story 2nd Season - 01 [粵語+內封繁體中文字幕] [BD 1920x1080 x264 AAC SRT TVB YUE]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	epIdx := -1
+	if res.EPSlot != nil && res.EPSlot.Primary != nil && res.EPSlot.Primary.TokenStart >= 0 {
+		epIdx = res.EPSlot.Primary.TokenStart
+	}
+	if epIdx < 0 {
+		t.Fatalf("expected episode token index")
+	}
+	for i := 0; i < epIdx && i < len(res.Tokens); i++ {
+		if strings.TrimSpace(res.Tokens[i].Text) != "/" {
+			continue
+		}
+		if !res.Tokens[i].Removed {
+			t.Fatalf("expected pre-episode bilingual slash consumed, idx=%d", i)
+		}
+	}
+}
+
 func TestGroupSlot2PlatformInfer_JibaketaDistributorNoPlatform(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

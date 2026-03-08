@@ -172,6 +172,55 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.8
+      - tokens: ["新组招募"]
+        emit:
+          - type: note
+            normalized: "RECRUITMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["新組招募"]
+        emit:
+          - type: note
+            normalized: "RECRUITMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["招募校对"]
+        emit:
+          - type: note
+            normalized: "RECRUITMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["招募校對"]
+        emit:
+          - type: note
+            normalized: "RECRUITMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["招募繁化"]
+        emit:
+          - type: note
+            normalized: "RECRUITMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["急招翻译校对时轴特效"]
+        emit:
+          - type: note
+            normalized: "RECRUITMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["急招翻譯校對時軸特效"]
+        emit:
+          - type: note
+            normalized: "RECRUITMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
 
   - id: note_search_and_share_meta_tokens
     any_of:
@@ -231,6 +280,27 @@ entries:
         emit:
           - type: note
             normalized: "AGE_RESTRICTED"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["先行版"]
+        emit:
+          - type: note
+            normalized: "PREVIEW_VERSION"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["先行版本"]
+        emit:
+          - type: note
+            normalized: "PREVIEW_VERSION"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["精修版"]
+        emit:
+          - type: note
+            normalized: "REFINED_VERSION"
             token_index: -1
         remove: true
         confidence: 0.75

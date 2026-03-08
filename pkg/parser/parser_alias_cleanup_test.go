@@ -1513,6 +1513,41 @@ func TestParserLexicon_RecruitmentAndBonusMetaTokensAreConsumed(t *testing.T) {
 	}
 }
 
+func TestParserLexicon_RecruitmentPreviewAndRefinedMetaTokensAreConsumed(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Group][示例标题/Example Title][01][1080p][先行版本][新组招募][招募校对][急招翻译校对时轴特效][精修版]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	aliases := canonicalAliases(res)
+	for _, a := range aliases {
+		if strings.Contains(a, "先行版") ||
+			strings.Contains(a, "先行版本") ||
+			strings.Contains(a, "新组招募") ||
+			strings.Contains(a, "招募校对") ||
+			strings.Contains(a, "急招翻译校对时轴特效") ||
+			strings.Contains(a, "精修版") {
+			t.Fatalf("meta token leaked into alias: %v", aliases)
+		}
+	}
+	notes := attrValues(res, model.AttrNote)
+	if !hasAttrValue(notes, "RECRUITMENT") {
+		t.Fatalf("expected note=RECRUITMENT, got=%v", notes)
+	}
+	if !hasAttrValue(notes, "PREVIEW_VERSION") {
+		t.Fatalf("expected note=PREVIEW_VERSION, got=%v", notes)
+	}
+	if !hasAttrValue(notes, "REFINED_VERSION") {
+		t.Fatalf("expected note=REFINED_VERSION, got=%v", notes)
+	}
+}
+
 func TestParserEpisodeRange_TVPackSuffixSplit(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

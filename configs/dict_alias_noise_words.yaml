@@ -81,7 +81,6 @@ alias_noise:
     - ANi
     - TBS
     - DSNP
-    - Part
 
   regex_patterns:
     # simple tech words / containers / codecs
@@ -100,7 +99,6 @@ alias_noise:
     - '(?i)^\d{1,2}\s*\+\s*movie$'
     - '(?i)^\d{1,2}月番$'
     - '(?i)^box\s*\d{1,2}$'
-    - '(?i)^[a-z]{2,6}&$'
 
   inline_strip_words_case_insensitive:
     - VOSTFR

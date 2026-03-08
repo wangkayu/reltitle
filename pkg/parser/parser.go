@@ -2078,7 +2078,9 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	parenAliases := p.extractParenAliasesAndRemoveFromTitle(tokens, titleEnd0, episodeIdx, episodeRangeIdx, &attrs)
 
 	title := p.extractTitle(tokens, episodeIdx, episodeRangeIdx, seasonCutIdx)
+	originalTitleSpan := strings.TrimSpace(title)
 	title, aliases := inferTitleAndAliasesFromTitleCanonical(title, p.isValidAliasToken)
+	title, aliases = restorePartSuffixFromOriginalTitle(originalTitleSpan, title, aliases)
 	titleStart, titleEnd := p.inferTitleTokenSpan(tokens, episodeIdx, episodeRangeIdx, seasonCutIdx)
 	pipeScanStart := titleStartAfterLeadingEmptyBracketBlocks(tokens)
 	if len(groupSpan) == 2 && groupSpan[1] > pipeScanStart {
@@ -4304,6 +4306,44 @@ func looksLikeSeasonOrPartSuffix(s string) bool {
 		return true
 	}
 	return false
+}
+
+var reTitlePartNumber = regexp.MustCompile(`(?i)\bpart\.?\s*([0-9]{1,2})\b`)
+
+func restorePartSuffixFromOriginalTitle(originalTitleSpan string, main string, aliases []string) (string, []string) {
+	main = strings.TrimSpace(main)
+	if main == "" || len(aliases) == 0 {
+		return main, aliases
+	}
+	hasPartAlias := false
+	kept := make([]string, 0, len(aliases))
+	for _, a := range aliases {
+		if strings.EqualFold(strings.TrimSpace(a), "part") {
+			hasPartAlias = true
+			continue
+		}
+		kept = append(kept, a)
+	}
+	if !hasPartAlias {
+		return main, aliases
+	}
+	orig := strings.TrimSpace(originalTitleSpan)
+	if orig == "" {
+		// No structural evidence from titleslot; keep original aliases.
+		return main, aliases
+	}
+	mm := reTitlePartNumber.FindStringSubmatch(orig)
+	if len(mm) < 2 {
+		// "Part" without numeric suffix is ambiguous; keep original aliases.
+		return main, aliases
+	}
+	if !reTitlePartNumber.MatchString(main) {
+		main = normalizeTitleMain(strings.TrimSpace(main + " Part " + mm[1]))
+	}
+	if len(kept) == 0 {
+		return main, nil
+	}
+	return main, kept
 }
 
 func splitByStrongTitleDelims(s string) []string {

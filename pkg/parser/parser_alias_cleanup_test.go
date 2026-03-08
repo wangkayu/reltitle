@@ -1256,6 +1256,10 @@ func TestParserAliasCleanup_DropsPartAliasFragment(t *testing.T) {
 	if containsAlias(aliases, "Part") {
 		t.Fatalf("part fragment should not be alias, aliases=%v", aliases)
 	}
+	title := canonicalTitle(res)
+	if !strings.Contains(strings.ToLower(title), "part 2") {
+		t.Fatalf("part suffix should remain in primary title when sourced from titleslot, got=%q", title)
+	}
 }
 
 func TestParserStableTechSpanCombo_CommaSeparatedCodecBlock(t *testing.T) {

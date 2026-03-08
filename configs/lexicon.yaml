@@ -5003,6 +5003,13 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.75
+      - tokens: ["2276p"]
+        emit:
+          - type: resolution
+            normalized: "2276p"
+            token_index: -1
+        remove: true
+        confidence: 0.75
       - tokens: ["1090p"]
         emit:
           - type: resolution
@@ -5240,6 +5247,23 @@ entries:
           - type: video_codec
             normalized: "MPEG2"
             token_index: 0
+        remove: true
+        confidence: 0.8
+
+  - id: video_codec_xvid
+    any_of:
+      - tokens: ["xvid"]
+        emit:
+          - type: video_codec
+            normalized: "XVID"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["x-vid"]
+        emit:
+          - type: video_codec
+            normalized: "XVID"
+            token_index: -1
         remove: true
         confidence: 0.8
 

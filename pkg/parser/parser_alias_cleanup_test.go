@@ -2162,6 +2162,22 @@ func TestLexiconDict_GluedTechTokensShouldBeConsumed(t *testing.T) {
 			},
 		},
 		{
+			name:  "xvid",
+			raw:   "Beet The Vandel Buster - WEBDL - VOSTFR - Xvid MP3 - ETF",
+			token: "Xvid",
+			expectAttrs: map[model.AttrType]string{
+				model.AttrVideoCodec: "XVID",
+			},
+		},
+		{
+			name:  "2276p",
+			raw:   "[A&C] 足球小将剧场版1.Captain Tsubasa Movie 01 The great competition of Europe (1985) (35mm 2276p HEVC) [Multi-Audio-Subs](原胶片数码扫描转制高清4K版）",
+			token: "2276p",
+			expectAttrs: map[model.AttrType]string{
+				model.AttrResolution: "2276p",
+			},
+		},
+		{
 			name:  "bd1080p",
 			raw:   "[DB] Dandadan 2nd Season | Dan Da Dan Season 2 [Dual Audio 10bit BD1080p][HEVC-x265]",
 			token: "BD1080p",

@@ -2271,6 +2271,9 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	if rawMarkers := extractContentsFromRawParens(rawTitle); len(rawMarkers) > 0 {
 		emitContentsAttrs(&attrs, rawMarkers, "raw_paren_contents_marker")
 	}
+	if strings.TrimSpace(spKind) == "" {
+		spKind = inferSPKindFromContentsAttrs(attrs)
+	}
 	if strings.TrimSpace(packKind) == "" {
 		packKind = inferPackKindFromContentsAttrs(packKind, attrs)
 	}
@@ -3368,6 +3371,22 @@ func inferPackKindFromContentsAttrs(currentPackKind string, attrs []model.Attrib
 	// so a single "(Movie)" marker does not force content_kind to BATCH.
 	if len(seen) >= 2 {
 		return "contents"
+	}
+	return ""
+}
+
+func inferSPKindFromContentsAttrs(attrs []model.Attribute) string {
+	for _, a := range attrs {
+		if a.Type != model.AttrContents {
+			continue
+		}
+		n := strings.ToUpper(strings.TrimSpace(a.Normalized))
+		switch n {
+		case "SPECIAL", "SP":
+			return "SP"
+		case "OVA", "OAD", "ONA", "EX", "PV", "NCOP", "NCED":
+			return n
+		}
 	}
 	return ""
 }

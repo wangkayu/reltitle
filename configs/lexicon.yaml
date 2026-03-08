@@ -3185,6 +3185,34 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.7
+      - tokens: ["jpn", "dub"]
+        emit:
+          - type: audio_flag
+            normalized: "JAPANESE_DUB"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["jp", "dub"]
+        emit:
+          - type: audio_flag
+            normalized: "JAPANESE_DUB"
+            token_index: -1
+        remove: true
+        confidence: 0.65
+      - tokens: ["japanese", "audio"]
+        emit:
+          - type: audio_flag
+            normalized: "JAPANESE_AUDIO"
+            token_index: -1
+        remove: true
+        confidence: 0.65
+      - tokens: ["jpn", "audio"]
+        emit:
+          - type: audio_flag
+            normalized: "JAPANESE_AUDIO"
+            token_index: -1
+        remove: true
+        confidence: 0.65
       - tokens: ["日语配音版"]
         emit:
           - type: audio_flag

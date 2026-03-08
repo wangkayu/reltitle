@@ -265,6 +265,36 @@ func TestParserSpecialMarker_WithoutEpisode_PromotesSPKind(t *testing.T) {
 	}
 }
 
+func TestParserAudioFlag_JpnDubPhraseConsumed(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[神楽坂 まひろ] 最后的召唤师（日配版） / The Last Summoner (JPN Dub) - 10 (B-Global Donghua 1920x1080 HEVC AAC MKV)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalEpisode(res); got != "10" {
+		t.Fatalf("episode=%q want=%q", got, "10")
+	}
+	if got := firstAttrValue(res, model.AttrAudioFlag); got == "" {
+		t.Fatalf("audio_flag should not be empty")
+	}
+	dubConsumed := false
+	for _, tk := range res.Tokens {
+		if strings.EqualFold(strings.TrimSpace(tk.Text), "dub") {
+			dubConsumed = tk.Removed
+			break
+		}
+	}
+	if !dubConsumed {
+		t.Fatalf("expected Dub token consumed by audio_flag rule")
+	}
+}
+
 func TestParserAliasCleanup_ParenAliasKeepsInnerClosingParen(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

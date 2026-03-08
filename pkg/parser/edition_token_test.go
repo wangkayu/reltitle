@@ -225,6 +225,55 @@ func TestEditionToken_RemasteredVer(t *testing.T) {
 	}
 }
 
+func TestEditionToken_WebVersionCleanup(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Lilith-Raws] 叫我對大哥 WEB版 / Ore, Tsushima Web ver. - 09 [Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	title := canonicalTitle(res)
+	if strings.Contains(strings.ToLower(title), "web") || strings.Contains(title, "版") {
+		t.Fatalf("web version token leaked into title: %q", title)
+	}
+	if !hasParseAttrValue(res, model.AttrNote, "WEB_VERSION") {
+		t.Fatalf("expected note WEB_VERSION")
+	}
+}
+
+func TestEditionToken_WebWordInTitleNotAsEdition(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[DBD-Raws][电脑冒险记/Dennou Boukenki Webdiver][01-52TV全集+SP][480P][BDRip][AVC][AC3][MKV](電脳冒険記ウェブダイバー)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if hasParseAttrValue(res, model.AttrNote, "WEB_VERSION") {
+		t.Fatalf("unexpected WEB_VERSION for title word Webdiver")
+	}
+	aliases := canonicalAliases(res)
+	found := false
+	for _, a := range aliases {
+		if strings.Contains(strings.ToLower(a), "webdiver") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected alias to keep Webdiver, aliases=%v", aliases)
+	}
+}
+
 func hasParseAttrValue(res *model.ParseResult, typ model.AttrType, normalized string) bool {
 	for _, a := range res.Attributes {
 		if a.Type != typ {

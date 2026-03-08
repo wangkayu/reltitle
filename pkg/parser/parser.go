@@ -153,6 +153,7 @@ func extractWxHResolutionAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[
 var stableTechResolutionPattern = regexp.MustCompile(`(?i)^(\d{3,4})p$`)
 var stableTechBitDepthPattern = regexp.MustCompile(`(?i)^(8|10|12)\s*bit$`)
 var stableTechCodecBitDepthPattern = regexp.MustCompile(`(?i)^(hevc|x265|h265|x264|h264)\s*[-_ ]?\s*0*(8|10|12)(?:bit|b)?$`)
+var maProfileBitDepthPattern = regexp.MustCompile(`(?i)^ma0*(8|10|12)p$`)
 var looseBitDepthPattern = regexp.MustCompile(`(?i)^0*(8|10|12)\s*(?:-|_)?\s*bit[\.,，:：;；!?]?$`)
 var stableTechSplitPattern = regexp.MustCompile(`[+_/\.]`)
 
@@ -642,6 +643,62 @@ func extractDashedAudioCodecAttrsAndRemoveFromTokens(tokens []model.Token, attrs
 			}
 			i += 2
 		}
+	}
+}
+
+func (p *Parser) extractMaProfileAudioCodecAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Attribute) {
+	if p == nil || attrs == nil || len(tokens) < 3 {
+		return
+	}
+	for i := 0; i+2 < len(tokens); i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		base := strings.TrimSpace(tokens[i].Text)
+		m := maProfileBitDepthPattern.FindStringSubmatch(base)
+		if len(m) != 2 {
+			continue
+		}
+		if tokens[i+1].Removed || tokens[i+2].Removed {
+			continue
+		}
+		sep := strings.TrimSpace(tokens[i+1].Text)
+		if sep != "_" && sep != "-" {
+			continue
+		}
+		codecNorm, ok := p.normalizeAudioCodecToken(strings.TrimSpace(tokens[i+2].Text))
+		if !ok || strings.TrimSpace(codecNorm) == "" {
+			continue
+		}
+		if !isInBracket(tokens, i) && !isInParen(tokens, i) && !hasNearbyTechContext(tokens, i, 4) && i < len(tokens)-4 {
+			continue
+		}
+		bit := strings.TrimLeft(m[1], "0")
+		if bit == "" {
+			bit = m[1]
+		}
+		*attrs = append(*attrs, model.Attribute{
+			Type:       model.AttrBitDepth,
+			Normalized: bit + "bit",
+			TokenStart: i,
+			TokenEnd:   i + 1,
+			Confidence: 0.72,
+			Source:     "tech_combo_token",
+		})
+		if !hasAudioCodecAttrNorm(*attrs, codecNorm) {
+			*attrs = append(*attrs, model.Attribute{
+				Type:       model.AttrAudioCodec,
+				Normalized: codecNorm,
+				TokenStart: i + 2,
+				TokenEnd:   i + 3,
+				Confidence: 0.72,
+				Source:     "tech_combo_token",
+			})
+		}
+		tokens[i].Removed = true
+		tokens[i+1].Removed = true
+		tokens[i+2].Removed = true
+		i += 2
 	}
 }
 
@@ -1645,6 +1702,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	p.extractStableTechSpanComboAttrsAndRemoveFromTokens(tokens, &attrs)
 	p.extractLooseCodecBitDepthAttrsAndRemoveFromTokens(tokens, &attrs)
 	extractDashedAudioCodecAttrsAndRemoveFromTokens(tokens, &attrs)
+	p.extractMaProfileAudioCodecAttrsAndRemoveFromTokens(tokens, &attrs)
 	p.extractStandaloneSourceTypeAttrsAndRemoveFromTokens(tokens, &attrs)
 	p.extractStandaloneAudioCodecAttrsAndRemoveFromTokens(tokens, &attrs)
 	extractLooseBitDepthAttrsAndRemoveFromTokens(tokens, &attrs)
@@ -8091,6 +8149,7 @@ func extractEditionAttrsAndRemoveFromTokens(tokens []model.Token, out *[]model.A
 	if out == nil || len(tokens) == 0 {
 		return
 	}
+	extractWebVersionEditionAttrsAndRemoveFromTokens(tokens, out)
 	extractAudioCommentaryEditionAttrsAndRemoveFromTokens(tokens, out, allowUnderscoreRoute)
 	extractUncutEditionAttrsAndRemoveFromTokens(tokens, out)
 	extractExtendedCutEditionAttrsAndRemoveFromTokens(tokens, out)
@@ -8098,6 +8157,62 @@ func extractEditionAttrsAndRemoveFromTokens(tokens []model.Token, out *[]model.A
 	extractDirectorsCutEditionAttrsAndRemoveFromTokens(tokens, out)
 	extractRemasteredEditionAttrsAndRemoveFromTokens(tokens, out)
 	extractEncodeVerEditionAttrsAndRemoveFromTokens(tokens, out)
+}
+
+func extractWebVersionEditionAttrsAndRemoveFromTokens(tokens []model.Token, out *[]model.Attribute) {
+	if out == nil || len(tokens) == 0 {
+		return
+	}
+	add := func(start, end int) {
+		*out = append(*out, model.Attribute{
+			Type:       model.AttrNote,
+			Normalized: "WEB_VERSION",
+			TokenStart: start,
+			TokenEnd:   end,
+			Confidence: 0.72,
+			Source:     "edition_token",
+		})
+	}
+	for i := 0; i < len(tokens); i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		txt := strings.TrimSpace(tokens[i].Text)
+		if txt == "" {
+			continue
+		}
+		low := strings.ToLower(txt)
+		compact := strings.ReplaceAll(strings.ReplaceAll(low, "_", ""), "-", "")
+		compact = strings.Trim(compact, ".。· ")
+		// WEB版 / WEB版本 / webver / webversion in one token.
+		if compact == "web版" || compact == "web版本" || compact == "webver" || compact == "webversion" {
+			add(i, i+1)
+			tokens[i].Removed = true
+			continue
+		}
+		if compact != "web" {
+			continue
+		}
+		j := nextAliveToken(tokens, i+1)
+		if j < 0 {
+			continue
+		}
+		nextRaw := strings.TrimSpace(tokens[j].Text)
+		nextLow := strings.ToLower(strings.Trim(nextRaw, ".。"))
+		if nextRaw != "版" && nextLow != "ver" && nextLow != "version" {
+			continue
+		}
+		end := j + 1
+		if (nextLow == "ver" || nextLow == "version") && j+1 < len(tokens) {
+			if d := strings.TrimSpace(tokens[j+1].Text); d == "." || d == "。" {
+				end = j + 2
+				tokens[j+1].Removed = true
+			}
+		}
+		add(i, end)
+		tokens[i].Removed = true
+		tokens[j].Removed = true
+	}
 }
 
 func extractAudioCommentaryEditionAttrsAndRemoveFromTokens(tokens []model.Token, out *[]model.Attribute, allowUnderscoreRoute bool) {

@@ -473,6 +473,37 @@ func TestParserStandaloneAudioCodec_DTSHDMABracket(t *testing.T) {
 	}
 }
 
+func TestParserStandaloneAudioCodec_Ma10pFLACTailConsumed(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Niconeiko Works] O.N.G.E.K.I. 音击 LIVE Vol.1 Jump!! Jump!! Jump!! Ma10p_FLAC"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	title := canonicalTitle(res)
+	aliases := canonicalAliases(res)
+	if strings.Contains(strings.ToLower(title), "ma10p") || strings.Contains(strings.ToLower(title), "flac") {
+		t.Fatalf("ma10p/flac should not leak into title: %q", title)
+	}
+	for _, a := range aliases {
+		la := strings.ToLower(a)
+		if strings.Contains(la, "ma10p") || strings.Contains(la, "flac") {
+			t.Fatalf("ma10p/flac should not leak into aliases: %v", aliases)
+		}
+	}
+	for _, tok := range res.Tokens {
+		low := strings.ToLower(strings.TrimSpace(tok.Text))
+		if (low == "ma10p" || low == "_" || low == "flac") && !tok.Removed {
+			t.Fatalf("ma10p_flac tokens should be consumed, tokens=%v", res.Tokens)
+		}
+	}
+}
+
 func TestParserPreEpisodePipeAliases_AreExtractedAndConsumed(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

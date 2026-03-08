@@ -670,6 +670,177 @@ func TestParserStandaloneDVDSource_ReideenDVDISOsConsumed(t *testing.T) {
 	}
 }
 
+func TestParserLexicon_MediaToken_VHSBracketConsumed(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := `Motto! Ojamajo Doremi - "Together with Mama" Tell me ♪ Momo-chan Snack Cooking [VHS]`
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSourceType), "VHS") {
+		t.Fatalf("expected source_type=VHS, got=%v", attrValues(res, model.AttrSourceType))
+	}
+	if containsAlias(canonicalAliases(res), "VHS") {
+		t.Fatalf("vhs marker should not stay in alias, aliases=%v", canonicalAliases(res))
+	}
+	for _, tok := range res.Tokens {
+		if strings.EqualFold(strings.TrimSpace(tok.Text), "VHS") && !tok.Removed {
+			t.Fatalf("vhs token should be consumed, tokens=%v", res.Tokens)
+		}
+	}
+}
+
+func TestParserLexicon_MediaToken_R2JDVDISOConsumed(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "Slam Dunk R2J DVD_ISO"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSourceType), "DVD") {
+		t.Fatalf("expected source_type=DVD, got=%v", attrValues(res, model.AttrSourceType))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrPlatformRegion), "JP") {
+		t.Fatalf("expected platform_region=JP, got=%v", attrValues(res, model.AttrPlatformRegion))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrNote), "DVD_ISO") {
+		t.Fatalf("expected note=DVD_ISO, got=%v", attrValues(res, model.AttrNote))
+	}
+	if title := strings.ToLower(canonicalTitle(res)); strings.Contains(title, "iso") {
+		t.Fatalf("iso residual should not leak into title, title=%q", canonicalTitle(res))
+	}
+	for _, tok := range res.Tokens {
+		txt := strings.ToLower(strings.TrimSpace(tok.Text))
+		if (txt == "dvd" || txt == "iso") && !tok.Removed {
+			t.Fatalf("dvd/iso tokens should be consumed, tokens=%v", res.Tokens)
+		}
+	}
+}
+
+func TestParserLexicon_MediaToken_USBDJPBDConsumed(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	cases := []struct {
+		raw      string
+		marker   string
+		region   string
+		note     string
+		titleHit string
+	}{
+		{
+			raw:      "Ultraman The Adventure Begins USBD",
+			marker:   "USBD",
+			region:   "US",
+			note:     "USBD",
+			titleHit: "USBD",
+		},
+		{
+			raw:      "Ultraman USA- The Adventure Begins JPBD",
+			marker:   "JPBD",
+			region:   "JP",
+			note:     "JPBD",
+			titleHit: "JPBD",
+		},
+	}
+	for _, tc := range cases {
+		res, err := p.Parse(tc.raw)
+		if err != nil {
+			t.Fatalf("parse failed for %q: %v", tc.raw, err)
+		}
+		if !hasAttrValue(attrValues(res, model.AttrSourceType), "BD") {
+			t.Fatalf("expected source_type=BD for %q, got=%v", tc.raw, attrValues(res, model.AttrSourceType))
+		}
+		if !hasAttrValue(attrValues(res, model.AttrPlatformRegion), tc.region) {
+			t.Fatalf("expected platform_region=%s for %q, got=%v", tc.region, tc.raw, attrValues(res, model.AttrPlatformRegion))
+		}
+		if !hasAttrValue(attrValues(res, model.AttrNote), tc.note) {
+			t.Fatalf("expected note=%s for %q, got=%v", tc.note, tc.raw, attrValues(res, model.AttrNote))
+		}
+		if strings.Contains(strings.ToUpper(canonicalTitle(res)), tc.titleHit) {
+			t.Fatalf("marker should not leak into title for %q, title=%q", tc.raw, canonicalTitle(res))
+		}
+		for _, tok := range res.Tokens {
+			if strings.EqualFold(strings.TrimSpace(tok.Text), tc.marker) && !tok.Removed {
+				t.Fatalf("%s token should be consumed for %q, tokens=%v", tc.marker, tc.raw, res.Tokens)
+			}
+		}
+	}
+}
+
+func TestParserLexicon_MediaToken_RetailBootlegConsumed(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	cases := []struct {
+		raw       string
+		note      string
+		forbidden string
+	}{
+		{
+			raw:       "Dragon Ball (TV Series 1986-1989) DVD9 RETAIL",
+			note:      "RETAIL",
+			forbidden: "RETAIL",
+		},
+		{
+			raw:       "Jetter Mars / Marte O Menino Bionico Português Brasileiro Bootleg DVD",
+			note:      "BOOTLEG",
+			forbidden: "BOOTLEG",
+		},
+	}
+	for _, tc := range cases {
+		res, err := p.Parse(tc.raw)
+		if err != nil {
+			t.Fatalf("parse failed for %q: %v", tc.raw, err)
+		}
+		if !hasAttrValue(attrValues(res, model.AttrNote), tc.note) {
+			t.Fatalf("expected note=%s for %q, got=%v", tc.note, tc.raw, attrValues(res, model.AttrNote))
+		}
+		if strings.Contains(strings.ToUpper(canonicalTitle(res)), tc.forbidden) {
+			t.Fatalf("%s should not stay in title for %q, title=%q", tc.forbidden, tc.raw, canonicalTitle(res))
+		}
+	}
+}
+
+func TestParserLexicon_MediaToken_LaserDiscBoxConsumed(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "Fushigi no Umi no Nadia episode Previews exclusive to the Laser Disc Box v2"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSourceType), "LD") {
+		t.Fatalf("expected source_type=LD, got=%v", attrValues(res, model.AttrSourceType))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrNote), "LASER_DISC_BOX") {
+		t.Fatalf("expected note=LASER_DISC_BOX, got=%v", attrValues(res, model.AttrNote))
+	}
+	if title := strings.ToLower(canonicalTitle(res)); strings.Contains(title, "laser disc box") {
+		t.Fatalf("laser disc box should be consumed from title, got=%q", canonicalTitle(res))
+	}
+}
+
 func TestParserStandaloneDVDSource_TokutenDVDSuffixConsumed(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

@@ -57,6 +57,17 @@ alias_noise:
     - BD720P
     - VCDRIP
     - LDRIP
+    - VHS
+    - USBD
+    - JPBD
+    - DVDISO
+    - DVD_ISO
+    - DVD-ISO
+    - RETAIL
+    - BOOTLEG
+    - LASERDISC
+    - LASER DISC
+    - LASER DISC BOX
     - 粤语中字
     - 粵語中字
     - 日语中字
@@ -90,6 +101,10 @@ alias_noise:
     - '(?i)^(web-?dl|webrip|bdrip|bluray|hdtv|dvd|remux)$'
     - '(?i)^(?:bd|web|hdtv|dvd|tv|vcd|ld|uhd|fhd)[-_.]?(?:rip|remux|iso)$'
     - '(?i)^(?:bd|web|hdtv|dvd|tv|uhd|fhd)\d{3,4}p$'
+    - '(?i)^dvd[-_ ]?isos?$'
+    - '(?i)^(us|jp)bd$'
+    - '(?i)^laser\s*disc(?:\s*box)?$'
+    - '(?i)^(retail|bootleg|vhs)$'
     - '(?i)^\d{3,4}p$'
     - '(?i)^(?:multi[-_ ]?sub|multisub|dual[-_ ]?audio|multi[-_ ]?audio)$'
     # movie/batch content markers that should not stay as title_alias
@@ -116,3 +131,11 @@ alias_noise:
     - SUB
     - SUBS
     - AUDIO
+    - VHS
+    - USBD
+    - JPBD
+    - DVDISO
+    - DVD_ISO
+    - DVD-ISO
+    - RETAIL
+    - BOOTLEG

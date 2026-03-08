@@ -237,6 +237,33 @@ entries:
     remove: true
     confidence: 0.7
 
+  - id: source_type_vhs
+    any_of:
+      - scope: plain
+        tokens: ["vhs"]
+        emit:
+          - type: source_type
+            normalized: "VHS"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - scope: bracket
+        tokens: ["vhs"]
+        emit:
+          - type: source_type
+            normalized: "VHS"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - scope: paren
+        tokens: ["vhs"]
+        emit:
+          - type: source_type
+            normalized: "VHS"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+
   - id: source_type_dvd
     any_of:
       - scope: paren
@@ -262,8 +289,84 @@ entries:
       - type: source_type
         normalized: "DVD"
         token_index: -1
+      - type: note
+        normalized: "DVD_ISO"
+        token_index: -1
     remove: true
     confidence: 0.7
+
+  - id: source_type_dvd_iso_variants
+    any_of:
+      - tokens: ["dvd", "_", "iso"]
+        emit:
+          - type: source_type
+            normalized: "DVD"
+            token_index: 0
+          - type: note
+            normalized: "DVD_ISO"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["dvd", "-", "iso"]
+        emit:
+          - type: source_type
+            normalized: "DVD"
+            token_index: 0
+          - type: note
+            normalized: "DVD_ISO"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["dvd", "_", "isos"]
+        emit:
+          - type: source_type
+            normalized: "DVD"
+            token_index: 0
+          - type: note
+            normalized: "DVD_ISO"
+            token_index: -1
+        remove: true
+        confidence: 0.78
+      - tokens: ["dvd", "-", "isos"]
+        emit:
+          - type: source_type
+            normalized: "DVD"
+            token_index: 0
+          - type: note
+            normalized: "DVD_ISO"
+            token_index: -1
+        remove: true
+        confidence: 0.78
+
+  - id: source_type_usbd
+    tokens: ["usbd"]
+    emit:
+      - type: source_type
+        normalized: "BD"
+        token_index: -1
+      - type: platform_region
+        normalized: "US"
+        token_index: -1
+      - type: note
+        normalized: "USBD"
+        token_index: -1
+    remove: true
+    confidence: 0.75
+
+  - id: source_type_jpbd
+    tokens: ["jpbd"]
+    emit:
+      - type: source_type
+        normalized: "BD"
+        token_index: -1
+      - type: platform_region
+        normalized: "JP"
+        token_index: -1
+      - type: note
+        normalized: "JPBD"
+        token_index: -1
+    remove: true
+    confidence: 0.75
 
   - id: source_type_jdvd
     tokens: ["jdvd"]
@@ -289,6 +392,47 @@ entries:
     remove: true
     confidence: 0.7
 
+  - id: note_retail
+    tokens: ["retail"]
+    emit:
+      - type: note
+        normalized: "RETAIL"
+        token_index: -1
+    remove: true
+    confidence: 0.75
+
+  - id: note_bootleg
+    tokens: ["bootleg"]
+    emit:
+      - type: note
+        normalized: "BOOTLEG"
+        token_index: -1
+    remove: true
+    confidence: 0.75
+
+  - id: source_type_laser_disc_box
+    any_of:
+      - tokens: ["laser", "disc", "box"]
+        emit:
+          - type: source_type
+            normalized: "LD"
+            token_index: 0
+          - type: note
+            normalized: "LASER_DISC_BOX"
+            token_index: -1
+        remove: true
+        confidence: 0.78
+      - tokens: ["laserdisc", "box"]
+        emit:
+          - type: source_type
+            normalized: "LD"
+            token_index: 0
+          - type: note
+            normalized: "LASER_DISC_BOX"
+            token_index: -1
+        remove: true
+        confidence: 0.78
+
   - id: platform_region_jp_bd
     any_of:
       - scope: plain
@@ -313,6 +457,77 @@ entries:
             token_index: 1
         remove: true
         confidence: 0.7
+
+  - id: platform_region_r2j_dvd_iso
+    any_of:
+      - scope: plain
+        tokens: ["r2j", "dvd", "_", "iso"]
+        emit:
+          - type: platform_region
+            normalized: "JP"
+            token_index: 0
+          - type: note
+            normalized: "R2J"
+            token_index: 0
+          - type: source_type
+            normalized: "DVD"
+            token_index: 1
+          - type: note
+            normalized: "DVD_ISO"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - scope: plain
+        tokens: ["r2j", "dvd", "-", "iso"]
+        emit:
+          - type: platform_region
+            normalized: "JP"
+            token_index: 0
+          - type: note
+            normalized: "R2J"
+            token_index: 0
+          - type: source_type
+            normalized: "DVD"
+            token_index: 1
+          - type: note
+            normalized: "DVD_ISO"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - scope: bracket
+        tokens: ["r2j", "dvd", "_", "iso"]
+        emit:
+          - type: platform_region
+            normalized: "JP"
+            token_index: 0
+          - type: note
+            normalized: "R2J"
+            token_index: 0
+          - type: source_type
+            normalized: "DVD"
+            token_index: 1
+          - type: note
+            normalized: "DVD_ISO"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - scope: bracket
+        tokens: ["r2j", "dvd", "-", "iso"]
+        emit:
+          - type: platform_region
+            normalized: "JP"
+            token_index: 0
+          - type: note
+            normalized: "R2J"
+            token_index: 0
+          - type: source_type
+            normalized: "DVD"
+            token_index: 1
+          - type: note
+            normalized: "DVD_ISO"
+            token_index: -1
+        remove: true
+        confidence: 0.8
 
   - id: platform_region_r2j_dvd
     any_of:
@@ -344,6 +559,31 @@ entries:
             token_index: 1
         remove: true
         confidence: 0.75
+
+  - id: platform_region_r2j
+    any_of:
+      - scope: plain
+        tokens: ["r2j"]
+        emit:
+          - type: platform_region
+            normalized: "JP"
+            token_index: -1
+          - type: note
+            normalized: "R2J"
+            token_index: -1
+        remove: true
+        confidence: 0.72
+      - scope: bracket
+        tokens: ["r2j"]
+        emit:
+          - type: platform_region
+            normalized: "JP"
+            token_index: -1
+          - type: note
+            normalized: "R2J"
+            token_index: -1
+        remove: true
+        confidence: 0.72
 
   - id: platform_region_ita_bd
     any_of:

@@ -255,18 +255,40 @@ func matchTemplate(cfg *config.Config, epRoute string, contentKind string, group
 	}
 
 	if strings.EqualFold(strings.TrimSpace(contentKind), "UNKNOWN") {
-		if strings.TrimSpace(group) != "" &&
-			strings.TrimSpace(episode) == "" &&
+		if strings.TrimSpace(episode) == "" &&
 			strings.TrimSpace(episodeRange) == "" &&
 			strings.TrimSpace(season) == "" &&
 			strings.TrimSpace(packKind) == "" &&
 			strings.TrimSpace(spKind) == "" &&
 			strings.TrimSpace(movieIndex) == "" &&
 			!hasTech {
-			if id, conf, route := selectBest(cfg.TemplateCatalog.UnknownTemplates, false); strings.TrimSpace(id) != "" {
+			unknownCandidates := make([]config.TemplateDef, 0, len(cfg.TemplateCatalog.UnknownTemplates))
+			hasGroup := strings.TrimSpace(group) != ""
+			hasAliasSep := hasUnknownAliasSeparatorSignal(tokens)
+			for _, t := range cfg.TemplateCatalog.UnknownTemplates {
+				route := strings.TrimSpace(t.RouteID)
+				switch route {
+				case "unknown_minimal_v1":
+					if !hasGroup {
+						continue
+					}
+				case "unknown_t_alias_minimal_v1":
+					if hasGroup || !hasAliasSep {
+						continue
+					}
+				}
+				unknownCandidates = append(unknownCandidates, t)
+			}
+			if id, conf, route := selectBest(unknownCandidates, false); strings.TrimSpace(id) != "" {
 				return id, conf, route
 			}
+			if hasGroup {
+				if id, conf, route := selectBest(cfg.TemplateCatalog.UnknownTemplates, false); strings.TrimSpace(id) != "" {
+					return id, conf, route
+				}
+			}
 		}
+		return "TF_UNKNOWN_DEFAULT", 0, ""
 	}
 
 	tpls := templatesByEpRoute(cfg, epRoute)
@@ -323,6 +345,12 @@ func templateByID(cfg *config.Config, id string) *config.TemplateDef {
 			return t
 		}
 	}
+	for i := range cfg.TemplateCatalog.UnknownTemplates {
+		t := &cfg.TemplateCatalog.UnknownTemplates[i]
+		if strings.TrimSpace(t.ID) == id {
+			return t
+		}
+	}
 	return nil
 }
 
@@ -344,6 +372,16 @@ func templateConditionSpecificity(cond *config.TemplateConditions) int {
 		s++
 	}
 	return s
+}
+
+func hasUnknownAliasSeparatorSignal(tokens []model.Token) bool {
+	for _, t := range tokens {
+		txt := strings.TrimSpace(t.Text)
+		if txt == "/" || txt == "／" || txt == "|" || txt == "｜" || txt == ";" || txt == "；" || txt == "\\" {
+			return true
+		}
+	}
+	return false
 }
 
 func templateConditionsSatisfiable(cond *config.TemplateConditions, attrs []model.Attribute, tokens []model.Token) bool {

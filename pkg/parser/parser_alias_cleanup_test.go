@@ -1287,6 +1287,49 @@ func TestParserUnknownTemplate_GTAliasMinimalAssigned(t *testing.T) {
 	}
 }
 
+func TestParserUnknownTemplate_TAliasMinimalAssigned(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "Mahou no Stage Fancy Lala  / Fancy Lala [Rus]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.TemplateID; got != "TF_UNKNOWN_T_ALIAS_MINIMAL_01" {
+		t.Fatalf("template_id=%q want=%q", got, "TF_UNKNOWN_T_ALIAS_MINIMAL_01")
+	}
+	if got := res.ContentKind; got != "UNKNOWN" {
+		t.Fatalf("content_kind=%q want=UNKNOWN", got)
+	}
+	if strings.TrimSpace(canonicalGroup(res)) != "" {
+		t.Fatalf("group should be empty for no-group minimal route, got=%q", canonicalGroup(res))
+	}
+	if strings.TrimSpace(canonicalTitle(res)) == "" {
+		t.Fatalf("title should be non-empty")
+	}
+}
+
+func TestParserUnknownTemplate_TAliasMinimalNotAppliedWithoutAliasSeparator(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "City Hunter 1987 [Rus]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.TemplateID; got == "TF_UNKNOWN_T_ALIAS_MINIMAL_01" {
+		t.Fatalf("T_ALIAS minimal should not apply without alias separator, raw=%q", raw)
+	}
+}
+
 func TestParserUnknownTemplate_GTAliasMinimalNotAppliedWithTech(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

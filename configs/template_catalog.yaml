@@ -917,18 +917,36 @@ unknown_templates:
       title_over_group_default: true
       tech_starts_after_ep: true
 
+  - id: "TF_UNKNOWN_T_ALIAS_MINIMAL_01"
+    name: "TITLE[/ALIAS] (no group, no episode, no tech)"
+    content_types: ["UNKNOWN"]
+    signature: "T"
+    confidence: 0.5
+    description: "未知内容下的最小 T(+A) 模板，仅用于无 GROUP 且存在别名分隔信号"
+    examples:
+      - "Mahou no Stage Fancy Lala / Fancy Lala [Rus]"
+    route_id: "unknown_t_alias_minimal_v1"
+    signals:
+      slot_order: ["T"]
+      group_position: "none"
+      group_after_ep_only: false
+      forbid_group_in_title_span: false
+      ep_anchor_priority: true
+      title_over_group_default: true
+      tech_starts_after_ep: true
+
 # ============================================================================
 # 模板统计
 # ============================================================================
 
 statistics:
-  total_templates: 34
+  total_templates: 35
   by_content_type:
     TV_EP: 6
     BATCH: 11
     MOVIE: 6
     SP: 10
-    UNKNOWN: 1
+    UNKNOWN: 2
   coverage:
     standard_formats: 100%
     tailgroup_formats: 100%

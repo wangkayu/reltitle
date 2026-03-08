@@ -362,6 +362,49 @@ func TestParserAliasCleanup_TitleGapAliasTokenWithSeasonSuffixConsumed(t *testin
 	}
 }
 
+func TestParserGroupDetection_LongBracketWithSubtitleKeyword(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[GreatMission字幕小队※急募时轴] 全员逃走中 动画版 Tousouchuu Great Mission - 14 [1080p][AVC][CHT][MP4]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	groups := attrValues(res, model.AttrGroup)
+	if len(groups) == 0 {
+		t.Fatalf("expected group detected from long subtitle bracket, got none")
+	}
+	if !strings.Contains(groups[0], "字幕") {
+		t.Fatalf("unexpected group=%v", groups)
+	}
+}
+
+func TestParserAliasCleanup_BatchTVMarkerConsumedInTitleGap(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "Kekkon Yubiwa Monogatari II | Tales of Wedding Rings [TV-2] [2025] [01 of 12] [WEBRip] [1080p] [RUS + JAP]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "BATCH" {
+		t.Fatalf("content_kind=%q want=BATCH", got)
+	}
+	for _, tok := range res.Tokens {
+		if strings.EqualFold(strings.TrimSpace(tok.Text), "TV") && !tok.Removed {
+			t.Fatalf("batch title-gap TV marker should be consumed, tokens=%v", res.Tokens)
+		}
+	}
+}
+
 func TestParserAliasCleanup_SingleSlashMiniAnimeBridgeAddsAlias(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

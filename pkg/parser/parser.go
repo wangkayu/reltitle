@@ -2492,6 +2492,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	p.consumeTitleGapSeasonBridgeMarkers(tokens, titleEnd, episodeIdx, episodeRangeIdx, attrs)
 	p.consumeTitleGapLatinAliasRuns(tokens, finalTitle, finalAliases, titleEnd, episodeIdx, episodeRangeIdx, attrs)
 	p.consumeTitleGapAliasSemanticTokens(tokens, finalAliases, titleEnd, episodeIdx, episodeRangeIdx, attrs)
+	p.consumeTitleGapBatchTVMarkers(tokens, titleEnd, episodeIdx, episodeRangeIdx, attrs)
 	p.consumeAliasChainTokensByFinalAliases(tokens, groupSpan, finalTitle, finalAliases, episodeIdx, episodeRangeIdx, seasonIdx, attrs)
 	p.consumeGroupSpecificTitleChainDelimiters(tokens, groupSpan, group, episodeIdx, episodeRangeIdx, attrs)
 
@@ -7018,7 +7019,7 @@ func extractHeadBracketGroup(tokens []model.Token) (string, [2]int) {
 		if !isGroupCandidateText(g) {
 			continue
 		}
-		if isLikelyMetaBracketText(g) || isEpisodeLikeBracketText(g) {
+		if (isLikelyMetaBracketText(g) && !hasStrongGroupKeyword(g)) || isEpisodeLikeBracketText(g) {
 			continue
 		}
 		if bi == 0 {
@@ -7220,7 +7221,11 @@ func isGroupCandidateText(s string) bool {
 	if s == "" {
 		return false
 	}
-	if len([]rune(s)) > 32 {
+	runeLen := len([]rune(s))
+	if runeLen > 64 {
+		return false
+	}
+	if runeLen > 32 && !hasStrongGroupKeyword(s) {
 		return false
 	}
 	allDigits := true
@@ -7246,6 +7251,20 @@ func isGroupCandidateText(s string) bool {
 		return false
 	}
 	return true
+}
+
+func hasStrongGroupKeyword(s string) bool {
+	ss := strings.ToLower(strings.TrimSpace(s))
+	if ss == "" {
+		return false
+	}
+	if strings.Contains(s, "字幕") || strings.Contains(s, "漢化") || strings.Contains(s, "汉化") {
+		return true
+	}
+	if strings.Contains(ss, "sub") || strings.Contains(ss, "raw") || strings.Contains(ss, "fansub") || strings.Contains(ss, "team") || strings.Contains(ss, "studio") {
+		return true
+	}
+	return false
 }
 
 func isLikelyMetaBracketText(s string) bool {
@@ -10511,6 +10530,42 @@ func (p *Parser) consumeTitleGapAliasSemanticTokens(tokens []model.Token, aliase
 				tokens[i].Removed = true
 				break
 			}
+		}
+	}
+}
+
+func (p *Parser) consumeTitleGapBatchTVMarkers(tokens []model.Token, titleEnd int, episodeIdx int, episodeRangeIdx int, attrs []model.Attribute) {
+	if len(tokens) == 0 || titleEnd < 0 || titleEnd >= len(tokens) {
+		return
+	}
+	// Scope to range-like outputs only; avoid touching regular TV title semantics.
+	if episodeRangeIdx < 0 {
+		return
+	}
+	scanStart := titleEnd
+	scanEnd := len(tokens)
+	if episodeRangeIdx >= scanStart && episodeRangeIdx < scanEnd {
+		scanEnd = episodeRangeIdx
+	}
+	if episodeIdx >= scanStart && episodeIdx < scanEnd {
+		scanEnd = episodeIdx
+	}
+	if techStart, ok := firstTechTokenIndexFromAttrs(attrs); ok && techStart > scanStart && techStart < scanEnd {
+		scanEnd = techStart
+	}
+	if scanStart >= scanEnd {
+		return
+	}
+	for i := scanStart; i < scanEnd; i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		txt := strings.ToLower(strings.TrimSpace(tokens[i].Text))
+		if txt != "tv" && txt != "tb" && txt != "тв" && txt != "тv" {
+			continue
+		}
+		if isInBracket(tokens, i) || isInParen(tokens, i) || hasSeasonSignalAroundToken(tokens, i, 3) {
+			tokens[i].Removed = true
 		}
 	}
 }

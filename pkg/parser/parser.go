@@ -1877,6 +1877,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	finalTitle := finalTitleValueFromAttributes(attrs, title)
 	finalAliases := finalTitleAliasValuesFromAttributes(attrs)
 	p.consumeAliasChainTokensByFinalAliases(tokens, groupSpan, finalTitle, finalAliases, episodeIdx, episodeRangeIdx, seasonIdx, attrs)
+	p.consumeGroupSpecificTitleChainDelimiters(tokens, groupSpan, group, episodeIdx, episodeRangeIdx, attrs)
 
 	res := &model.ParseResult{
 		RawTitle:           originalRawTitle,
@@ -6079,7 +6080,7 @@ func isGroupCandidateText(s string) bool {
 		if ('A' <= r && r <= 'Z') || ('a' <= r && r <= 'z') || ('0' <= r && r <= '9') {
 			continue
 		}
-		if r == ' ' || r == '_' || r == '-' || r == '.' || r == '&' || r == '＆' || r == ',' || r == '，' || r == '@' {
+		if r == ' ' || r == '_' || r == '-' || r == '.' || r == '&' || r == '＆' || r == '+' || r == '＋' || r == ',' || r == '，' || r == '@' {
 			continue
 		}
 		if r > 127 {
@@ -6144,7 +6145,7 @@ func isLikelyMetaBracketText(s string) bool {
 		return true
 	}
 	// Common combined language tags like "CHS&JPN" / "CHT&JPN" / "CHS&CHT&JPN".
-	if regexp.MustCompile(`(?i)^(?:CHS|CHT|JPN|JP|ENG)(?:\s*(?:&|＆)\s*(?:CHS|CHT|JPN|JP|ENG))+$`).MatchString(trim) {
+	if regexp.MustCompile(`(?i)^(?:CHS|CHT|JPN|JP|ENG)(?:\s*(?:&|＆|\+|＋)\s*(?:CHS|CHT|JPN|JP|ENG))+$`).MatchString(trim) {
 		return true
 	}
 	if strings.Contains(s, "简") || strings.Contains(s, "繁") {
@@ -9008,6 +9009,76 @@ func (p *Parser) consumeAliasChainTokensByFinalAliases(tokens []model.Token, gro
 			continue
 		}
 		if isAliasChainDelimiterToken(tokens[i].Text) {
+			tokens[i].Removed = true
+		}
+	}
+}
+
+func hasSemanticTokenAroundDelimiter(tokens []model.Token, start int, end int, step int) bool {
+	if step == 0 {
+		return false
+	}
+	for i := start; ; i += step {
+		if step > 0 {
+			if i >= end {
+				break
+			}
+		} else {
+			if i < end {
+				break
+			}
+		}
+		txt := strings.TrimSpace(tokens[i].Text)
+		if txt == "" || isAliasChainDelimiterToken(txt) {
+			continue
+		}
+		switch txt {
+		case "-", "_", "~", ":", "：", "·", "•", "☆", "★", ".", "。":
+			continue
+		}
+		return aliasChainSemanticKey(txt) != ""
+	}
+	return false
+}
+
+func (p *Parser) consumeGroupSpecificTitleChainDelimiters(tokens []model.Token, groupSpan [2]int, group string, episodeIdx int, episodeRangeIdx int, attrs []model.Attribute) {
+	if len(tokens) == 0 {
+		return
+	}
+	groupKey := strings.ToLower(strings.TrimSpace(group))
+	if !strings.Contains(groupKey, "jibaketa") {
+		return
+	}
+	scanStart := titleStartAfterLeadingEmptyBracketBlocks(tokens)
+	if len(groupSpan) == 2 && groupSpan[1] > scanStart {
+		scanStart = groupSpan[1]
+	}
+	if scanStart < 0 {
+		scanStart = 0
+	}
+	scanEnd := len(tokens)
+	if episodeRangeIdx >= scanStart && episodeRangeIdx < scanEnd {
+		scanEnd = episodeRangeIdx
+	}
+	if episodeIdx >= scanStart && episodeIdx < scanEnd {
+		scanEnd = episodeIdx
+	}
+	if techStart, ok := firstTechTokenIndexFromAttrs(attrs); ok && techStart >= scanStart && techStart < scanEnd {
+		scanEnd = techStart
+	}
+	if scanStart >= scanEnd {
+		return
+	}
+	for i := scanStart; i < scanEnd; i++ {
+		if tokens[i].Removed || isInBracket(tokens, i) || isInParen(tokens, i) {
+			continue
+		}
+		if strings.TrimSpace(tokens[i].Text) != "/" && strings.TrimSpace(tokens[i].Text) != "／" {
+			continue
+		}
+		leftOK := hasSemanticTokenAroundDelimiter(tokens, i-1, scanStart, -1)
+		rightOK := hasSemanticTokenAroundDelimiter(tokens, i+1, scanEnd, 1)
+		if leftOK && rightOK {
 			tokens[i].Removed = true
 		}
 	}

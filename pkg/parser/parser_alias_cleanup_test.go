@@ -1388,6 +1388,55 @@ func TestConsumeAliasChainTokensByFinalAliases_JibaketaBilingualSlashOnly(t *tes
 	}
 }
 
+func TestGroupSpecificTitleChainDelimiterCleanup_JibaketaViuTVSlash(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+	raw := "[jibaketa合成&壓制][ViuTV粵語]约定的夢幻島 S2 / Yakusoku no Neverland 2nd Season - 01 [粵日雙語+內封繁體中文雙字幕] (BD 1920x1080 x264 AACx2 PGS+SRT ViuTV CHT)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	epIdx := -1
+	if res.EPSlot != nil && res.EPSlot.Primary != nil && res.EPSlot.Primary.TokenStart >= 0 {
+		epIdx = res.EPSlot.Primary.TokenStart
+	}
+	if epIdx < 0 {
+		t.Fatalf("expected episode token index")
+	}
+	for i := 0; i < epIdx && i < len(res.Tokens); i++ {
+		if strings.TrimSpace(res.Tokens[i].Text) != "/" {
+			continue
+		}
+		if !res.Tokens[i].Removed {
+			t.Fatalf("expected jibaketa bilingual title-chain slash consumed, idx=%d", i)
+		}
+	}
+}
+
+func TestGroupExtract_JibaketaPlusCompoundGroup(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+	raw := "[jibaketa合成&音頻壓制+部份二次壓制][ViuTV粵語]捉捉！迷你寶 / 奇妙！萌可 第1季 / Catch! Teenieping [粵語+無字幕] (WEB 1920x1080 x264 AAC YUE)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	title := canonicalTitle(res)
+	if strings.Contains(title, "jibaketa") || strings.Contains(title, "合成") {
+		t.Fatalf("title should not collapse to group payload, got=%q", title)
+	}
+	groupVals := attrValues(res, model.AttrGroup)
+	if len(groupVals) == 0 || !strings.Contains(strings.ToLower(groupVals[0]), "jibaketa") {
+		t.Fatalf("expected jibaketa group extracted, got=%v", groupVals)
+	}
+}
+
 func TestGroupSlot2PlatformInfer_JibaketaDistributorNoPlatform(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

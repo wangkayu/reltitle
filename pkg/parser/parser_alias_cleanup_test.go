@@ -1593,6 +1593,52 @@ func TestParserGroupRouteOverride_FurretarCleanupNoGlobalDrift(t *testing.T) {
 	}
 }
 
+func TestParserGroupRouteOverride_AniSpecialNoEpisodeForcesSpecial(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[ANi] 無職轉生～到了異世界就拿出真本事 第二季 - 特別篇 [1080P][Baha][WEB-DL][AAC AVC][CHT][V2][MP4]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "SPECIAL" {
+		t.Fatalf("content_kind=%q want=%q", got, "SPECIAL")
+	}
+	if got := res.TemplateID; got != "TF_TV_SP_ONLY_01" {
+		t.Fatalf("template_id=%q want=%q", got, "TF_TV_SP_ONLY_01")
+	}
+	if got := canonicalEpisode(res); got != "" {
+		t.Fatalf("episode=%q want empty", got)
+	}
+	if got := canonicalSPKind(res); got != "SP" {
+		t.Fatalf("sp_kind=%q want=%q", got, "SP")
+	}
+}
+
+func TestParserGroupRouteOverride_AniSpecialWithEpisodeStaysTVEP(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[ANi] 关于我转生变成史莱姆这档事 第三季 [特别篇] - 01 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "TV_EP" {
+		t.Fatalf("content_kind=%q want=%q", got, "TV_EP")
+	}
+	if got := canonicalEpisode(res); got != "1" {
+		t.Fatalf("episode=%q want=%q", got, "1")
+	}
+}
+
 func TestParserAliasCleanup_FurretarDropsMovieMetaAlias(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

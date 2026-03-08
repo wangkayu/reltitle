@@ -48,6 +48,21 @@ overrides:
       force_content_kind: "TV_EP"
       force_route_id: "group_epseg_maruko_v1"
 
+  - id: "ani_special_no_ep_streaming"
+    enabled: true
+    priority: 94
+    match:
+      group_in: ["ANi"]
+      raw_must_contain_any:
+        - " - 特別篇 ["
+        - " - 特别篇 ["
+        - "-特別篇["
+        - "-特别篇["
+    output:
+      force_content_kind: "SPECIAL"
+      force_template_id: "TF_TV_SP_ONLY_01"
+      force_route_id: "group_ani_special_no_ep_v1"
+
   - id: "furretar_dub_prefix_cleanup"
     enabled: true
     priority: 92

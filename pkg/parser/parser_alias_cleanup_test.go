@@ -294,6 +294,11 @@ func TestParserAliasCleanup_RebalanceGenericTheatricalTitleFromAlias(t *testing.
 	if !strings.Contains(title, "橡果兄弟") {
 		t.Fatalf("unexpected rebalanced title=%q aliases=%v", title, canonicalAliases(res))
 	}
+	for _, a := range canonicalAliases(res) {
+		if strings.EqualFold(strings.TrimSpace(a), "v2") || strings.EqualFold(strings.TrimSpace(a), "ver2") {
+			t.Fatalf("version marker leaked into aliases: %v", canonicalAliases(res))
+		}
+	}
 }
 
 func TestParserAliasCleanup_DropsResolutionMetaAliases(t *testing.T) {

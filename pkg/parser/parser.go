@@ -5234,6 +5234,10 @@ func (p *Parser) isValidAliasToken(s string) bool {
 	if regexp.MustCompile(`(?i)^\d{1,4}[vV]\d{1,2}$`).MatchString(s) {
 		return false
 	}
+	// Pure version tags like "v2" / "ver2" should not be aliases.
+	if regexp.MustCompile(`(?i)^v(?:er)?\.?\s*\d{1,3}$`).MatchString(s) {
+		return false
+	}
 	if len([]rune(s)) < 2 {
 		return false
 	}

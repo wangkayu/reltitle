@@ -233,6 +233,69 @@ func TestParserAliasCleanup_DropsSeasonOnlyAliasSuffix(t *testing.T) {
 	}
 }
 
+func TestParserAliasCleanup_RebalanceGenericPrimaryFromAlias(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[DBD-Raws][4K Remastered][大魔神剧场版三部曲合集/Daimajin The Moive Trilogy 01-03][正片+特典映像][1080P][BDRip][HEVC-10bit][FLAC][MKV](大魔神劇場版三部作)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	title := canonicalTitle(res)
+	if title == "正片" {
+		t.Fatalf("generic primary title should be rebalanced, got=%q aliases=%v", title, canonicalAliases(res))
+	}
+	if !strings.Contains(title, "大魔神") {
+		t.Fatalf("unexpected rebalanced title=%q", title)
+	}
+}
+
+func TestParserAliasCleanup_RebalanceGenericMovieTitleFromLatinFragments(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[NC-Raws] BanG Dream！FILM LIVE - 電影 (Baha 1920x1080 AVC AAC MP4)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	title := canonicalTitle(res)
+	if title == "電影" {
+		t.Fatalf("generic movie marker should not remain primary title, got=%q aliases=%v", title, canonicalAliases(res))
+	}
+	if !strings.Contains(strings.ToLower(title), "bang") || !strings.Contains(strings.ToLower(title), "live") {
+		t.Fatalf("unexpected rebalanced title=%q", title)
+	}
+}
+
+func TestParserAliasCleanup_RebalanceGenericTheatricalTitleFromAlias(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "【动漫国字幕组】★剧场版[再见了 橡果兄弟! -奇迹的暑假-][BDRip][AVC_AAC][1080P][简体][MP4][v2]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	title := canonicalTitle(res)
+	if title == "剧场版" || title == "劇場版" {
+		t.Fatalf("generic theatrical marker should not remain primary title, got=%q aliases=%v", title, canonicalAliases(res))
+	}
+	if !strings.Contains(title, "橡果兄弟") {
+		t.Fatalf("unexpected rebalanced title=%q aliases=%v", title, canonicalAliases(res))
+	}
+}
+
 func TestParserAliasCleanup_DropsResolutionMetaAliases(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

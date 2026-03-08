@@ -2373,6 +2373,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	title = sanitizePrimaryTitleForOutput(title)
 	title = trimTitleTailByPackKind(title, packKind)
 	aliases = p.sanitizeAliasesForOutput(aliases, title, episode, season)
+	title, aliases = p.rebalanceGenericPrimaryTitleFromAliases(title, aliases)
 	if strings.TrimSpace(title) != "" && aliasSemanticKey(title) != aliasSemanticKey(origTitle) {
 		attrs = upsertTitleAttribute(attrs, title, "title_cleanup")
 	}
@@ -4853,6 +4854,156 @@ func (p *Parser) sanitizeAliasesForOutput(aliases []string, title string, episod
 		return nil
 	}
 	return out
+}
+
+func isGenericBridgeTitleToken(s string) bool {
+	ss := strings.TrimSpace(strings.ToLower(s))
+	if ss == "" {
+		return false
+	}
+	switch ss {
+	case "系列", "シリーズ", "series", "franchise",
+		"電影", "电影", "movie", "movies",
+		"電影版", "电影版",
+		"劇場版", "剧场版",
+		"正片", "特典", "合集", "全集", "枪版", "槍版":
+		return true
+	default:
+		return false
+	}
+}
+
+func looksLikeLatinAliasFragment(s string) bool {
+	s = strings.TrimSpace(s)
+	if s == "" || hasCJK(s) {
+		return false
+	}
+	hasLetter := false
+	for _, r := range s {
+		if ('A' <= r && r <= 'Z') || ('a' <= r && r <= 'z') {
+			hasLetter = true
+			continue
+		}
+		if ('0' <= r && r <= '9') || r == ' ' || r == '-' || r == '\'' || r == '’' || r == '.' || r == '!' || r == '?' || r == '！' || r == '？' || r == ':' || r == '：' {
+			continue
+		}
+		return false
+	}
+	return hasLetter
+}
+
+func aliasPromotionScore(s string) int {
+	ss := strings.TrimSpace(s)
+	if ss == "" {
+		return -1
+	}
+	score := 0
+	if hasCJK(ss) {
+		score += 60
+	}
+	if hasLatin(ss) {
+		score += 50
+	}
+	if strings.Contains(ss, " ") {
+		score += 10
+	}
+	score += len([]rune(ss))
+	return score
+}
+
+func removeAliasBySemanticKey(aliases []string, key string) []string {
+	if len(aliases) == 0 || key == "" {
+		return aliases
+	}
+	out := make([]string, 0, len(aliases))
+	for _, a := range aliases {
+		if aliasSemanticKey(a) == key {
+			continue
+		}
+		out = append(out, a)
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+func (p *Parser) rebalanceGenericPrimaryTitleFromAliases(title string, aliases []string) (string, []string) {
+	title = strings.TrimSpace(title)
+	if title == "" || len(aliases) == 0 {
+		return title, aliases
+	}
+	if !isGenericBridgeTitleToken(title) {
+		return title, aliases
+	}
+
+	best := ""
+	bestScore := -1
+	joinedFromFragments := false
+	for _, a := range aliases {
+		c := strings.TrimSpace(a)
+		if c == "" {
+			continue
+		}
+		if isLikelySearchHintText(c) || isAliasMetaSemanticOnly(c) || isStreamMetaText(c) {
+			continue
+		}
+		if p != nil && !p.isValidAliasToken(c) {
+			continue
+		}
+		sc := aliasPromotionScore(c)
+		if sc > bestScore {
+			bestScore = sc
+			best = c
+		}
+	}
+	// Also consider joining latin fragments, e.g. "BanG" + "Dream!FILM" + "LIVE".
+	allLatin := true
+	frags := make([]string, 0, len(aliases))
+	for _, a := range aliases {
+		c := strings.TrimSpace(a)
+		if !looksLikeLatinAliasFragment(c) {
+			allLatin = false
+			break
+		}
+		frags = append(frags, c)
+	}
+	if allLatin && len(frags) >= 2 {
+		joined := strings.TrimSpace(strings.Join(frags, " "))
+		joined = p.normalizeAliasCandidateForOutput(joined)
+		if joined != "" && !isAliasMetaSemanticOnly(joined) && !isLikelySearchHintText(joined) {
+			sc := aliasPromotionScore(joined) + 5
+			if sc > bestScore {
+				bestScore = sc
+				best = joined
+				joinedFromFragments = true
+			}
+		}
+	}
+	if best == "" {
+		return title, aliases
+	}
+
+	titleKey := aliasSemanticKey(title)
+	bestKey := aliasSemanticKey(best)
+	if bestKey == "" || bestKey == titleKey {
+		return title, aliases
+	}
+	if joinedFromFragments {
+		out := make([]string, 0, len(aliases))
+		for _, a := range aliases {
+			if looksLikeLatinAliasFragment(a) {
+				continue
+			}
+			out = append(out, a)
+		}
+		if len(out) == 0 {
+			out = nil
+		}
+		return best, out
+	}
+	newAliases := removeAliasBySemanticKey(aliases, bestKey)
+	return best, newAliases
 }
 
 func sanitizePrimaryTitleForOutput(title string) string {

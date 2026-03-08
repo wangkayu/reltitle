@@ -405,6 +405,27 @@ func TestParserAliasCleanup_BatchTVMarkerConsumedInTitleGap(t *testing.T) {
 	}
 }
 
+func TestParserGroupDetection_InlineStarTwoTokenPrefix(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "SFSub&六四位元字幕組★29歲單身中堅冒險家的日常 29-sai Dokushin Chuuken Boukensha no Nichijou★01★1920x1080★AVC AAC MP4★繁體中文"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	groups := attrValues(res, model.AttrGroup)
+	if len(groups) == 0 {
+		t.Fatalf("expected inline-star two-token group detected")
+	}
+	if !strings.Contains(groups[0], "字幕") {
+		t.Fatalf("unexpected group=%v", groups)
+	}
+}
+
 func TestParserAliasCleanup_SingleSlashMiniAnimeBridgeAddsAlias(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

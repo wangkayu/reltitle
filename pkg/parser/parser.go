@@ -8032,6 +8032,38 @@ func extractInlineStarGroup(tokens []model.Token) string {
 			}
 		}
 	}
+	// Case A2: two-token group prefix before star.
+	// Example: ["SFSub&", "六四位元字幕組", "★", "..."].
+	if len(tokens) >= 3 {
+		sep := strings.TrimSpace(tokens[2].Text)
+		if sep == "★" || sep == "☆" {
+			leftA := strings.TrimSpace(tokens[0].Text)
+			leftB := strings.TrimSpace(tokens[1].Text)
+			joined := strings.TrimSpace(leftA + " " + leftB)
+			if validLeft(joined) || (strings.HasSuffix(leftA, "&") && hasStrongGroupKeyword(leftB)) {
+				hasRight := false
+				maxLookahead := 20
+				if maxLookahead > len(tokens) {
+					maxLookahead = len(tokens)
+				}
+				for j := 3; j < maxLookahead; j++ {
+					if tokens[j].Removed {
+						continue
+					}
+					if strings.TrimSpace(tokens[j].Text) != "" {
+						hasRight = true
+						break
+					}
+				}
+				if hasRight {
+					tokens[0].Removed = true
+					tokens[1].Removed = true
+					tokens[2].Removed = true
+					return joined
+				}
+			}
+		}
+	}
 
 	// Case B: delimiter is embedded in the first token.
 	text := tokens[0].Text
@@ -10815,11 +10847,11 @@ func (p *Parser) extractPreEpisodePipeAliasesAndConsume(tokens []model.Token, st
 	return main, aliases, true
 }
 
-var singleSlashAliasSeasonSignalPattern = regexp.MustCompile(`(?i)^(?:s\d{1,2}|season|saison|part|cour|\d{1,2}(?:st|nd|rd|th))$`)
+var singleSlashAliasSeasonSignalPattern = regexp.MustCompile(`(?i)^(?:s\d{1,2}|p\d{1,2}|season|saison|part|cour|\d{1,2}(?:st|nd|rd|th))$`)
 var singleSlashAliasSeasonSignalCJKPattern = regexp.MustCompile(`^第?[一二三四五六七八九十0-9]{1,3}(?:季|期|部)$`)
 var singleSlashAliasSeasonPhrasePattern = regexp.MustCompile(`(?i)^season\s*\d{1,2}$`)
 var singleSlashAliasEmbeddedSeasonCJKPattern = regexp.MustCompile(`^第?[一二三四五六七八九十0-9]{1,3}(?:季|期|部).*$`)
-var singleSlashAliasBridgeTokenPattern = regexp.MustCompile(`(?i)^(?:special|ova|oad|ona|sp|dub|audio|dual|sub|subs|subtitle|uncut|version|anime|mini|gekijou|theater)$`)
+var singleSlashAliasBridgeTokenPattern = regexp.MustCompile(`(?i)^(?:special|ova|oad|ona|sp|dub|audio|dual|sub|subs|subtitle|uncut|version|ver|vol|chapter|box|anime|mini|gekijou|theater)$`)
 var titleGapLatinAliasTokenPattern = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9'.’\-]*$`)
 var titleGapEmbeddedSeasonTokenPattern = regexp.MustCompile(`(?i)\b(?:season|saison|part|cour)\s*\d{1,2}\b|\bs\d{1,2}\b`)
 
@@ -10863,6 +10895,7 @@ func (p *Parser) inferTitleGapSingleSlashAlias(tokens []model.Token, title strin
 	if stripped := stripExplicitSeasonSuffix(right); stripped != "" {
 		right = stripped
 	}
+	right = p.normalizeAliasCandidateForOutput(right)
 	right = strings.TrimSpace(right)
 	if right == "" || !p.isValidAliasToken(right) {
 		return nil
@@ -10936,6 +10969,7 @@ func (p *Parser) inferTitleGapDashAlias(tokens []model.Token, title string, titl
 		if stripped := stripExplicitSeasonSuffix(candidate); stripped != "" {
 			candidate = stripped
 		}
+		candidate = p.normalizeAliasCandidateForOutput(candidate)
 		candidate = strings.TrimSpace(candidate)
 		if candidate == "" || !p.isValidAliasToken(candidate) {
 			continue
@@ -11009,6 +11043,7 @@ func (p *Parser) inferTitleGapBilingualRunAlias(tokens []model.Token, title stri
 	if stripped := stripExplicitSeasonSuffix(cand); stripped != "" {
 		cand = stripped
 	}
+	cand = p.normalizeAliasCandidateForOutput(cand)
 	cand = strings.TrimSpace(cand)
 	if cand == "" || !p.isValidAliasToken(cand) {
 		return nil

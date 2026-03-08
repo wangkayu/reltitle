@@ -1202,6 +1202,62 @@ func TestParserAliasCleanup_FurretarDropsMovieMetaAlias(t *testing.T) {
 	}
 }
 
+func TestParserAliasCleanup_FurretarDropsLangMetaAliases(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Furretar] 台配 - 进击的巨人 The Final Season 完结篇 [繁字][CHT][國語][中文配音]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	aliases := canonicalAliases(res)
+	for _, ban := range []string{"繁字", "國語", "国语", "中文配音", "中配版", "音"} {
+		if containsAlias(aliases, ban) {
+			t.Fatalf("forbidden language/meta alias leaked: %q aliases=%v", ban, aliases)
+		}
+	}
+}
+
+func TestParserAliasCleanup_DropsPlatformTagAliasDSNP(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "Cat's Eye (2025) S01E01 MULTi 1080p WEB H.264 AAC -Tsundere-Raws (DSNP) (VF, FRENCH, VOSTFR, Cat's♥Eye)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	aliases := canonicalAliases(res)
+	if containsAlias(aliases, "DSNP") {
+		t.Fatalf("platform tag should not be alias, aliases=%v", aliases)
+	}
+}
+
+func TestParserAliasCleanup_DropsPartAliasFragment(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[酷漫404][进击的巨人 最终季 Part.2][76][1080P][WebRip][简日对白字幕+特效注解字幕][HEVC-10bit AAC][MKV][字幕组招人內详]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	aliases := canonicalAliases(res)
+	if containsAlias(aliases, "Part") {
+		t.Fatalf("part fragment should not be alias, aliases=%v", aliases)
+	}
+}
+
 func TestParserStableTechSpanCombo_CommaSeparatedCodecBlock(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

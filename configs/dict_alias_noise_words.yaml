@@ -70,6 +70,18 @@ alias_noise:
     - 中文字幕
     - 英语中字
     - 英語中字
+    - 国语
+    - 國語
+    - 繁字
+    - 中文配音
+    - 中配版
+    - 正式版本
+    - 上半年
+    - 下半年
+    - ANi
+    - TBS
+    - DSNP
+    - Part
 
   regex_patterns:
     # simple tech words / containers / codecs
@@ -86,6 +98,9 @@ alias_noise:
     - '(?i)^movies?\s*\+\s*(?:specials?|sp|ova|oad|ona)$'
     - '(?i)^season\s*\d{1,2}(?:\s*[-~]\s*\d{1,2})?\s*\+\s*movie$'
     - '(?i)^\d{1,2}\s*\+\s*movie$'
+    - '(?i)^\d{1,2}月番$'
+    - '(?i)^box\s*\d{1,2}$'
+    - '(?i)^[a-z]{2,6}&$'
 
   inline_strip_words_case_insensitive:
     - VOSTFR

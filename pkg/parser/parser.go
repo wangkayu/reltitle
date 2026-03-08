@@ -2446,6 +2446,9 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 		}
 		attrs = upsertGroupAttribute(attrs, group, "group_route_override")
 	}
+	// Group-route overrides may inject raw alias candidates; run final alias/title cleanup once more.
+	aliases = p.sanitizeAliasesForOutput(aliases, title, episode, season)
+	title, aliases = p.rebalanceGenericPrimaryTitleFromAliases(title, aliases)
 	packProfile := p.inferPackProfile(contentKind, packKind, season, seasonRange, attrs)
 	attrs = upsertTitleAttribute(attrs, title, "canonical")
 	attrs = upsertGroupAttribute(attrs, group, "canonical")

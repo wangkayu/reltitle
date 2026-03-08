@@ -1575,6 +1575,36 @@ func TestParserLexicon_EndAndDigitalRemasterMetaTokensAreConsumed(t *testing.T) 
 	}
 }
 
+func TestParserLexicon_MonthAndFileshareMetaTokensAreConsumed(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Group][示例标题/Example Title][02][02月新番][招募時軸][服務器種][1080p][WEB-DL]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	aliases := canonicalAliases(res)
+	for _, a := range aliases {
+		if strings.Contains(a, "02月新番") || strings.Contains(a, "招募時軸") || strings.Contains(a, "服務器種") {
+			t.Fatalf("meta token leaked into alias: %v", aliases)
+		}
+	}
+	notes := attrValues(res, model.AttrNote)
+	if !hasAttrValue(notes, "02月新番") {
+		t.Fatalf("expected note=02月新番, got=%v", notes)
+	}
+	if !hasAttrValue(notes, "RECRUITMENT") {
+		t.Fatalf("expected note=RECRUITMENT, got=%v", notes)
+	}
+	if !hasAttrValue(notes, "FILESHARE_META") {
+		t.Fatalf("expected note=FILESHARE_META, got=%v", notes)
+	}
+}
+
 func TestParserEpisodeRange_TVPackSuffixSplit(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

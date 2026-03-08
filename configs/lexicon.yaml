@@ -221,6 +221,13 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.8
+      - tokens: ["招募時軸"]
+        emit:
+          - type: note
+            normalized: "RECRUITMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
 
   - id: note_search_and_share_meta_tokens
     any_of:
@@ -246,6 +253,20 @@ entries:
         remove: true
         confidence: 0.7
       - tokens: ["網盤下載"]
+        emit:
+          - type: note
+            normalized: "FILESHARE_META"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["服務器種"]
+        emit:
+          - type: note
+            normalized: "FILESHARE_META"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["服务器种"]
         emit:
           - type: note
             normalized: "FILESHARE_META"
@@ -1715,6 +1736,44 @@ entries:
         emit:
           - type: note
             normalized: "4月新番"
+            token_index: -1
+        remove: true
+        confidence: 0.65
+
+  - id: note_month_new_season_02
+    any_of:
+      - scope: bracket
+        tokens: ["02月新番"]
+        emit:
+          - type: note
+            normalized: "02月新番"
+            token_index: -1
+        remove: true
+        confidence: 0.65
+      - scope: plain
+        tokens: ["02月新番"]
+        emit:
+          - type: note
+            normalized: "02月新番"
+            token_index: -1
+        remove: true
+        confidence: 0.65
+
+  - id: note_month_new_season_2
+    any_of:
+      - scope: bracket
+        tokens: ["2月新番"]
+        emit:
+          - type: note
+            normalized: "2月新番"
+            token_index: -1
+        remove: true
+        confidence: 0.65
+      - scope: plain
+        tokens: ["2月新番"]
+        emit:
+          - type: note
+            normalized: "2月新番"
             token_index: -1
         remove: true
         confidence: 0.65

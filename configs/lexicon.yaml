@@ -537,6 +537,29 @@ entries:
     remove: true
     confidence: 0.75
 
+  - id: source_type_resolution_bluray1080p_glued
+    any_of:
+      - tokens: ["blu", "-", "ray1080p"]
+        emit:
+          - type: source_type
+            normalized: "BluRay"
+            token_index: 0
+          - type: resolution
+            normalized: "1080p"
+            token_index: 2
+        remove: true
+        confidence: 0.75
+      - tokens: ["ray1080p"]
+        emit:
+          - type: source_type
+            normalized: "BluRay"
+            token_index: -1
+          - type: resolution
+            normalized: "1080p"
+            token_index: -1
+        remove: true
+        confidence: 0.65
+
   - id: source_type_resolution_hdtv720p_glued
     tokens: ["hdtv720p"]
     emit:
@@ -3822,6 +3845,15 @@ entries:
     remove: true
     confidence: 0.9
 
+  - id: audio_atmos_token
+    tokens: ["atmos"]
+    emit:
+      - type: audio_object
+        normalized: "ATMOS"
+        token_index: -1
+    remove: true
+    confidence: 0.75
+
   - id: audio_truehd_atmos_71
     tokens: ["truehd", "atmos", "7.1"]
     emit:
@@ -3876,6 +3908,38 @@ entries:
     remove: true
     confidence: 0.9
 
+  - id: audio_dts5_51_split
+    any_of:
+      - tokens: ["dts5", ".", "1"]
+        emit:
+          - type: audio_codec
+            normalized: "DTS"
+            token_index: 0
+          - type: audio_channels
+            normalized: "5.1"
+            token_index: 2
+        remove: true
+        confidence: 0.9
+      - tokens: ["dts5", "1"]
+        emit:
+          - type: audio_codec
+            normalized: "DTS"
+            token_index: 0
+          - type: audio_channels
+            normalized: "5.1"
+            token_index: 1
+        remove: true
+        confidence: 0.85
+
+  - id: audio_dts5_token
+    tokens: ["dts5"]
+    emit:
+      - type: audio_codec
+        normalized: "DTS"
+        token_index: -1
+    remove: true
+    confidence: 0.75
+
   - id: audio_opus_20
     tokens: ["opus", "2.0"]
     emit:
@@ -3899,6 +3963,38 @@ entries:
         token_index: 1
     remove: true
     confidence: 0.95
+
+  - id: audio_flac2_20_split
+    any_of:
+      - tokens: ["flac2", ".", "0"]
+        emit:
+          - type: audio_codec
+            normalized: "FLAC"
+            token_index: 0
+          - type: audio_channels
+            normalized: "2.0"
+            token_index: 2
+        remove: true
+        confidence: 0.9
+      - tokens: ["flac2", "0"]
+        emit:
+          - type: audio_codec
+            normalized: "FLAC"
+            token_index: 0
+          - type: audio_channels
+            normalized: "2.0"
+            token_index: 1
+        remove: true
+        confidence: 0.85
+
+  - id: audio_flac2_token
+    tokens: ["flac2"]
+    emit:
+      - type: audio_codec
+        normalized: "FLAC"
+        token_index: -1
+    remove: true
+    confidence: 0.75
 
   - id: audio_ac3_51
     tokens: ["ac3", "5.1"]
@@ -3949,6 +4045,38 @@ entries:
 
   - id: audio_aac2_token
     tokens: ["aac2"]
+    emit:
+      - type: audio_codec
+        normalized: "AAC"
+        token_index: -1
+    remove: true
+    confidence: 0.75
+
+  - id: audio_aac5_51_split
+    any_of:
+      - tokens: ["aac5", ".", "1"]
+        emit:
+          - type: audio_codec
+            normalized: "AAC"
+            token_index: 0
+          - type: audio_channels
+            normalized: "5.1"
+            token_index: 2
+        remove: true
+        confidence: 0.9
+      - tokens: ["aac5", "1"]
+        emit:
+          - type: audio_codec
+            normalized: "AAC"
+            token_index: 0
+          - type: audio_channels
+            normalized: "5.1"
+            token_index: 1
+        remove: true
+        confidence: 0.85
+
+  - id: audio_aac5_token
+    tokens: ["aac5"]
     emit:
       - type: audio_codec
         normalized: "AAC"

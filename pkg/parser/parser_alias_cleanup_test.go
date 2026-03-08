@@ -2214,6 +2214,50 @@ func TestLexiconDict_GluedTechTokensShouldBeConsumed(t *testing.T) {
 				model.AttrNote: "UHD",
 			},
 		},
+		{
+			name:  "atmos_token",
+			raw:   "Chainsaw Man The Movie Reze Arc 2025 1080p AMZN WEB-DL MULTi DDP5.1 Atmos H 264-VARYG (Chainsaw Man: Reze-hen, Multi-Audio, Multi-Subs)",
+			token: "Atmos",
+			expectAttrs: map[model.AttrType]string{
+				model.AttrAudioObject: "ATMOS",
+			},
+		},
+		{
+			name:  "ray1080p_glued",
+			raw:   "Origine 2006 MULTI Blu-Ray1080p HEVC DTS-HDMA 5.1 - MaitreAnonyme",
+			token: "Ray1080p",
+			expectAttrs: map[model.AttrType]string{
+				model.AttrSourceType: "BluRay",
+				model.AttrResolution: "1080p",
+			},
+		},
+		{
+			name:  "flac2",
+			raw:   "Angels.Egg.1985.1080p.BluRay.FLAC2.0.Hi10P.x264-ZoroSenpai.mkv",
+			token: "FLAC2",
+			expectAttrs: map[model.AttrType]string{
+				model.AttrAudioCodec:    "FLAC",
+				model.AttrAudioChannels: "2.0",
+			},
+		},
+		{
+			name:  "aac5",
+			raw:   "Chainsaw.Man.The.Movie.Reze.Arc.2025.1080p.AMZN.WEBRip.Dual.Audio.AAC5.1.10bits.x265-Rapta",
+			token: "AAC5",
+			expectAttrs: map[model.AttrType]string{
+				model.AttrAudioCodec:    "AAC",
+				model.AttrAudioChannels: "5.1",
+			},
+		},
+		{
+			name:  "dts5",
+			raw:   "The Legend of Hei 2 / Luo Xiaohei Zhanji 2 (2025) [2160p WEB-DL H265 HQ HDR DTS5.1]",
+			token: "DTS5",
+			expectAttrs: map[model.AttrType]string{
+				model.AttrAudioCodec:    "DTS",
+				model.AttrAudioChannels: "5.1",
+			},
+		},
 	}
 
 	for _, tc := range cases {

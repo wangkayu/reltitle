@@ -256,6 +256,39 @@ entries:
         remove: true
         confidence: 0.65
 
+  - id: source_type_dvdiso
+    tokens: ["dvdiso"]
+    emit:
+      - type: source_type
+        normalized: "DVD"
+        token_index: -1
+    remove: true
+    confidence: 0.7
+
+  - id: source_type_jdvd
+    tokens: ["jdvd"]
+    emit:
+      - type: source_type
+        normalized: "DVD"
+        token_index: -1
+      - type: note
+        normalized: "JDVD"
+        token_index: -1
+    remove: true
+    confidence: 0.7
+
+  - id: source_type_dvd9
+    tokens: ["dvd9"]
+    emit:
+      - type: source_type
+        normalized: "DVD"
+        token_index: -1
+      - type: note
+        normalized: "DVD9"
+        token_index: -1
+    remove: true
+    confidence: 0.7
+
   - id: platform_region_jp_bd
     any_of:
       - scope: plain
@@ -578,6 +611,15 @@ entries:
     emit:
       - type: note
         normalized: "HDR"
+        token_index: -1
+    remove: true
+    confidence: 0.7
+
+  - id: note_uhd
+    tokens: ["uhd"]
+    emit:
+      - type: note
+        normalized: "UHD"
         token_index: -1
     remove: true
     confidence: 0.7
@@ -2793,6 +2835,14 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.7
+      - scope: plain
+        tokens: ["dv"]
+        emit:
+          - type: hdr
+            normalized: "DOLBY_VISION"
+            token_index: -1
+        remove: true
+        confidence: 0.6
       - tokens: ["dolby", "vision"]
         emit:
           - type: hdr
@@ -2800,6 +2850,24 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.7
+
+  - id: hdr_hdr10
+    tokens: ["hdr10"]
+    emit:
+      - type: hdr
+        normalized: "HDR10"
+        token_index: -1
+    remove: true
+    confidence: 0.7
+
+  - id: hdr_hdr10_plus
+    tokens: ["hdr10p"]
+    emit:
+      - type: hdr
+        normalized: "HDR10_PLUS"
+        token_index: -1
+    remove: true
+    confidence: 0.7
 
   - id: sub_cn_subtitle_word
     tokens: ["字幕"]
@@ -3917,6 +3985,38 @@ entries:
         token_index: 1
     remove: true
     confidence: 0.95
+
+  - id: audio_ddp5_51_split
+    any_of:
+      - tokens: ["ddp5", ".", "1"]
+        emit:
+          - type: audio_codec
+            normalized: "EAC3"
+            token_index: 0
+          - type: audio_channels
+            normalized: "5.1"
+            token_index: 2
+        remove: true
+        confidence: 0.9
+      - tokens: ["ddp5", "1"]
+        emit:
+          - type: audio_codec
+            normalized: "EAC3"
+            token_index: 0
+          - type: audio_channels
+            normalized: "5.1"
+            token_index: 1
+        remove: true
+        confidence: 0.85
+
+  - id: audio_ddp5_token
+    tokens: ["ddp5"]
+    emit:
+      - type: audio_codec
+        normalized: "EAC3"
+        token_index: -1
+    remove: true
+    confidence: 0.75
 
   - id: audio_ddp2_20_split
     any_of:

@@ -2154,6 +2154,66 @@ func TestLexiconDict_GluedTechTokensShouldBeConsumed(t *testing.T) {
 				model.AttrResolution: "1080p",
 			},
 		},
+		{
+			name:  "ddp5_1",
+			raw:   "100 Meters 2025 1080p NF WEB-DL DUAL DDP5.1 H 264-VARYG (Hyakuemu., Dual-Audio, Multi-Subs)",
+			token: "DDP5",
+			expectAttrs: map[model.AttrType]string{
+				model.AttrAudioCodec:    "EAC3",
+				model.AttrAudioChannels: "5.1",
+			},
+		},
+		{
+			name:  "dv_hdr10p",
+			raw:   "Chainsaw.Man.The.Movie.Reze.Arc.2025.REPACK.2160p.MA.WEB-DL.DUAL.DDP5.1.Atmos.DV.HDR10P.H.265-BYNDR",
+			token: "DV",
+			expectAttrs: map[model.AttrType]string{
+				model.AttrType("hdr"): "DOLBY_VISION",
+				model.AttrAudioCodec:  "EAC3",
+			},
+		},
+		{
+			name:  "hdr10p",
+			raw:   "Chainsaw.Man.The.Movie.Reze.Arc.2025.REPACK.2160p.MA.WEB-DL.DUAL.DDP5.1.Atmos.DV.HDR10P.H.265-BYNDR",
+			token: "HDR10P",
+			expectAttrs: map[model.AttrType]string{
+				model.AttrType("hdr"): "HDR10_PLUS",
+			},
+		},
+		{
+			name:  "dvdiso",
+			raw:   "Dofus.livre.1.Julith.2016.DVDISO.FRENCH-MaitreAnonyme.iso",
+			token: "DVDISO",
+			expectAttrs: map[model.AttrType]string{
+				model.AttrSourceType: "DVD",
+			},
+		},
+		{
+			name:  "dvd9",
+			raw:   "Dragon Ball (TV Series 1986–1989) DVD9 RETAIL",
+			token: "DVD9",
+			expectAttrs: map[model.AttrType]string{
+				model.AttrSourceType: "DVD",
+				model.AttrNote:       "DVD9",
+			},
+		},
+		{
+			name:  "jdvd",
+			raw:   "(WHIM) Deltora Quest (2007) [480p JDVD] [H265] [Opus 2.0]",
+			token: "JDVD",
+			expectAttrs: map[model.AttrType]string{
+				model.AttrSourceType: "DVD",
+				model.AttrNote:       "JDVD",
+			},
+		},
+		{
+			name:  "uhd_note",
+			raw:   "Dragon Ball DAIMA 2024 S01 Deluxe Edition JPN 2160p UHD Blu-ray 1080p Blu-ray BOX-GWXHBL [BDMV]",
+			token: "UHD",
+			expectAttrs: map[model.AttrType]string{
+				model.AttrNote: "UHD",
+			},
+		},
 	}
 
 	for _, tc := range cases {

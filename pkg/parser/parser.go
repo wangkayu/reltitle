@@ -1882,7 +1882,15 @@ func (p *Parser) Parse(rawTitle string) (*model.ParseResult, error) {
 }
 
 func normalizeRawTitleForParsing(raw string) string {
-	s := strings.TrimSpace(raw)
+	s := strings.Map(func(r rune) rune {
+		switch r {
+		case '\u200b', '\u200c', '\u200d', '\u2060', '\ufeff':
+			return -1
+		default:
+			return r
+		}
+	}, raw)
+	s = strings.TrimSpace(s)
 	if s == "" {
 		return s
 	}

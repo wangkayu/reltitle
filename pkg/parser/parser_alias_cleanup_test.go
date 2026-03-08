@@ -2498,6 +2498,26 @@ func TestParserNoiseWrapper_UnwrapTransportNestedBracket(t *testing.T) {
 	}
 }
 
+func TestParserNormalizeRawTitle_StripsZeroWidthPrefix(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "\u200b[c.c動漫][10月新番][境界觸發者 第三季][01][BIG5][1080P][MP4]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if strings.TrimSpace(canonicalTitle(res)) == "" {
+		t.Fatalf("title should not be empty")
+	}
+	if strings.TrimSpace(canonicalGroup(res)) == "" {
+		t.Fatalf("group should not be empty")
+	}
+}
+
 func TestParserSingleVersionToken_UnknownCoreOnly(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

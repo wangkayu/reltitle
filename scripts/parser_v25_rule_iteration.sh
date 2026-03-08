@@ -97,8 +97,14 @@ cmd=("$QUEUE_GATE" --input "$INPUT" --run-prefix "$RUN_PREFIX")
 if [[ "${#extra_args[@]}" -gt 0 ]]; then
   cmd+=("${extra_args[@]}")
 fi
-gate_output="$("${cmd[@]}")"
+set +e
+gate_output="$("${cmd[@]}" 2>&1)"
+gate_code=$?
+set -e
 echo "$gate_output"
+if [[ "$gate_code" -ne 0 ]]; then
+  exit "$gate_code"
+fi
 
 actionable_path="$(echo "$gate_output" | awk -F= '/^actionable=/{print $2}' | tail -n1)"
 if [[ -z "$actionable_path" ]]; then

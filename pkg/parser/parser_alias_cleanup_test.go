@@ -337,6 +337,31 @@ func TestParserAliasCleanup_InlineBracketMetaNotPromoted(t *testing.T) {
 	}
 }
 
+func TestParserAliasCleanup_TitleGapAliasTokenWithSeasonSuffixConsumed(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[ANi] The Devil Is a PartTimer S2 - 打工吧，魔王大人！第二季 - 01 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if canonicalTitle(res) != "The Devil Is a PartTimer" {
+		t.Fatalf("unexpected title=%q", canonicalTitle(res))
+	}
+	if !containsAlias(canonicalAliases(res), "打工吧，魔王大人！") {
+		t.Fatalf("expected cleaned zh alias, got=%v", canonicalAliases(res))
+	}
+	for _, tok := range res.Tokens {
+		if strings.TrimSpace(tok.Text) == "打工吧，魔王大人！第二季" && !tok.Removed {
+			t.Fatalf("alias token with embedded season suffix should be consumed, tokens=%v", res.Tokens)
+		}
+	}
+}
+
 func TestParserAliasCleanup_SingleSlashMiniAnimeBridgeAddsAlias(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

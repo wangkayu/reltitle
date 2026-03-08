@@ -2491,6 +2491,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	finalAliases := finalTitleAliasValuesFromAttributes(attrs)
 	p.consumeTitleGapSeasonBridgeMarkers(tokens, titleEnd, episodeIdx, episodeRangeIdx, attrs)
 	p.consumeTitleGapLatinAliasRuns(tokens, finalTitle, finalAliases, titleEnd, episodeIdx, episodeRangeIdx, attrs)
+	p.consumeTitleGapAliasSemanticTokens(tokens, finalAliases, titleEnd, episodeIdx, episodeRangeIdx, attrs)
 	p.consumeAliasChainTokensByFinalAliases(tokens, groupSpan, finalTitle, finalAliases, episodeIdx, episodeRangeIdx, seasonIdx, attrs)
 	p.consumeGroupSpecificTitleChainDelimiters(tokens, groupSpan, group, episodeIdx, episodeRangeIdx, attrs)
 
@@ -10455,6 +10456,82 @@ func (p *Parser) consumeTitleGapLatinAliasRuns(tokens []model.Token, title strin
 	}
 }
 
+func (p *Parser) consumeTitleGapAliasSemanticTokens(tokens []model.Token, aliases []string, titleEnd int, episodeIdx int, episodeRangeIdx int, attrs []model.Attribute) {
+	if len(tokens) == 0 || len(aliases) == 0 || titleEnd < 0 || titleEnd >= len(tokens) {
+		return
+	}
+	aliasKeys := map[string]bool{}
+	for _, a := range aliases {
+		k := aliasSemanticKey(a)
+		if k != "" {
+			aliasKeys[k] = true
+		}
+	}
+	if len(aliasKeys) == 0 {
+		return
+	}
+
+	scanStart := titleEnd
+	scanEnd := len(tokens)
+	if episodeRangeIdx >= scanStart && episodeRangeIdx < scanEnd {
+		scanEnd = episodeRangeIdx
+	}
+	if episodeIdx >= scanStart && episodeIdx < scanEnd {
+		scanEnd = episodeIdx
+	}
+	if techStart, ok := firstTechTokenIndexFromAttrs(attrs); ok && techStart > scanStart && techStart < scanEnd {
+		scanEnd = techStart
+	}
+	if scanStart >= scanEnd {
+		return
+	}
+
+	for i := scanStart; i < scanEnd; i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		txt := strings.TrimSpace(tokens[i].Text)
+		if txt == "" || isDashDelimiterToken(txt) || txt == "/" || txt == "／" {
+			continue
+		}
+		switch txt {
+		case "[", "]", "(", ")", "（", "）", "【", "】", "{", "}":
+			continue
+		}
+		tk := aliasSemanticKey(txt)
+		if tk == "" {
+			continue
+		}
+		for ak := range aliasKeys {
+			if tk == ak {
+				tokens[i].Removed = true
+				break
+			}
+			if strings.Contains(tk, ak) && hasEmbeddedSeasonMarkerToken(txt) {
+				tokens[i].Removed = true
+				break
+			}
+		}
+	}
+}
+
+func hasEmbeddedSeasonMarkerToken(s string) bool {
+	ss := strings.TrimSpace(s)
+	if ss == "" {
+		return false
+	}
+	if isSingleSlashSeasonSignalToken(ss) {
+		return true
+	}
+	if reExplicitSeasonMarkerCJK.MatchString(ss) {
+		return true
+	}
+	if titleGapEmbeddedSeasonTokenPattern.MatchString(ss) {
+		return true
+	}
+	return false
+}
+
 func hasSemanticTokenAroundDelimiter(tokens []model.Token, start int, end int, step int) bool {
 	if step == 0 {
 		return false
@@ -10689,6 +10766,7 @@ var singleSlashAliasSeasonPhrasePattern = regexp.MustCompile(`(?i)^season\s*\d{1
 var singleSlashAliasEmbeddedSeasonCJKPattern = regexp.MustCompile(`^第?[一二三四五六七八九十0-9]{1,3}(?:季|期|部).*$`)
 var singleSlashAliasBridgeTokenPattern = regexp.MustCompile(`(?i)^(?:special|ova|oad|ona|sp|dub|audio|dual|sub|subs|subtitle|uncut|version|anime|mini|gekijou|theater)$`)
 var titleGapLatinAliasTokenPattern = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9'.’\-]*$`)
+var titleGapEmbeddedSeasonTokenPattern = regexp.MustCompile(`(?i)\b(?:season|saison|part|cour)\s*\d{1,2}\b|\bs\d{1,2}\b`)
 
 func (p *Parser) inferTitleGapSingleSlashAlias(tokens []model.Token, title string, titleEnd int, episodeIdx int, episodeRangeIdx int) []string {
 	if len(tokens) == 0 || titleEnd < 0 || titleEnd >= len(tokens) {

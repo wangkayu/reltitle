@@ -124,8 +124,39 @@ func TestParserAliasCleanup_DelicosSlashTitleNotMerged(t *testing.T) {
 	if strings.Contains(title, "/") {
 		t.Fatalf("slash title should not be merged: %q", title)
 	}
-	if !containsAlias(aliases, "Delicos Nursery") && !containsAlias(aliases, "TRUMP 系列 Delico’s Nursery") {
-		t.Fatalf("expected one clean alias, got: %v", aliases)
+	if title != "Delicos Nursery" {
+		t.Fatalf("unexpected primary title: %q", title)
+	}
+	if !containsAlias(aliases, "TRUMP 系列 Delico’s Nursery") {
+		t.Fatalf("expected series-bridge alias, got: %v", aliases)
+	}
+}
+
+func TestParserAliasCleanup_DelicosNoSlashKeepsFullTitle(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[ANi] TRUMP 系列 Delico’s Nursery - 08 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	title := canonicalTitle(res)
+	aliases := canonicalAliases(res)
+
+	if title == "系列" {
+		t.Fatalf("mixed-script fallback over-split title, got=%q aliases=%v", title, aliases)
+	}
+	if !strings.Contains(title, "TRUMP") || !strings.Contains(title, "Nursery") {
+		t.Fatalf("unexpected title after cleanup: %q aliases=%v", title, aliases)
+	}
+	for _, bad := range []string{"TRUMP", "Delico’s", "Nursery"} {
+		if containsAlias(aliases, bad) {
+			t.Fatalf("single-token alias leak (%q): %v", bad, aliases)
+		}
 	}
 }
 

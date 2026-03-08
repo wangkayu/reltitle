@@ -101,6 +101,38 @@ func inferTitleAndAliasesFromTitleCore(title string, aliasValid func(string) boo
 			return main, aliases
 		}
 		if isMostlyLatinToken(first) {
+			firstKey := latinSemanticKeyForAlias(first)
+			if firstKey != "" {
+				for _, p := range parts[1:] {
+					p = strings.TrimSpace(p)
+					if p == "" {
+						continue
+					}
+					// Prefer keeping the first latin segment as the primary title when
+					// a later segment is a series-bridge form that already contains the same latin core.
+					// Example: "Delicos Nursery / TRUMP 系列 Delico’s Nursery".
+					if !hasCJK(p) || !hasLatin(p) || !looksLikeSeriesBridgeText(p) {
+						continue
+					}
+					if !strings.Contains(latinSemanticKeyForAlias(p), firstKey) {
+						continue
+					}
+					main := normalizeTitleMain(cleanTitleToken(first))
+					if main == "" {
+						main = normalizeTitleMain(first)
+					}
+					aliases := make([]string, 0, len(parts))
+					seen := map[string]bool{}
+					seen[strings.ToLower(strings.TrimSpace(main))] = true
+					for _, a := range parts[1:] {
+						addAlias(&aliases, seen, a)
+					}
+					if len(aliases) == 0 {
+						return main, nil
+					}
+					return main, aliases
+				}
+			}
 			for _, p := range parts[1:] {
 				p = strings.TrimSpace(p)
 				if p == "" {
@@ -194,6 +226,9 @@ func inferTitleAndAliasesFromTitleCore(title string, aliasValid func(string) boo
 	}
 
 	if hasCJK(s) && hasLatin(s) {
+		if !isSimpleMixedScriptAliasCandidate(s) {
+			return normalizeTitleMain(s), nil
+		}
 		fields := strings.Fields(s)
 		cjkParts := make([]string, 0, 8)
 		latinParts := make([]string, 0, 8)
@@ -236,6 +271,76 @@ func inferTitleAndAliasesFromTitleCore(title string, aliasValid func(string) boo
 	}
 
 	return normalizeTitleMain(s), nil
+}
+
+func looksLikeSeriesBridgeText(s string) bool {
+	ss := strings.TrimSpace(s)
+	if ss == "" {
+		return false
+	}
+	low := strings.ToLower(ss)
+	return strings.Contains(ss, "系列") ||
+		strings.Contains(ss, "シリーズ") ||
+		strings.Contains(low, "series") ||
+		strings.Contains(low, "franchise")
+}
+
+func latinSemanticKeyForAlias(s string) string {
+	s = strings.ToLower(strings.TrimSpace(s))
+	if s == "" {
+		return ""
+	}
+	var b strings.Builder
+	b.Grow(len(s))
+	for _, r := range s {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
+}
+
+func isSimpleMixedScriptAliasCandidate(s string) bool {
+	fields := strings.Fields(strings.TrimSpace(s))
+	if len(fields) < 2 {
+		return false
+	}
+	prevClass := 0
+	switchCount := 0
+	cjkCount := 0
+	latinCount := 0
+	for _, f := range fields {
+		cur := scriptClassForAliasSplit(f)
+		if cur == 0 {
+			continue
+		}
+		if cur == 1 {
+			cjkCount++
+		}
+		if cur == 2 {
+			latinCount++
+		}
+		if prevClass != 0 && prevClass != cur {
+			switchCount++
+		}
+		prevClass = cur
+	}
+	if cjkCount == 0 || latinCount == 0 {
+		return false
+	}
+	// Guard against interleaved latin-cjk-latin titles (e.g. "TRUMP 系列 Delico’s Nursery").
+	return switchCount <= 1
+}
+
+func scriptClassForAliasSplit(s string) int {
+	switch {
+	case hasCJK(s) || hasKana(s):
+		return 1
+	case hasLatin(s):
+		return 2
+	default:
+		return 0
+	}
 }
 
 func inferTitleAndAliasesFromTitleCanonical(title string, aliasValid func(string) bool) (string, []string) {

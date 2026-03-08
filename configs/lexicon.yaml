@@ -85,6 +85,23 @@ entries:
     remove: true
     confidence: 0.6
 
+  - id: contents_special_marker_cn
+    any_of:
+      - tokens: ["特别篇"]
+        emit:
+          - type: contents
+            normalized: "SPECIAL"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["特別篇"]
+        emit:
+          - type: contents
+            normalized: "SPECIAL"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+
   - id: sub_vostfr_trailing_comma
     tokens: ["vostfr,"]
     emit:

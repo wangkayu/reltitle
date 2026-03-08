@@ -1259,6 +1259,51 @@ func TestParserGroupRouteOverride_GroupEPRouteAtlasWithSP(t *testing.T) {
 	}
 }
 
+func TestParserUnknownTemplate_GTAliasMinimalAssigned(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	cases := []string{
+		"[LoliHouse] 保龄球少女！ / Turkey!",
+		"[Inka-Subs] Armor Hunter Merowlink (Mellowlink)",
+	}
+	for _, raw := range cases {
+		res, err := p.Parse(raw)
+		if err != nil {
+			t.Fatalf("parse failed for %q: %v", raw, err)
+		}
+		if got := res.TemplateID; got != "TF_UNKNOWN_G_T_ALIAS_MINIMAL_01" {
+			t.Fatalf("template_id=%q want=%q raw=%q", got, "TF_UNKNOWN_G_T_ALIAS_MINIMAL_01", raw)
+		}
+		if got := res.ContentKind; got != "UNKNOWN" {
+			t.Fatalf("content_kind=%q want=UNKNOWN raw=%q", got, raw)
+		}
+		if strings.TrimSpace(canonicalGroup(res)) == "" || strings.TrimSpace(canonicalTitle(res)) == "" {
+			t.Fatalf("group/title should be non-empty raw=%q attrs=%v", raw, res.Attributes)
+		}
+	}
+}
+
+func TestParserUnknownTemplate_GTAliasMinimalNotAppliedWithTech(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[LoliHouse] Clevatess -魔兽之王与赤子与尸之勇者- / Clevatess: Majuu no Ou to Akago to Shikabane no Yuusha [1080p]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.TemplateID; got == "TF_UNKNOWN_G_T_ALIAS_MINIMAL_01" {
+		t.Fatalf("minimal unknown template should not be used when tech exists, raw=%q", raw)
+	}
+}
+
 func TestParserGroupRouteOverride_GroupEPRouteMarukoNotMovie(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

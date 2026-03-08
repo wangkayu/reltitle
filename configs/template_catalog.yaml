@@ -894,16 +894,41 @@ special_templates:
       - "[Nekomoe] 葬送的芙莉莲 Extra [BDRip]"
 
 # ============================================================================
+# UNKNOWN 最小模板 (1个)
+# ============================================================================
+
+unknown_templates:
+  - id: "TF_UNKNOWN_G_T_ALIAS_MINIMAL_01"
+    name: "[GROUP] TITLE[/ALIAS] (no episode, no tech)"
+    content_types: ["UNKNOWN"]
+    signature: "G T"
+    confidence: 0.55
+    description: "未知内容下的最小 G+T(+A) 模板，仅用于无 EP/TECH 锚点场景"
+    examples:
+      - "[LoliHouse] 保龄球少女！ / Turkey!"
+      - "[Inka-Subs] Armor Hunter Merowlink (Mellowlink)"
+    route_id: "unknown_minimal_v1"
+    signals:
+      slot_order: ["G", "T"]
+      group_position: "head"
+      group_after_ep_only: false
+      forbid_group_in_title_span: true
+      ep_anchor_priority: true
+      title_over_group_default: true
+      tech_starts_after_ep: true
+
+# ============================================================================
 # 模板统计
 # ============================================================================
 
 statistics:
-  total_templates: 33
+  total_templates: 34
   by_content_type:
     TV_EP: 6
     BATCH: 11
     MOVIE: 6
     SP: 10
+    UNKNOWN: 1
   coverage:
     standard_formats: 100%
     tailgroup_formats: 100%

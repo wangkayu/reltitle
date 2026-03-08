@@ -76,6 +76,7 @@ type TemplateCatalogConfig struct {
 	BatchTemplates     []TemplateDef `yaml:"batch_templates" json:"batch_templates"`
 	MovieTemplates     []TemplateDef `yaml:"movie_templates" json:"movie_templates"`
 	SpecialTemplates   []TemplateDef `yaml:"special_templates" json:"special_templates"`
+	UnknownTemplates   []TemplateDef `yaml:"unknown_templates" json:"unknown_templates"`
 }
 
 type TemplateDef struct {

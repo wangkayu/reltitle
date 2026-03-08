@@ -254,6 +254,21 @@ func matchTemplate(cfg *config.Config, epRoute string, contentKind string, group
 		}
 	}
 
+	if strings.EqualFold(strings.TrimSpace(contentKind), "UNKNOWN") {
+		if strings.TrimSpace(group) != "" &&
+			strings.TrimSpace(episode) == "" &&
+			strings.TrimSpace(episodeRange) == "" &&
+			strings.TrimSpace(season) == "" &&
+			strings.TrimSpace(packKind) == "" &&
+			strings.TrimSpace(spKind) == "" &&
+			strings.TrimSpace(movieIndex) == "" &&
+			!hasTech {
+			if id, conf, route := selectBest(cfg.TemplateCatalog.UnknownTemplates, false); strings.TrimSpace(id) != "" {
+				return id, conf, route
+			}
+		}
+	}
+
 	tpls := templatesByEpRoute(cfg, epRoute)
 	if len(tpls) == 0 {
 		tpls = templatesByContentKind(cfg, contentKind)
@@ -459,6 +474,8 @@ func templatesByContentKind(cfg *config.Config, contentKind string) []config.Tem
 		return cfg.TemplateCatalog.MovieTemplates
 	case "SP", "SPECIAL":
 		return cfg.TemplateCatalog.SpecialTemplates
+	case "UNKNOWN":
+		return cfg.TemplateCatalog.UnknownTemplates
 	default:
 		return nil
 	}

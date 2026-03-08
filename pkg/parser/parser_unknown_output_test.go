@@ -22,8 +22,8 @@ func TestParserUnknownOutput_KeepOnlyGroupTitleAlias(t *testing.T) {
 	if res.ContentKind != "UNKNOWN" {
 		t.Fatalf("content_kind=%q want UNKNOWN", res.ContentKind)
 	}
-	if res.TemplateID != "TF_UNKNOWN_DEFAULT" {
-		t.Fatalf("template_id=%q want TF_UNKNOWN_DEFAULT", res.TemplateID)
+	if res.TemplateID != "TF_UNKNOWN_DEFAULT" && res.TemplateID != "TF_UNKNOWN_G_T_ALIAS_MINIMAL_01" {
+		t.Fatalf("template_id=%q want TF_UNKNOWN_DEFAULT|TF_UNKNOWN_G_T_ALIAS_MINIMAL_01", res.TemplateID)
 	}
 	if res.EPSlot != nil {
 		t.Fatalf("epslot must be nil for UNKNOWN output, got=%+v", res.EPSlot)

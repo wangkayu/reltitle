@@ -8283,6 +8283,9 @@ func looksLikeBracketCodecNumber(tokens []model.Token, idx int) bool {
 }
 
 var episodeSPBracketCombinedPattern = regexp.MustCompile(`(?i)^0*(\d{1,3})\s*[_ .-]\s*(sp|ova|oad|ona|ex|pv|op|ed)\s*$`)
+var partIndexLeadPattern = regexp.MustCompile(`(?i)^(?:part|pt|cour|cours)$`)
+var seasonSignalTokenPattern = regexp.MustCompile(`(?i)^(?:s\d{1,2}|season|saison|cour|cours)$`)
+var seasonSignalCJKTokenPattern = regexp.MustCompile(`^第?[一二三四五六七八九十0-9]{1,3}(?:季|期|部)$`)
 
 func detectEpisodeFromSPBracketSegment(tokens []model.Token) (string, int, bool) {
 	for i := 0; i < len(tokens); i++ {
@@ -8622,6 +8625,9 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 			}
 			signalScore := 0
 			if prefix == "" {
+				if shouldSkipPartIndexEpisodeCandidate(tokens, i, inBracket) {
+					continue
+				}
 				ok := false
 				if inBracket {
 					if isBracketLeadingNumericTitlePrefix(tokens, i) {
@@ -8746,6 +8752,48 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 		return best, bestIdx, bestVer, bestIdx
 	}
 	return best, bestIdx, "", -1
+}
+
+func shouldSkipPartIndexEpisodeCandidate(tokens []model.Token, idx int, inBracket bool) bool {
+	if inBracket || idx <= 0 || idx >= len(tokens) {
+		return false
+	}
+	cur := strings.TrimSpace(tokens[idx].Text)
+	if !episodeOfTotalPattern.MatchString(cur) {
+		return false
+	}
+	prev := strings.TrimSpace(tokens[idx-1].Text)
+	if prev == "" {
+		return false
+	}
+	if !partIndexLeadPattern.MatchString(prev) {
+		return false
+	}
+	return hasSeasonSignalAroundToken(tokens, idx, 6)
+}
+
+func hasSeasonSignalAroundToken(tokens []model.Token, idx int, window int) bool {
+	if len(tokens) == 0 || idx < 0 || idx >= len(tokens) {
+		return false
+	}
+	start := idx - window
+	if start < 0 {
+		start = 0
+	}
+	end := idx + window
+	if end >= len(tokens) {
+		end = len(tokens) - 1
+	}
+	for i := start; i <= end; i++ {
+		txt := strings.TrimSpace(tokens[i].Text)
+		if txt == "" {
+			continue
+		}
+		if seasonSignalTokenPattern.MatchString(txt) || seasonSignalCJKTokenPattern.MatchString(txt) {
+			return true
+		}
+	}
+	return false
 }
 
 func extractVersionAttrsAndRemoveFromTokens(tokens []model.Token, out *[]model.Attribute) string {

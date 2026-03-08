@@ -507,3 +507,49 @@ func TestParserBatchTemplate_ATXMpeg2AndTSContainerExtracted(t *testing.T) {
 		t.Fatalf("container=%q want=%q", got, "TS")
 	}
 }
+
+func TestParserBatchTemplate_SxxPartIndexWithoutStrongEP_PrefersSeasonPack(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Breeze] Dr. STONE - Science Future - S04 Part 1 [1080p AV1][Dual Audio]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "BATCH" {
+		t.Fatalf("content_kind=%q want=%q", got, "BATCH")
+	}
+	if got := firstAttrValue(res, model.AttrSeason); got != "4" {
+		t.Fatalf("season=%q want=%q", got, "4")
+	}
+	if got := canonicalEpisode(res); got != "" {
+		t.Fatalf("episode=%q want empty", got)
+	}
+}
+
+func TestParserBatchTemplate_SxxPartIndexWithStrongEP_StillKeepsEpisode(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Breeze] Dr. STONE - Science Future - S04 Part 1 - 03 [1080p AV1][Dual Audio]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "TV_EP" {
+		t.Fatalf("content_kind=%q want=%q", got, "TV_EP")
+	}
+	if got := firstAttrValue(res, model.AttrSeason); got != "4" {
+		t.Fatalf("season=%q want=%q", got, "4")
+	}
+	if got := canonicalEpisode(res); got != "3" {
+		t.Fatalf("episode=%q want=%q", got, "3")
+	}
+}

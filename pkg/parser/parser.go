@@ -2162,6 +2162,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 		aliases = mergeAliases(aliases, p.inferAliasesFromAdjacentBrackets(tokens, titleEnd, episodeIdx, episodeRangeIdx))
 		aliases = mergeAliases(aliases, p.inferTitleGapSingleSlashAlias(tokens, title, titleEnd, episodeIdx, episodeRangeIdx))
 		aliases = mergeAliases(aliases, p.inferTitleGapDashAlias(tokens, title, titleEnd, episodeIdx, episodeRangeIdx))
+		aliases = mergeAliases(aliases, p.inferTitleGapBilingualRunAlias(tokens, title, titleEnd, episodeIdx, episodeRangeIdx))
 	}
 	aliases = mergeAliases(aliases, parenAliases)
 	aliases = mergeAliases(aliases, inferPostEpisodeSearchHintAliasesFromParens(tokens, episodeIdx, episodeRangeIdx, &attrs))
@@ -2488,6 +2489,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	finalTitle := finalTitleValueFromAttributes(attrs, title)
 	finalAliases := finalTitleAliasValuesFromAttributes(attrs)
 	p.consumeTitleGapSeasonBridgeMarkers(tokens, titleEnd, episodeIdx, episodeRangeIdx, attrs)
+	p.consumeTitleGapLatinAliasRuns(tokens, finalTitle, finalAliases, titleEnd, episodeIdx, episodeRangeIdx, attrs)
 	p.consumeAliasChainTokensByFinalAliases(tokens, groupSpan, finalTitle, finalAliases, episodeIdx, episodeRangeIdx, seasonIdx, attrs)
 	p.consumeGroupSpecificTitleChainDelimiters(tokens, groupSpan, group, episodeIdx, episodeRangeIdx, attrs)
 
@@ -10386,8 +10388,68 @@ func (p *Parser) consumeTitleGapSeasonBridgeMarkers(tokens []model.Token, titleE
 		if txt == "" {
 			continue
 		}
-		if isSingleSlashSeasonSignalToken(txt) {
+		if isSingleSlashSeasonSignalToken(txt) || isSingleSlashBridgeToken(txt) {
 			tokens[i].Removed = true
+		}
+	}
+}
+
+func (p *Parser) consumeTitleGapLatinAliasRuns(tokens []model.Token, title string, aliases []string, titleEnd int, episodeIdx int, episodeRangeIdx int, attrs []model.Attribute) {
+	if len(tokens) == 0 || titleEnd < 0 || titleEnd >= len(tokens) {
+		return
+	}
+	if !hasCJK(title) || hasLatin(title) {
+		return
+	}
+	aliasKeys := map[string]bool{}
+	for _, a := range aliases {
+		aa := strings.TrimSpace(a)
+		if aa == "" || hasCJK(aa) || !hasLatin(aa) {
+			continue
+		}
+		if key := aliasSemanticKey(aa); key != "" {
+			aliasKeys[key] = true
+		}
+	}
+	if len(aliasKeys) == 0 {
+		return
+	}
+
+	scanStart := titleEnd
+	scanEnd := len(tokens)
+	if episodeRangeIdx >= scanStart && episodeRangeIdx < scanEnd {
+		scanEnd = episodeRangeIdx
+	}
+	if episodeIdx >= scanStart && episodeIdx < scanEnd {
+		scanEnd = episodeIdx
+	}
+	if techStart, ok := firstTechTokenIndexFromAttrs(attrs); ok && techStart > scanStart && techStart < scanEnd {
+		scanEnd = techStart
+	}
+	if scanStart >= scanEnd {
+		return
+	}
+
+	for i := scanStart; i < scanEnd; i++ {
+		if tokens[i].Removed || !isTitleGapLatinAliasToken(tokens[i].Text) {
+			continue
+		}
+		start := i
+		for i < scanEnd && !tokens[i].Removed && isTitleGapLatinAliasToken(tokens[i].Text) {
+			i++
+		}
+		stop := i
+		if stop-start < 2 {
+			continue
+		}
+		cand := cleanAliasToken(extractTitleFromSpanAllowRemoved(tokens, start, stop, false))
+		if cand == "" {
+			continue
+		}
+		if aliasKeys[aliasSemanticKey(cand)] {
+			for k := start; k < stop && k < len(tokens); k++ {
+				tokens[k].Removed = true
+			}
 		}
 	}
 }
@@ -10624,7 +10686,8 @@ var singleSlashAliasSeasonSignalPattern = regexp.MustCompile(`(?i)^(?:s\d{1,2}|s
 var singleSlashAliasSeasonSignalCJKPattern = regexp.MustCompile(`^第?[一二三四五六七八九十0-9]{1,3}(?:季|期|部)$`)
 var singleSlashAliasSeasonPhrasePattern = regexp.MustCompile(`(?i)^season\s*\d{1,2}$`)
 var singleSlashAliasEmbeddedSeasonCJKPattern = regexp.MustCompile(`^第?[一二三四五六七八九十0-9]{1,3}(?:季|期|部).*$`)
-var singleSlashAliasBridgeTokenPattern = regexp.MustCompile(`(?i)^(?:special|ova|oad|ona|sp|dub|audio|dual|sub|subs|subtitle|uncut|version)$`)
+var singleSlashAliasBridgeTokenPattern = regexp.MustCompile(`(?i)^(?:special|ova|oad|ona|sp|dub|audio|dual|sub|subs|subtitle|uncut|version|anime|mini|gekijou|theater)$`)
+var titleGapLatinAliasTokenPattern = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9'.’\-]*$`)
 
 func (p *Parser) inferTitleGapSingleSlashAlias(tokens []model.Token, title string, titleEnd int, episodeIdx int, episodeRangeIdx int) []string {
 	if len(tokens) == 0 || titleEnd < 0 || titleEnd >= len(tokens) {
@@ -10702,6 +10765,9 @@ func (p *Parser) inferTitleGapDashAlias(tokens []model.Token, title string, titl
 			continue
 		}
 		if isDashDelimiterToken(tokens[i].Text) {
+			if isInlineAliasWordDash(tokens, i, titleEnd, end) {
+				continue
+			}
 			dashIdx = append(dashIdx, i)
 		}
 	}
@@ -10756,6 +10822,74 @@ func (p *Parser) inferTitleGapDashAlias(tokens []model.Token, title string, titl
 	return out
 }
 
+func (p *Parser) inferTitleGapBilingualRunAlias(tokens []model.Token, title string, titleEnd int, episodeIdx int, episodeRangeIdx int) []string {
+	if len(tokens) == 0 || titleEnd < 0 || titleEnd >= len(tokens) {
+		return nil
+	}
+	// Conservative path: CJK primary title with latin run alias in title-gap.
+	if !hasCJK(title) || hasLatin(title) {
+		return nil
+	}
+	end := len(tokens)
+	if episodeRangeIdx >= 0 && episodeRangeIdx < end {
+		end = episodeRangeIdx
+	}
+	if episodeIdx >= 0 && episodeIdx < end {
+		end = episodeIdx
+	}
+	if titleEnd >= end || !hasDashAliasBridgeSignal(tokens, titleEnd, end) {
+		return nil
+	}
+	for i := titleEnd; i < end; i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		txt := strings.TrimSpace(tokens[i].Text)
+		if txt == "/" || txt == "／" {
+			// slash chains are handled by inferTitleGapSingleSlashAlias.
+			return nil
+		}
+	}
+
+	bestStart := -1
+	bestEnd := -1
+	for i := titleEnd; i < end; i++ {
+		if tokens[i].Removed || !isTitleGapLatinAliasToken(tokens[i].Text) {
+			continue
+		}
+		start := i
+		for i < end && !tokens[i].Removed && isTitleGapLatinAliasToken(tokens[i].Text) {
+			i++
+		}
+		stop := i
+		if stop-start >= 2 && (bestStart < 0 || stop-start > bestEnd-bestStart) {
+			bestStart = start
+			bestEnd = stop
+		}
+	}
+	if bestStart < 0 || bestEnd <= bestStart {
+		return nil
+	}
+
+	cand := cleanAliasToken(extractTitleFromSpanAllowRemoved(tokens, bestStart, bestEnd, false))
+	if stripped := stripExplicitSeasonSuffix(cand); stripped != "" {
+		cand = stripped
+	}
+	cand = strings.TrimSpace(cand)
+	if cand == "" || !p.isValidAliasToken(cand) {
+		return nil
+	}
+	if !hasLatin(cand) || hasCJK(cand) {
+		return nil
+	}
+	titleKey := aliasSemanticKey(title)
+	candKey := aliasSemanticKey(cand)
+	if candKey == "" || (titleKey != "" && candKey == titleKey) {
+		return nil
+	}
+	return []string{cand}
+}
+
 func isDashDelimiterToken(t string) bool {
 	switch strings.TrimSpace(t) {
 	case "-", "–", "—", "－":
@@ -10763,6 +10897,15 @@ func isDashDelimiterToken(t string) bool {
 	default:
 		return false
 	}
+}
+
+func isInlineAliasWordDash(tokens []model.Token, idx int, start int, end int) bool {
+	prev := lastVisibleTokenText(tokens, start, idx)
+	next := nextVisibleTokenText(tokens, idx+1, end)
+	if prev == "" || next == "" {
+		return false
+	}
+	return isTitleGapLatinAliasToken(prev) && isTitleGapLatinAliasToken(next)
 }
 
 func hasDashAliasBridgeSignal(tokens []model.Token, start int, end int) bool {
@@ -10776,6 +10919,25 @@ func hasDashAliasBridgeSignal(tokens []model.Token, start int, end int) bool {
 		}
 	}
 	return false
+}
+
+func isTitleGapLatinAliasToken(t string) bool {
+	s := strings.TrimSpace(t)
+	if s == "" {
+		return false
+	}
+	if isSingleSlashSeasonSignalToken(s) || isDashDelimiterToken(s) {
+		return false
+	}
+	switch s {
+	case "[", "]", "(", ")", "（", "）", "【", "】", "{", "}":
+		return false
+	}
+	s = strings.Trim(s, "[](){}【】（）.,;:!?\"'")
+	if s == "" {
+		return false
+	}
+	return titleGapLatinAliasTokenPattern.MatchString(s)
 }
 
 func isBilingualDashAliasCandidate(title string, candidate string) bool {
@@ -10863,7 +11025,13 @@ func isSingleSlashBridgeToken(t string) bool {
 	if strings.Contains(ls, "special") || strings.Contains(ls, "dub") || strings.Contains(ls, "audio") {
 		return true
 	}
+	if strings.Contains(ls, "anime") || strings.Contains(ls, "gekijou") || strings.Contains(ls, "theater") {
+		return true
+	}
 	if strings.Contains(s, "特別篇") || strings.Contains(s, "特别篇") || strings.Contains(s, "年齡限制版") || strings.Contains(s, "年龄限制版") || strings.Contains(s, "日配版") || strings.Contains(s, "中文配音") {
+		return true
+	}
+	if strings.Contains(s, "小劇場") || strings.Contains(s, "小剧场") || strings.Contains(s, "劇場") || strings.Contains(s, "剧场") {
 		return true
 	}
 	return false

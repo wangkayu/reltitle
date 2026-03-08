@@ -279,6 +279,50 @@ func TestParserAliasCleanup_DashBridge_SeasonMarkerConsumedInTitleGap(t *testing
 	}
 }
 
+func TestParserAliasCleanup_TitleGapBilingualRunAlias_NoDelimiter(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[云光字幕组]夏目友人帐S07 Natsume Yuujinchou S07[01][简体双语][1080p]招募翻译"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	aliases := canonicalAliases(res)
+	if !containsAlias(aliases, "Natsume Yuujinchou") {
+		t.Fatalf("expected no-delimiter bilingual alias extracted, got=%v", aliases)
+	}
+}
+
+func TestParserAliasCleanup_SingleSlashMiniAnimeBridgeAddsAlias(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[黒ネズミたち] 小手指同學，請別亂摸 小劇場 / Sawaranaide Kotesashi-kun Mini Anime Gekijou - 01 (ABEMA 1920x1080 AVC AAC MP4)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	aliases := canonicalAliases(res)
+	if !containsAlias(aliases, "Sawaranaide Kotesashi-kun Mini Anime Gekijou") {
+		t.Fatalf("expected mini-anime slash alias extracted, got=%v", aliases)
+	}
+	if containsAlias(aliases, "kun Mini Anime Gekijou") {
+		t.Fatalf("hyphen-split alias fragment should not leak, aliases=%v", aliases)
+	}
+	for _, tok := range res.Tokens {
+		if strings.TrimSpace(tok.Text) == "小劇場" && !tok.Removed {
+			t.Fatalf("mini-theater bridge marker should be consumed, tokens=%v", res.Tokens)
+		}
+	}
+}
+
 func TestParserSpecialMarker_WithEpisode_PrefersEpisodePrimary(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

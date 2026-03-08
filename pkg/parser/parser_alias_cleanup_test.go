@@ -219,6 +219,47 @@ func TestParserAliasCleanup_SingleSlashSpecialBridgeAddsAlias(t *testing.T) {
 	}
 }
 
+func TestParserAliasCleanup_DashBridgeBilingualSeasonAlias(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[ANi] AMAIM Warrior at the Borderline S2 - 境界戰機 第二部 - 15 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	title := canonicalTitle(res)
+	aliases := canonicalAliases(res)
+
+	if title != "AMAIM Warrior at the Borderline" {
+		t.Fatalf("unexpected title: %q aliases=%v", title, aliases)
+	}
+	if !containsAlias(aliases, "境界戰機") {
+		t.Fatalf("expected bilingual dash alias extracted, got=%v", aliases)
+	}
+}
+
+func TestParserAliasCleanup_DashBridge_NoSeasonSignalNotForced(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[TestGroup] To Be Hero X - Inherited Will - 12 [1080p][WEB-DL]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	aliases := canonicalAliases(res)
+	if containsAlias(aliases, "Inherited Will") {
+		t.Fatalf("dash bridge should not force alias without season/special signal, aliases=%v", aliases)
+	}
+}
+
 func TestParserSpecialMarker_WithEpisode_PrefersEpisodePrimary(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

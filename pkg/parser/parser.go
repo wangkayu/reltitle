@@ -2161,6 +2161,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 		attrs = append(attrs, model.Attribute{Type: model.AttrTitle, Normalized: title, TokenStart: titleStart, TokenEnd: titleEnd, Confidence: 0.7, Source: "heuristic"})
 		aliases = mergeAliases(aliases, p.inferAliasesFromAdjacentBrackets(tokens, titleEnd, episodeIdx, episodeRangeIdx))
 		aliases = mergeAliases(aliases, p.inferTitleGapSingleSlashAlias(tokens, title, titleEnd, episodeIdx, episodeRangeIdx))
+		aliases = mergeAliases(aliases, p.inferTitleGapDashAlias(tokens, title, titleEnd, episodeIdx, episodeRangeIdx))
 	}
 	aliases = mergeAliases(aliases, parenAliases)
 	aliases = mergeAliases(aliases, inferPostEpisodeSearchHintAliasesFromParens(tokens, episodeIdx, episodeRangeIdx, &attrs))
@@ -10641,6 +10642,126 @@ func (p *Parser) inferTitleGapSingleSlashAlias(tokens []model.Token, title strin
 		return nil
 	}
 	return []string{right}
+}
+
+func (p *Parser) inferTitleGapDashAlias(tokens []model.Token, title string, titleEnd int, episodeIdx int, episodeRangeIdx int) []string {
+	if len(tokens) == 0 || titleEnd < 0 || titleEnd >= len(tokens) {
+		return nil
+	}
+	end := len(tokens)
+	if episodeRangeIdx >= 0 && episodeRangeIdx < end {
+		end = episodeRangeIdx
+	}
+	if episodeIdx >= 0 && episodeIdx < end {
+		end = episodeIdx
+	}
+	if titleEnd >= end {
+		return nil
+	}
+	if !hasDashAliasBridgeSignal(tokens, titleEnd, end) {
+		return nil
+	}
+
+	dashIdx := make([]int, 0, 3)
+	for i := titleEnd; i < end; i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		if isDashDelimiterToken(tokens[i].Text) {
+			dashIdx = append(dashIdx, i)
+		}
+	}
+	if len(dashIdx) == 0 {
+		return nil
+	}
+
+	segments := make([][2]int, 0, len(dashIdx))
+	if len(dashIdx) == 1 {
+		segments = append(segments, [2]int{dashIdx[0] + 1, end})
+	} else {
+		for i := 0; i+1 < len(dashIdx); i++ {
+			segments = append(segments, [2]int{dashIdx[i] + 1, dashIdx[i+1]})
+		}
+	}
+
+	titleKey := aliasSemanticKey(title)
+	seen := map[string]bool{}
+	out := make([]string, 0, 2)
+	for _, seg := range segments {
+		start, stop := seg[0], seg[1]
+		if start < 0 {
+			start = 0
+		}
+		if stop > end {
+			stop = end
+		}
+		if start >= stop {
+			continue
+		}
+		candidate := cleanAliasToken(extractTitleFromSpanAllowRemoved(tokens, start, stop, false))
+		if stripped := stripExplicitSeasonSuffix(candidate); stripped != "" {
+			candidate = stripped
+		}
+		candidate = strings.TrimSpace(candidate)
+		if candidate == "" || !p.isValidAliasToken(candidate) {
+			continue
+		}
+		if !isBilingualDashAliasCandidate(title, candidate) {
+			continue
+		}
+		key := aliasSemanticKey(candidate)
+		if key == "" || key == titleKey || seen[key] {
+			continue
+		}
+		seen[key] = true
+		out = append(out, candidate)
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+func isDashDelimiterToken(t string) bool {
+	switch strings.TrimSpace(t) {
+	case "-", "–", "—", "－":
+		return true
+	default:
+		return false
+	}
+}
+
+func hasDashAliasBridgeSignal(tokens []model.Token, start int, end int) bool {
+	for i := start; i < end; i++ {
+		txt := strings.TrimSpace(tokens[i].Text)
+		if txt == "" {
+			continue
+		}
+		if isSingleSlashSeasonSignalToken(txt) || isSingleSlashBridgeToken(txt) {
+			return true
+		}
+	}
+	return false
+}
+
+func isBilingualDashAliasCandidate(title string, candidate string) bool {
+	titleHasCJK := hasCJK(title)
+	titleHasLatin := hasLatin(title)
+	candHasCJK := hasCJK(candidate)
+	candHasLatin := hasLatin(candidate)
+	if !candHasCJK && !candHasLatin {
+		return false
+	}
+	if candHasCJK && !titleHasCJK {
+		return true
+	}
+	if candHasLatin && !titleHasLatin {
+		return true
+	}
+	if candHasCJK && candHasLatin {
+		return true
+	}
+	return false
 }
 
 func hasSingleSlashBridgeSignal(tokens []model.Token, start int, end int, slashIdx int) bool {

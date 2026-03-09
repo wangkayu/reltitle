@@ -228,6 +228,97 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.8
+      - tokens: ["招校对"]
+        emit:
+          - type: note
+            normalized: "RECRUITMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["招校對"]
+        emit:
+          - type: note
+            normalized: "RECRUITMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["招翻译"]
+        emit:
+          - type: note
+            normalized: "RECRUITMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["招翻譯"]
+        emit:
+          - type: note
+            normalized: "RECRUITMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["招募軸效"]
+        emit:
+          - type: note
+            normalized: "RECRUITMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["招募轴效"]
+        emit:
+          - type: note
+            normalized: "RECRUITMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["招募萌新"]
+        emit:
+          - type: note
+            normalized: "RECRUITMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["急招后期"]
+        emit:
+          - type: note
+            normalized: "RECRUITMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["招募翻译等"]
+        emit:
+          - type: note
+            normalized: "RECRUITMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["招募翻譯等"]
+        emit:
+          - type: note
+            normalized: "RECRUITMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["現急招翻譯校對特效"]
+        emit:
+          - type: note
+            normalized: "RECRUITMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["现急招翻译校对特效"]
+        emit:
+          - type: note
+            normalized: "RECRUITMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["字幕组招人內详"]
+        emit:
+          - type: note
+            normalized: "RECRUITMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
 
   - id: note_search_and_share_meta_tokens
     any_of:
@@ -270,6 +361,20 @@ entries:
         emit:
           - type: note
             normalized: "FILESHARE_META"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["新番速览计划"]
+        emit:
+          - type: note
+            normalized: "ANNOUNCEMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["新番速覽計劃"]
+        emit:
+          - type: note
+            normalized: "ANNOUNCEMENT"
             token_index: -1
         remove: true
         confidence: 0.7

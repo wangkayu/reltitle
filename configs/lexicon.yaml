@@ -6678,6 +6678,30 @@ entries:
         remove: true
         confidence: 0.75
 
+  - id: video_codec_vp9
+    any_of:
+      - tokens: ["vp9"]
+        emit:
+          - type: video_codec
+            normalized: "VP9"
+            token_index: -1
+        remove: true
+        confidence: 0.85
+      - tokens: ["vp", "9"]
+        emit:
+          - type: video_codec
+            normalized: "VP9"
+            token_index: 0
+        remove: true
+        confidence: 0.75
+      - tokens: ["vp", "-", "9"]
+        emit:
+          - type: video_codec
+            normalized: "VP9"
+            token_index: 0
+        remove: true
+        confidence: 0.75
+
   - id: video_codec_mpeg
     any_of:
       - tokens: ["mpeg"]

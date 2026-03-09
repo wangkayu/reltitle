@@ -192,6 +192,8 @@ func matchTemplate(cfg *config.Config, epRoute string, contentKind string, group
 
 	admitStreaming := isStreamingRelease(tokens, attrs)
 	isBatchContent := strings.EqualFold(strings.TrimSpace(contentKind), "BATCH")
+	strictRouteIDs := collectStrictRouteIDs(cfg)
+	allowedByFamily := allowedStrictRouteIDsForFamily(family)
 	selectBest := func(tpls []config.TemplateDef, enforceEpRoute bool) (string, float64, string) {
 		if len(tpls) == 0 {
 			return "", 0, ""
@@ -202,6 +204,14 @@ func matchTemplate(cfg *config.Config, epRoute string, contentKind string, group
 		bestSpec := -1
 		bestSigSpec := -1
 		for _, t := range tpls {
+			routeIDNorm := strings.ToLower(strings.TrimSpace(t.RouteID))
+			if routeIDNorm != "" {
+				if _, strict := strictRouteIDs[routeIDNorm]; strict {
+					if _, ok := allowedByFamily[routeIDNorm]; !ok {
+						continue
+					}
+				}
+			}
 			if strings.TrimSpace(t.RouteID) == "streaming_release_v1" {
 				if !admitStreaming {
 					continue
@@ -613,6 +623,41 @@ func filterTemplatesByRouteIDs(tpls []config.TemplateDef, allowed map[string]str
 			continue
 		}
 		out = append(out, t)
+	}
+	return out
+}
+
+func collectStrictRouteIDs(cfg *config.Config) map[string]struct{} {
+	out := map[string]struct{}{}
+	if cfg == nil {
+		return out
+	}
+	for _, fam := range cfg.RouteFamilies.Families {
+		if !fam.Enabled || !fam.Select.StrictTemplateFilter {
+			continue
+		}
+		for _, rid := range fam.Select.AllowedRouteIDs {
+			key := strings.ToLower(strings.TrimSpace(rid))
+			if key == "" {
+				continue
+			}
+			out[key] = struct{}{}
+		}
+	}
+	return out
+}
+
+func allowedStrictRouteIDsForFamily(rule *config.RouteFamilyRule) map[string]struct{} {
+	out := map[string]struct{}{}
+	if rule == nil || !rule.Enabled || !rule.Select.StrictTemplateFilter {
+		return out
+	}
+	for _, rid := range rule.Select.AllowedRouteIDs {
+		key := strings.ToLower(strings.TrimSpace(rid))
+		if key == "" {
+			continue
+		}
+		out[key] = struct{}{}
 	}
 	return out
 }

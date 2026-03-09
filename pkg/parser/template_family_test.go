@@ -223,3 +223,125 @@ func TestMatchTemplate_RawMediaStrictFilterFallbackToDefault(t *testing.T) {
 		t.Fatalf("template_id=%q want TF_TV_STANDARD_01", id)
 	}
 }
+
+func TestMatchTemplate_StrictRouteTemplateExcludedWithoutFamily(t *testing.T) {
+	cfg := &config.Config{
+		RouteFamilies: config.RouteFamiliesConfig{
+			Families: []config.RouteFamilyRule{
+				{
+					ID:       "raw_media",
+					Enabled:  true,
+					Priority: 100,
+					Match: config.RouteFamilyMatch{
+						RawMustContainAny: []string{"bdmv"},
+						SourceTypeIn:      []string{"BD"},
+						NoteIn:            []string{"BDMV"},
+					},
+					Select: config.RouteFamilySelect{
+						StrictTemplateFilter:        true,
+						AllowedRouteIDs:             []string{"raw_media_v1"},
+						PreferredTemplateCategories: []string{"batch"},
+					},
+				},
+			},
+		},
+		TemplateCatalog: config.TemplateCatalogConfig{
+			BatchTemplates: []config.TemplateDef{
+				{ID: "TF_BATCH_RAW_ONLY", Signature: "G T", RouteID: "raw_media_v1", Confidence: 0.95},
+				{ID: "TF_BATCH_GENERIC", Signature: "G T", Confidence: 0.7},
+			},
+		},
+	}
+
+	attrs := []model.Attribute{
+		{Type: model.AttrSourceType, Normalized: "WEB-DL"},
+	}
+	tokens := []model.Token{
+		{Text: "["},
+		{Text: "Group"},
+		{Text: "]"},
+		{Text: "Title"},
+	}
+
+	id, _, _ := matchTemplate(
+		cfg,
+		"NONE",
+		"BATCH",
+		"Group",
+		"",
+		"",
+		"",
+		"",
+		"",
+		"",
+		false,
+		false,
+		attrs,
+		tokens,
+	)
+	if id != "TF_BATCH_GENERIC" {
+		t.Fatalf("template_id=%q want TF_BATCH_GENERIC", id)
+	}
+}
+
+func TestMatchTemplate_StrictRouteTemplateAllowedWithFamily(t *testing.T) {
+	cfg := &config.Config{
+		RouteFamilies: config.RouteFamiliesConfig{
+			Families: []config.RouteFamilyRule{
+				{
+					ID:       "raw_media",
+					Enabled:  true,
+					Priority: 100,
+					Match: config.RouteFamilyMatch{
+						RawMustContainAny: []string{"bdmv"},
+						SourceTypeIn:      []string{"BD"},
+						NoteIn:            []string{"BDMV"},
+					},
+					Select: config.RouteFamilySelect{
+						StrictTemplateFilter:        true,
+						AllowedRouteIDs:             []string{"raw_media_v1"},
+						PreferredTemplateCategories: []string{"batch"},
+					},
+				},
+			},
+		},
+		TemplateCatalog: config.TemplateCatalogConfig{
+			BatchTemplates: []config.TemplateDef{
+				{ID: "TF_BATCH_RAW_ONLY", Signature: "G T", RouteID: "raw_media_v1", Confidence: 0.6},
+				{ID: "TF_BATCH_GENERIC", Signature: "G T", Confidence: 0.9},
+			},
+		},
+	}
+
+	attrs := []model.Attribute{
+		{Type: model.AttrSourceType, Normalized: "BD"},
+		{Type: model.AttrNote, Normalized: "BDMV"},
+	}
+	tokens := []model.Token{
+		{Text: "["},
+		{Text: "Group"},
+		{Text: "]"},
+		{Text: "Title"},
+		{Text: "BDMV"},
+	}
+
+	id, _, _ := matchTemplate(
+		cfg,
+		"NONE",
+		"BATCH",
+		"Group",
+		"",
+		"",
+		"",
+		"",
+		"",
+		"",
+		false,
+		false,
+		attrs,
+		tokens,
+	)
+	if id != "TF_BATCH_RAW_ONLY" {
+		t.Fatalf("template_id=%q want TF_BATCH_RAW_ONLY", id)
+	}
+}

@@ -492,6 +492,9 @@ batch_templates:
     description: "Media container pack: BDMV/DVDISO/BluRay/BDRemux (no EP)"
     examples:
       - "[Group] Title BDMV"
+    conditions:
+      require:
+        source_type_in: ["BD", "BluRay", "DVD"]
 
   - id: "TF_BATCH_MEDIA_CONTAINER_02"
     name: "TITLE [BDMV/DVDISO/BluRay]"
@@ -502,6 +505,9 @@ batch_templates:
     description: "Media container pack: no group (no EP)"
     examples:
       - "Title DVDISO"
+    conditions:
+      require:
+        source_type_in: ["BD", "BluRay", "DVD"]
 
   - id: "TF_BATCH_MIXED_CONTENTS_01"
     name: "[GROUP] TITLE Mixed Contents"

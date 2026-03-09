@@ -10,7 +10,9 @@ families:
       raw_must_contain_any:
         - "bdmv"
         - "dvdiso"
+        - "dvd iso"
         - "bd-box"
+        - "bd box"
         - "bdbox"
         - "dvd9"
       source_type_in:

@@ -345,3 +345,78 @@ func TestMatchTemplate_StrictRouteTemplateAllowedWithFamily(t *testing.T) {
 		t.Fatalf("template_id=%q want TF_BATCH_RAW_ONLY", id)
 	}
 }
+
+func TestMatchTemplate_RawMediaPrefersRawBatchClone(t *testing.T) {
+	cfg := &config.Config{
+		RouteFamilies: config.RouteFamiliesConfig{
+			Families: []config.RouteFamilyRule{
+				{
+					ID:       "raw_media",
+					Enabled:  true,
+					Priority: 100,
+					Match: config.RouteFamilyMatch{
+						RawMustContainAny: []string{"bdmv"},
+						SourceTypeIn:      []string{"BD"},
+						NoteIn:            []string{"BDMV"},
+					},
+					Select: config.RouteFamilySelect{
+						StrictTemplateFilter:        true,
+						AllowedRouteIDs:             []string{"raw_media_v1"},
+						PreferredTemplateCategories: []string{"batch"},
+					},
+				},
+			},
+		},
+		TemplateCatalog: config.TemplateCatalogConfig{
+			BatchTemplates: []config.TemplateDef{
+				{
+					ID:         "TF_BATCH_COMPLETE_01",
+					Signature:  "G T C X",
+					Confidence: 0.95,
+				},
+				{
+					ID:         "TF_BATCH_RAW_COMPLETE_01",
+					Signature:  "G T C X",
+					RouteID:    "raw_media_v1",
+					Confidence: 0.96,
+					Conditions: &config.TemplateConditions{
+						Require: &config.TemplateConditionRequire{
+							SourceTypeIn: []string{"BD"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	attrs := []model.Attribute{
+		{Type: model.AttrSourceType, Normalized: "BD"},
+		{Type: model.AttrNote, Normalized: "BDMV"},
+	}
+	tokens := []model.Token{
+		{Text: "[Group]"},
+		{Text: "Title"},
+		{Text: "Complete"},
+		{Text: "BDMV"},
+	}
+
+	id, _, _ := matchTemplate(
+		cfg,
+		"NONE",
+		"BATCH",
+		"Group",
+		"",
+		"",
+		"",
+		"BATCH",
+		"",
+		"",
+		true,
+		false,
+		attrs,
+		tokens,
+	)
+	if id != "TF_BATCH_RAW_COMPLETE_01" {
+		t.Fatalf("template_id=%q want TF_BATCH_RAW_COMPLETE_01", id)
+	}
+}

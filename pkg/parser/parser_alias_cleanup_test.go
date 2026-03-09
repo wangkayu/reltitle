@@ -3938,6 +3938,42 @@ func TestLexiconDict_ConfigFirst_ITABDCompound(t *testing.T) {
 	}
 }
 
+func TestParserPlatformRegion_EmbeddedRestrictionDoesNotAnchorTitleSpan(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[ANi] Akiba Maid War - 秋葉原冥途戰爭（僅限港澳台地區） - 02 [1080P][Bilibili][WEB-DL][AAC AVC][CHT CHS][MP4]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrPlatformRegion), "HK+MO+TW") {
+		t.Fatalf("expected platform_region=HK+MO+TW, got=%v", attrValues(res, model.AttrPlatformRegion))
+	}
+	found := false
+	for _, a := range res.Attributes {
+		if a.Type != model.AttrPlatformRegion {
+			continue
+		}
+		if strings.TrimSpace(a.Normalized) != "HK+MO+TW" {
+			continue
+		}
+		found = true
+		if a.TokenStart != -1 || a.TokenEnd != -1 {
+			t.Fatalf("embedded region restriction should not keep title-span indices, got token_start=%d token_end=%d", a.TokenStart, a.TokenEnd)
+		}
+	}
+	if !found {
+		t.Fatalf("missing platform_region attribute for embedded restriction")
+	}
+	if strings.Contains(canonicalTitle(res), "港澳台") || strings.Contains(canonicalTitle(res), "港澳臺") {
+		t.Fatalf("region restriction leaked into title, title=%q", canonicalTitle(res))
+	}
+}
+
 func TestLexiconDict_ConfigFirst_BDBoxAtomicNoAliasPollution(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

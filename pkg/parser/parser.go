@@ -4711,11 +4711,24 @@ func extractPlatformRegionAttrsAndRemoveFromTokens(tokens []model.Token, out *[]
 		if regionHKMOTWEmbeddedPattern.FindStringIndex(orig) == nil {
 			continue
 		}
-		*out = append(*out, model.Attribute{Type: model.AttrPlatformRegion, Normalized: "HK+MO+TW", TokenStart: i, TokenEnd: i + 1, Confidence: 0.8, Source: "region_restriction"})
 		cleaned := regionHKMOTWRemovalPattern.ReplaceAllString(orig, "")
 		cleaned = strings.TrimSpace(cleaned)
 		cleaned = strings.Trim(cleaned, "（）()[]【】")
 		cleaned = strings.TrimSpace(cleaned)
+		tokenStart, tokenEnd := i, i+1
+		// Embedded region-restriction phrase should not anchor to title span.
+		// Keep positional indices only when this token is pure region meta.
+		if cleaned != "" {
+			tokenStart, tokenEnd = -1, -1
+		}
+		*out = append(*out, model.Attribute{
+			Type:       model.AttrPlatformRegion,
+			Normalized: "HK+MO+TW",
+			TokenStart: tokenStart,
+			TokenEnd:   tokenEnd,
+			Confidence: 0.8,
+			Source:     "region_restriction",
+		})
 		if cleaned == "" {
 			tokens[i].Removed = true
 			continue

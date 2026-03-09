@@ -1067,6 +1067,23 @@ func consumeTokensByTechAttrSpans(tokens []model.Token, attrs []model.Attribute)
 	}
 }
 
+func consumeTokensByEPSlotPrimarySpan(tokens []model.Token, epslot *model.EPSlot) {
+	if len(tokens) == 0 || epslot == nil || epslot.Primary == nil {
+		return
+	}
+	start := epslot.Primary.TokenStart
+	end := epslot.Primary.TokenEnd
+	if start < 0 || end <= start || start >= len(tokens) {
+		return
+	}
+	if end > len(tokens) {
+		end = len(tokens)
+	}
+	for i := start; i < end; i++ {
+		tokens[i].Removed = true
+	}
+}
+
 func extractYearAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Attribute, hasTech bool) {
 	if attrs == nil || len(tokens) == 0 {
 		return
@@ -2506,6 +2523,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 		ctx.AudioSlot = nil
 	}
 	consumeTokensByTechAttrSpans(tokens, attrs)
+	consumeTokensByEPSlotPrimarySpan(tokens, epslot)
 	finalTitle := finalTitleValueFromAttributes(attrs, title)
 	finalAliases := finalTitleAliasValuesFromAttributes(attrs)
 	p.consumeTitleGapSeasonBridgeMarkers(tokens, titleEnd, episodeIdx, episodeRangeIdx, attrs)

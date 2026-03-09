@@ -2405,6 +2405,50 @@ func TestParserContentsMarker_CJKMovieWordInsideTitleSpanNotContents(t *testing.
 	}
 }
 
+func TestParserEPSlotSurfaceTokenConsumed_ChineseEpisodeWord(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Test] 示例标题 第12话 [1080p][WEB-DL]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalEpisode(res); got != "12" {
+		t.Fatalf("episode=%q want=12", got)
+	}
+	for _, tok := range res.Tokens {
+		if strings.EqualFold(strings.TrimSpace(tok.Text), "第12话") && !tok.Removed {
+			t.Fatalf("epslot surface token should be consumed, tokens=%v", res.Tokens)
+		}
+	}
+}
+
+func TestParserEPSlotSurfaceTokenConsumed_EPToken(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "Biao Ren Blades of the Guardians EP01 vostfr."
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalEpisode(res); got != "1" {
+		t.Fatalf("episode=%q want=1", got)
+	}
+	for _, tok := range res.Tokens {
+		if strings.EqualFold(strings.TrimSpace(tok.Text), "EP01") && !tok.Removed {
+			t.Fatalf("epslot surface token should be consumed, tokens=%v", res.Tokens)
+		}
+	}
+}
+
 func TestParserAliasCleanup_FurretarDropsLangMetaAliases(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

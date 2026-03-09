@@ -14,12 +14,16 @@ families:
         - "bdbox"
         - "dvd9"
       source_type_in:
+        - "BD"
         - "DVD"
         - "BluRay"
       note_in:
         - "BDMV"
         - "DVDISO"
+        - "DVD_ISO"
         - "DVD9"
+        - "BD-BOX"
+        - "BD_BOX"
     select:
       strict_template_filter: true
       allowed_route_ids:

@@ -1,0 +1,15 @@
+{"raw_title":"Happy World! NCOP DVD","expect":{"sp_kind":"NCOP","content_kind_in":["SPECIAL","TV_EP"],"template_id_in":["TF_TV_SP_ONLY_04","TF_TV_SP_ONLY_01"]}}
+{"raw_title":"Popolocrois Monogatari NCOP NCED DVDRIP","expect":{"sp_kind":"NCOP","candidate_sp_kind_in":["NCED"],"content_kind_in":["BATCH","SPECIAL"],"template_id_in":["TF_BATCH_MIXED_CONTENTS_02","TF_TV_SP_ONLY_03"]}}
+{"raw_title":"[Anime Time] Urusei Yatsura (2022) Season 1 + NCOP & NCED [BD] [1080p][HEVC 10bit x265][AAC][Dual-Audio] [Batch]","expect":{"sp_kind":"NCOP","candidate_sp_kind_in":["NCED"],"content_kind_in":["BATCH"],"template_id_in":["TF_BATCH_SEASON_02","TF_BATCH_MIXED_CONTENTS_02"]}}
+{"raw_title":"[sandoe41] Death March kara Hajimaru Isekai Kyousoukyoku Season One NCOP-NCED","expect":{"sp_kind":"NCOP","candidate_sp_kind_in":["NCED"],"content_kind_in":["SPECIAL"],"template_id_in":["TF_TV_SP_ONLY_03","TF_TV_SP_ONLY_01"]}}
+{"raw_title":"[Group] Sample Title NCED [1080p][WEB-DL][AAC AVC]","expect":{"sp_kind":"NCED","content_kind_in":["SPECIAL"],"template_id_in":["TF_TV_SP_ONLY_01"]}}
+{"raw_title":"[Group] Sample Title - NCED [1080p][WEB-DL]","expect":{"sp_kind":"NCED","content_kind_in":["SPECIAL"],"template_id_in":["TF_TV_SP_ONLY_01"]}}
+{"raw_title":"[Some-Stuffs] Pocket Monsters (2023) Catcher in the Sky (Episode 121) PV (720p) [850831C1]","expect":{"sp_kind":"PV","content_kind_in":["SPECIAL"],"template_id_in":["TF_TV_SP_ONLY_01"]}}
+{"raw_title":"[哆啦字幕组][哆啦A梦剧场版1983 DoraemonThe Movie1983][M4][1080P&4K][简日内嵌&简繁内封][PV][MP4&MKV]","expect":{"sp_kind":"PV","content_kind_in":["MOVIE"],"template_id_in":["TF_MOVIE_STANDARD_01"]}}
+{"raw_title":"[悠哈璃羽字幕社][輝夜大小姐想讓我告白_Kaguya-sama wa Kokurasetai S3][pv][x264 720p][CHT]","expect":{"sp_kind":"PV","content_kind_in":["BATCH","SPECIAL"],"template_id_in":["TF_BATCH_SEASON_02","TF_TV_SP_ONLY_01"]}}
+{"raw_title":"[悠哈璃羽字幕社][辉夜大小姐想让我告白_Kaguya-sama wa Kokurasetai S3][pv][x264 720p][CHS]","expect":{"sp_kind":"PV","content_kind_in":["BATCH","SPECIAL"],"template_id_in":["TF_BATCH_SEASON_02","TF_TV_SP_ONLY_01"]}}
+{"raw_title":"[酷漫404][剧场版 咒术回战0 公开直前PV][1080P][WebRip][简日双语][HEVC AAC][MKV][字幕组招人内详]","expect":{"sp_kind":"PV","content_kind_in":["MOVIE"],"template_id_in":["TF_MOVIE_STANDARD_01"]}}
+{"raw_title":"[酷漫404][劇場版 咒術迴​戰0 公開直前PV][1080P][WebRip][繁日雙語][HEVC AAC][MKV][字幕組招人內詳]","expect":{"sp_kind":"PV","content_kind_in":["MOVIE"],"template_id_in":["TF_MOVIE_STANDARD_01"]}}
+{"raw_title":"[霜庭云花Sub][间谍教室 / SPY ROOM / スパイ教室][先导PV][WebRip 1080P][简日双语]【招募】","expect":{"sp_kind":"PV","content_kind_in":["SPECIAL"],"template_id_in":["TF_TV_SP_ONLY_01"]}}
+{"raw_title":"[霜庭云花Sub][间谍教室 / SPY ROOM / スパイ教室][原著第三季PV][WebRip 1080P][简日双语]","expect":{"sp_kind":"PV","content_kind_in":["SPECIAL"],"template_id_in":["TF_TV_SP_ONLY_01"]}}
+{"raw_title":"[霜庭云花Sub][间谍教室 / SPY ROOM / スパイ教室][吉比娅 角色PV][WebRip 1080P][简日双语]【急招募】","expect":{"sp_kind":"PV","content_kind_in":["SPECIAL"],"template_id_in":["TF_TV_SP_ONLY_01"]}}

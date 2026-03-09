@@ -278,6 +278,8 @@ type RouteFamilyMatch struct {
 
 type RouteFamilySelect struct {
 	PreferredTemplateCategories []string `yaml:"preferred_template_categories" json:"preferred_template_categories"`
+	StrictTemplateFilter        bool     `yaml:"strict_template_filter" json:"strict_template_filter"`
+	AllowedRouteIDs             []string `yaml:"allowed_route_ids" json:"allowed_route_ids"`
 }
 
 type GroupSlot2PlatformConfig struct {

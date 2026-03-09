@@ -461,6 +461,7 @@ batch_templates:
     name: "[GROUP] TITLE [BDRip/DVDRip]"
     content_types: ["BATCH"]
     signature: "G T X"
+    route_id: "raw_media_v1"
     confidence: 0.6
     description: "Media RIP pack: BDRip/DVDRip (no EP), require source_type"
     examples:
@@ -473,6 +474,7 @@ batch_templates:
     name: "TITLE [BDRip/DVDRip]"
     content_types: ["BATCH"]
     signature: "T X"
+    route_id: "raw_media_v1"
     confidence: 0.55
     description: "Media RIP pack: no group, require source_type"
     examples:
@@ -485,6 +487,7 @@ batch_templates:
     name: "[GROUP] TITLE [BDMV/DVDISO/BluRay]"
     content_types: ["BATCH"]
     signature: "G T"
+    route_id: "raw_media_v1"
     confidence: 0.55
     description: "Media container pack: BDMV/DVDISO/BluRay/BDRemux (no EP)"
     examples:
@@ -494,6 +497,7 @@ batch_templates:
     name: "TITLE [BDMV/DVDISO/BluRay]"
     content_types: ["BATCH"]
     signature: "T"
+    route_id: "raw_media_v1"
     confidence: 0.5
     description: "Media container pack: no group (no EP)"
     examples:

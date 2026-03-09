@@ -254,9 +254,15 @@ func matchTemplate(cfg *config.Config, epRoute string, contentKind string, group
 	// on ambiguous EP routes before falling back to the default pipeline.
 	if family != nil {
 		prefCats := preferredTemplateCategories(family)
+		strictFilter := strictTemplateFilterEnabled(family)
+		allowedRouteIDs := allowedRouteIDSet(family)
 		if len(prefCats) > 0 && (epRoute == "ABS_EP" || epRoute == "PLAIN_EP" || epRoute == "NONE") {
 			for _, cat := range prefCats {
-				if id, conf, route := selectBest(templatesByCategory(cfg, cat), false); strings.TrimSpace(id) != "" {
+				candidates := templatesByCategory(cfg, cat)
+				if strictFilter && len(allowedRouteIDs) > 0 {
+					candidates = filterTemplatesByRouteIDs(candidates, allowedRouteIDs)
+				}
+				if id, conf, route := selectBest(candidates, false); strings.TrimSpace(id) != "" {
 					return id, conf, route
 				}
 			}
@@ -567,6 +573,46 @@ func preferredTemplateCategories(rule *config.RouteFamilyRule) []string {
 		}
 		seen[cc] = struct{}{}
 		out = append(out, cc)
+	}
+	return out
+}
+
+func strictTemplateFilterEnabled(rule *config.RouteFamilyRule) bool {
+	if rule == nil {
+		return false
+	}
+	return rule.Select.StrictTemplateFilter
+}
+
+func allowedRouteIDSet(rule *config.RouteFamilyRule) map[string]struct{} {
+	out := map[string]struct{}{}
+	if rule == nil {
+		return out
+	}
+	for _, id := range rule.Select.AllowedRouteIDs {
+		key := strings.ToLower(strings.TrimSpace(id))
+		if key == "" {
+			continue
+		}
+		out[key] = struct{}{}
+	}
+	return out
+}
+
+func filterTemplatesByRouteIDs(tpls []config.TemplateDef, allowed map[string]struct{}) []config.TemplateDef {
+	if len(tpls) == 0 || len(allowed) == 0 {
+		return tpls
+	}
+	out := make([]config.TemplateDef, 0, len(tpls))
+	for _, t := range tpls {
+		routeID := strings.ToLower(strings.TrimSpace(t.RouteID))
+		if routeID == "" {
+			continue
+		}
+		if _, ok := allowed[routeID]; !ok {
+			continue
+		}
+		out = append(out, t)
 	}
 	return out
 }

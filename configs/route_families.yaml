@@ -21,6 +21,9 @@ families:
         - "DVDISO"
         - "DVD9"
     select:
+      strict_template_filter: true
+      allowed_route_ids:
+        - "raw_media_v1"
       preferred_template_categories:
         - "batch"
         - "movie"
@@ -35,7 +38,7 @@ families:
         - "BDRip"
         - "HDTV"
     select:
+      strict_template_filter: false
       preferred_template_categories:
         - "tv_episode"
         - "batch"
-

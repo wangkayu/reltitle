@@ -2562,6 +2562,9 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 		}
 	}
 	if overrideApplied {
+		title, aliases = applyGroupTitleAliasSpecialization(rawTitle, routeID, title, aliases)
+	}
+	if overrideApplied {
 		if strings.TrimSpace(title) != "" {
 			attrs = upsertTitleAttribute(attrs, title, "group_route_override")
 		}
@@ -3246,6 +3249,61 @@ func stripConfiguredPrefixes(s string, prefixes []string) string {
 		}
 	}
 	return strings.TrimSpace(out)
+}
+
+func applyGroupTitleAliasSpecialization(rawTitle string, routeID string, title string, aliases []string) (string, []string) {
+	rid := strings.ToLower(strings.TrimSpace(routeID))
+	switch rid {
+	case "group_epseg_fate_sf_wgjd_v1", "group_epseg_fate_sf_atlas_v1":
+		return applyFateStrangeFakeTitleAliasSpecialization(rawTitle, title, aliases)
+	default:
+		return title, aliases
+	}
+}
+
+func applyFateStrangeFakeTitleAliasSpecialization(rawTitle string, title string, aliases []string) (string, []string) {
+	matches := bracketSegmentPattern.FindAllStringSubmatch(rawTitle, -1)
+	if len(matches) < 2 {
+		return title, aliases
+	}
+	seg2 := strings.TrimSpace(matches[1][1])
+	if seg2 == "" {
+		return title, aliases
+	}
+	parts := strings.SplitN(seg2, "_", 2)
+	if len(parts) != 2 {
+		return title, aliases
+	}
+	mainTitle := cleanTitleToken(parts[0])
+	alias := cleanTitleToken(parts[1])
+	if mainTitle == "" || alias == "" {
+		return title, aliases
+	}
+	alias = strings.TrimSpace(strings.ReplaceAll(alias, "／", "/"))
+	alias = strings.Join(strings.Fields(alias), " ")
+	merged := mergeAliases([]string{alias}, aliases)
+	merged = dropAliasFragmentsOfPrimary(alias, merged)
+	return mainTitle, merged
+}
+
+func dropAliasFragmentsOfPrimary(primary string, aliases []string) []string {
+	pk := aliasSemanticKey(primary)
+	if pk == "" || len(aliases) == 0 {
+		return aliases
+	}
+	out := make([]string, 0, len(aliases))
+	for _, a := range aliases {
+		aa := strings.TrimSpace(a)
+		if aa == "" {
+			continue
+		}
+		ak := aliasSemanticKey(aa)
+		if ak != "" && ak != pk && len(ak) >= 4 && strings.Contains(pk, ak) {
+			continue
+		}
+		out = append(out, aa)
+	}
+	return out
 }
 
 func normalizeEpisodeTitleSepConstraint(raw string) string {

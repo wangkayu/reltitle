@@ -2579,12 +2579,19 @@ func TestParserGroupRouteOverride_GroupEPRouteWGDL(t *testing.T) {
 	if got := canonicalTitle(res); got == "" {
 		t.Fatalf("title should not be empty")
 	}
+	if got := canonicalTitle(res); strings.Contains(strings.ToLower(got), "fate") {
+		t.Fatalf("title should keep zh main title only for this route, got=%q", got)
+	}
+	aliases := canonicalAliases(res)
+	if !containsAlias(aliases, "Fate strange Fake") {
+		t.Fatalf("expected alias Fate strange Fake, got=%v", aliases)
+	}
 	if res.EPSlot == nil || res.EPSlot.Primary == nil || strings.TrimSpace(res.EPSlot.Primary.Source) != "group_route_override" {
 		t.Fatalf("expected group_route_override source, got=%+v", res.EPSlot)
 	}
-	for _, a := range canonicalAliases(res) {
+	for _, a := range aliases {
 		if strings.Contains(a, "09 ") || strings.HasPrefix(strings.TrimSpace(a), "09_") {
-			t.Fatalf("episode-like alias should be pruned, aliases=%v", canonicalAliases(res))
+			t.Fatalf("episode-like alias should be pruned, aliases=%v", aliases)
 		}
 	}
 	if res.ContentKind == "MOVIE" {
@@ -2606,6 +2613,16 @@ func TestParserGroupRouteOverride_AtlasUnderscoreSeparatorApplied(t *testing.T) 
 	}
 	if got := canonicalEpisode(res); got != "4" {
 		t.Fatalf("episode=%q want=%q", got, "4")
+	}
+	if got := canonicalTitle(res); strings.Contains(strings.ToLower(got), "fate") {
+		t.Fatalf("title should keep zh main title only for this route, got=%q", got)
+	}
+	aliases := canonicalAliases(res)
+	if !containsAlias(aliases, "Fate/strange Fake") {
+		t.Fatalf("expected alias Fate/strange Fake, got=%v", aliases)
+	}
+	if containsAlias(aliases, "strange Fake") {
+		t.Fatalf("fragment alias should be pruned, got=%v", aliases)
 	}
 	if res.EPSlot == nil || res.EPSlot.Primary == nil || strings.TrimSpace(res.EPSlot.Primary.Source) != "group_route_override" {
 		t.Fatalf("expected group_route_override source, got=%+v", res.EPSlot)

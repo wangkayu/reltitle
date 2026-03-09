@@ -11742,6 +11742,48 @@ func isBracketOpen(raw string) bool {
 	}
 }
 
+func isBracketClose(raw string) bool {
+	switch strings.TrimSpace(raw) {
+	case "]", "】", ")", "）":
+		return true
+	default:
+		return false
+	}
+}
+
+func isLikelyDelimiterToken(raw string) bool {
+	switch strings.TrimSpace(raw) {
+	case "", "-", "_", ".", ":", "：", "&", "＆", "+", "＋", "/", "／", "|", "｜":
+		return true
+	default:
+		return false
+	}
+}
+
+func isIsolatedInBracketOrParen(tokens []model.Token, idx int) bool {
+	if idx < 0 || idx >= len(tokens) {
+		return false
+	}
+	inBracket := isInBracket(tokens, idx)
+	inParen := isInParen(tokens, idx)
+	if !inBracket && !inParen {
+		return false
+	}
+	if idx-1 >= 0 {
+		prev := strings.TrimSpace(tokens[idx-1].Text)
+		if !(isBracketOpen(prev) || isLikelyDelimiterToken(prev)) {
+			return false
+		}
+	}
+	if idx+1 < len(tokens) {
+		next := strings.TrimSpace(tokens[idx+1].Text)
+		if !(isBracketClose(next) || isLikelyDelimiterToken(next)) {
+			return false
+		}
+	}
+	return true
+}
+
 func shouldAcceptSPKindToken(tokens []model.Token, idx int, kind string, suffix string) bool {
 	k := strings.ToUpper(strings.TrimSpace(kind))
 	if k != "EX" {
@@ -11754,16 +11796,10 @@ func shouldAcceptSPKindToken(tokens []model.Token, idx int, kind string, suffix 
 		return false
 	}
 	if isInBracket(tokens, idx) || isInParen(tokens, idx) {
+		if !isIsolatedInBracketOrParen(tokens, idx) {
+			return false
+		}
 		return true
-	}
-	if idx-1 >= 0 && strings.TrimSpace(tokens[idx-1].Text) == "-" {
-		next := nextAliveToken(tokens, idx+1)
-		if next < 0 {
-			return true
-		}
-		if isBracketOpen(tokens[next].Text) || isShortEpisodeNumberToken(tokens[next].Text) {
-			return true
-		}
 	}
 	prev := prevAliveToken(tokens, idx-1)
 	if prev >= 0 && prev < idx {

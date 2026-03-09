@@ -977,6 +977,23 @@ func TestParserSpecial_BareExInTitlePhraseNotDetectedAsSPKind(t *testing.T) {
 	}
 }
 
+func TestParserSpecial_BracketPhraseExNotDetectedAsSPKind(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[DBD-Raws][little busters ex][1080P][BDRip][HEVC-10bit][FLAC][MKV]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalSPKind(res); got != "" {
+		t.Fatalf("bracket phrase ex must not be detected as sp_kind, got=%q", got)
+	}
+}
+
 func TestParserSpecial_EX01StillDetectedAsSPKind(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {
@@ -994,7 +1011,7 @@ func TestParserSpecial_EX01StillDetectedAsSPKind(t *testing.T) {
 	}
 }
 
-func TestParserSpecial_DashEXStillDetectedAsSPKind(t *testing.T) {
+func TestParserSpecial_DashEXWithoutStrongContextNotDetectedAsSPKind(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {
 		t.Fatalf("load config: %v", err)
@@ -1006,8 +1023,25 @@ func TestParserSpecial_DashEXStillDetectedAsSPKind(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse failed: %v", err)
 	}
+	if got := canonicalSPKind(res); got != "" {
+		t.Fatalf("dash EX without strong context must not be detected as sp_kind, got=%q", got)
+	}
+}
+
+func TestParserSpecial_IsolatedBracketEXStillDetectedAsSPKind(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Group] Sample Title [EX] [1080p][WEB-DL]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
 	if got := canonicalSPKind(res); got != "EX" {
-		t.Fatalf("dash EX marker should keep sp_kind=EX, got=%q", got)
+		t.Fatalf("isolated bracket EX should keep sp_kind=EX, got=%q", got)
 	}
 }
 

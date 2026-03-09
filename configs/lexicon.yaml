@@ -111,6 +111,88 @@ entries:
         remove: true
         confidence: 0.8
 
+  - id: contents_movie_marker_cjk
+    any_of:
+      - scope: bracket
+        tokens: ["剧场版"]
+        emit:
+          - type: contents
+            normalized: "MOVIE"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - scope: bracket
+        tokens: ["劇場版"]
+        emit:
+          - type: contents
+            normalized: "MOVIE"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - scope: paren
+        tokens: ["剧场版"]
+        emit:
+          - type: contents
+            normalized: "MOVIE"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - scope: paren
+        tokens: ["劇場版"]
+        emit:
+          - type: contents
+            normalized: "MOVIE"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+
+  - id: contents_main_plus_ova_cn
+    any_of:
+      - scope: bracket
+        tokens: ["正片", "+", "ova"]
+        emit:
+          - type: contents
+            normalized: "MOVIE"
+            token_index: 0
+          - type: contents
+            normalized: "OVA"
+            token_index: 2
+        remove: true
+        confidence: 0.82
+      - scope: bracket
+        tokens: ["正片", "+", "oad"]
+        emit:
+          - type: contents
+            normalized: "MOVIE"
+            token_index: 0
+          - type: contents
+            normalized: "OAD"
+            token_index: 2
+        remove: true
+        confidence: 0.82
+      - scope: bracket
+        tokens: ["正片", "+", "special"]
+        emit:
+          - type: contents
+            normalized: "MOVIE"
+            token_index: 0
+          - type: contents
+            normalized: "SPECIAL"
+            token_index: 2
+        remove: true
+        confidence: 0.82
+      - scope: bracket
+        tokens: ["正片", "+", "特典"]
+        emit:
+          - type: contents
+            normalized: "MOVIE"
+            token_index: 0
+          - type: contents
+            normalized: "SPECIAL"
+            token_index: 2
+        remove: true
+        confidence: 0.82
+
   - id: sub_vostfr_trailing_comma
     tokens: ["vostfr,"]
     emit:

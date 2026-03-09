@@ -2349,6 +2349,44 @@ func TestParserAliasCleanup_FurretarDropsMovieMetaAlias(t *testing.T) {
 	}
 }
 
+func TestParserContentsMarker_CJKMovieMarkerInBracket(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[TestGroup] 示例标题 [剧场版][1080p][WEB-DL]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrContents), "MOVIE") {
+		t.Fatalf("expected contents MOVIE, got=%v", attrValues(res, model.AttrContents))
+	}
+}
+
+func TestParserContentsMarker_CJKMainPlusOVAInBracket(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[TestGroup] 示例标题 [正片+OVA][1080p][BDRip]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	got := attrValues(res, model.AttrContents)
+	if !hasAttrValue(got, "MOVIE") {
+		t.Fatalf("expected contents MOVIE, got=%v", got)
+	}
+	if !hasAttrValue(got, "OVA") {
+		t.Fatalf("expected contents OVA, got=%v", got)
+	}
+}
+
 func TestParserAliasCleanup_FurretarDropsLangMetaAliases(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

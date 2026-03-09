@@ -2282,6 +2282,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	if rawMarkers := extractContentsFromRawParens(rawTitle); len(rawMarkers) > 0 {
 		emitContentsAttrs(&attrs, rawMarkers, "raw_paren_contents_marker")
 	}
+	attrs = dropContentsAttrsInsideTitleSpan(attrs, titleStart, titleEnd)
 	if strings.TrimSpace(spKind) == "" {
 		spKind = inferSPKindFromContentsAttrs(attrs)
 	}
@@ -3415,6 +3416,25 @@ func inferSPKindFromContentsAttrs(attrs []model.Attribute) string {
 		}
 	}
 	return ""
+}
+
+func dropContentsAttrsInsideTitleSpan(attrs []model.Attribute, titleStart int, titleEnd int) []model.Attribute {
+	if len(attrs) == 0 {
+		return attrs
+	}
+	if titleStart < 0 || titleEnd <= titleStart {
+		return attrs
+	}
+	out := make([]model.Attribute, 0, len(attrs))
+	for _, a := range attrs {
+		if a.Type == model.AttrContents && a.TokenStart >= titleStart && a.TokenStart < titleEnd {
+			// Do not treat in-title markers (e.g. "剧场版" in canonical title span)
+			// as contents/meta markers.
+			continue
+		}
+		out = append(out, a)
+	}
+	return out
 }
 
 func (p *Parser) inferPackProfile(contentKind string, packKind string, season string, seasonRange string, attrs []model.Attribute) string {

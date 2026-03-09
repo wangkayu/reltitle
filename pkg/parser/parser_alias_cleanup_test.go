@@ -2387,6 +2387,24 @@ func TestParserContentsMarker_CJKMainPlusOVAInBracket(t *testing.T) {
 	}
 }
 
+func TestParserContentsMarker_CJKMovieWordInsideTitleSpanNotContents(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[4K_SDR][DBD-Raws][名侦探柯南 剧场版 06 贝克街的亡灵/Detective Conan: The Phantom of Baker Street][2160P][BDRip][HEVC-10bit][简体外挂][FLAC][MKV]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	contents := attrValues(res, model.AttrContents)
+	if hasAttrValue(contents, "MOVIE") {
+		t.Fatalf("in-title 剧场版 should not emit contents MOVIE, got=%v", contents)
+	}
+}
+
 func TestParserAliasCleanup_FurretarDropsLangMetaAliases(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

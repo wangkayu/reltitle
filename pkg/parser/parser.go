@@ -7680,6 +7680,15 @@ func detectEpisodeRange(tokens []model.Token) (string, int) {
 		}
 		inBracket := isInBracket(tokens, i)
 		inParen := isInParen(tokens, i)
+		if m := episodeCountPackSuffixPattern.FindStringSubmatch(strings.TrimSpace(tokens[i].Text)); len(m) == 3 {
+			n := strings.TrimLeft(strings.TrimSpace(m[1]), "0")
+			if n == "" {
+				n = "0"
+			}
+			if n != "0" {
+				return "1-" + n, i
+			}
+		}
 		if inBracket {
 			if txt := bracketBlockInnerText(tokens, i); txt != "" {
 				if isLikelyMetaBracketText(txt) && !isEpisodeLikeBracketText(txt) {

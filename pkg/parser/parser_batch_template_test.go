@@ -395,6 +395,65 @@ func TestParserBatchTemplateRangePack_TVQuanJiWithExtrasStillKeepsRange(t *testi
 	}
 }
 
+func TestParserBatchTemplateRangePack_CuratedCountSuffixAsRange(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Group][Sample Title][12合集][1080p][WEB-DL]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "BATCH" {
+		t.Fatalf("content_kind=%q want=%q", got, "BATCH")
+	}
+	if got := canonicalEpisodeRange(res); got != "1-12" {
+		t.Fatalf("episode_range=%q want=%q", got, "1-12")
+	}
+	if got := firstAttrValue(res, model.AttrPackKind); got != "合集" {
+		t.Fatalf("pack_kind=%q want=%q", got, "合集")
+	}
+	for _, tok := range res.Tokens {
+		if strings.EqualFold(strings.TrimSpace(tok.Text), "12合集") && !tok.Removed {
+			t.Fatalf("12合集 should be consumed, tokens=%v", res.Tokens)
+		}
+	}
+}
+
+func TestParserBatchTemplateRangePack_CuratedRangeSuffixAsRange(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Group][Sample Title][01-12修正合集][1080p][WEB-DL]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "BATCH" {
+		t.Fatalf("content_kind=%q want=%q", got, "BATCH")
+	}
+	if got := canonicalEpisodeRange(res); got != "1-12" {
+		t.Fatalf("episode_range=%q want=%q", got, "1-12")
+	}
+	if got := firstAttrValue(res, model.AttrPackKind); got != "合集" {
+		t.Fatalf("pack_kind=%q want=%q", got, "合集")
+	}
+	if !hasAttrValue(attrValues(res, model.AttrNote), "CURATED_PACK") {
+		t.Fatalf("expected note=CURATED_PACK")
+	}
+	for _, tok := range res.Tokens {
+		if strings.EqualFold(strings.TrimSpace(tok.Text), "12修正合集") && !tok.Removed {
+			t.Fatalf("12修正合集 should be consumed, tokens=%v", res.Tokens)
+		}
+	}
+}
+
 func TestParserEpisodeList_ConanDoubleEpisodeBracket(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

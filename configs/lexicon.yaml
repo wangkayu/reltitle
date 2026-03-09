@@ -809,21 +809,6 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.75
-      - tokens: ["12合集"]
-        emit:
-          - type: note
-            normalized: "CURATED_PACK"
-            token_index: -1
-        remove: true
-        confidence: 0.75
-      - tokens: ["12修正合集"]
-        emit:
-          - type: note
-            normalized: "CURATED_PACK"
-            token_index: -1
-        remove: true
-        confidence: 0.75
-
   - id: note_movie_bracket
     scope: bracket
     tokens: ["movie"]
@@ -1560,23 +1545,23 @@ entries:
         remove: true
         confidence: 0.8
 
-  - id: note_lang_tag_pt_br
+  - id: sub_lang_pt_br_priority
     scope: bracket
     any_of:
       - tokens: ["pt", "-", "br"]
         emit:
-          - type: note
-            normalized: "PT-BR"
+          - type: sub_lang
+            normalized: "POR"
             token_index: -1
         remove: true
-        confidence: 0.7
+        confidence: 0.75
       - tokens: ["pt-br"]
         emit:
-          - type: note
-            normalized: "PT-BR"
+          - type: sub_lang
+            normalized: "POR"
             token_index: -1
         remove: true
-        confidence: 0.7
+        confidence: 0.75
 
   - id: note_lang_tag_lat_fre_jap
     scope: bracket
@@ -2621,13 +2606,6 @@ entries:
             token_index: 0
         remove: true
         confidence: 0.65
-      - tokens: ["s2"]
-        emit:
-          - type: note
-            normalized: "S2"
-            token_index: -1
-        remove: true
-        confidence: 0.6
       - tokens: ["s3"]
         emit:
           - type: note
@@ -2667,13 +2645,6 @@ entries:
             token_index: 0
         remove: true
         confidence: 0.65
-      - tokens: ["s2"]
-        emit:
-          - type: note
-            normalized: "S2"
-            token_index: -1
-        remove: true
-        confidence: 0.6
       - tokens: ["s3"]
         emit:
           - type: note
@@ -2837,55 +2808,31 @@ entries:
       - tokens: ["重制"]
         emit:
           - type: note
-            normalized: "重制"
+            normalized: "REMASTERED_VERSION"
             token_index: -1
         remove: true
         confidence: 0.7
       - tokens: ["重制版"]
         emit:
           - type: note
-            normalized: "重制版"
+            normalized: "REMASTERED_VERSION"
             token_index: -1
         remove: true
         confidence: 0.7
       - tokens: ["重製"]
         emit:
           - type: note
-            normalized: "重制"
+            normalized: "REMASTERED_VERSION"
             token_index: -1
         remove: true
         confidence: 0.7
       - tokens: ["重製版"]
         emit:
           - type: note
-            normalized: "重制版"
+            normalized: "REMASTERED_VERSION"
             token_index: -1
         remove: true
         confidence: 0.7
-
-  - id: note_ext_ts
-    any_of:
-      - tokens: [".", "ts"]
-        emit:
-          - type: note
-            normalized: "TS"
-            token_index: 1
-          - type: container
-            normalized: "TS"
-            token_index: 1
-        remove: true
-        confidence: 0.7
-      - scope: bracket
-        tokens: ["ts"]
-        emit:
-          - type: note
-            normalized: "TS"
-            token_index: -1
-          - type: container
-            normalized: "TS"
-            token_index: -1
-        remove: true
-        confidence: 0.65
 
   - id: note_web_tech
     any_of:
@@ -3722,21 +3669,21 @@ entries:
       - tokens: ["dualaudio"]
         emit:
           - type: audio_flag
-            normalized: "DUAL_AUDIO"
+            normalized: "DUAL"
             token_index: -1
         remove: true
         confidence: 0.7
       - tokens: ["dual", "audio"]
         emit:
           - type: audio_flag
-            normalized: "DUAL_AUDIO"
+            normalized: "DUAL"
             token_index: -1
         remove: true
         confidence: 0.7
       - tokens: ["dual-audio"]
         emit:
           - type: audio_flag
-            normalized: "DUAL_AUDIO"
+            normalized: "DUAL"
             token_index: -1
         remove: true
         confidence: 0.7
@@ -4195,6 +4142,38 @@ entries:
 
   - id: season_s2_bracket
     scope: bracket
+    any_of:
+      - tokens: ["S2"]
+        emit:
+          - type: season
+            normalized: "2"
+            token_index: 0
+        remove: true
+        confidence: 0.75
+      - tokens: ["s2"]
+        emit:
+          - type: season
+            normalized: "2"
+            token_index: 0
+        remove: true
+        confidence: 0.75
+      - tokens: ["S02"]
+        emit:
+          - type: season
+            normalized: "2"
+            token_index: 0
+        remove: true
+        confidence: 0.75
+      - tokens: ["s02"]
+        emit:
+          - type: season
+            normalized: "2"
+            token_index: 0
+        remove: true
+        confidence: 0.75
+
+  - id: season_s2_paren
+    scope: paren
     any_of:
       - tokens: ["S2"]
         emit:
@@ -5622,15 +5601,6 @@ entries:
     remove: true
     confidence: 0.6
 
-  - id: note_vostfr
-    tokens: ["vostfr"]
-    emit:
-      - type: note
-        normalized: "VOSTFR"
-        token_index: -1
-    remove: true
-    confidence: 0.7
-
   - id: source_type_webrip
     any_of:
       - tokens: ["webrip"]
@@ -5856,7 +5826,8 @@ entries:
 
   - id: source_type_ts
     any_of:
-      - tokens: ["ts"]
+      - scope: bracket
+        tokens: ["ts"]
         emit:
           - type: source_type
             normalized: "TS"
@@ -6687,25 +6658,6 @@ entries:
     tokens: ["★"]
     remove: true
     confidence: 0.6
-
-  # 注意：此 entry 已被下方的 platform_netflix 替代，保留仅为兼容性
-  # 新的 platform_netflix entry 使用正确的 type: platform
-  - id: platform_netflix_nf_deprecated
-    any_of:
-      - tokens: ["nf"]
-        emit:
-          - type: note
-            normalized: "NF"
-            token_index: -1
-        remove: true
-        confidence: 0.6
-      - tokens: ["netflix"]
-        emit:
-          - type: note
-            normalized: "Netflix"
-            token_index: -1
-        remove: true
-        confidence: 0.6
 
   # ============================================================
   # Platform (流媒体平台) - 新增属性
@@ -7602,28 +7554,28 @@ entries:
       - tokens: ["ver", "2"]
         emit:
           - type: version
-            normalized: "VER2"
+            normalized: "V2"
             token_index: -1
         remove: true
         confidence: 0.7
       - tokens: ["ver", "3"]
         emit:
           - type: version
-            normalized: "VER3"
+            normalized: "V3"
             token_index: -1
         remove: true
         confidence: 0.7
       - tokens: ["version", "2"]
         emit:
           - type: version
-            normalized: "VERSION2"
+            normalized: "V2"
             token_index: -1
         remove: true
         confidence: 0.7
       - tokens: ["version", "3"]
         emit:
           - type: version
-            normalized: "VERSION3"
+            normalized: "V3"
             token_index: -1
         remove: true
         confidence: 0.7
@@ -7652,23 +7604,6 @@ entries:
         emit:
           - type: note
             normalized: "MULTI_TRACK"
-            token_index: -1
-        remove: true
-        confidence: 0.7
-
-  - id: note_english_dub
-    any_of:
-      - tokens: ["english", "dub"]
-        emit:
-          - type: note
-            normalized: "ENGLISH_DUB"
-            token_index: -1
-        remove: true
-        confidence: 0.7
-      - tokens: ["eng", "dub"]
-        emit:
-          - type: note
-            normalized: "ENGLISH_DUB"
             token_index: -1
         remove: true
         confidence: 0.7

@@ -14,7 +14,9 @@ var summarySpecialPattern = regexp.MustCompile(`^(总集篇)0*(\d{1,3})[_-](\d{1
 var summarySpecialLeadPattern = regexp.MustCompile(`^(总集篇)0*(\d{1,3})$`)
 var episodeListPattern = regexp.MustCompile(`(?i)^\s*\d{1,4}(?:\s*(?:&|＆|\+|＋|/|／|,|，|、)\s*\d{1,4})+\s*$`)
 var episodeListDigitsPattern = regexp.MustCompile(`\d{1,4}`)
-var episodeRangeTVPackRightPattern = regexp.MustCompile(`(?i)^0*(\d{1,4})\s*tv(?:全集|全话|全話)?$`)
+var episodeRangePackRightPattern = regexp.MustCompile(`(?i)^0*(\d{1,4})\s*(tv(?:全集|全话|全話)?|修正合集|合集)$`)
+var episodeRangePackEmbeddedPattern = regexp.MustCompile(`(?i)^0*(\d{1,4})\s*[-~]\s*0*(\d{1,4})\s*(tv(?:全集|全话|全話)?|修正合集|合集)$`)
+var episodeCountPackSuffixPattern = regexp.MustCompile(`(?i)^0*(\d{1,4})\s*(修正合集|合集)$`)
 
 func detectSeasonFromAttrs(attrs []model.Attribute) (season string, tokenIdx int) {
 	bestIdx := -1
@@ -417,7 +419,11 @@ func passDetectEpisodeRangeAndEpisode(tokens []model.Token, attrs *[]model.Attri
 		ctx.EpisodeRangeIdx = taggedRangeIdx
 	}
 	if strings.TrimSpace(ctx.EpisodeRange) != "" && ctx.EpisodeRangeIdx >= 0 {
-		normalizeEpisodeRangeTVPackSuffix(tokens, attrs, ctx.EpisodeRangeIdx)
+		if pk := normalizeEpisodeRangeTVPackSuffix(tokens, attrs, ctx.EpisodeRangeIdx); pk != "" {
+			if strings.TrimSpace(ctx.PackKind) == "" || strings.EqualFold(pk, "TV_PACK") {
+				ctx.PackKind = pk
+			}
+		}
 	}
 	ctx.EpisodeList = ""
 	ctx.EpisodeListIdx = -1
@@ -545,25 +551,84 @@ func passDetectEpisodeRangeAndEpisode(tokens []model.Token, attrs *[]model.Attri
 	finalizeEPSlotPrimary(ctx.EPSlot, ctx.Season, ctx.Episode, ctx.EpisodeRange, ctx.EpisodeList, ctx.SPKind, ctx.EpisodeIdx, ctx.EpisodeRangeIdx, ctx.EpisodeListIdx, ctx.SxxExxIdx)
 }
 
-func normalizeEpisodeRangeTVPackSuffix(tokens []model.Token, attrs *[]model.Attribute, rangeIdx int) {
-	if rangeIdx < 0 || rangeIdx+2 >= len(tokens) {
-		return
+func normalizeEpisodeRangeTVPackSuffix(tokens []model.Token, attrs *[]model.Attribute, rangeIdx int) string {
+	if rangeIdx < 0 || rangeIdx >= len(tokens) {
+		return ""
+	}
+	appendPackAttrs := func(packKind, note string, tokenStart, tokenEnd int, source string) {
+		if attrs == nil {
+			return
+		}
+		if note != "" {
+			*attrs = append(*attrs, model.Attribute{
+				Type:       model.AttrNote,
+				Normalized: note,
+				TokenStart: tokenStart,
+				TokenEnd:   tokenEnd,
+				Confidence: 0.7,
+				Source:     source,
+			})
+		}
+		if packKind != "" {
+			*attrs = append(*attrs, model.Attribute{
+				Type:       model.AttrPackKind,
+				Normalized: packKind,
+				TokenStart: tokenStart,
+				TokenEnd:   tokenEnd,
+				Confidence: 0.75,
+				Source:     source,
+			})
+		}
+	}
+	packKindFromSuffix := func(suffix string) (string, string) {
+		lower := strings.ToLower(strings.TrimSpace(suffix))
+		if strings.HasPrefix(lower, "tv") {
+			return "TV_PACK", "TV_PACK"
+		}
+		if strings.Contains(lower, "合集") {
+			return "合集", "CURATED_PACK"
+		}
+		return "", ""
+	}
+
+	text := strings.TrimSpace(tokens[rangeIdx].Text)
+	if m := episodeRangePackEmbeddedPattern.FindStringSubmatch(text); len(m) == 4 {
+		if pk, note := packKindFromSuffix(m[3]); pk != "" {
+			tokens[rangeIdx].Removed = true
+			appendPackAttrs(pk, note, rangeIdx, rangeIdx+1, "episode_range_pack_suffix_embedded")
+			return pk
+		}
+	}
+	if m := episodeCountPackSuffixPattern.FindStringSubmatch(text); len(m) == 3 {
+		if pk, note := packKindFromSuffix(m[2]); pk != "" {
+			tokens[rangeIdx].Removed = true
+			appendPackAttrs(pk, note, rangeIdx, rangeIdx+1, "episode_range_pack_suffix_count")
+			return pk
+		}
+	}
+
+	if rangeIdx+2 >= len(tokens) {
+		return ""
 	}
 	left := strings.TrimSpace(tokens[rangeIdx].Text)
 	sep := strings.TrimSpace(tokens[rangeIdx+1].Text)
 	right := strings.TrimSpace(tokens[rangeIdx+2].Text)
 	if left == "" || right == "" {
-		return
+		return ""
 	}
 	if sep != "-" && sep != "~" {
-		return
+		return ""
 	}
 	if !episodeOfTotalPattern.MatchString(left) {
-		return
+		return ""
 	}
-	m := episodeRangeTVPackRightPattern.FindStringSubmatch(right)
-	if len(m) != 2 {
-		return
+	m := episodeRangePackRightPattern.FindStringSubmatch(right)
+	if len(m) != 3 {
+		return ""
+	}
+	pk, note := packKindFromSuffix(m[2])
+	if pk == "" {
+		return ""
 	}
 	n := strings.TrimLeft(strings.TrimSpace(m[1]), "0")
 	if n == "" {
@@ -571,16 +636,8 @@ func normalizeEpisodeRangeTVPackSuffix(tokens []model.Token, attrs *[]model.Attr
 	}
 	tokens[rangeIdx+2].Text = n
 	tokens[rangeIdx+2].Removed = true
-	if attrs != nil {
-		*attrs = append(*attrs, model.Attribute{
-			Type:       model.AttrNote,
-			Normalized: "TV_PACK",
-			TokenStart: rangeIdx + 2,
-			TokenEnd:   rangeIdx + 3,
-			Confidence: 0.7,
-			Source:     "episode_range_tvpack",
-		})
-	}
+	appendPackAttrs(pk, note, rangeIdx+2, rangeIdx+3, "episode_range_pack_suffix")
+	return pk
 }
 
 func detectEpisodeList(tokens []model.Token) (episodeList string, firstEpisode string, tokenIdx int) {

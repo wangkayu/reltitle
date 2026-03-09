@@ -7919,6 +7919,8 @@ func detectSeasonKeyword(tokens []model.Token) (season string, tokenIdx int) {
 
 var episodeRangePattern = regexp.MustCompile(`(?i)^(\d{1,4})[-~](\d{1,4})$`)
 var episodeRangeEmbeddedPattern = regexp.MustCompile(`(?i)(\d{1,4})[-~](\d{1,4})`)
+var episodeRangeLeftCJKPattern = regexp.MustCompile(`^(?:第)?(\d{1,4})$`)
+var episodeRangeRightCJKPattern = regexp.MustCompile(`^(\d{1,4})(?:集|话|話|回|章)?$`)
 var epPrefixedDigitsPattern = regexp.MustCompile(`(?i)^e(?:p)?(\d{1,4})$`)
 var episodeOfTotalPattern = regexp.MustCompile(`^(\d{1,4})$`)
 var leadingDigitsPattern = regexp.MustCompile(`^(\d{1,4})`)
@@ -8190,6 +8192,47 @@ func detectEpisodeRange(tokens []model.Token) (string, int) {
 			return normalizeEpisodeRangeText(m[1] + "-" + m[2]), i
 		}
 		if i+2 < len(tokens) {
+			leftRaw := strings.TrimSpace(tokens[i].Text)
+			sep := strings.TrimSpace(tokens[i+1].Text)
+			rightRaw := strings.TrimSpace(tokens[i+2].Text)
+			if sep == "-" || sep == "~" {
+				leftHasMarker := strings.HasPrefix(leftRaw, "第")
+				rightHasMarker := strings.HasSuffix(rightRaw, "集") || strings.HasSuffix(rightRaw, "话") || strings.HasSuffix(rightRaw, "話") || strings.HasSuffix(rightRaw, "回") || strings.HasSuffix(rightRaw, "章")
+				if leftHasMarker || rightHasMarker {
+					lraw := leftRaw
+					if lm := episodeRangeLeftCJKPattern.FindStringSubmatch(lraw); len(lm) == 2 {
+						lraw = strings.TrimSpace(lm[1])
+					}
+					rraw := rightRaw
+					if rm := episodeRangeRightCJKPattern.FindStringSubmatch(rraw); len(rm) == 2 {
+						rraw = strings.TrimSpace(rm[1])
+					} else if mm := leadingDigitsPattern.FindStringSubmatch(rraw); len(mm) == 2 {
+						rraw = strings.TrimSpace(mm[1])
+					}
+					if episodeOfTotalPattern.MatchString(lraw) && episodeOfTotalPattern.MatchString(rraw) {
+						l := strings.TrimLeft(lraw, "0")
+						if l == "" {
+							l = "0"
+						}
+						r := strings.TrimLeft(rraw, "0")
+						if r == "" {
+							r = "0"
+						}
+						if l != "0" && r != "0" {
+							if len(lraw) == 4 && len(rraw) == 4 {
+								if y1, err1 := strconv.Atoi(lraw); err1 == nil {
+									if y2, err2 := strconv.Atoi(rraw); err2 == nil {
+										if y1 >= 1900 && y1 <= 2099 && y2 >= 1900 && y2 <= 2099 {
+											continue
+										}
+									}
+								}
+							}
+							return l + "-" + r, i
+						}
+					}
+				}
+			}
 			if episodeOfTotalPattern.MatchString(strings.TrimSpace(tokens[i].Text)) && strings.TrimSpace(tokens[i+1].Text) == "-" {
 				rawR := strings.TrimSpace(tokens[i+2].Text)
 				if episodeOfTotalPattern.MatchString(rawR) {
@@ -8540,6 +8583,7 @@ func extractInlineStarGroup(tokens []model.Token) string {
 }
 
 var episodePattern = regexp.MustCompile(`(?i)^(?:(e|ep|第))?(\d{1,4})(?:\.(\d{1,2}))?(?:[vV]\d{1,2})?$`)
+var episodeWithParenSuffixPattern = regexp.MustCompile(`(?i)^(?:(e|ep|第))?(\d{1,4})(?:\.(\d{1,2}))?[（(][^）)]{1,32}[）)]$`)
 var episodeVersionSuffixPattern = regexp.MustCompile(`(?i)^(?:\d{1,4}(?:\.\d{1,2})?)[vV]\d{1,2}$`)
 var chineseEpisodeSuffixPattern = regexp.MustCompile(`^(?:第)?(\d{1,4})(?:话|集)$`)
 var chineseEpisodeWithSuffixMarkerPattern = regexp.MustCompile(`^(?:第)?(\d{1,4})(?:话|集|話)[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳]$`)
@@ -8554,6 +8598,24 @@ var episodeEndSuffixPattern = regexp.MustCompile(`(?i)^(\d{1,4})(end|fin|final)$
 var standaloneVersionPattern = regexp.MustCompile(`(?i)^v(\d{1,2})$`)
 var regionHKMOTWEmbeddedPattern = regexp.MustCompile(`(?i)(?:仅限港澳台地区|僅限港澳台地區)`)
 var regionHKMOTWRemovalPattern = regexp.MustCompile(`(?i)[(（]?\s*(?:仅限港澳台地区|僅限港澳台地區)\s*[)）]?`)
+var bracketScheduleNoticeDatePattern = regexp.MustCompile(`\d{1,2}[./]\d{1,2}`)
+
+func isBracketScheduleNoticeText(s string) bool {
+	ss := strings.TrimSpace(s)
+	if ss == "" {
+		return false
+	}
+	if !strings.Contains(ss, "停播") && !strings.Contains(ss, "停更") {
+		return false
+	}
+	if bracketScheduleNoticeDatePattern.MatchString(ss) || dateYMDPattern.MatchString(ss) {
+		return true
+	}
+	if strings.Contains(ss, "，") || strings.Contains(ss, ",") || strings.Contains(ss, "。") || strings.Contains(ss, ";") || strings.Contains(ss, "；") {
+		return true
+	}
+	return false
+}
 
 func isEpisodeBoundaryRightToken(t string) bool {
 	tt := strings.TrimSpace(t)
@@ -8982,6 +9044,9 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 		inBracket := isInBracket(tokens, i)
 		if inBracket {
 			if txt := bracketBlockInnerText(tokens, i); txt != "" {
+				if isBracketScheduleNoticeText(txt) {
+					continue
+				}
 				if isLikelyMetaBracketText(txt) && !isEpisodeLikeBracketText(txt) {
 					continue
 				}
@@ -9048,6 +9113,30 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 				bestIdx = i
 				best = n
 				bestVer = "v" + ver
+			}
+			continue
+		}
+		// Support episode tokens with trailing parenthetical marker:
+		// e.g. "03（Onair）" / "03(Premium)".
+		if mm := episodeWithParenSuffixPattern.FindStringSubmatch(strings.TrimSpace(tokens[i].Text)); len(mm) >= 4 {
+			if yearPattern.MatchString(strings.TrimSpace(mm[2])) {
+				continue
+			}
+			n := strings.TrimLeft(mm[2], "0")
+			if n == "" {
+				n = "0"
+			}
+			if strings.TrimSpace(mm[3]) != "" {
+				n = n + "." + strings.TrimSpace(mm[3])
+			}
+			if n != "0" {
+				score := len(mm[2]) + 91
+				if score > bestScore {
+					bestScore = score
+					bestIdx = i
+					best = n
+					bestVer = ""
+				}
 			}
 			continue
 		}

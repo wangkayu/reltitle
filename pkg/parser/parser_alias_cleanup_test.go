@@ -2364,6 +2364,43 @@ func TestParserEpisodeRange_TVPackSuffixSplit(t *testing.T) {
 	}
 }
 
+func TestParserEpisode_TailScheduleNoticeDoesNotOverridePrimary(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "【永恒译制】★1月新番★ Showtime！2～唱歌的大姐姐也想做～ / Showtime! 2 Uta no Onee-san Datte Shitai 03（Onair） GB 720P MP4【下周停播，2.6第4集】"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalEpisode(res); got != "3" {
+		t.Fatalf("episode=%q want=3", got)
+	}
+}
+
+func TestParserEpisodeRange_CJKSplitRangeWithSuffix(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "【极影字幕·毁片党】碧蓝之海2 Grand Blue Dreaming! S2 第01-12集 GB_CN HEVC_opus 1080p"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalEpisodeRange(res); got != "1-12" {
+		t.Fatalf("episode_range=%q want=1-12", got)
+	}
+	if got := canonicalEpisode(res); got != "" {
+		t.Fatalf("episode=%q want empty when range detected", got)
+	}
+}
+
 func TestParserAliasCleanup_BracketTitleFallbackWhenMainTitleEmpty(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

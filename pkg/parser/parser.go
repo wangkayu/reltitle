@@ -5096,7 +5096,7 @@ func extractGuardedDVDRIPReleaseTagAttrsAndRemoveFromTokens(tokens []model.Token
 		if !strings.EqualFold(txt, "DVDRIP") {
 			continue
 		}
-		*out = append(*out, model.Attribute{Type: model.AttrNote, Normalized: "DVDRIP", TokenStart: i, TokenEnd: i + 1, Confidence: 0.7, Source: "dvdrip_tag"})
+		*out = append(*out, model.Attribute{Type: model.AttrSourceType, Normalized: "DVDRip", TokenStart: i, TokenEnd: i + 1, Confidence: 0.7, Source: "dvdrip_tag"})
 		tokens[i].Removed = true
 	}
 }

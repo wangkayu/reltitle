@@ -2266,6 +2266,26 @@ func TestParserLexicon_EndAndDigitalRemasterMetaTokensAreConsumed(t *testing.T) 
 	}
 }
 
+func TestParserNotePromotion_1080pToResolution(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "Patema Sottosopra (2013) [1080p.BluRay.x264.FLAC.ITA.JPN.Subs.Ita.Eng] [12.3GB] [stress]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrResolution), "1080p") {
+		t.Fatalf("expected resolution=1080p, got=%v", attrValues(res, model.AttrResolution))
+	}
+	if hasAttrValue(attrValues(res, model.AttrNote), "1080p") {
+		t.Fatalf("1080p should be promoted from note, notes=%v", attrValues(res, model.AttrNote))
+	}
+}
+
 func TestParserLexicon_MonthAndFileshareMetaTokensAreConsumed(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

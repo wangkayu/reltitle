@@ -70,6 +70,13 @@ rules:
       type: contents
       normalized: MOVIE
 
+  - id: note_to_resolution_1080p
+    match:
+      note_values_case_insensitive: ["1080P"]
+    promote_to:
+      type: resolution
+      normalized: 1080p
+
 note_whitelist:
   # 未命中 promotion 且属于白名单的 note 保留
   - 检索

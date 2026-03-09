@@ -2306,6 +2306,46 @@ func TestParserNotePromotion_AgeRestrictedToContentRating(t *testing.T) {
 	}
 }
 
+func TestParserNoteFinalInParenAlias_NoLongerPromotedAsMeta(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "May I Ask for One Final Thing S01E01 MULTi 1080p WEB x264 AAC -Tsundere-Raws (CR) (VF, FRENCH, VOSTFR, Saigo ni Hitotsu dake Onegai shitemo Yoroshii deshou ka, May I Ask for One Final Thing?)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if hasAttrValue(attrValues(res, model.AttrNote), "FINAL") {
+		t.Fatalf("paren alias word FINAL should not become note, notes=%v", attrValues(res, model.AttrNote))
+	}
+	if hasAttrValue(attrValues(res, model.AttrReleaseStatus), "FINAL") {
+		t.Fatalf("paren alias word FINAL should not become release_status, got=%v", attrValues(res, model.AttrReleaseStatus))
+	}
+}
+
+func TestParserNotePromotion_FinalBracketToReleaseStatus(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[TestGroup][Sample Title][12][Final][1080p][WEB-DL]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrReleaseStatus), "FINAL") {
+		t.Fatalf("expected release_status=FINAL, got=%v", attrValues(res, model.AttrReleaseStatus))
+	}
+	if hasAttrValue(attrValues(res, model.AttrNote), "FINAL") {
+		t.Fatalf("FINAL should be promoted from note, notes=%v", attrValues(res, model.AttrNote))
+	}
+}
+
 func TestParserLexicon_MonthAndFileshareMetaTokensAreConsumed(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

@@ -2589,13 +2589,6 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.65
-      - tokens: ["final"]
-        emit:
-          - type: note
-            normalized: "FINAL"
-            token_index: -1
-        remove: true
-        confidence: 0.65
 
   - id: note_season_cn_bracket
     scope: bracket

@@ -58,7 +58,7 @@ rules:
 
   - id: note_to_release_status
     match:
-      note_values_case_insensitive: ["END", "FIN", "COMPLETE"]
+      note_values_case_insensitive: ["END", "FIN", "COMPLETE", "FINAL"]
     promote_to:
       type: release_status
       normalized_from_token: true

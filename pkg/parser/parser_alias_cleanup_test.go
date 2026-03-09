@@ -1151,6 +1151,52 @@ func TestParserEPSlotAxis_EPrefixedTokenUsesABS(t *testing.T) {
 	}
 }
 
+func TestParserEPSlotAxis_RangeUsesABSWithoutSeason(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Group] Sample Title [01-12][1080p][WEB-DL]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if res.EPSlot == nil || res.EPSlot.Primary == nil {
+		t.Fatalf("epslot.primary should not be nil")
+	}
+	if got := strings.ToUpper(strings.TrimSpace(res.EPSlot.Primary.Kind)); got != "RANGE" {
+		t.Fatalf("epslot.primary.kind=%q want=%q", got, "RANGE")
+	}
+	if got := strings.ToUpper(strings.TrimSpace(res.EPSlot.Primary.Axis)); got != "ABS" {
+		t.Fatalf("epslot.primary.axis=%q want=%q", got, "ABS")
+	}
+}
+
+func TestParserEPSlotAxis_GroupRouteOverrideUsesABS(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[丸子家族][我们这一家 NEXT(Atashin'Chi NEXT)][01]柚子的活动铅笔[2024.06.05][简日][1080P][MP4]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if res.EPSlot == nil || res.EPSlot.Primary == nil {
+		t.Fatalf("epslot.primary should not be nil")
+	}
+	if got := strings.TrimSpace(res.EPSlot.Primary.Source); got != "group_route_override" {
+		t.Fatalf("epslot.primary.source=%q want=%q", got, "group_route_override")
+	}
+	if got := strings.ToUpper(strings.TrimSpace(res.EPSlot.Primary.Axis)); got != "ABS" {
+		t.Fatalf("epslot.primary.axis=%q want=%q", got, "ABS")
+	}
+}
+
 func TestParserEpisodeRange_EPrefixedRangeDetected(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

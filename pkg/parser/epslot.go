@@ -22,7 +22,7 @@ func buildEPSlotCandidates(tokens []model.Token, season string, seasonIdx int, e
 		cands = append(cands, e)
 	}
 
-	axisSE := "UNKNOWN"
+	axisSE := "ABS"
 	if strings.TrimSpace(season) != "" {
 		axisSE = "SE"
 	}
@@ -192,7 +192,7 @@ func finalizeEPSlotPrimary(epslot *model.EPSlot, season string, episode string, 
 	if epslot == nil {
 		return
 	}
-	axisSE := "UNKNOWN"
+	axisSE := "ABS"
 	if strings.TrimSpace(season) != "" {
 		axisSE = "SE"
 	}

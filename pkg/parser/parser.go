@@ -2495,9 +2495,13 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 			}
 			isMarukoRoute := strings.EqualFold(strings.TrimSpace(routeID), "group_epseg_maruko_v1")
 			aliases = pruneEpisodeLikeAliases(aliases)
+			overrideAxis := "ABS"
+			if strings.TrimSpace(season) != "" {
+				overrideAxis = "SE"
+			}
 			primary := &model.EPEntity{
 				Kind:       "EP",
-				Axis:       "UNKNOWN",
+				Axis:       overrideAxis,
 				Episode:    episode,
 				SPKind:     spKind,
 				TokenStart: -1,

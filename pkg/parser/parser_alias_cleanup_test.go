@@ -1097,6 +1097,54 @@ func TestParserSpecial_IsolatedBracketEXStillDetectedAsSPKind(t *testing.T) {
 	}
 }
 
+func TestParserNotePromotion_EndToReleaseStatus(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Group][Sample Title][12FIN][1080p][WEB-DL]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrReleaseStatus), "FIN") {
+		t.Fatalf("expected release_status=FIN, got=%v", attrValues(res, model.AttrReleaseStatus))
+	}
+	if hasAttrValue(attrValues(res, model.AttrNote), "FIN") {
+		t.Fatalf("FIN should be promoted from note, notes=%v", attrValues(res, model.AttrNote))
+	}
+}
+
+func TestDropRedundantNoteAttributes_RemovesMetaDuplicates(t *testing.T) {
+	attrs := []model.Attribute{
+		{Type: model.AttrPlatform, Normalized: "VIUTV"},
+		{Type: model.AttrResolution, Normalized: "1080p"},
+		{Type: model.AttrSourceType, Normalized: "WEB-DL"},
+		{Type: model.AttrSeason, Normalized: "2"},
+		{Type: model.AttrPackKind, Normalized: "tv_pack"},
+		{Type: model.AttrContents, Normalized: "MOVIE"},
+		{Type: model.AttrNote, Normalized: "VIUTV"},
+		{Type: model.AttrNote, Normalized: "1080p"},
+		{Type: model.AttrNote, Normalized: "WEB-DL"},
+		{Type: model.AttrNote, Normalized: "Season 2"},
+		{Type: model.AttrNote, Normalized: "TV_PACK"},
+		{Type: model.AttrNote, Normalized: "MOVIE"},
+		{Type: model.AttrNote, Normalized: "RECRUITMENT"},
+	}
+	got := dropRedundantNoteAttributes(attrs)
+	notes := make([]string, 0, 8)
+	for _, a := range got {
+		if a.Type == model.AttrNote {
+			notes = append(notes, a.Normalized)
+		}
+	}
+	if len(notes) != 1 || !strings.EqualFold(strings.TrimSpace(notes[0]), "RECRUITMENT") {
+		t.Fatalf("expected only RECRUITMENT note to remain, notes=%v", notes)
+	}
+}
+
 func TestParserSpecial_DashSpecialPhrasePromotesEPSlotPrimarySP(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {
@@ -2207,8 +2255,11 @@ func TestParserLexicon_EndAndDigitalRemasterMetaTokensAreConsumed(t *testing.T) 
 		}
 	}
 	notes := attrValues(res, model.AttrNote)
-	if !hasAttrValue(notes, "END") {
-		t.Fatalf("expected note=END, got=%v", notes)
+	if hasAttrValue(notes, "END") {
+		t.Fatalf("END should not remain in note after release_status promotion, notes=%v", notes)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrReleaseStatus), "END") {
+		t.Fatalf("expected release_status=END, got=%v", attrValues(res, model.AttrReleaseStatus))
 	}
 	if !hasAttrValue(notes, "DIGITAL_REMASTER") {
 		t.Fatalf("expected note=DIGITAL_REMASTER, got=%v", notes)
@@ -2449,8 +2500,8 @@ func TestParserEpisodeRange_TVPackSuffixSplit(t *testing.T) {
 	if got := canonicalEpisodeRange(res); got != "1-12" {
 		t.Fatalf("episode_range=%q want=1-12", got)
 	}
-	if !hasAttrValue(attrValues(res, model.AttrNote), "TV_PACK") {
-		t.Fatalf("expected note=TV_PACK")
+	if hasAttrValue(attrValues(res, model.AttrNote), "TV_PACK") {
+		t.Fatalf("TV_PACK note should be removed when pack_kind exists, notes=%v", attrValues(res, model.AttrNote))
 	}
 	if got := canonicalPackKind(res); got != "TV_PACK" {
 		t.Fatalf("pack_kind=%q want=TV_PACK", got)

@@ -74,6 +74,7 @@ const (
 	AttrSeason          AttrType = "season"
 	AttrSeasonRange     AttrType = "season_range"
 	AttrVersion         AttrType = "version"
+	AttrReleaseStatus   AttrType = "release_status"
 	AttrPackKind        AttrType = "pack_kind"
 	AttrPackProfile     AttrType = "pack_profile"
 	AttrSPKind          AttrType = "sp_kind"

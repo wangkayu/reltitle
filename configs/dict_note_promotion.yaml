@@ -56,6 +56,13 @@ rules:
       type: sub_flag
       normalized_from_token: true
 
+  - id: note_to_release_status
+    match:
+      note_values_case_insensitive: ["END", "FIN", "COMPLETE"]
+    promote_to:
+      type: release_status
+      normalized_from_token: true
+
 note_whitelist:
   # 未命中 promotion 且属于白名单的 note 保留
   - 检索

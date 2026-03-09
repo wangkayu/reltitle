@@ -358,17 +358,11 @@ func TestParserEpisodeCompactEndFlag_NotBatch(t *testing.T) {
 	if got := firstAttrValue(res, model.AttrEpisodeRange); got != "" {
 		t.Fatalf("episode_range=%q want empty", got)
 	}
-	notes := attrValues(res, model.AttrNote)
-	hasEndFlag := false
-	for _, n := range notes {
-		up := strings.ToUpper(strings.TrimSpace(n))
-		if up == "END" || up == "FIN" || up == "FINAL" {
-			hasEndFlag = true
-			break
-		}
+	if got := firstAttrValue(res, model.AttrReleaseStatus); got != "END" {
+		t.Fatalf("release_status=%q want=%q", got, "END")
 	}
-	if !hasEndFlag {
-		t.Fatalf("expected endflag note from compact episode token, notes=%v", notes)
+	if hasAttrValue(attrValues(res, model.AttrNote), "END") {
+		t.Fatalf("END should not remain in note after release_status promotion, notes=%v", attrValues(res, model.AttrNote))
 	}
 }
 

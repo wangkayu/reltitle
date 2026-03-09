@@ -2589,6 +2589,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	attrs = upsertScalarAttribute(attrs, model.AttrMovieIndexRange, movieIndexRange, "canonical")
 	attrs = appendTitleAliasAttributes(attrs, aliases, title, "canonical")
 	attrs = p.promoteNoteAttributes(attrs)
+	attrs = dropRedundantNoteAttributes(attrs)
 	p.normalizePlatformAttrs(attrs)
 	p.normalizeSourceTypeAttrs(attrs)
 	attrs = p.enrichBatchSourceTypeFromPackKind(attrs, contentKind)
@@ -3117,6 +3118,107 @@ func (p *Parser) promoteNoteAttributes(attrs []model.Attribute) []model.Attribut
 		}
 	}
 	return attrs
+}
+
+var seasonNotePattern = regexp.MustCompile(`(?i)^season\s*0*(\d{1,2})$`)
+
+func normalizeMetaCompareKey(v string) string {
+	s := strings.ToUpper(strings.TrimSpace(v))
+	if s == "" {
+		return ""
+	}
+	repl := strings.NewReplacer(
+		" ", "",
+		"-", "",
+		"_", "",
+		".", "",
+		"／", "/",
+		"/", "",
+		"·", "",
+		":", "",
+		"：", "",
+	)
+	return repl.Replace(s)
+}
+
+func dropRedundantNoteAttributes(attrs []model.Attribute) []model.Attribute {
+	if len(attrs) == 0 {
+		return attrs
+	}
+	hasPlatform := map[string]struct{}{}
+	hasResolution := map[string]struct{}{}
+	hasSourceType := map[string]struct{}{}
+	hasSeason := map[string]struct{}{}
+	packKindPresent := false
+	movieSignalPresent := false
+
+	for _, a := range attrs {
+		n := strings.TrimSpace(a.Normalized)
+		if n == "" {
+			continue
+		}
+		switch a.Type {
+		case model.AttrPlatform:
+			hasPlatform[normalizeMetaCompareKey(n)] = struct{}{}
+		case model.AttrResolution:
+			hasResolution[normalizeMetaCompareKey(n)] = struct{}{}
+		case model.AttrSourceType:
+			hasSourceType[normalizeMetaCompareKey(n)] = struct{}{}
+		case model.AttrSeason:
+			hasSeason[strings.TrimLeft(strings.TrimSpace(n), "0")] = struct{}{}
+		case model.AttrPackKind:
+			packKindPresent = true
+		case model.AttrContents:
+			if strings.EqualFold(strings.TrimSpace(n), "MOVIE") {
+				movieSignalPresent = true
+			}
+		case model.AttrMovieFlag:
+			movieSignalPresent = true
+		}
+	}
+
+	out := make([]model.Attribute, 0, len(attrs))
+	for _, a := range attrs {
+		if a.Type != model.AttrNote {
+			out = append(out, a)
+			continue
+		}
+		n := strings.TrimSpace(a.Normalized)
+		if n == "" {
+			continue
+		}
+		nk := normalizeMetaCompareKey(n)
+		up := strings.ToUpper(n)
+
+		if _, ok := hasPlatform[nk]; ok {
+			continue
+		}
+		if _, ok := hasResolution[nk]; ok {
+			continue
+		}
+		if _, ok := hasSourceType[nk]; ok {
+			continue
+		}
+		if m := seasonNotePattern.FindStringSubmatch(n); len(m) == 2 {
+			ss := strings.TrimLeft(strings.TrimSpace(m[1]), "0")
+			if ss == "" {
+				ss = "0"
+			}
+			if _, ok := hasSeason[ss]; ok {
+				continue
+			}
+		}
+		if packKindPresent {
+			if up == "TV_PACK" || up == "BATCH" || n == "全集" || n == "合集" {
+				continue
+			}
+		}
+		if movieSignalPresent && up == "MOVIE" {
+			continue
+		}
+		out = append(out, a)
+	}
+	return out
 }
 
 func (p *Parser) applyGroupRouteOverride(

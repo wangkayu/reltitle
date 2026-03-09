@@ -7109,6 +7109,37 @@ entries:
     remove: true
     confidence: 0.8
 
+  - id: platform_unext
+    any_of:
+      - tokens: ["UNEXT"]
+        emit:
+          - type: platform
+            normalized: "UNEXT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["unext"]
+        emit:
+          - type: platform
+            normalized: "UNEXT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["u-next"]
+        emit:
+          - type: platform
+            normalized: "UNEXT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["u", "-", "next"]
+        emit:
+          - type: platform
+            normalized: "UNEXT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+
   - id: platform_amazon
     any_of:
       - tokens: ["amazon"]
@@ -7319,10 +7350,34 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.8
+      - tokens: ["atx"]
+        emit:
+          - type: platform
+            normalized: "AT-X"
+            token_index: -1
+        remove: true
+        confidence: 0.8
       - tokens: ["at", "-", "x"]
         emit:
           - type: platform
             normalized: "AT-X"
+            token_index: 0
+        remove: true
+        confidence: 0.8
+
+  - id: platform_bs11
+    any_of:
+      - tokens: ["bs11"]
+        emit:
+          - type: platform
+            normalized: "BS11"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["bs", "11"]
+        emit:
+          - type: platform
+            normalized: "BS11"
             token_index: 0
         remove: true
         confidence: 0.8

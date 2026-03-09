@@ -2516,6 +2516,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	attrs = dedupeAttributes(attrs)
 	attrs = collapseOverlappingSpecificAudioCodecs(attrs)
 	ctx.AudioSlot = reconcileAudioSlotWithAttributes(ctx.AudioSlot, attrs)
+	epslot = ensureSPPrimaryFromSPKind(epslot, season, episode, episodeRange, episodeList, spKind)
 	epslot = pruneBatchEPSlotForConservativeOutput(epslot, contentKind, episode, episodeRange, spKind)
 	if isUnknownOutput(contentKind, templateID) {
 		attrs = pruneUnknownCoreAttributes(attrs)
@@ -2567,6 +2568,56 @@ func pruneBatchEPSlotForConservativeOutput(epslot *model.EPSlot, contentKind str
 		return epslot
 	}
 	return nil
+}
+
+func ensureSPPrimaryFromSPKind(epslot *model.EPSlot, season string, episode string, episodeRange string, episodeList string, spKind string) *model.EPSlot {
+	k := strings.ToUpper(strings.TrimSpace(spKind))
+	if k == "" {
+		return epslot
+	}
+	if strings.TrimSpace(episode) != "" || strings.TrimSpace(episodeRange) != "" || strings.TrimSpace(episodeList) != "" {
+		return epslot
+	}
+	if epslot == nil {
+		e := model.EPEntity{
+			Kind:   "SP",
+			Axis:   k,
+			Season: season,
+			SPKind: k,
+			Source: "sp_kind_final",
+		}
+		return &model.EPSlot{
+			Primary:    &e,
+			Candidates: []model.EPEntity{{Kind: "SP", Axis: k, Season: season, SPKind: k, Source: "sp_kind"}},
+		}
+	}
+	if epslot.Primary == nil {
+		e := model.EPEntity{
+			Kind:   "SP",
+			Axis:   k,
+			Season: season,
+			SPKind: k,
+			Source: "sp_kind_final",
+		}
+		epslot.Primary = &e
+	}
+	hasSPCandidate := false
+	for _, c := range epslot.Candidates {
+		if strings.EqualFold(strings.TrimSpace(c.Kind), "SP") && strings.EqualFold(strings.TrimSpace(c.SPKind), k) {
+			hasSPCandidate = true
+			break
+		}
+	}
+	if !hasSPCandidate {
+		epslot.Candidates = append(epslot.Candidates, model.EPEntity{
+			Kind:   "SP",
+			Axis:   k,
+			Season: season,
+			SPKind: k,
+			Source: "sp_kind",
+		})
+	}
+	return epslot
 }
 
 func isUnknownOutput(contentKind string, templateID string) bool {
@@ -11646,15 +11697,130 @@ func detectPackKind(cfg *config.Config, rawTitle string) string {
 }
 
 var spKindPattern = regexp.MustCompile(`(?i)^(sp|ova|oad|ona|ex|ncop|nced|pv)(\d{1,3})?$`)
+var shortEpisodeNumberPattern = regexp.MustCompile(`^\d{1,3}$`)
+
+func isShortEpisodeNumberToken(raw string) bool {
+	txt := strings.TrimSpace(raw)
+	if txt == "" {
+		return false
+	}
+	if !shortEpisodeNumberPattern.MatchString(txt) {
+		return false
+	}
+	n, err := strconv.Atoi(txt)
+	if err != nil {
+		return false
+	}
+	return n >= 0 && n <= 999
+}
+
+func isSPLeadToken(raw string) bool {
+	up := strings.ToUpper(strings.TrimSpace(raw))
+	switch up {
+	case "SP", "SPECIAL", "特别篇", "特別篇", "OVA", "OAD", "ONA":
+		return true
+	default:
+		return false
+	}
+}
+
+func isSimpleBoundarySep(raw string) bool {
+	switch strings.TrimSpace(raw) {
+	case "-", ":", "：", "&", "＆", "+", "＋", "/", "／":
+		return true
+	default:
+		return false
+	}
+}
+
+func isBracketOpen(raw string) bool {
+	switch strings.TrimSpace(raw) {
+	case "[", "【", "(", "（":
+		return true
+	default:
+		return false
+	}
+}
+
+func shouldAcceptSPKindToken(tokens []model.Token, idx int, kind string, suffix string) bool {
+	k := strings.ToUpper(strings.TrimSpace(kind))
+	if k != "EX" {
+		return true
+	}
+	if strings.TrimSpace(suffix) != "" {
+		return true
+	}
+	if idx < 0 || idx >= len(tokens) {
+		return false
+	}
+	if isInBracket(tokens, idx) || isInParen(tokens, idx) {
+		return true
+	}
+	if idx-1 >= 0 && strings.TrimSpace(tokens[idx-1].Text) == "-" {
+		next := nextAliveToken(tokens, idx+1)
+		if next < 0 {
+			return true
+		}
+		if isBracketOpen(tokens[next].Text) || isShortEpisodeNumberToken(tokens[next].Text) {
+			return true
+		}
+	}
+	prev := prevAliveToken(tokens, idx-1)
+	if prev >= 0 && prev < idx {
+		between := ""
+		if idx-1 >= 0 {
+			between = strings.TrimSpace(tokens[idx-1].Text)
+		}
+		if isShortEpisodeNumberToken(tokens[prev].Text) && isSimpleBoundarySep(between) {
+			return true
+		}
+		if isSPLeadToken(tokens[prev].Text) && isSimpleBoundarySep(between) {
+			return true
+		}
+	}
+	next := nextAliveToken(tokens, idx+1)
+	if next >= 0 && next > idx {
+		between := ""
+		if idx+1 < len(tokens) {
+			between = strings.TrimSpace(tokens[idx+1].Text)
+		}
+		if isShortEpisodeNumberToken(tokens[next].Text) && isSimpleBoundarySep(between) {
+			return true
+		}
+	}
+	return false
+}
 
 func detectSPKind(tokens []model.Token) string {
 	for i := 0; i < len(tokens); i++ {
-		if m := regexp.MustCompile(`(?i)^0?\d{1,3}\s*(?:&|＆)\s*(sp|ova|oad|ona|ex|ncop|nced|pv)\b`).FindStringSubmatch(strings.TrimSpace(tokens[i].Text)); len(m) == 2 {
+		txt := strings.TrimSpace(tokens[i].Text)
+		if txt == "" {
+			continue
+		}
+		if tokens[i].Removed {
+			if m := spKindPattern.FindStringSubmatch(txt); len(m) >= 2 {
+				kind := strings.ToUpper(strings.TrimSpace(m[1]))
+				// Removed EX token is often part of channel/source markers (BS-EX/CS-EX1),
+				// so we do not infer sp_kind=EX from removed tokens.
+				if kind != "EX" {
+					return kind
+				}
+			}
+			continue
+		}
+		if m := regexp.MustCompile(`(?i)^0?\d{1,3}\s*(?:&|＆)\s*(sp|ova|oad|ona|ex|ncop|nced|pv)\b`).FindStringSubmatch(txt); len(m) == 2 {
 			return strings.ToUpper(m[1])
 		}
-		m := spKindPattern.FindStringSubmatch(tokens[i].Text)
+		m := spKindPattern.FindStringSubmatch(txt)
 		if len(m) >= 2 {
-			return strings.ToUpper(m[1])
+			kind := strings.ToUpper(strings.TrimSpace(m[1]))
+			suffix := ""
+			if len(m) >= 3 {
+				suffix = strings.TrimSpace(m[2])
+			}
+			if shouldAcceptSPKindToken(tokens, i, kind, suffix) {
+				return kind
+			}
 		}
 	}
 	return ""

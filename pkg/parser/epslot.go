@@ -78,9 +78,16 @@ func buildEPSlotCandidates(tokens []model.Token, season string, seasonIdx int, e
 		// SP tokens with optional index like OVA1 / SP01.
 		if m := spKindPattern.FindStringSubmatch(txt); len(m) >= 2 {
 			k := strings.ToUpper(strings.TrimSpace(m[1]))
-			idx := ""
+			suffix := ""
 			if len(m) >= 3 {
-				idx = strings.TrimLeft(strings.TrimSpace(m[2]), "0")
+				suffix = strings.TrimSpace(m[2])
+			}
+			idx := ""
+			if suffix != "" {
+				idx = strings.TrimLeft(suffix, "0")
+			}
+			if !shouldAcceptSPKindToken(tokens, i, k, suffix) {
+				continue
 			}
 			e := model.EPEntity{Kind: "SP", Axis: k, Season: season, SPKind: k, TokenStart: i, TokenEnd: i + 1, Source: "sp_token"}
 			if idx != "" {

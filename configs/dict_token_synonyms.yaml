@@ -142,6 +142,20 @@ rules:
       normalized: BS11
     priority: 100
 
+  - id: platform_bs_ex
+    raw_tokens: ["bs-ex", "bs ex"]
+    emit:
+      type: platform
+      normalized: BS-EX
+    priority: 100
+
+  - id: platform_cs_ex1
+    raw_tokens: ["cs-ex1", "cs ex1", "ex-cs1", "ex cs1"]
+    emit:
+      type: platform
+      normalized: CS-EX1
+    priority: 100
+
   - id: platform_wowow
     raw_tokens: ["wowow"]
     emit:

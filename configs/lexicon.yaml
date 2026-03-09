@@ -7284,6 +7284,61 @@ entries:
         remove: true
         confidence: 0.8
 
+  - id: platform_bs_ex_channel
+    any_of:
+      - tokens: ["bs-ex"]
+        emit:
+          - type: platform
+            normalized: "BS-EX"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["bs", "-", "ex"]
+        emit:
+          - type: platform
+            normalized: "BS-EX"
+            token_index: 0
+        remove: true
+        confidence: 0.8
+      - tokens: ["bs", "-", "ex1"]
+        emit:
+          - type: platform
+            normalized: "BS-EX"
+            token_index: 0
+        remove: true
+        confidence: 0.8
+
+  - id: platform_cs_ex_channel
+    any_of:
+      - tokens: ["cs-ex1"]
+        emit:
+          - type: platform
+            normalized: "CS-EX1"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["cs", "-", "ex1"]
+        emit:
+          - type: platform
+            normalized: "CS-EX1"
+            token_index: 0
+        remove: true
+        confidence: 0.8
+      - tokens: ["ex-cs1"]
+        emit:
+          - type: platform
+            normalized: "CS-EX1"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["ex", "-", "cs1"]
+        emit:
+          - type: platform
+            normalized: "CS-EX1"
+            token_index: 0
+        remove: true
+        confidence: 0.8
+
   - id: platform_lntv
     tokens: ["lntv"]
     emit:

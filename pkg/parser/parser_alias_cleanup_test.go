@@ -943,6 +943,140 @@ func TestParserSpecial_CMNotDetectedFromLengthUnit(t *testing.T) {
 	}
 }
 
+func TestParserSpecial_BareExTitleWordNotDetectedAsSPKind(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[AI-Raws] Star Ocean EX 1080p WEB-DL AAC AVC"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalSPKind(res); got != "" {
+		t.Fatalf("bare EX title word must not be detected as sp_kind, got=%q", got)
+	}
+}
+
+func TestParserSpecial_BareExInTitlePhraseNotDetectedAsSPKind(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "Betrothed to My Sister's Ex S01E07 1080p WEB-DL AAC"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalSPKind(res); got != "" {
+		t.Fatalf("title phrase Ex must not be detected as sp_kind, got=%q", got)
+	}
+}
+
+func TestParserSpecial_EX01StillDetectedAsSPKind(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Group] Sample Title EX01 [1080p][WEB-DL]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalSPKind(res); got != "EX" {
+		t.Fatalf("EX01 should keep sp_kind=EX, got=%q", got)
+	}
+}
+
+func TestParserSpecial_DashEXStillDetectedAsSPKind(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Group] Sample Title - EX [1080p][WEB-DL]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalSPKind(res); got != "EX" {
+		t.Fatalf("dash EX marker should keep sp_kind=EX, got=%q", got)
+	}
+}
+
+func TestParserSpecial_DashSpecialPhrasePromotesEPSlotPrimarySP(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[ANi] Kaijuu 8 gou S02 / 怪獸 8 號 第二季 - 特別篇 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if res.EPSlot == nil || res.EPSlot.Primary == nil {
+		t.Fatalf("epslot.primary should be promoted for dash special phrase, epslot=%+v", res.EPSlot)
+	}
+	if got := strings.ToUpper(strings.TrimSpace(res.EPSlot.Primary.Kind)); got != "SP" {
+		t.Fatalf("epslot.primary.kind=%q want=SP", got)
+	}
+	if got := strings.ToUpper(strings.TrimSpace(res.EPSlot.Primary.SPKind)); got != "SP" {
+		t.Fatalf("epslot.primary.sp_kind=%q want=SP", got)
+	}
+	if got := canonicalSPKind(res); got != "SP" {
+		t.Fatalf("canonical sp_kind=%q want=SP", got)
+	}
+}
+
+func TestParserPlatform_BSExChannelDoesNotTriggerSPKindEX(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[NanakoRaws] Nohara Hiroshi Hiru Meshi no Ryuugi (BS-EX 4K 3840x2160 x265 AAC)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if hasAttrValue(attrValues(res, model.AttrSPKind), "EX") {
+		t.Fatalf("BS-EX channel marker must not trigger sp_kind=EX, attrs=%v", attrValues(res, model.AttrSPKind))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrPlatform), "BS-EX") {
+		t.Fatalf("expected platform=BS-EX, attrs=%v", attrValues(res, model.AttrPlatform))
+	}
+}
+
+func TestParserPlatform_CSExChannelDoesNotTriggerSPKindEX(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[shincaps] Doraemon Birthday Special 2024 (CS-EX1 1440x1080 MPEG2 AAC).ts"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if hasAttrValue(attrValues(res, model.AttrSPKind), "EX") {
+		t.Fatalf("CS-EX1 channel marker must not trigger sp_kind=EX, attrs=%v", attrValues(res, model.AttrSPKind))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrPlatform), "CS-EX1") {
+		t.Fatalf("expected platform=CS-EX1, attrs=%v", attrValues(res, model.AttrPlatform))
+	}
+}
+
 func TestParserLexicon_CommaLanguageTokensAreConsumed(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

@@ -240,6 +240,7 @@ type GroupRouteMatch struct {
 	RequireEpisodeRange     bool     `yaml:"require_episode_range" json:"require_episode_range"`
 	RequireEpisodeLike      bool     `yaml:"require_episode_like" json:"require_episode_like"`
 	RequireEpisodeWithTitle bool     `yaml:"require_episode_with_title" json:"require_episode_with_title"`
+	EpisodeTitleSepIn       []string `yaml:"episode_title_sep_in" json:"episode_title_sep_in"`
 }
 
 type GroupRouteOutput struct {

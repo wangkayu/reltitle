@@ -52,6 +52,7 @@ type groupRouteRule struct {
 	requireEpisodeRange     bool
 	requireEpisodeLike      bool
 	requireEpisodeWithTitle bool
+	episodeTitleSepIn       map[string]struct{}
 	forceGroup              string
 	forceTitle              string
 	clearAliases            bool
@@ -1553,6 +1554,12 @@ func New(cfg *config.Config) *Parser {
 			}
 			aliasStripPrefixes = append(aliasStripPrefixes, ss)
 		}
+		episodeTitleSepIn := map[string]struct{}{}
+		for _, s := range r.Match.EpisodeTitleSepIn {
+			if sep := normalizeEpisodeTitleSepConstraint(s); sep != "" {
+				episodeTitleSepIn[sep] = struct{}{}
+			}
+		}
 		p.groupRouteRules = append(p.groupRouteRules, groupRouteRule{
 			id:                      id,
 			priority:                r.Priority,
@@ -1561,6 +1568,7 @@ func New(cfg *config.Config) *Parser {
 			requireEpisodeRange:     r.Match.RequireEpisodeRange,
 			requireEpisodeLike:      r.Match.RequireEpisodeLike,
 			requireEpisodeWithTitle: r.Match.RequireEpisodeWithTitle,
+			episodeTitleSepIn:       episodeTitleSepIn,
 			forceGroup:              strings.TrimSpace(r.Output.ForceGroup),
 			forceTitle:              strings.TrimSpace(r.Output.ForceTitle),
 			clearAliases:            r.Output.ClearAliases,
@@ -3138,9 +3146,14 @@ func (p *Parser) applyGroupRouteOverride(
 			}
 		}
 		if r.requireEpisodeWithTitle {
-			_, _, epTitle, ok := extractEpisodeLikeFromThirdBracketDetailed(rawTitle)
+			_, _, epTitle, epSep, ok := extractEpisodeLikeFromThirdBracketDetailedWithSep(rawTitle)
 			if !ok || strings.TrimSpace(epTitle) == "" {
 				continue
+			}
+			if len(r.episodeTitleSepIn) > 0 {
+				if _, ok := r.episodeTitleSepIn[epSep]; !ok {
+					continue
+				}
 			}
 		}
 		if len(r.rawMustContainAny) > 0 {
@@ -3235,6 +3248,25 @@ func stripConfiguredPrefixes(s string, prefixes []string) string {
 	return strings.TrimSpace(out)
 }
 
+func normalizeEpisodeTitleSepConstraint(raw string) string {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "_", "underscore":
+		return "_"
+	case "-", "dash":
+		return "-"
+	case ".", "dot":
+		return "."
+	case "&", "amp", "and":
+		return "&"
+	case "space", "whitespace":
+		return " "
+	}
+	if raw == " " {
+		return " "
+	}
+	return ""
+}
+
 func trimPrefixFold(s, prefix string) (string, bool) {
 	if prefix == "" {
 		return s, false
@@ -3256,33 +3288,42 @@ var episodeLikeAliasPattern = regexp.MustCompile(`(?i)^\s*\d{1,4}(?:\s*([_ .-]|&
 var bracketDatePattern = regexp.MustCompile(`\[(\d{4}[./-]\d{2}[./-]\d{2})\]`)
 
 func extractEpisodeLikeFromThirdBracket(rawTitle string) (episode string, spKind string, ok bool) {
-	ep, sp, _, ok := extractEpisodeLikeFromThirdBracketDetailed(rawTitle)
+	ep, sp, _, _, ok := extractEpisodeLikeFromThirdBracketDetailedWithSep(rawTitle)
 	return ep, sp, ok
 }
 
 func extractEpisodeLikeFromThirdBracketDetailed(rawTitle string) (episode string, spKind string, epTitle string, ok bool) {
+	ep, sp, title, _, ok := extractEpisodeLikeFromThirdBracketDetailedWithSep(rawTitle)
+	return ep, sp, title, ok
+}
+
+func extractEpisodeLikeFromThirdBracketDetailedWithSep(rawTitle string) (episode string, spKind string, epTitle string, epSep string, ok bool) {
 	if strings.TrimSpace(rawTitle) == "" {
-		return "", "", "", false
+		return "", "", "", "", false
 	}
 	matches := bracketSegmentPattern.FindAllStringSubmatch(rawTitle, -1)
 	if len(matches) < 3 {
-		return "", "", "", false
+		return "", "", "", "", false
 	}
 	seg := strings.TrimSpace(matches[2][1])
 	if seg == "" {
-		return "", "", "", false
+		return "", "", "", "", false
 	}
 	m := episodeLikeThirdBracketPattern.FindStringSubmatch(seg)
 	if len(m) == 0 {
-		return "", "", "", false
+		return "", "", "", "", false
 	}
 	epRaw := strings.TrimSpace(m[1])
 	epNum, err := strconv.Atoi(epRaw)
 	if err != nil || epNum < 0 {
-		return "", "", "", false
+		return "", "", "", "", false
 	}
 	episode = strconv.Itoa(epNum)
 	rest := ""
+	sep := strings.TrimSpace(m[2])
+	if m[2] == " " {
+		sep = " "
+	}
 	if len(m) >= 4 {
 		rest = strings.TrimSpace(m[3])
 	}
@@ -3291,16 +3332,16 @@ func extractEpisodeLikeFromThirdBracketDetailed(rawTitle string) (episode string
 			spKind = strings.ToUpper(strings.TrimSpace(sm[1]))
 			epTitle = strings.TrimSpace(rest[len(strings.TrimSpace(sm[0])):])
 			epTitle = strings.TrimSpace(strings.TrimLeft(epTitle, "_ .-"))
-			return episode, spKind, epTitle, true
+			return episode, spKind, epTitle, "&", true
 		}
 	}
 	if sm := spKindLeadPattern.FindStringSubmatch(rest); len(sm) > 1 {
 		spKind = strings.ToUpper(strings.TrimSpace(sm[1]))
 		epTitle = strings.TrimSpace(rest[len(strings.TrimSpace(sm[0])):])
 		epTitle = strings.TrimSpace(strings.TrimLeft(epTitle, "_ .-"))
-		return episode, spKind, epTitle, true
+		return episode, spKind, epTitle, sep, true
 	}
-	return episode, "", rest, true
+	return episode, "", rest, sep, true
 }
 
 func extractTailBetweenThirdAndFourthBracket(rawTitle string) string {

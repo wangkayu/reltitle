@@ -2579,6 +2579,9 @@ func TestParserGroupRouteOverride_GroupEPRouteWGDL(t *testing.T) {
 	if got := canonicalTitle(res); got == "" {
 		t.Fatalf("title should not be empty")
 	}
+	if res.EPSlot == nil || res.EPSlot.Primary == nil || strings.TrimSpace(res.EPSlot.Primary.Source) != "group_route_override" {
+		t.Fatalf("expected group_route_override source, got=%+v", res.EPSlot)
+	}
 	for _, a := range canonicalAliases(res) {
 		if strings.Contains(a, "09 ") || strings.HasPrefix(strings.TrimSpace(a), "09_") {
 			t.Fatalf("episode-like alias should be pruned, aliases=%v", canonicalAliases(res))
@@ -2586,6 +2589,43 @@ func TestParserGroupRouteOverride_GroupEPRouteWGDL(t *testing.T) {
 	}
 	if res.ContentKind == "MOVIE" {
 		t.Fatalf("content_kind should not remain MOVIE, got=%q", res.ContentKind)
+	}
+}
+
+func TestParserGroupRouteOverride_AtlasUnderscoreSeparatorApplied(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[阿特拉斯字幕组·雪原市出差所][命运-奇异赝品_Fate／strange Fake][04_半神们的卡农曲][简繁日内封PGS][日语配音版_Japanese Dub][Web-DL Remux][1080p AVC AAC]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalEpisode(res); got != "4" {
+		t.Fatalf("episode=%q want=%q", got, "4")
+	}
+	if res.EPSlot == nil || res.EPSlot.Primary == nil || strings.TrimSpace(res.EPSlot.Primary.Source) != "group_route_override" {
+		t.Fatalf("expected group_route_override source, got=%+v", res.EPSlot)
+	}
+}
+
+func TestParserGroupRouteOverride_AtlasSpaceSeparatorNotApplied(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[阿特拉斯字幕组·雪原市出差所][命运-奇异赝品_Fate／strange Fake][04 半神们的卡农曲][简繁日内封PGS][日语配音版_Japanese Dub][Web-DL Remux][1080p AVC AAC]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if res.EPSlot != nil && res.EPSlot.Primary != nil && strings.TrimSpace(res.EPSlot.Primary.Source) == "group_route_override" {
+		t.Fatalf("space separator should not hit atlas group override, epslot=%+v", res.EPSlot)
 	}
 }
 

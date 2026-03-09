@@ -500,6 +500,111 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.75
+      - tokens: ["英语中字"]
+        emit:
+          - type: note
+            normalized: "ENG_AUDIO_CHS_SUBS"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["英語中字"]
+        emit:
+          - type: note
+            normalized: "ENG_AUDIO_CHS_SUBS"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["国语中字"]
+        emit:
+          - type: note
+            normalized: "CHN_AUDIO_CHS_SUBS"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["國語中字"]
+        emit:
+          - type: note
+            normalized: "CHN_AUDIO_CHS_SUBS"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["国粤双语中字"]
+        emit:
+          - type: note
+            normalized: "CHN_YUE_AUDIO_SUBS"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["國粵雙語中字"]
+        emit:
+          - type: note
+            normalized: "CHN_YUE_AUDIO_SUBS"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["无修版"]
+        emit:
+          - type: note
+            normalized: "UNCENSORED_VERSION"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["無修版"]
+        emit:
+          - type: note
+            normalized: "UNCENSORED_VERSION"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["无水印"]
+        emit:
+          - type: note
+            normalized: "WATERMARK_FREE"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["無水印"]
+        emit:
+          - type: note
+            normalized: "WATERMARK_FREE"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["附外挂字幕"]
+        emit:
+          - type: note
+            normalized: "EXTERNAL_SUBS"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["附外掛字幕"]
+        emit:
+          - type: note
+            normalized: "EXTERNAL_SUBS"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["附字幕颜色分角色"]
+        emit:
+          - type: note
+            normalized: "STYLIZED_SUBS"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["附字幕顏色分角色"]
+        emit:
+          - type: note
+            normalized: "STYLIZED_SUBS"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["合集版"]
+        emit:
+          - type: note
+            normalized: "CURATED_PACK"
+            token_index: -1
+        remove: true
+        confidence: 0.75
 
   - id: note_movie_bracket
     scope: bracket

@@ -1675,6 +1675,48 @@ func TestParserLexicon_SubAndSearchMetaTokensAreConsumed(t *testing.T) {
 	}
 }
 
+func TestParserLexicon_SubtitleStyleAndUncensoredMetaTokensAreConsumed(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Group][示例标题/Example Title][05][国语中字][国粤双语中字][英语中字][无修版][无水印][附外挂字幕][附字幕颜色分角色][合集版][1080p][WEB-DL]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	aliases := canonicalAliases(res)
+	for _, a := range aliases {
+		if strings.Contains(a, "国语中字") ||
+			strings.Contains(a, "国粤双语中字") ||
+			strings.Contains(a, "英语中字") ||
+			strings.Contains(a, "无修版") ||
+			strings.Contains(a, "无水印") ||
+			strings.Contains(a, "附外挂字幕") ||
+			strings.Contains(a, "附字幕颜色分角色") ||
+			strings.Contains(a, "合集版") {
+			t.Fatalf("meta token leaked into alias: %v", aliases)
+		}
+	}
+	notes := attrValues(res, model.AttrNote)
+	for _, want := range []string{
+		"CHN_AUDIO_CHS_SUBS",
+		"CHN_YUE_AUDIO_SUBS",
+		"ENG_AUDIO_CHS_SUBS",
+		"UNCENSORED_VERSION",
+		"WATERMARK_FREE",
+		"EXTERNAL_SUBS",
+		"STYLIZED_SUBS",
+		"CURATED_PACK",
+	} {
+		if !hasAttrValue(notes, want) {
+			t.Fatalf("expected note=%s, got=%v", want, notes)
+		}
+	}
+}
+
 func TestParserEpisodeRange_TVPackSuffixSplit(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

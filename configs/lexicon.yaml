@@ -6723,6 +6723,27 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.8
+      - tokens: ["nf", "web", "-", "dl"]
+        emit:
+          - type: platform
+            normalized: "NETFLIX"
+            token_index: 0
+        remove: true
+        confidence: 0.82
+      - tokens: ["nf", "webrip"]
+        emit:
+          - type: platform
+            normalized: "NETFLIX"
+            token_index: 0
+        remove: true
+        confidence: 0.8
+      - tokens: ["nf"]
+        emit:
+          - type: platform
+            normalized: "NETFLIX"
+            token_index: -1
+        remove: true
+        confidence: 0.78
       - scope: bracket
         tokens: ["nf"]
         emit:
@@ -6749,6 +6770,27 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.8
+      - tokens: ["cr", "web", "-", "dl"]
+        emit:
+          - type: platform
+            normalized: "CRUNCHYROLL"
+            token_index: 0
+        remove: true
+        confidence: 0.82
+      - tokens: ["cr", "webrip"]
+        emit:
+          - type: platform
+            normalized: "CRUNCHYROLL"
+            token_index: 0
+        remove: true
+        confidence: 0.8
+      - tokens: ["cr"]
+        emit:
+          - type: platform
+            normalized: "CRUNCHYROLL"
+            token_index: -1
+        remove: true
+        confidence: 0.75
       - scope: bracket
         tokens: ["cr"]
         emit:

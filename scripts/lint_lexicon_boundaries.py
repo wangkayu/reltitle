@@ -26,7 +26,7 @@ SHORT_ALNUM = re.compile(r"^[A-Za-z0-9]{1,2}$")
 DIGIT_CURATED_PACK = re.compile(r"^\d{1,4}(?:修正)?合集$", re.IGNORECASE)
 
 # Version short forms are intentionally global.
-SHORT_GLOBAL_ALLOWLIST = {"v2", "v3", "v4", "v5", "4k", "dv"}
+SHORT_GLOBAL_ALLOWLIST = {"v2", "v3", "v4", "v5", "4k", "dv", "nf", "cr"}
 
 
 @dataclass(frozen=True)

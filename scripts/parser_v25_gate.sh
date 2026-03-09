@@ -4,10 +4,12 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SCANNER="$REPO_ROOT/training/scripts/scan_retrieval_aliases_quality.py"
 OUT_DIR="$REPO_ROOT/training/artifacts/parser_v25_eval"
+LEXICON_LINT="$REPO_ROOT/scripts/lint_lexicon_boundaries.py"
 
 usage() {
   cat <<USAGE
 Usage: $(basename "$0") [--stage 10k|50k|120k|all] [--run-prefix PREFIX]
+                           [--skip-lexicon-lint]
 
 Examples:
   $(basename "$0") --stage 10k
@@ -17,6 +19,7 @@ USAGE
 
 STAGE="10k"
 RUN_PREFIX="gate"
+SKIP_LEXICON_LINT=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -27,6 +30,10 @@ while [[ $# -gt 0 ]]; do
     --run-prefix)
       RUN_PREFIX="$2"
       shift 2
+      ;;
+    --skip-lexicon-lint)
+      SKIP_LEXICON_LINT=1
+      shift 1
       ;;
     -h|--help)
       usage
@@ -47,6 +54,15 @@ case "$STAGE" in
     exit 2
     ;;
 esac
+
+if [[ "$SKIP_LEXICON_LINT" != "1" ]]; then
+  if [[ ! -f "$LEXICON_LINT" ]]; then
+    echo "Missing lexicon lint script: $LEXICON_LINT" >&2
+    exit 2
+  fi
+  echo "[gate] run lexicon boundary lint"
+  python3 "$LEXICON_LINT"
+fi
 
 run_stage() {
   local stage="$1"

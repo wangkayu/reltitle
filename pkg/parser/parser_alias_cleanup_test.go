@@ -2286,6 +2286,26 @@ func TestParserNotePromotion_1080pToResolution(t *testing.T) {
 	}
 }
 
+func TestParserNotePromotion_AgeRestrictedToContentRating(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[ANi] NUKITASHI 住在拔作島上的我該如何是好？ [年齡限制版] - 11 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrContentRating), "AGE_RESTRICTED") {
+		t.Fatalf("expected content_rating=AGE_RESTRICTED, got=%v", attrValues(res, model.AttrContentRating))
+	}
+	if hasAttrValue(attrValues(res, model.AttrNote), "AGE_RESTRICTED") {
+		t.Fatalf("AGE_RESTRICTED should be promoted from note, notes=%v", attrValues(res, model.AttrNote))
+	}
+}
+
 func TestParserLexicon_MonthAndFileshareMetaTokensAreConsumed(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

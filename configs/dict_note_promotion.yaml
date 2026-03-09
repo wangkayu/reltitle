@@ -77,6 +77,13 @@ rules:
       type: resolution
       normalized: 1080p
 
+  - id: note_to_content_rating_age_restricted
+    match:
+      note_values_case_insensitive: ["AGE_RESTRICTED"]
+    promote_to:
+      type: content_rating
+      normalized: AGE_RESTRICTED
+
 note_whitelist:
   # 未命中 promotion 且属于白名单的 note 保留
   - 检索

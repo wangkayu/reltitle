@@ -1733,16 +1733,29 @@ entries:
         confidence: 0.65
 
   - id: note_br
-    tokens: ["br"]
-    emit:
-      - type: note
-        normalized: "BR"
-        token_index: -1
-      - type: source_type
-        normalized: "BluRay"
-        token_index: -1
-    remove: true
-    confidence: 0.65
+    any_of:
+      - scope: bracket
+        tokens: ["br"]
+        emit:
+          - type: note
+            normalized: "BR"
+            token_index: -1
+          - type: source_type
+            normalized: "BluRay"
+            token_index: -1
+        remove: true
+        confidence: 0.65
+      - scope: paren
+        tokens: ["br"]
+        emit:
+          - type: note
+            normalized: "BR"
+            token_index: -1
+          - type: source_type
+            normalized: "BluRay"
+            token_index: -1
+        remove: true
+        confidence: 0.65
 
   - id: source_type_bluray
     any_of:
@@ -2944,22 +2957,42 @@ entries:
         confidence: 0.7
 
   - id: note_vf
-    tokens: ["vf"]
-    emit:
-      - type: note
-        normalized: "VF"
-        token_index: -1
-    remove: true
-    confidence: 0.6
+    any_of:
+      - scope: bracket
+        tokens: ["vf"]
+        emit:
+          - type: note
+            normalized: "VF"
+            token_index: -1
+        remove: true
+        confidence: 0.6
+      - scope: paren
+        tokens: ["vf"]
+        emit:
+          - type: note
+            normalized: "VF"
+            token_index: -1
+        remove: true
+        confidence: 0.6
 
   - id: note_vo
-    tokens: ["vo"]
-    emit:
-      - type: note
-        normalized: "VO"
-        token_index: -1
-    remove: true
-    confidence: 0.6
+    any_of:
+      - scope: bracket
+        tokens: ["vo"]
+        emit:
+          - type: note
+            normalized: "VO"
+            token_index: -1
+        remove: true
+        confidence: 0.6
+      - scope: paren
+        tokens: ["vo"]
+        emit:
+          - type: note
+            normalized: "VO"
+            token_index: -1
+        remove: true
+        confidence: 0.6
 
   - id: sub_nosub
     any_of:
@@ -4065,7 +4098,8 @@ entries:
 
   - id: note_bd_short
     any_of:
-      - tokens: ["BD"]
+      - scope: bracket
+        tokens: ["BD"]
         emit:
           - type: note
             normalized: "BD"
@@ -4075,7 +4109,30 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.7
-      - tokens: ["bd"]
+      - scope: bracket
+        tokens: ["bd"]
+        emit:
+          - type: note
+            normalized: "BD"
+            token_index: -1
+          - type: source_type
+            normalized: "BD"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - scope: paren
+        tokens: ["BD"]
+        emit:
+          - type: note
+            normalized: "BD"
+            token_index: -1
+          - type: source_type
+            normalized: "BD"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - scope: paren
+        tokens: ["bd"]
         emit:
           - type: note
             normalized: "BD"
@@ -5487,16 +5544,7 @@ entries:
     remove: true
     confidence: 0.75
 
-  - id: audio_dual_audio
-    tokens: ["dual", "audio"]
-    emit:
-      - type: audio_flag
-        normalized: "DUAL"
-        token_index: -1
-    remove: true
-    confidence: 0.8
-
-  - id: audio_dual_audio_dash
+  - id: audio_dual_audio_alt_order
     any_of:
       - scope: paren
         tokens: ["dual", "-", "audio"]
@@ -5844,13 +5892,6 @@ entries:
 
   - id: source_type_tc
     any_of:
-      - tokens: ["tc"]
-        emit:
-          - type: source_type
-            normalized: "TC"
-            token_index: -1
-        remove: true
-        confidence: 0.7
       - tokens: ["telecine"]
         emit:
           - type: source_type
@@ -5860,13 +5901,23 @@ entries:
         confidence: 0.7
 
   - id: source_type_r5
-    tokens: ["r5"]
-    emit:
-      - type: source_type
-        normalized: "R5"
-        token_index: -1
-    remove: true
-    confidence: 0.65
+    any_of:
+      - scope: bracket
+        tokens: ["r5"]
+        emit:
+          - type: source_type
+            normalized: "R5"
+            token_index: -1
+        remove: true
+        confidence: 0.65
+      - scope: paren
+        tokens: ["r5"]
+        emit:
+          - type: source_type
+            normalized: "R5"
+            token_index: -1
+        remove: true
+        confidence: 0.65
 
   - id: source_type_ppv
     tokens: ["ppv"]
@@ -6672,7 +6723,16 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.8
-      - tokens: ["nf"]
+      - scope: bracket
+        tokens: ["nf"]
+        emit:
+          - type: platform
+            normalized: "NETFLIX"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - scope: paren
+        tokens: ["nf"]
         emit:
           - type: platform
             normalized: "NETFLIX"
@@ -6689,7 +6749,16 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.8
-      - tokens: ["cr"]
+      - scope: bracket
+        tokens: ["cr"]
+        emit:
+          - type: platform
+            normalized: "CRUNCHYROLL"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - scope: paren
+        tokens: ["cr"]
         emit:
           - type: platform
             normalized: "CRUNCHYROLL"
@@ -7297,67 +7366,6 @@ entries:
   # Version (通用版本号) - 新增属性
   # 注意：这是文件/发布的版本，不是 EP 的版本
   # ============================================================
-
-  - id: version_v2
-    tokens: ["v2"]
-    emit:
-      - type: version
-        normalized: "V2"
-        token_index: -1
-    remove: true
-    confidence: 0.7
-
-  - id: version_v3
-    tokens: ["v3"]
-    emit:
-      - type: version
-        normalized: "V3"
-        token_index: -1
-    remove: true
-    confidence: 0.7
-
-  - id: version_v4
-    tokens: ["v4"]
-    emit:
-      - type: version
-        normalized: "V4"
-        token_index: -1
-    remove: true
-    confidence: 0.7
-
-  - id: version_ver2
-    any_of:
-      - tokens: ["ver2"]
-        emit:
-          - type: version
-            normalized: "V2"
-            token_index: -1
-        remove: true
-        confidence: 0.7
-      - tokens: ["ver", "2"]
-        emit:
-          - type: version
-            normalized: "V2"
-            token_index: -1
-        remove: true
-        confidence: 0.7
-
-  - id: version_ver3
-    any_of:
-      - tokens: ["ver3"]
-        emit:
-          - type: version
-            normalized: "V3"
-            token_index: -1
-        remove: true
-        confidence: 0.7
-      - tokens: ["ver", "3"]
-        emit:
-          - type: version
-            normalized: "V3"
-            token_index: -1
-        remove: true
-        confidence: 0.7
 
   # ============================================================
   # Upscaled (升频标志) - 新增属性

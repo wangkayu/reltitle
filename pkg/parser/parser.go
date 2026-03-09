@@ -1983,6 +1983,12 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	if group == "" {
 		group, groupSpan = extractHeadBracketGroupAfterLeadingParenMeta(tokens)
 	}
+	if group == "" {
+		if g := detectHeadBracketGroupFromRawTitle(rawTitle); g != "" {
+			group = g
+			groupSpan = [2]int{-1, -1}
+		}
+	}
 
 	if group != "" {
 		// If we can detect a reliable tail group from raw title (e.g. "-ANi"), the head bracket
@@ -5964,6 +5970,23 @@ func detectTailGroupFromRawTitle(rawTitle string) string {
 	return ""
 }
 
+func detectHeadBracketGroupFromRawTitle(rawTitle string) string {
+	rawTitle = strings.TrimSpace(rawTitle)
+	if rawTitle == "" {
+		return ""
+	}
+	rawTokens := tokenize.Tokenize(rawTitle)
+	if len(rawTokens) == 0 {
+		return ""
+	}
+	tokens := make([]model.Token, 0, len(rawTokens))
+	for _, t := range rawTokens {
+		tokens = append(tokens, model.Token{Text: t})
+	}
+	g, _ := extractHeadBracketGroup(tokens)
+	return strings.TrimSpace(g)
+}
+
 func promoteFrenchMultiNoteToAudioFlag(attrs []model.Attribute) {
 	if len(attrs) == 0 {
 		return
@@ -6692,7 +6715,9 @@ func (p *Parser) inferTitleTokenSpan(tokens []model.Token, episodeIdx int, episo
 		end = episodeRangeIdx
 	}
 	if episodeIdx >= 0 && episodeIdx < end {
-		end = episodeIdx
+		if shouldUseEpisodeAsTitleCut(tokens, start, episodeIdx) {
+			end = episodeIdx
+		}
 	}
 	if seasonCutIdx >= start && seasonCutIdx >= 0 && seasonCutIdx < end {
 		end = seasonCutIdx
@@ -6840,6 +6865,49 @@ func (p *Parser) inferTitleTokenSpan(tokens []model.Token, episodeIdx int, episo
 		return -1, -1
 	}
 	return first, last + 1
+}
+
+func firstVisibleTitleTokenIndex(tokens []model.Token, start int, end int) int {
+	if start < 0 {
+		start = 0
+	}
+	if end > len(tokens) {
+		end = len(tokens)
+	}
+	if start >= end {
+		return -1
+	}
+	for i := start; i < end; i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		t := strings.TrimSpace(tokens[i].Text)
+		if t == "" {
+			continue
+		}
+		if t == "[" || t == "]" || t == "【" || t == "】" || t == "(" || t == ")" || t == "（" || t == "）" {
+			continue
+		}
+		if t == "-" || t == "|" || t == "｜" || t == "/" || t == "／" {
+			continue
+		}
+		if isTitleNoiseToken(t) {
+			continue
+		}
+		return i
+	}
+	return -1
+}
+
+func shouldUseEpisodeAsTitleCut(tokens []model.Token, titleStart int, episodeIdx int) bool {
+	if episodeIdx < 0 || episodeIdx >= len(tokens) {
+		return false
+	}
+	first := firstVisibleTitleTokenIndex(tokens, titleStart, len(tokens))
+	if first >= 0 && episodeIdx < first {
+		return false
+	}
+	return true
 }
 
 var reDotSeparatedRes = regexp.MustCompile(`(?i)^\d{3,4}p$`)
@@ -7586,6 +7654,12 @@ func isLikelyMetaBracketText(s string) bool {
 	low := strings.ToLower(strings.TrimSpace(s))
 	up := strings.ToUpper(strings.TrimSpace(s))
 	trim := strings.TrimSpace(s)
+	if low == "4k" || low == "8k" {
+		return true
+	}
+	if strings.Contains(trim, "修正版") || strings.Contains(trim, "修正") {
+		return true
+	}
 	if trim == "无字幕" || trim == "無字幕" {
 		return true
 	}
@@ -8695,6 +8769,59 @@ var chineseEpisodeDecimalTailPattern = regexp.MustCompile(`^(\d{1,2})(?:集|话|
 var chineseEpisodeDecimalHeadPattern = regexp.MustCompile(`^第(\d{1,4})$`)
 var bracketCatalogIDPrefixPattern = regexp.MustCompile(`^[A-Z]{3,}[A-Z0-9]*$`)
 
+func hasDashSeparatorAroundToken(tokens []model.Token, idx int) bool {
+	if idx-1 >= 0 {
+		sep := strings.TrimSpace(tokens[idx-1].Text)
+		if sep == "-" || sep == "~" {
+			return true
+		}
+	}
+	if idx+1 < len(tokens) {
+		sep := strings.TrimSpace(tokens[idx+1].Text)
+		if sep == "-" || sep == "~" {
+			return true
+		}
+	}
+	return false
+}
+
+func looksLikeVolumeContextNumberToken(tokens []model.Token, idx int) bool {
+	if idx < 0 || idx >= len(tokens) {
+		return false
+	}
+	cur := strings.TrimSpace(tokens[idx].Text)
+	if !episodeOfTotalPattern.MatchString(cur) {
+		return false
+	}
+	if idx-1 >= 0 {
+		prev := strings.TrimSpace(tokens[idx-1].Text)
+		if volumeWordPattern.MatchString(prev) {
+			return true
+		}
+	}
+	if idx+1 < len(tokens) {
+		next := strings.TrimSpace(tokens[idx+1].Text)
+		if volumeWordPattern.MatchString(next) {
+			return true
+		}
+	}
+	if idx-2 >= 0 {
+		prevSep := strings.TrimSpace(tokens[idx-1].Text)
+		prevLead := strings.TrimSpace(tokens[idx-2].Text)
+		if prevSep == "." && volumeWordPattern.MatchString(prevLead) {
+			return true
+		}
+	}
+	if idx+2 < len(tokens) {
+		nextSep := strings.TrimSpace(tokens[idx+1].Text)
+		nextLead := strings.TrimSpace(tokens[idx+2].Text)
+		if nextSep == "." && volumeWordPattern.MatchString(nextLead) {
+			return true
+		}
+	}
+	return false
+}
+
 func detectEpisodeFromSPBracketSegment(tokens []model.Token) (string, int, bool) {
 	for i := 0; i < len(tokens); i++ {
 		if !isInBracket(tokens, i) {
@@ -8892,6 +9019,12 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 			}
 			n := strings.TrimSpace(tokens[i].Text)
 			if episodeOfTotalPattern.MatchString(n) {
+				if looksLikeVolumeContextNumberToken(tokens, i) {
+					continue
+				}
+				if hasMatchingSeasonNumberAroundToken(tokens, i, 12) && !hasDashSeparatorAroundToken(tokens, i) {
+					continue
+				}
 				if i-2 >= 0 {
 					prevSep := strings.TrimSpace(tokens[i-1].Text)
 					prevLead := strings.TrimSpace(tokens[i-2].Text)
@@ -9089,6 +9222,12 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 					continue
 				}
 			}
+			if prefix == "" && looksLikeVolumeContextNumberToken(tokens, i) {
+				continue
+			}
+			if prefix == "" && inBracket && hasMatchingSeasonNumberAroundToken(tokens, i, 12) && !hasDashSeparatorAroundToken(tokens, i) {
+				continue
+			}
 			signalScore := 0
 			if prefix == "" {
 				if shouldSkipPartIndexEpisodeCandidate(tokens, i, inBracket) {
@@ -9260,6 +9399,64 @@ func hasSeasonSignalAroundToken(tokens []model.Token, idx int, window int) bool 
 		}
 		if seasonSignalTokenPattern.MatchString(txt) || seasonSignalCJKTokenPattern.MatchString(txt) {
 			return true
+		}
+	}
+	return false
+}
+
+func hasMatchingSeasonNumberAroundToken(tokens []model.Token, idx int, window int) bool {
+	if len(tokens) == 0 || idx < 0 || idx >= len(tokens) {
+		return false
+	}
+	cur := strings.TrimLeft(strings.TrimSpace(tokens[idx].Text), "0")
+	if cur == "" {
+		cur = "0"
+	}
+	if !episodeOfTotalPattern.MatchString(cur) && cur != "0" {
+		return false
+	}
+	start := idx - window
+	if start < 0 {
+		start = 0
+	}
+	end := idx + window
+	if end >= len(tokens) {
+		end = len(tokens) - 1
+	}
+	matchSeasonVal := func(v string) bool {
+		v = strings.TrimLeft(strings.TrimSpace(v), "0")
+		if v == "" {
+			v = "0"
+		}
+		return v == cur
+	}
+	for i := start; i <= end; i++ {
+		txt := strings.TrimSpace(tokens[i].Text)
+		if txt == "" {
+			continue
+		}
+		if m := seasonOnlyPattern.FindStringSubmatch(txt); len(m) == 2 && matchSeasonVal(m[1]) {
+			return true
+		}
+		if m := seasonEmbeddedPattern.FindStringSubmatch(txt); len(m) == 2 && matchSeasonVal(m[1]) {
+			return true
+		}
+		if m := seasonCJKPattern.FindStringSubmatch(txt); len(m) == 2 {
+			if v := parseSmallSeasonNumberToken(m[1]); v != "" && matchSeasonVal(v) {
+				return true
+			}
+		}
+		if m := seasonOrdinalPattern.FindStringSubmatch(txt); len(m) == 2 {
+			if i+1 < len(tokens) && seasonWordLoosePattern.MatchString(strings.TrimSpace(tokens[i+1].Text)) && matchSeasonVal(m[1]) {
+				return true
+			}
+		}
+		if seasonWordLoosePattern.MatchString(txt) {
+			if i+1 < len(tokens) {
+				if v := parseSmallSeasonNumberToken(strings.TrimSpace(tokens[i+1].Text)); v != "" && matchSeasonVal(v) {
+					return true
+				}
+			}
 		}
 	}
 	return false
@@ -10053,7 +10250,8 @@ func (p *Parser) extractTitle(tokens []model.Token, episodeIdx int, episodeRange
 	if episodeIdx >= 0 && episodeIdx < end {
 		// If episode is embedded at the end of a title token like "...第08集",
 		// keep the token in title extraction and strip the suffix later.
-		if !embeddedChineseEpisodeSuffixPattern.MatchString(strings.TrimSpace(tokens[episodeIdx].Text)) {
+		if !embeddedChineseEpisodeSuffixPattern.MatchString(strings.TrimSpace(tokens[episodeIdx].Text)) &&
+			shouldUseEpisodeAsTitleCut(tokens, start, episodeIdx) {
 			end = episodeIdx
 		}
 	}

@@ -1221,6 +1221,112 @@ func TestParserEpisode_BracketCatalogIDNotMisreadAsEpisode(t *testing.T) {
 	}
 }
 
+func TestParserEpisode_SeasonNumberInAliasNotMisreadAsEpisode(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[FY-Raws]赛马娘 第三季 [Uma Musume ~Pretty Derby~ 3][ウマ娘 プリティーダービー Season 3][BDRip][1080P_x265(10bit)-FLAC][ALL]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalEpisode(res); got == "3" {
+		t.Fatalf("season number in alias must not be parsed as episode, got=%q", got)
+	}
+	if got := canonicalSeason(res); got != "3" {
+		t.Fatalf("season=%q want=%q", got, "3")
+	}
+}
+
+func TestParserEpisode_VolumeRangeNotMisreadAsEpisode(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[PMR]Re:从零开始的异世界生活 第三季/ [BDMV] Re Zero kara Hajimeru Isekai Seikatsu 3rd Season [Vol.1-Vol.5]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalEpisode(res); got == "1" || got == "5" {
+		t.Fatalf("volume range number must not be parsed as episode, got=%q", got)
+	}
+	if res != nil && res.EPSlot != nil {
+		for _, c := range res.EPSlot.Candidates {
+			ep := strings.TrimSpace(c.Episode)
+			if ep == "1" || ep == "5" {
+				t.Fatalf("volume range number must not be kept in epslot candidates: %+v", c)
+			}
+		}
+	}
+}
+
+func TestParserTitle_PreEpisodeTokenDoesNotBlankTitle(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[超次元ゲイム ネプテューヌ][简体字幕]OVA3 沐浴阳光的紫茄子花 陽だまりの茄花[超次元游戏海王星][Hyperdimension Neptunia][CHS]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	title := canonicalTitle(res)
+	if !strings.Contains(title, "沐浴阳光的紫茄子花") {
+		t.Fatalf("pre-episode token should not blank title, got=%q", title)
+	}
+	if got := canonicalEpisode(res); got != "3" {
+		t.Fatalf("episode=%q want=%q", got, "3")
+	}
+}
+
+func TestParserGroup_LeadingMetaBracketThenGroupDetected(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[4K][DBD-Raws][少女与战车 最终章 第1话/Girls und Panzer das Finale 01][2160P][BDRip][HEVC-10bit][简繁外挂][FLACx4][MKV](ガールズ&パンツァー 最終章 第1話)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalGroup(res); got != "DBD-Raws" {
+		t.Fatalf("group=%q want=%q", got, "DBD-Raws")
+	}
+	if got := canonicalTitle(res); !strings.Contains(got, "少女与战车") {
+		t.Fatalf("title should keep main title, got=%q", got)
+	}
+}
+
+func TestParserGroup_LeadingVersionMetaThenGroupDetected(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[V2修正版][夜莺家族&YYQ字幕组]New Doraemon 哆啦A梦新番[707][2022.05.21][AVC][1080P][GB_JP]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := strings.ReplaceAll(canonicalGroup(res), " ", ""); got != "夜莺家族&YYQ字幕组" {
+		t.Fatalf("group(normalized)=%q want=%q", got, "夜莺家族&YYQ字幕组")
+	}
+	if got := canonicalTitle(res); !strings.Contains(got, "New Doraemon") {
+		t.Fatalf("title should keep program title, got=%q", got)
+	}
+}
+
 func TestParserPlatform_BSExChannelDoesNotTriggerSPKindEX(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

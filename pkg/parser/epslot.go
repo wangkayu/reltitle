@@ -103,6 +103,9 @@ func buildEPSlotCandidates(tokens []model.Token, season string, seasonIdx int, e
 		}
 		// Single episode digits (often in brackets). Keep it conservative.
 		if episodeOfTotalPattern.MatchString(txt) {
+			if looksLikeVolumeContextNumberToken(tokens, i) {
+				continue
+			}
 			if looksLikeDottedNumericSequence(tokens, i) {
 				continue
 			}
@@ -126,6 +129,9 @@ func buildEPSlotCandidates(tokens []model.Token, season string, seasonIdx int, e
 			}
 			// Avoid obvious meta bracket content.
 			if isInBracket(tokens, i) {
+				if hasMatchingSeasonNumberAroundToken(tokens, i, 12) && !hasDashSeparatorAroundToken(tokens, i) {
+					continue
+				}
 				// Guard: skip catalog/product IDs like "[KAXA-9023]".
 				if i-2 >= 0 {
 					prevSep := strings.TrimSpace(tokens[i-1].Text)

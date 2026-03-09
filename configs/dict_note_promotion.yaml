@@ -63,6 +63,13 @@ rules:
       type: release_status
       normalized_from_token: true
 
+  - id: note_to_contents_movie
+    match:
+      note_values_case_insensitive: ["MOVIE"]
+    promote_to:
+      type: contents
+      normalized: MOVIE
+
 note_whitelist:
   # 未命中 promotion 且属于白名单的 note 保留
   - 检索

@@ -3033,6 +3033,26 @@ func TestParserContentsMarker_CJKMovieMarkerInBracket(t *testing.T) {
 	}
 }
 
+func TestParserContentsMarker_EnglishMovieBracketPromotedFromNote(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[TestGroup] Sample Title [Movie] [1080p][WEB-DL]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrContents), "MOVIE") {
+		t.Fatalf("expected contents MOVIE, got=%v", attrValues(res, model.AttrContents))
+	}
+	if hasAttrValue(attrValues(res, model.AttrNote), "MOVIE") {
+		t.Fatalf("MOVIE note should be promoted to contents, notes=%v", attrValues(res, model.AttrNote))
+	}
+}
+
 func TestParserContentsMarker_CJKMainPlusOVAInBracket(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

@@ -898,6 +898,34 @@ func TestParserTitle_TailGroupSuffixTrimmedFromTitle(t *testing.T) {
 	}
 }
 
+func TestParserTitle_SpacedTailGroupSuffixTrimmedFromTitle(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "100 METERS (2025) MULTi 1080p WEB AV1 E-AC-3 -Tsundere-Raws (NF) (VF, FRENCH, VOSTFR, Hyakuemu.)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalGroup(res); got != "Tsundere-Raws" {
+		t.Fatalf("group=%q want=%q", got, "Tsundere-Raws")
+	}
+	title := canonicalTitle(res)
+	upper := strings.ToUpper(title)
+	if strings.Contains(upper, "TSUNDERE") || strings.Contains(upper, "RAWS") {
+		t.Fatalf("title should not contain spaced tail group suffix, got=%q", title)
+	}
+	for _, tok := range res.Tokens {
+		txt := strings.ToLower(strings.TrimSpace(tok.Text))
+		if (txt == "tsundere" || txt == "raws") && !tok.Removed {
+			t.Fatalf("tail group tokens should be consumed, tokens=%v", res.Tokens)
+		}
+	}
+}
+
 func TestParserSpecial_CMNotDetectedFromLengthUnit(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {
@@ -936,6 +964,72 @@ func TestParserLexicon_CommaLanguageTokensAreConsumed(t *testing.T) {
 	}
 	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "VOSTFR") {
 		t.Fatalf("expected sub_flag=VOSTFR, attrs=%v", attrValues(res, model.AttrSubFlag))
+	}
+}
+
+func TestParserFrenchSignals_VfVostfrAreStructured(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "Aishite Knight (Lucille, amour et rock 'n roll) MULTI DVD CUSTOM VF/VOSTFR"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "FRA") {
+		t.Fatalf("expected audio_lang=FRA, got=%v", attrValues(res, model.AttrAudioLang))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioFlag), "DUB") {
+		t.Fatalf("expected audio_flag=DUB, got=%v", attrValues(res, model.AttrAudioFlag))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "VOSTFR") {
+		t.Fatalf("expected sub_flag=VOSTFR, got=%v", attrValues(res, model.AttrSubFlag))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSubLang), "FRA") {
+		t.Fatalf("expected sub_lang=FRA, got=%v", attrValues(res, model.AttrSubLang))
+	}
+}
+
+func TestParserFrenchSignals_TrueFrenchStructured(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "Pokemon.Film.01.Mewtwo.contre.attaque.1998.TRUEFRENCH.DVDISO.576p.MPEG.FranceTV-MaitreAnonyme.iso"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "FRA") {
+		t.Fatalf("expected audio_lang=FRA, got=%v", attrValues(res, model.AttrAudioLang))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioFlag), "DUB") {
+		t.Fatalf("expected audio_flag=DUB, got=%v", attrValues(res, model.AttrAudioFlag))
+	}
+}
+
+func TestParserFrenchSignals_FrenchSubtitleStructured(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[TestGroup] Example Show [法文字幕][1080p][WEB-DL]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSubLang), "FRA") {
+		t.Fatalf("expected sub_lang=FRA, got=%v", attrValues(res, model.AttrSubLang))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "SUBS") {
+		t.Fatalf("expected sub_flag=SUBS, got=%v", attrValues(res, model.AttrSubFlag))
 	}
 }
 

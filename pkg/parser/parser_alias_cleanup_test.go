@@ -1206,6 +1206,13 @@ func TestParserEpisode_BracketCatalogIDNotMisreadAsEpisode(t *testing.T) {
 	if got := canonicalEpisode(res); got == "9023" {
 		t.Fatalf("catalog id should not be parsed as episode, got=%q", got)
 	}
+	if res != nil && res.EPSlot != nil {
+		for _, c := range res.EPSlot.Candidates {
+			if strings.TrimSpace(c.Episode) == "9023" {
+				t.Fatalf("catalog id should not be kept in epslot candidates: %+v", c)
+			}
+		}
+	}
 }
 
 func TestParserPlatform_BSExChannelDoesNotTriggerSPKindEX(t *testing.T) {

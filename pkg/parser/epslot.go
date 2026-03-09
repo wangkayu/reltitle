@@ -126,6 +126,14 @@ func buildEPSlotCandidates(tokens []model.Token, season string, seasonIdx int, e
 			}
 			// Avoid obvious meta bracket content.
 			if isInBracket(tokens, i) {
+				// Guard: skip catalog/product IDs like "[KAXA-9023]".
+				if i-2 >= 0 {
+					prevSep := strings.TrimSpace(tokens[i-1].Text)
+					prevLead := strings.TrimSpace(tokens[i-2].Text)
+					if prevSep == "-" && bracketCatalogIDPrefixPattern.MatchString(prevLead) {
+						continue
+					}
+				}
 				if isTitlePrefixedDigitRangeInBracket(tokens, i) {
 					continue
 				}

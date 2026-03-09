@@ -5,11 +5,13 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SCANNER="$REPO_ROOT/training/scripts/scan_retrieval_aliases_quality.py"
 OUT_DIR="$REPO_ROOT/training/artifacts/parser_v25_eval"
 LEXICON_LINT="$REPO_ROOT/scripts/lint_lexicon_boundaries.py"
+SP_FOCUS_GATE="$REPO_ROOT/scripts/parser_v25_sp_focus_gate.sh"
 
 usage() {
   cat <<USAGE
 Usage: $(basename "$0") [--stage 10k|50k|120k|all] [--run-prefix PREFIX]
                            [--skip-lexicon-lint]
+                           [--skip-sp-focus]
 
 Examples:
   $(basename "$0") --stage 10k
@@ -20,6 +22,7 @@ USAGE
 STAGE="10k"
 RUN_PREFIX="gate"
 SKIP_LEXICON_LINT=0
+RUN_SP_FOCUS=1
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -33,6 +36,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --skip-lexicon-lint)
       SKIP_LEXICON_LINT=1
+      shift 1
+      ;;
+    --skip-sp-focus)
+      RUN_SP_FOCUS=0
       shift 1
       ;;
     -h|--help)
@@ -62,6 +69,11 @@ if [[ "$SKIP_LEXICON_LINT" != "1" ]]; then
   fi
   echo "[gate] run lexicon boundary lint"
   python3 "$LEXICON_LINT"
+fi
+
+if [[ "$RUN_SP_FOCUS" == "1" && ! -f "$SP_FOCUS_GATE" ]]; then
+  echo "Missing sp focus gate script: $SP_FOCUS_GATE" >&2
+  exit 2
 fi
 
 run_stage() {
@@ -137,6 +149,11 @@ if [[ "$STAGE" == "all" ]]; then
   run_stage 120k
 else
   run_stage "$STAGE"
+fi
+
+if [[ "$RUN_SP_FOCUS" == "1" ]]; then
+  echo "[gate] run sp focus gate"
+  bash "$SP_FOCUS_GATE" --run-prefix "${RUN_PREFIX}_sp_focus"
 fi
 
 echo "[gate] done"

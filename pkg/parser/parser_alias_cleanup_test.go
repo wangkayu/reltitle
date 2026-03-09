@@ -1637,6 +1637,44 @@ func TestParserLexicon_RecruitmentVariantsAndAnnouncementAreConsumed(t *testing.
 	}
 }
 
+func TestParserLexicon_SubAndSearchMetaTokensAreConsumed(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Group][示例标题/Example Title][04][中文字幕][简体中文][特效字幕][日语中字][（檢索][1080p][WEB-DL]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	aliases := canonicalAliases(res)
+	for _, a := range aliases {
+		if strings.Contains(a, "中文字幕") ||
+			strings.Contains(a, "简体中文") ||
+			strings.Contains(a, "特效字幕") ||
+			strings.Contains(a, "日语中字") ||
+			strings.Contains(a, "日語中字") ||
+			strings.Contains(a, "（檢索") {
+			t.Fatalf("meta token leaked into alias: %v", aliases)
+		}
+	}
+	notes := attrValues(res, model.AttrNote)
+	if !hasAttrValue(notes, "CHS_SUBS") {
+		t.Fatalf("expected note=CHS_SUBS, got=%v", notes)
+	}
+	if !hasAttrValue(notes, "FX_SUBS") {
+		t.Fatalf("expected note=FX_SUBS, got=%v", notes)
+	}
+	if !hasAttrValue(notes, "JPN_AUDIO_CHS_SUBS") {
+		t.Fatalf("expected note=JPN_AUDIO_CHS_SUBS, got=%v", notes)
+	}
+	if !hasAttrValue(notes, "SEARCH_HINT_META") {
+		t.Fatalf("expected note=SEARCH_HINT_META, got=%v", notes)
+	}
+}
+
 func TestParserEpisodeRange_TVPackSuffixSplit(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

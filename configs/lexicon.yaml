@@ -329,7 +329,21 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.75
+      - tokens: ["（檢索"]
+        emit:
+          - type: note
+            normalized: "SEARCH_HINT_META"
+            token_index: -1
+        remove: true
+        confidence: 0.75
       - tokens: ["（檢索用"]
+        emit:
+          - type: note
+            normalized: "SEARCH_HINT_META"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["（搜索用"]
         emit:
           - type: note
             normalized: "SEARCH_HINT_META"
@@ -441,6 +455,48 @@ entries:
         emit:
           - type: note
             normalized: "DIGITAL_REMASTER"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["中文字幕"]
+        emit:
+          - type: note
+            normalized: "CHS_SUBS"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["简体中文"]
+        emit:
+          - type: note
+            normalized: "CHS_SUBS"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["簡體中文"]
+        emit:
+          - type: note
+            normalized: "CHS_SUBS"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["特效字幕"]
+        emit:
+          - type: note
+            normalized: "FX_SUBS"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["日语中字"]
+        emit:
+          - type: note
+            normalized: "JPN_AUDIO_CHS_SUBS"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["日語中字"]
+        emit:
+          - type: note
+            normalized: "JPN_AUDIO_CHS_SUBS"
             token_index: -1
         remove: true
         confidence: 0.75

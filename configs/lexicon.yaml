@@ -6264,6 +6264,25 @@ entries:
         remove: true
         confidence: 0.85
 
+  - id: resolution_8k
+    any_of:
+      - scope: bracket
+        tokens: ["8k"]
+        emit:
+          - type: resolution
+            normalized: "4320p"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - scope: paren
+        tokens: ["8k"]
+        emit:
+          - type: resolution
+            normalized: "4320p"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+
   - id: resolution_480p
     tokens: ["480p"]
     emit:

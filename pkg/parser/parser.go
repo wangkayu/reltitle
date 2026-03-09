@@ -1727,6 +1727,53 @@ func New(cfg *config.Config) *Parser {
 	return p
 }
 
+func selectGroupFromAttrs(attrs []model.Attribute) (string, [2]int, bool) {
+	best := ""
+	span := [2]int{0, 0}
+	bestScore := -1
+	for _, a := range attrs {
+		if a.Type != model.AttrGroup {
+			continue
+		}
+		g := strings.TrimSpace(a.Normalized)
+		if g == "" {
+			continue
+		}
+		score := 0
+		if strings.EqualFold(strings.TrimSpace(a.Source), "lexicon") {
+			score += 100
+		}
+		if a.Confidence > 0 {
+			score += int(a.Confidence * 10)
+		}
+		if score > bestScore {
+			bestScore = score
+			best = g
+			span = [2]int{a.TokenStart, a.TokenEnd}
+		}
+	}
+	if bestScore < 0 {
+		return "", [2]int{0, 0}, false
+	}
+	return best, span, true
+}
+
+func hasGroupAttr(attrs []model.Attribute, group string) bool {
+	group = strings.TrimSpace(group)
+	if group == "" {
+		return false
+	}
+	for _, a := range attrs {
+		if a.Type != model.AttrGroup {
+			continue
+		}
+		if strings.EqualFold(strings.TrimSpace(a.Normalized), group) {
+			return true
+		}
+	}
+	return false
+}
+
 func buildTypeCanonicalMap(cfg *config.Config, targetType string) map[string]string {
 	out := make(map[string]string)
 	if cfg == nil {
@@ -1976,7 +2023,15 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	removePreYearNoiseNumberTokens(tokens)
 	tailParenBlock := detectTailParenBlock(tokens)
 
-	group, groupSpan := extractHeadBracketGroup(tokens)
+	group := ""
+	groupSpan := [2]int{0, 0}
+	if g0, span0, ok := selectGroupFromAttrs(attrs); ok {
+		group = normalizeGroupText(g0)
+		groupSpan = span0
+	}
+	if group == "" {
+		group, groupSpan = extractHeadBracketGroup(tokens)
+	}
 	if group == "" {
 		group, groupSpan = extractHeadParenGroup(tokens)
 	}
@@ -2006,10 +2061,13 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 		// Group normalization is now handled by grouplist.yaml configuration
 		// Apply normal normalization
 		group = normalizeGroupText(group)
-
-		attrs = append(attrs, model.Attribute{Type: model.AttrGroup, Normalized: group, TokenStart: groupSpan[0], TokenEnd: groupSpan[1], Confidence: 0.9, Source: "heuristic"})
-		for i := groupSpan[0]; i < groupSpan[1]; i++ {
-			tokens[i].Removed = true
+		if !hasGroupAttr(attrs, group) {
+			attrs = append(attrs, model.Attribute{Type: model.AttrGroup, Normalized: group, TokenStart: groupSpan[0], TokenEnd: groupSpan[1], Confidence: 0.9, Source: "heuristic"})
+		}
+		if groupSpan[0] >= 0 && groupSpan[1] > groupSpan[0] {
+			for i := groupSpan[0]; i < groupSpan[1] && i < len(tokens); i++ {
+				tokens[i].Removed = true
+			}
 		}
 	}
 	if group == "" {
@@ -7445,6 +7503,9 @@ func areLeadingHeadBlocksMeta(tokens []model.Token, blocks [][3]int) bool {
 		return false
 	}
 	for _, b := range blocks {
+		if !headBracketBlockHasAliveToken(tokens, b) {
+			continue
+		}
 		text := headBracketBlockText(tokens, b)
 		if text == "" {
 			continue
@@ -7654,12 +7715,6 @@ func isLikelyMetaBracketText(s string) bool {
 	low := strings.ToLower(strings.TrimSpace(s))
 	up := strings.ToUpper(strings.TrimSpace(s))
 	trim := strings.TrimSpace(s)
-	if low == "4k" || low == "8k" {
-		return true
-	}
-	if strings.Contains(trim, "修正版") || strings.Contains(trim, "修正") {
-		return true
-	}
 	if trim == "无字幕" || trim == "無字幕" {
 		return true
 	}

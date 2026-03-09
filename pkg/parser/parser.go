@@ -2517,6 +2517,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	attrs = collapseOverlappingSpecificAudioCodecs(attrs)
 	ctx.AudioSlot = reconcileAudioSlotWithAttributes(ctx.AudioSlot, attrs)
 	epslot = ensureSPPrimaryFromSPKind(epslot, season, episode, episodeRange, episodeList, spKind)
+	epslot = adjudicateEPSlotPrimaryAxis(epslot, tokens, season)
 	epslot = pruneBatchEPSlotForConservativeOutput(epslot, contentKind, episode, episodeRange, spKind)
 	if isUnknownOutput(contentKind, templateID) {
 		attrs = pruneUnknownCoreAttributes(attrs)
@@ -2616,6 +2617,86 @@ func ensureSPPrimaryFromSPKind(epslot *model.EPSlot, season string, episode stri
 			SPKind: k,
 			Source: "sp_kind",
 		})
+	}
+	return epslot
+}
+
+func isUnknownEPSlotAxis(axis string) bool {
+	ax := strings.ToUpper(strings.TrimSpace(axis))
+	return ax == "" || ax == "UNKNOWN"
+}
+
+func inferEPAxisFromTokenContext(tokens []model.Token, tokenIdx int) string {
+	if tokenIdx < 0 || tokenIdx >= len(tokens) {
+		return ""
+	}
+	cur := strings.TrimSpace(tokens[tokenIdx].Text)
+	if cur == "" {
+		return ""
+	}
+	if chineseEpisodeSuffixPattern.MatchString(cur) || chineseEpisodeWithSuffixMarkerPattern.MatchString(cur) || embeddedChineseEpisodeSuffixPattern.MatchString(cur) {
+		return "ABS"
+	}
+	if isInBracket(tokens, tokenIdx) && episodeOfTotalPattern.MatchString(cur) {
+		return "ABS"
+	}
+	prev := ""
+	next := ""
+	if tokenIdx-1 >= 0 {
+		prev = strings.TrimSpace(tokens[tokenIdx-1].Text)
+	}
+	if tokenIdx+1 < len(tokens) {
+		next = strings.TrimSpace(tokens[tokenIdx+1].Text)
+	}
+	if strings.EqualFold(prev, "episode") || strings.EqualFold(prev, "ep") ||
+		strings.EqualFold(next, "episode") || strings.EqualFold(next, "ep") {
+		return "ABS"
+	}
+	if prev == "第" && (next == "集" || next == "话" || next == "話") {
+		return "ABS"
+	}
+	if next == "集" || next == "话" || next == "話" {
+		return "ABS"
+	}
+	return ""
+}
+
+func adjudicateEPSlotPrimaryAxis(epslot *model.EPSlot, tokens []model.Token, season string) *model.EPSlot {
+	if epslot == nil || epslot.Primary == nil {
+		return epslot
+	}
+	primary := epslot.Primary
+	kind := strings.ToUpper(strings.TrimSpace(primary.Kind))
+	if kind == "" {
+		return epslot
+	}
+	if kind == "SP" {
+		if isUnknownEPSlotAxis(primary.Axis) {
+			ax := strings.ToUpper(strings.TrimSpace(primary.SPKind))
+			if ax == "" {
+				ax = "SP"
+			}
+			primary.Axis = ax
+		}
+		return epslot
+	}
+	if !isUnknownEPSlotAxis(primary.Axis) {
+		return epslot
+	}
+	if strings.TrimSpace(primary.Season) != "" || strings.TrimSpace(season) != "" {
+		primary.Axis = "SE"
+		return epslot
+	}
+	src := strings.ToLower(strings.TrimSpace(primary.Source))
+	if strings.Contains(src, "sxxexx") {
+		primary.Axis = "SE"
+		return epslot
+	}
+	if kind == "EP" {
+		if axis := inferEPAxisFromTokenContext(tokens, primary.TokenStart); axis != "" {
+			primary.Axis = axis
+			return epslot
+		}
 	}
 	return epslot
 }

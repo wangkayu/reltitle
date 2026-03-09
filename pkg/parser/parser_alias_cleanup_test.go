@@ -1071,6 +1071,66 @@ func TestParserSpecial_DashSpecialPhrasePromotesEPSlotPrimarySP(t *testing.T) {
 	}
 }
 
+func TestParserEPSlotAxis_BracketEpisodeUsesABS(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Group] Sample Title [07][1080p][WEB-DL]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if res.EPSlot == nil || res.EPSlot.Primary == nil {
+		t.Fatalf("epslot.primary should not be nil")
+	}
+	if got := strings.ToUpper(strings.TrimSpace(res.EPSlot.Primary.Axis)); got != "ABS" {
+		t.Fatalf("epslot.primary.axis=%q want=%q", got, "ABS")
+	}
+}
+
+func TestParserEPSlotAxis_EpisodeKeywordUsesABS(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Group] Sample Title - Episode 52 [1080p][WEB-DL]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if res.EPSlot == nil || res.EPSlot.Primary == nil {
+		t.Fatalf("epslot.primary should not be nil")
+	}
+	if got := strings.ToUpper(strings.TrimSpace(res.EPSlot.Primary.Axis)); got != "ABS" {
+		t.Fatalf("epslot.primary.axis=%q want=%q", got, "ABS")
+	}
+}
+
+func TestParserEPSlotAxis_DashEpisodeWithoutSignalsKeepsUNKNOWN(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Group] Sample Title - 07 [1080p][WEB-DL]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if res.EPSlot == nil || res.EPSlot.Primary == nil {
+		t.Fatalf("epslot.primary should not be nil")
+	}
+	if got := strings.ToUpper(strings.TrimSpace(res.EPSlot.Primary.Axis)); got != "UNKNOWN" {
+		t.Fatalf("epslot.primary.axis=%q want=%q", got, "UNKNOWN")
+	}
+}
+
 func TestParserPlatform_BSExChannelDoesNotTriggerSPKindEX(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

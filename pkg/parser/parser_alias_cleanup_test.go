@@ -1172,6 +1172,12 @@ func TestParserEpisodeRange_EPrefixedRangeDetected(t *testing.T) {
 	if got := canonicalSeason(res); got != "1" {
 		t.Fatalf("season=%q want=%q", got, "1")
 	}
+	if got := canonicalGroup(res); got != "" {
+		t.Fatalf("group should stay empty for no-group title, got=%q", got)
+	}
+	if got := firstAttrValue(res, model.AttrTailGroup); got != "" {
+		t.Fatalf("tail_group should be empty for e-prefixed range token, got=%q", got)
+	}
 }
 
 func TestParserEpisode_DecimalChineseEpisodeDetected(t *testing.T) {

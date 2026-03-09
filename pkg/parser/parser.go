@@ -9871,6 +9871,10 @@ func isTailGroupToken(s string) bool {
 	if s == "" {
 		return false
 	}
+	// Guard: EP-like tokens such as E192 / EP07 are episode markers, not release groups.
+	if episodePrefixedTokenPattern.MatchString(s) {
+		return false
+	}
 	if !tailGroupPattern.MatchString(s) {
 		return false
 	}

@@ -105,6 +105,13 @@ rules:
       type: version
       normalized: rev
 
+  - id: note_to_hdr
+    match:
+      note_values_case_insensitive: ["HDR"]
+    promote_to:
+      type: hdr
+      normalized: HDR
+
 note_whitelist:
   # 未命中 promotion 且属于白名单的 note 保留
   - 检索

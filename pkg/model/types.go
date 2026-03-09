@@ -96,6 +96,7 @@ const (
 	AttrPlatform       AttrType = "platform"
 	AttrPlatformRegion AttrType = "platform_region"
 	AttrOriginRegion   AttrType = "origin_region"
+	AttrHDR            AttrType = "hdr"
 	AttrCRC            AttrType = "crc"
 	AttrTech           AttrType = "tech"
 	AttrTailGroup      AttrType = "tail_group"

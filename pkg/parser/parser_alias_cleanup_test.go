@@ -4460,6 +4460,9 @@ func TestLexiconDict_4KHDRComboShouldNotPolluteTitle(t *testing.T) {
 	if !hasAttrValue(attrValues(res, model.AttrResolution), "2160p") {
 		t.Fatalf("expected resolution 2160p, got=%v", attrValues(res, model.AttrResolution))
 	}
+	if !hasAttrValue(attrValues(res, model.AttrHDR), "HDR") {
+		t.Fatalf("expected hdr=HDR from 4k_hdr combo, got=%v", attrValues(res, model.AttrHDR))
+	}
 }
 
 func TestLexiconDict_DVTokenToDolbyVisionHDR(t *testing.T) {
@@ -4474,8 +4477,8 @@ func TestLexiconDict_DVTokenToDolbyVisionHDR(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse failed: %v", err)
 	}
-	if !hasAttrValue(attrValues(res, model.AttrType("hdr")), "DOLBY_VISION") {
-		t.Fatalf("expected hdr DOLBY_VISION, got=%v", attrValues(res, model.AttrType("hdr")))
+	if !hasAttrValue(attrValues(res, model.AttrHDR), "DOLBY_VISION") {
+		t.Fatalf("expected hdr DOLBY_VISION, got=%v", attrValues(res, model.AttrHDR))
 	}
 }
 
@@ -4618,7 +4621,7 @@ func TestLexiconDict_GluedTechTokensShouldBeConsumed(t *testing.T) {
 			raw:   "Chainsaw.Man.The.Movie.Reze.Arc.2025.REPACK.2160p.MA.WEB-DL.DUAL.DDP5.1.Atmos.DV.HDR10P.H.265-BYNDR",
 			token: "DV",
 			expectAttrs: map[model.AttrType]string{
-				model.AttrType("hdr"): "DOLBY_VISION",
+				model.AttrHDR: "DOLBY_VISION",
 				model.AttrAudioCodec:  "EAC3",
 			},
 		},
@@ -4627,7 +4630,7 @@ func TestLexiconDict_GluedTechTokensShouldBeConsumed(t *testing.T) {
 			raw:   "Chainsaw.Man.The.Movie.Reze.Arc.2025.REPACK.2160p.MA.WEB-DL.DUAL.DDP5.1.Atmos.DV.HDR10P.H.265-BYNDR",
 			token: "HDR10P",
 			expectAttrs: map[model.AttrType]string{
-				model.AttrType("hdr"): "HDR10_PLUS",
+				model.AttrHDR: "HDR10_PLUS",
 			},
 		},
 		{

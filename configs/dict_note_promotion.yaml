@@ -84,6 +84,20 @@ rules:
       type: content_rating
       normalized: AGE_RESTRICTED
 
+  - id: note_to_edition_bdmv
+    match:
+      note_values_case_insensitive: ["BDMV"]
+    promote_to:
+      type: edition
+      normalized: BDMV
+
+  - id: note_to_edition_dvd_iso
+    match:
+      note_values_case_insensitive: ["DVD_ISO", "DVDISO"]
+    promote_to:
+      type: edition
+      normalized: DVD_ISO
+
 note_whitelist:
   # 未命中 promotion 且属于白名单的 note 保留
   - 检索

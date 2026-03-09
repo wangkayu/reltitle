@@ -1807,8 +1807,11 @@ func TestParserLexicon_MediaToken_R2JDVDISOConsumed(t *testing.T) {
 	if !hasAttrValue(attrValues(res, model.AttrPlatformRegion), "JP") {
 		t.Fatalf("expected platform_region=JP, got=%v", attrValues(res, model.AttrPlatformRegion))
 	}
-	if !hasAttrValue(attrValues(res, model.AttrNote), "DVD_ISO") {
-		t.Fatalf("expected note=DVD_ISO, got=%v", attrValues(res, model.AttrNote))
+	if !hasAttrValue(attrValues(res, model.AttrEdition), "DVD_ISO") {
+		t.Fatalf("expected edition=DVD_ISO, got=%v", attrValues(res, model.AttrEdition))
+	}
+	if hasAttrValue(attrValues(res, model.AttrNote), "DVD_ISO") {
+		t.Fatalf("DVD_ISO should not remain in note, notes=%v", attrValues(res, model.AttrNote))
 	}
 	if title := strings.ToLower(canonicalTitle(res)); strings.Contains(title, "iso") {
 		t.Fatalf("iso residual should not leak into title, title=%q", canonicalTitle(res))
@@ -1818,6 +1821,29 @@ func TestParserLexicon_MediaToken_R2JDVDISOConsumed(t *testing.T) {
 		if (txt == "dvd" || txt == "iso") && !tok.Removed {
 			t.Fatalf("dvd/iso tokens should be consumed, tokens=%v", res.Tokens)
 		}
+	}
+}
+
+func TestParserLexicon_MediaToken_BDMVPromotedToEdition(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[BDMV] CITY THE ANIMATION Vol.1-2"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrEdition), "BDMV") {
+		t.Fatalf("expected edition=BDMV, got=%v", attrValues(res, model.AttrEdition))
+	}
+	if hasAttrValue(attrValues(res, model.AttrNote), "BDMV") {
+		t.Fatalf("BDMV should not remain in note, notes=%v", attrValues(res, model.AttrNote))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSourceType), "BD") {
+		t.Fatalf("expected source_type=BD, got=%v", attrValues(res, model.AttrSourceType))
 	}
 }
 

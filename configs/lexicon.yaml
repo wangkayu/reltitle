@@ -221,6 +221,20 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.8
+      - tokens: ["急招翻译"]
+        emit:
+          - type: note
+            normalized: "RECRUITMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["急招翻譯"]
+        emit:
+          - type: note
+            normalized: "RECRUITMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
       - tokens: ["招募時軸"]
         emit:
           - type: note
@@ -386,6 +400,34 @@ entries:
         remove: true
         confidence: 0.7
       - tokens: ["新番速覽計劃"]
+        emit:
+          - type: note
+            normalized: "ANNOUNCEMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["（下周停播）"]
+        emit:
+          - type: note
+            normalized: "ANNOUNCEMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["（下週停播）"]
+        emit:
+          - type: note
+            normalized: "ANNOUNCEMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["下周停播"]
+        emit:
+          - type: note
+            normalized: "ANNOUNCEMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["下週停播"]
         emit:
           - type: note
             normalized: "ANNOUNCEMENT"
@@ -605,6 +647,98 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.75
+      - tokens: ["高帧率"]
+        emit:
+          - type: note
+            normalized: "HIGH_FPS"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["高幀率"]
+        emit:
+          - type: note
+            normalized: "HIGH_FPS"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["国粤双语"]
+        emit:
+          - type: note
+            normalized: "CHN_YUE_AUDIO"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["國粵雙語"]
+        emit:
+          - type: note
+            normalized: "CHN_YUE_AUDIO"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["繁中內掛"]
+        emit:
+          - type: note
+            normalized: "CHT_HARDSUB"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["繁中内挂"]
+        emit:
+          - type: note
+            normalized: "CHT_HARDSUB"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["繁体内挂"]
+        emit:
+          - type: note
+            normalized: "CHT_HARDSUB"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["繁體內掛"]
+        emit:
+          - type: note
+            normalized: "CHT_HARDSUB"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["日语无字"]
+        emit:
+          - type: note
+            normalized: "JPN_AUDIO_NO_SUB"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["日語無字"]
+        emit:
+          - type: note
+            normalized: "JPN_AUDIO_NO_SUB"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["日语简繁中字"]
+        emit:
+          - type: note
+            normalized: "JPN_AUDIO_CHS_CHT_SUBS"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["日語簡繁中字"]
+        emit:
+          - type: note
+            normalized: "JPN_AUDIO_CHS_CHT_SUBS"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - scope: bracket
+        tokens: ["修正"]
+        emit:
+          - type: note
+            normalized: "REVISION"
+            token_index: -1
+        remove: true
+        confidence: 0.7
 
   - id: note_movie_bracket
     scope: bracket

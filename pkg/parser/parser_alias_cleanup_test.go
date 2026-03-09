@@ -1717,6 +1717,46 @@ func TestParserLexicon_SubtitleStyleAndUncensoredMetaTokensAreConsumed(t *testin
 	}
 }
 
+func TestParserLexicon_HighFpsNoSubAndScheduleMetaTokensAreConsumed(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Group][示例标题/Example Title][06][高帧率][国粤双语][繁中內掛][日语无字][日语简繁中字][急招翻译][（下周停播）][1080p][WEB-DL]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	aliases := canonicalAliases(res)
+	for _, a := range aliases {
+		if strings.Contains(a, "高帧率") ||
+			strings.Contains(a, "国粤双语") ||
+			strings.Contains(a, "繁中內掛") ||
+			strings.Contains(a, "日语无字") ||
+			strings.Contains(a, "日语简繁中字") ||
+			strings.Contains(a, "急招翻译") ||
+			strings.Contains(a, "下周停播") {
+			t.Fatalf("meta token leaked into alias: %v", aliases)
+		}
+	}
+	notes := attrValues(res, model.AttrNote)
+	for _, want := range []string{
+		"HIGH_FPS",
+		"CHN_YUE_AUDIO",
+		"CHT_HARDSUB",
+		"JPN_AUDIO_NO_SUB",
+		"JPN_AUDIO_CHS_CHT_SUBS",
+		"RECRUITMENT",
+		"ANNOUNCEMENT",
+	} {
+		if !hasAttrValue(notes, want) {
+			t.Fatalf("expected note=%s, got=%v", want, notes)
+		}
+	}
+}
+
 func TestParserEpisodeRange_TVPackSuffixSplit(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

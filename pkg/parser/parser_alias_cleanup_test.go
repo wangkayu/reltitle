@@ -874,6 +874,58 @@ func TestParserSpecial_NCOPNCEDNotAsTailGroup(t *testing.T) {
 	}
 }
 
+func TestParserSpecial_PureNCEDRouteAndTitleCleanup(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Group] Sample Title NCED [1080p][WEB-DL][AAC AVC]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalSPKind(res); got != "NCED" {
+		t.Fatalf("sp_kind=%q want=NCED", got)
+	}
+	if got := canonicalTitle(res); strings.Contains(strings.ToUpper(got), "NCED") {
+		t.Fatalf("title should strip NCED suffix, got=%q", got)
+	}
+	if got := firstAttrValue(res, model.AttrTailGroup); got != "" {
+		t.Fatalf("tail_group should be empty, got=%q", got)
+	}
+}
+
+func TestParserSpecial_NCOPNCEDKeepsNCEDCandidate(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[sandoe41] Death March kara Hajimaru Isekai Kyousoukyoku Season One NCOP-NCED"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalSPKind(res); got != "NCOP" {
+		t.Fatalf("sp_kind=%q want=NCOP", got)
+	}
+	hasNCEDCandidate := false
+	if res.EPSlot != nil {
+		for _, c := range res.EPSlot.Candidates {
+			if strings.EqualFold(strings.TrimSpace(c.Kind), "SP") && strings.EqualFold(strings.TrimSpace(c.SPKind), "NCED") {
+				hasNCEDCandidate = true
+				break
+			}
+		}
+	}
+	if !hasNCEDCandidate {
+		t.Fatalf("expected NCED candidate in epslot, got=%+v", res.EPSlot)
+	}
+}
+
 func TestParserTitle_TailGroupSuffixTrimmedFromTitle(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

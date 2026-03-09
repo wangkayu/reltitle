@@ -98,6 +98,13 @@ rules:
       type: edition
       normalized: DVD_ISO
 
+  - id: note_to_version_rev
+    match:
+      note_values_case_insensitive: ["REV"]
+    promote_to:
+      type: version
+      normalized: rev
+
 note_whitelist:
   # 未命中 promotion 且属于白名单的 note 保留
   - 检索

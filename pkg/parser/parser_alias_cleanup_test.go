@@ -2378,6 +2378,26 @@ func TestParserNotePromotion_FinalBracketToReleaseStatus(t *testing.T) {
 	}
 }
 
+func TestParserNotePromotion_RevToVersion(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Group] Sample Show - 01 [rev] [1080p][WEB-DL]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrVersion), "rev") {
+		t.Fatalf("expected version=rev, got=%v", attrValues(res, model.AttrVersion))
+	}
+	if hasAttrValue(attrValues(res, model.AttrNote), "REV") {
+		t.Fatalf("REV should be promoted from note, notes=%v", attrValues(res, model.AttrNote))
+	}
+}
+
 func TestParserLexicon_MonthAndFileshareMetaTokensAreConsumed(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

@@ -2395,6 +2395,16 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 		attrs = upsertTitleAttribute(attrs, title, "title_cleanup")
 	}
 	group, title, aliases, templateID, contentKind, routeID, overrideApplied := p.applyGroupRouteOverride(rawTitle, group, episodeRange, title, aliases, templateID, contentKind, routeID)
+	title = trimTitleTailByGroup(title, group)
+	for _, a := range attrs {
+		if a.Type != model.AttrTailGroup {
+			continue
+		}
+		if strings.TrimSpace(a.Normalized) == "" {
+			continue
+		}
+		title = trimTitleTailByGroup(title, a.Normalized)
+	}
 	if overrideApplied && strings.HasPrefix(routeID, "group_epseg_") {
 		if ep, sp, epTitle, ok := extractEpisodeLikeFromThirdBracketDetailed(rawTitle); ok {
 			episode = ep
@@ -5124,6 +5134,20 @@ func trimTitleTailByPackKind(title string, packKind string) string {
 		return title
 	}
 	return t
+}
+
+func trimTitleTailByGroup(title string, group string) string {
+	title = strings.TrimSpace(title)
+	group = strings.TrimSpace(normalizeGroupText(group))
+	if title == "" || group == "" {
+		return title
+	}
+	re := regexp.MustCompile(`(?i)\s*-\s*` + regexp.QuoteMeta(group) + `\s*$`)
+	out := strings.TrimSpace(re.ReplaceAllString(title, ""))
+	if out == "" {
+		return title
+	}
+	return out
 }
 
 func upsertTitleAttribute(attrs []model.Attribute, title string, source string) []model.Attribute {

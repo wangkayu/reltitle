@@ -874,6 +874,30 @@ func TestParserSpecial_NCOPNCEDNotAsTailGroup(t *testing.T) {
 	}
 }
 
+func TestParserTitle_TailGroupSuffixTrimmedFromTitle(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "100 Meters 2025 1080p NF WEB-DL DUAL DDP5.1 H 264-VARYG (Hyakuemu., Dual-Audio, Multi-Subs)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalGroup(res); got != "VARYG" {
+		t.Fatalf("group=%q want=%q", got, "VARYG")
+	}
+	if got := firstAttrValue(res, model.AttrTailGroup); got != "VARYG" {
+		t.Fatalf("tail_group=%q want=%q", got, "VARYG")
+	}
+	title := canonicalTitle(res)
+	if strings.Contains(strings.ToUpper(title), "VARYG") {
+		t.Fatalf("title should not contain tail group, got=%q", title)
+	}
+}
+
 func TestParserSpecial_CMNotDetectedFromLengthUnit(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

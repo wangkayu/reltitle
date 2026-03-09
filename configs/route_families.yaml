@@ -1,0 +1,41 @@
+description: "Template route families for high-level routing before template matching."
+defaults:
+  fallback_family: "tv_web_general"
+
+families:
+  - id: "raw_media"
+    enabled: true
+    priority: 100
+    match:
+      raw_must_contain_any:
+        - "bdmv"
+        - "dvdiso"
+        - "bd-box"
+        - "bdbox"
+        - "dvd9"
+      source_type_in:
+        - "DVD"
+        - "BluRay"
+      note_in:
+        - "BDMV"
+        - "DVDISO"
+        - "DVD9"
+    select:
+      preferred_template_categories:
+        - "batch"
+        - "movie"
+
+  - id: "tv_web_general"
+    enabled: true
+    priority: 10
+    match:
+      source_type_in:
+        - "WEB-DL"
+        - "WEBRip"
+        - "BDRip"
+        - "HDTV"
+    select:
+      preferred_template_categories:
+        - "tv_episode"
+        - "batch"
+

@@ -157,6 +157,7 @@ func matchContentTypeCondition(r config.ContentTypeInferenceRule, hasEpisode boo
 }
 
 func matchTemplate(cfg *config.Config, epRoute string, contentKind string, group string, episode string, episodeRange string, season string, packKind string, spKind string, movieIndex string, hasTech bool, hasMovieKeyword bool, attrs []model.Attribute, tokens []model.Token) (string, float64, string) {
+	family := detectRouteFamily(cfg, attrs, tokens)
 	epRoute = strings.TrimSpace(epRoute)
 	if epRoute == "RANGE" {
 		if strings.TrimSpace(episodeRange) == "" {
@@ -246,6 +247,20 @@ func matchTemplate(cfg *config.Config, epRoute string, contentKind string, group
 			}
 		}
 		return bestID, bestConf, bestRoute
+	}
+
+	// Family-level preference:
+	// when a high-level family is detected, try its preferred template categories first
+	// on ambiguous EP routes before falling back to the default pipeline.
+	if family != nil {
+		prefCats := preferredTemplateCategories(family)
+		if len(prefCats) > 0 && (epRoute == "ABS_EP" || epRoute == "PLAIN_EP" || epRoute == "NONE") {
+			for _, cat := range prefCats {
+				if id, conf, route := selectBest(templatesByCategory(cfg, cat), false); strings.TrimSpace(id) != "" {
+					return id, conf, route
+				}
+			}
+		}
 	}
 
 	if strings.EqualFold(strings.TrimSpace(contentKind), "BATCH") {
@@ -517,6 +532,145 @@ func templatesByContentKind(cfg *config.Config, contentKind string) []config.Tem
 	default:
 		return nil
 	}
+}
+
+func templatesByCategory(cfg *config.Config, cat string) []config.TemplateDef {
+	switch strings.ToLower(strings.TrimSpace(cat)) {
+	case "tv_episode", "tv", "tv_ep":
+		return cfg.TemplateCatalog.TVEpisodeTemplates
+	case "batch":
+		return cfg.TemplateCatalog.BatchTemplates
+	case "movie":
+		return cfg.TemplateCatalog.MovieTemplates
+	case "special", "sp":
+		return cfg.TemplateCatalog.SpecialTemplates
+	case "unknown":
+		return cfg.TemplateCatalog.UnknownTemplates
+	default:
+		return nil
+	}
+}
+
+func preferredTemplateCategories(rule *config.RouteFamilyRule) []string {
+	if rule == nil {
+		return nil
+	}
+	out := make([]string, 0, len(rule.Select.PreferredTemplateCategories))
+	seen := map[string]struct{}{}
+	for _, c := range rule.Select.PreferredTemplateCategories {
+		cc := strings.ToLower(strings.TrimSpace(c))
+		if cc == "" {
+			continue
+		}
+		if _, ok := seen[cc]; ok {
+			continue
+		}
+		seen[cc] = struct{}{}
+		out = append(out, cc)
+	}
+	return out
+}
+
+func detectRouteFamily(cfg *config.Config, attrs []model.Attribute, tokens []model.Token) *config.RouteFamilyRule {
+	if cfg == nil || len(cfg.RouteFamilies.Families) == 0 {
+		return nil
+	}
+	rawLower := strings.ToLower(strings.TrimSpace(joinTokensForFamilyMatch(tokens)))
+	sourceSet := attrValueSet(attrs, model.AttrSourceType)
+	noteSet := attrValueSet(attrs, model.AttrNote)
+	rules := append([]config.RouteFamilyRule(nil), cfg.RouteFamilies.Families...)
+	sort.SliceStable(rules, func(i, j int) bool {
+		return rules[i].Priority > rules[j].Priority
+	})
+	for i := range rules {
+		rule := &rules[i]
+		if !rule.Enabled {
+			continue
+		}
+		if !routeFamilyRuleMatches(rule, rawLower, sourceSet, noteSet) {
+			continue
+		}
+		return rule
+	}
+	return nil
+}
+
+func routeFamilyRuleMatches(rule *config.RouteFamilyRule, rawLower string, sourceSet map[string]struct{}, noteSet map[string]struct{}) bool {
+	if rule == nil {
+		return false
+	}
+	if len(rule.Match.RawMustContainAny) == 0 && len(rule.Match.SourceTypeIn) == 0 && len(rule.Match.NoteIn) == 0 {
+		return false
+	}
+	if len(rule.Match.RawMustContainAny) > 0 && !containsAnyFold(rawLower, rule.Match.RawMustContainAny) {
+		return false
+	}
+	if len(rule.Match.RawMustNotContainAny) > 0 && containsAnyFold(rawLower, rule.Match.RawMustNotContainAny) {
+		return false
+	}
+	if len(rule.Match.SourceTypeIn) > 0 && !setHasAnyFold(sourceSet, rule.Match.SourceTypeIn) {
+		return false
+	}
+	if len(rule.Match.NoteIn) > 0 && !setHasAnyFold(noteSet, rule.Match.NoteIn) {
+		return false
+	}
+	return true
+}
+
+func joinTokensForFamilyMatch(tokens []model.Token) string {
+	if len(tokens) == 0 {
+		return ""
+	}
+	parts := make([]string, 0, len(tokens))
+	for _, tk := range tokens {
+		t := strings.TrimSpace(tk.Text)
+		if t == "" {
+			continue
+		}
+		parts = append(parts, t)
+	}
+	return strings.Join(parts, " ")
+}
+
+func attrValueSet(attrs []model.Attribute, t model.AttrType) map[string]struct{} {
+	out := map[string]struct{}{}
+	for _, a := range attrs {
+		if a.Type != t {
+			continue
+		}
+		v := strings.ToUpper(strings.TrimSpace(a.Normalized))
+		if v == "" {
+			continue
+		}
+		out[v] = struct{}{}
+	}
+	return out
+}
+
+func containsAnyFold(rawLower string, needles []string) bool {
+	for _, n := range needles {
+		ns := strings.ToLower(strings.TrimSpace(n))
+		if ns == "" {
+			continue
+		}
+		if strings.Contains(rawLower, ns) {
+			return true
+		}
+	}
+	return false
+}
+
+func setHasAnyFold(set map[string]struct{}, vals []string) bool {
+	for _, v := range vals {
+		key := strings.ToUpper(strings.TrimSpace(v))
+		if key == "" {
+			continue
+		}
+		if _, ok := set[key]; ok {
+			return true
+		}
+	}
+	return false
 }
 
 func signatureSatisfiable(sig string, group string, episode string, episodeRange string, season string, packKind string, spKind string, movieIndex string, hasTech bool, hasMovieKeyword bool) bool {

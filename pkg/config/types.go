@@ -6,6 +6,7 @@ type Config struct {
 	Inference          InferenceRulesConfig     `json:"inference"`
 	GroupList          GroupListConfig          `json:"group_list"`
 	GroupRoute         GroupRouteConfig         `json:"group_route,omitempty"`
+	RouteFamilies      RouteFamiliesConfig      `json:"route_families,omitempty"`
 	GroupSlot2Platform GroupSlot2PlatformConfig `json:"group_slot2_platform,omitempty"`
 	PackProfileRules   PackProfileRulesConfig   `json:"pack_profile_rules,omitempty"`
 
@@ -250,6 +251,33 @@ type GroupRouteOutput struct {
 	ForceRouteID       string   `yaml:"force_route_id" json:"force_route_id"`
 	TitleStripPrefixes []string `yaml:"title_strip_prefixes" json:"title_strip_prefixes"`
 	AliasStripPrefixes []string `yaml:"alias_strip_prefixes" json:"alias_strip_prefixes"`
+}
+
+type RouteFamiliesConfig struct {
+	Version     string            `yaml:"version" json:"version"`
+	UpdatedAt   string            `yaml:"updated_at" json:"updated_at"`
+	Description string            `yaml:"description" json:"description"`
+	Defaults    map[string]any    `yaml:"defaults" json:"defaults"`
+	Families    []RouteFamilyRule `yaml:"families" json:"families"`
+}
+
+type RouteFamilyRule struct {
+	ID       string            `yaml:"id" json:"id"`
+	Enabled  bool              `yaml:"enabled" json:"enabled"`
+	Priority int               `yaml:"priority" json:"priority"`
+	Match    RouteFamilyMatch  `yaml:"match" json:"match"`
+	Select   RouteFamilySelect `yaml:"select" json:"select"`
+}
+
+type RouteFamilyMatch struct {
+	RawMustContainAny    []string `yaml:"raw_must_contain_any" json:"raw_must_contain_any"`
+	RawMustNotContainAny []string `yaml:"raw_must_not_contain_any" json:"raw_must_not_contain_any"`
+	SourceTypeIn         []string `yaml:"source_type_in" json:"source_type_in"`
+	NoteIn               []string `yaml:"note_in" json:"note_in"`
+}
+
+type RouteFamilySelect struct {
+	PreferredTemplateCategories []string `yaml:"preferred_template_categories" json:"preferred_template_categories"`
 }
 
 type GroupSlot2PlatformConfig struct {

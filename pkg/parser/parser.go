@@ -2652,10 +2652,16 @@ func inferEPAxisFromTokenContext(tokens []model.Token, tokenIdx int) string {
 		strings.EqualFold(next, "episode") || strings.EqualFold(next, "ep") {
 		return "ABS"
 	}
+	if episodePrefixedTokenPattern.MatchString(cur) {
+		return "ABS"
+	}
 	if prev == "第" && (next == "集" || next == "话" || next == "話") {
 		return "ABS"
 	}
 	if next == "集" || next == "话" || next == "話" {
+		return "ABS"
+	}
+	if prev == "-" && (next == "[" || next == "【" || next == "(" || next == "（") && episodeOfTotalPattern.MatchString(cur) {
 		return "ABS"
 	}
 	return ""
@@ -8680,6 +8686,7 @@ var episodeSPBracketCombinedPattern = regexp.MustCompile(`(?i)^0*(\d{1,3})\s*[_ 
 var partIndexLeadPattern = regexp.MustCompile(`(?i)^(?:part|pt|cour|cours)$`)
 var seasonSignalTokenPattern = regexp.MustCompile(`(?i)^(?:s\d{1,2}|season|saison|cour|cours)$`)
 var seasonSignalCJKTokenPattern = regexp.MustCompile(`^第?[一二三四五六七八九十0-9]{1,3}(?:季|期|部)$`)
+var episodePrefixedTokenPattern = regexp.MustCompile(`(?i)^(?:e|ep)\d{1,4}(?:\.\d{1,2})?(?:[vV]\d{1,2})?$`)
 
 func detectEpisodeFromSPBracketSegment(tokens []model.Token) (string, int, bool) {
 	for i := 0; i < len(tokens); i++ {

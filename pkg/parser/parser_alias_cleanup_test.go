@@ -1111,7 +1111,7 @@ func TestParserEPSlotAxis_EpisodeKeywordUsesABS(t *testing.T) {
 	}
 }
 
-func TestParserEPSlotAxis_DashEpisodeWithoutSignalsKeepsUNKNOWN(t *testing.T) {
+func TestParserEPSlotAxis_DashEpisodeBeforeTechBracketUsesABS(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {
 		t.Fatalf("load config: %v", err)
@@ -1126,8 +1126,28 @@ func TestParserEPSlotAxis_DashEpisodeWithoutSignalsKeepsUNKNOWN(t *testing.T) {
 	if res.EPSlot == nil || res.EPSlot.Primary == nil {
 		t.Fatalf("epslot.primary should not be nil")
 	}
-	if got := strings.ToUpper(strings.TrimSpace(res.EPSlot.Primary.Axis)); got != "UNKNOWN" {
-		t.Fatalf("epslot.primary.axis=%q want=%q", got, "UNKNOWN")
+	if got := strings.ToUpper(strings.TrimSpace(res.EPSlot.Primary.Axis)); got != "ABS" {
+		t.Fatalf("epslot.primary.axis=%q want=%q", got, "ABS")
+	}
+}
+
+func TestParserEPSlotAxis_EPrefixedTokenUsesABS(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Group] Sample Title E10 [1080p][WEB-DL]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if res.EPSlot == nil || res.EPSlot.Primary == nil {
+		t.Fatalf("epslot.primary should not be nil")
+	}
+	if got := strings.ToUpper(strings.TrimSpace(res.EPSlot.Primary.Axis)); got != "ABS" {
+		t.Fatalf("epslot.primary.axis=%q want=%q", got, "ABS")
 	}
 }
 

@@ -1706,6 +1706,12 @@ func TestParserStandaloneDVDSource_InferredAndConsumed(t *testing.T) {
 	if !hasAttrValue(attrValues(res, model.AttrSourceType), "DVD") {
 		t.Fatalf("expected source_type=DVD, got=%v", attrValues(res, model.AttrSourceType))
 	}
+	if !hasAttrValue(attrValues(res, model.AttrEdition), "CUSTOM") {
+		t.Fatalf("expected edition=CUSTOM, got=%v", attrValues(res, model.AttrEdition))
+	}
+	if hasAttrValue(attrValues(res, model.AttrNote), "CUSTOM") {
+		t.Fatalf("CUSTOM should not remain in note, notes=%v", attrValues(res, model.AttrNote))
+	}
 	for _, tok := range res.Tokens {
 		if strings.EqualFold(strings.TrimSpace(tok.Text), "DVD") && !tok.Removed {
 			t.Fatalf("standalone DVD token should be consumed, tokens=%v", res.Tokens)

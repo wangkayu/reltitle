@@ -5030,7 +5030,7 @@ func extractStrictCustomReleaseTagAttrsAndRemoveFromTokens(tokens []model.Token,
 		} else {
 			continue
 		}
-		*out = append(*out, model.Attribute{Type: model.AttrNote, Normalized: "CUSTOM", TokenStart: i, TokenEnd: i + 1, Confidence: 0.6, Source: "custom_tag"})
+		*out = append(*out, model.Attribute{Type: model.AttrEdition, Normalized: "CUSTOM", TokenStart: i, TokenEnd: i + 1, Confidence: 0.6, Source: "custom_tag"})
 		tokens[i].Removed = true
 		// If surrounded by parentheses, remove them too.
 		if i-1 >= 0 {

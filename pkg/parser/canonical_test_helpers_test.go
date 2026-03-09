@@ -59,6 +59,16 @@ func canonicalEpisodeRange(res *model.ParseResult) string {
 	return firstAttrValue(res, model.AttrEpisodeRange)
 }
 
+func canonicalSeason(res *model.ParseResult) string {
+	if res != nil && res.EPSlot != nil && res.EPSlot.Primary != nil {
+		v := strings.TrimSpace(res.EPSlot.Primary.Season)
+		if v != "" {
+			return v
+		}
+	}
+	return firstAttrValue(res, model.AttrSeason)
+}
+
 func canonicalVersion(res *model.ParseResult) string {
 	return firstAttrValue(res, model.AttrVersion)
 }

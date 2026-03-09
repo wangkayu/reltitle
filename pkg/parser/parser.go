@@ -7790,7 +7790,7 @@ func detectSeasonKeyword(tokens []model.Token) (season string, tokenIdx int) {
 
 var episodeRangePattern = regexp.MustCompile(`(?i)^(\d{1,4})[-~](\d{1,4})$`)
 var episodeRangeEmbeddedPattern = regexp.MustCompile(`(?i)(\d{1,4})[-~](\d{1,4})`)
-var epPrefixedDigitsPattern = regexp.MustCompile(`(?i)^ep(\d{1,4})$`)
+var epPrefixedDigitsPattern = regexp.MustCompile(`(?i)^e(?:p)?(\d{1,4})$`)
 var episodeOfTotalPattern = regexp.MustCompile(`^(\d{1,4})$`)
 var leadingDigitsPattern = regexp.MustCompile(`^(\d{1,4})`)
 
@@ -7958,6 +7958,9 @@ func detectEpisodeRange(tokens []model.Token) (string, int) {
 			continue
 		}
 		rawR := strings.TrimSpace(tokens[i+2].Text)
+		if rm := epPrefixedDigitsPattern.FindStringSubmatch(strings.ToLower(rawR)); len(rm) == 2 {
+			rawR = strings.TrimSpace(rm[1])
+		}
 		if !episodeOfTotalPattern.MatchString(rawR) {
 			continue
 		}
@@ -8687,6 +8690,10 @@ var partIndexLeadPattern = regexp.MustCompile(`(?i)^(?:part|pt|cour|cours)$`)
 var seasonSignalTokenPattern = regexp.MustCompile(`(?i)^(?:s\d{1,2}|season|saison|cour|cours)$`)
 var seasonSignalCJKTokenPattern = regexp.MustCompile(`^第?[一二三四五六七八九十0-9]{1,3}(?:季|期|部)$`)
 var episodePrefixedTokenPattern = regexp.MustCompile(`(?i)^(?:e|ep)\d{1,4}(?:\.\d{1,2})?(?:[vV]\d{1,2})?$`)
+var chineseEpisodeDecimalSuffixPattern = regexp.MustCompile(`^第?(\d{1,4})\.(\d{1,2})(?:集|话|話|回)$`)
+var chineseEpisodeDecimalTailPattern = regexp.MustCompile(`^(\d{1,2})(?:集|话|話|回)$`)
+var chineseEpisodeDecimalHeadPattern = regexp.MustCompile(`^第(\d{1,4})$`)
+var bracketCatalogIDPrefixPattern = regexp.MustCompile(`^[A-Z]{3,}[A-Z0-9]*$`)
 
 func detectEpisodeFromSPBracketSegment(tokens []model.Token) (string, int, bool) {
 	for i := 0; i < len(tokens); i++ {
@@ -8885,6 +8892,13 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 			}
 			n := strings.TrimSpace(tokens[i].Text)
 			if episodeOfTotalPattern.MatchString(n) {
+				if i-2 >= 0 {
+					prevSep := strings.TrimSpace(tokens[i-1].Text)
+					prevLead := strings.TrimSpace(tokens[i-2].Text)
+					if prevSep == "-" && bracketCatalogIDPrefixPattern.MatchString(prevLead) {
+						continue
+					}
+				}
 				nn := strings.TrimLeft(n, "0")
 				if nn == "" {
 					nn = "0"
@@ -9011,6 +9025,49 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 			}
 			continue
 		}
+		if mm := chineseEpisodeDecimalSuffixPattern.FindStringSubmatch(strings.TrimSpace(tokens[i].Text)); len(mm) == 3 {
+			maj := strings.TrimLeft(mm[1], "0")
+			if maj == "" {
+				maj = "0"
+			}
+			dec := strings.TrimSpace(mm[2])
+			if dec != "" {
+				n := maj + "." + dec
+				score := len(mm[1]) + 93
+				if score > bestScore {
+					bestScore = score
+					bestIdx = i
+					best = n
+				}
+				continue
+			}
+		}
+		if i+2 < len(tokens) {
+			left := strings.TrimSpace(tokens[i].Text)
+			dot := strings.TrimSpace(tokens[i+1].Text)
+			right := strings.TrimSpace(tokens[i+2].Text)
+			if strings.HasPrefix(left, "第") && dot == "." {
+				if lm := chineseEpisodeDecimalHeadPattern.FindStringSubmatch(left); len(lm) == 2 {
+					if rm := chineseEpisodeDecimalTailPattern.FindStringSubmatch(right); len(rm) == 2 {
+						maj := strings.TrimLeft(lm[1], "0")
+						if maj == "" {
+							maj = "0"
+						}
+						dec := strings.TrimSpace(rm[1])
+						if dec != "" {
+							n := maj + "." + dec
+							score := len(lm[1]) + 93
+							if score > bestScore {
+								bestScore = score
+								bestIdx = i
+								best = n
+							}
+							continue
+						}
+					}
+				}
+			}
+		}
 		m := episodePattern.FindStringSubmatch(tokens[i].Text)
 		if len(m) >= 3 {
 			prefix := strings.TrimSpace(m[1])
@@ -9022,6 +9079,14 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 				dec := strings.TrimSpace(m[3])
 				if dec != "" {
 					n = n + "." + dec
+				}
+			}
+			// Guard: bracketed catalog IDs like "[KAXA-9023]" are product codes, not episodes.
+			if prefix == "" && inBracket && i-2 >= 0 {
+				prevSep := strings.TrimSpace(tokens[i-1].Text)
+				prevLead := strings.TrimSpace(tokens[i-2].Text)
+				if prevSep == "-" && bracketCatalogIDPrefixPattern.MatchString(prevLead) {
+					continue
 				}
 			}
 			signalScore := 0
@@ -9051,6 +9116,9 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 						if i-2 >= 0 {
 							prev2 := strings.TrimSpace(tokens[i-2].Text)
 							if looksLikeCodecPrefixToken(prev2) {
+								ok = false
+							}
+							if inBracket && bracketCatalogIDPrefixPattern.MatchString(prev2) {
 								ok = false
 							}
 						}

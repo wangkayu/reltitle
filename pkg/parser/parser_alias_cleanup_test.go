@@ -1151,6 +1151,63 @@ func TestParserEPSlotAxis_EPrefixedTokenUsesABS(t *testing.T) {
 	}
 }
 
+func TestParserEpisodeRange_EPrefixedRangeDetected(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "Boruto S01 E01-E192 1080p WEB-DL H264 AAC 中文字幕"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalEpisodeRange(res); got != "1-192" {
+		t.Fatalf("episode_range=%q want=%q", got, "1-192")
+	}
+	if got := canonicalEpisode(res); got != "" {
+		t.Fatalf("episode should be empty when range exists, got=%q", got)
+	}
+	if got := canonicalSeason(res); got != "1" {
+		t.Fatalf("season=%q want=%q", got, "1")
+	}
+}
+
+func TestParserEpisode_DecimalChineseEpisodeDetected(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[AngelEcho]自称Fランクのお兄さまがゲームで評価される学園の頂点に君臨するそうですよ？ [第26.5话]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalEpisode(res); got != "26.5" {
+		t.Fatalf("episode=%q want=%q", got, "26.5")
+	}
+}
+
+func TestParserEpisode_BracketCatalogIDNotMisreadAsEpisode(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[PMR] [BDMV] Haite Kudasai, Takamine-san [Vol.3] [KAXA-9023]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalEpisode(res); got == "9023" {
+		t.Fatalf("catalog id should not be parsed as episode, got=%q", got)
+	}
+}
+
 func TestParserPlatform_BSExChannelDoesNotTriggerSPKindEX(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

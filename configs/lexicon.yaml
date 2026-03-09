@@ -333,6 +333,34 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.8
+      - tokens: ["急招翻校轴"]
+        emit:
+          - type: note
+            normalized: "RECRUITMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["急招翻校軸"]
+        emit:
+          - type: note
+            normalized: "RECRUITMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["字幕組廣招新人"]
+        emit:
+          - type: note
+            normalized: "RECRUITMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["字幕组广招新人"]
+        emit:
+          - type: note
+            normalized: "RECRUITMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
 
   - id: note_search_and_share_meta_tokens
     any_of:
@@ -731,6 +759,20 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.75
+      - tokens: ["国日双语"]
+        emit:
+          - type: note
+            normalized: "CHN_JPN_AUDIO"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["國日雙語"]
+        emit:
+          - type: note
+            normalized: "CHN_JPN_AUDIO"
+            token_index: -1
+        remove: true
+        confidence: 0.75
       - scope: bracket
         tokens: ["修正"]
         emit:
@@ -739,6 +781,48 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.7
+      - tokens: ["重制版"]
+        emit:
+          - type: note
+            normalized: "REMASTERED_VERSION"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["重製版"]
+        emit:
+          - type: note
+            normalized: "REMASTERED_VERSION"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["附小剧场"]
+        emit:
+          - type: note
+            normalized: "BONUS_VIDEO"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["附小劇場"]
+        emit:
+          - type: note
+            normalized: "BONUS_VIDEO"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["12合集"]
+        emit:
+          - type: note
+            normalized: "CURATED_PACK"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["12修正合集"]
+        emit:
+          - type: note
+            normalized: "CURATED_PACK"
+            token_index: -1
+        remove: true
+        confidence: 0.75
 
   - id: note_movie_bracket
     scope: bracket

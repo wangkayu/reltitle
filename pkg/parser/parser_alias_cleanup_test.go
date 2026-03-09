@@ -1757,6 +1757,43 @@ func TestParserLexicon_HighFpsNoSubAndScheduleMetaTokensAreConsumed(t *testing.T
 	}
 }
 
+func TestParserLexicon_RecruitmentPackAndRemasterVariantsAreConsumed(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Group][示例标题/Example Title][07][急招翻校轴][字幕組廣招新人][国日双语][附小剧场][重制版][12修正合集][1080p][WEB-DL]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	aliases := canonicalAliases(res)
+	for _, a := range aliases {
+		if strings.Contains(a, "急招翻校轴") ||
+			strings.Contains(a, "字幕組廣招新人") ||
+			strings.Contains(a, "国日双语") ||
+			strings.Contains(a, "附小剧场") ||
+			strings.Contains(a, "重制版") ||
+			strings.Contains(a, "12修正合集") {
+			t.Fatalf("meta token leaked into alias: %v", aliases)
+		}
+	}
+	notes := attrValues(res, model.AttrNote)
+	for _, want := range []string{
+		"RECRUITMENT",
+		"CHN_JPN_AUDIO",
+		"BONUS_VIDEO",
+		"REMASTERED_VERSION",
+		"CURATED_PACK",
+	} {
+		if !hasAttrValue(notes, want) {
+			t.Fatalf("expected note=%s, got=%v", want, notes)
+		}
+	}
+}
+
 func TestParserEpisodeRange_TVPackSuffixSplit(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

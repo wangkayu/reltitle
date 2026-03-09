@@ -41,46 +41,55 @@ entries:
     remove: true
     confidence: 0.75
 
-  - id: note_truefrench
+  - id: audio_truefrench
     any_of:
       - tokens: ["truefrench"]
         emit:
-          - type: note
-            normalized: "TRUEFRENCH"
+          - type: audio_lang
+            normalized: "FRA"
+            token_index: -1
+          - type: audio_flag
+            normalized: "DUB"
             token_index: -1
         remove: true
         confidence: 0.7
       - tokens: ["true-french"]
         emit:
-          - type: note
-            normalized: "TRUEFRENCH"
+          - type: audio_lang
+            normalized: "FRA"
+            token_index: -1
+          - type: audio_flag
+            normalized: "DUB"
             token_index: -1
         remove: true
         confidence: 0.7
 
-  - id: note_french
+  - id: audio_french
     tokens: ["french"]
     emit:
-      - type: note
-        normalized: "FRENCH"
+      - type: audio_lang
+        normalized: "FRA"
         token_index: -1
     remove: true
     confidence: 0.6
 
-  - id: note_vf_trailing_comma
+  - id: audio_vf_trailing_comma
     tokens: ["vf,"]
     emit:
-      - type: note
-        normalized: "VF"
+      - type: audio_lang
+        normalized: "FRA"
+        token_index: -1
+      - type: audio_flag
+        normalized: "DUB"
         token_index: -1
     remove: true
     confidence: 0.6
 
-  - id: note_french_trailing_comma
+  - id: audio_french_trailing_comma
     tokens: ["french,"]
     emit:
-      - type: note
-        normalized: "FRENCH"
+      - type: audio_lang
+        normalized: "FRA"
         token_index: -1
     remove: true
     confidence: 0.6
@@ -1844,11 +1853,11 @@ entries:
         remove: true
         confidence: 0.8
 
-  - id: note_francais
+  - id: audio_francais
     tokens: ["francais"]
     emit:
-      - type: note
-        normalized: "FRANCAIS"
+      - type: audio_lang
+        normalized: "FRA"
         token_index: -1
     remove: true
     confidence: 0.6
@@ -1863,21 +1872,27 @@ entries:
     remove: true
     confidence: 0.7
 
-  - id: note_french_subtitle_cn
+  - id: sub_french_subtitle_cn
     any_of:
       - scope: plain
         tokens: ["法文字幕"]
         emit:
-          - type: note
-            normalized: "法文字幕"
+          - type: sub_lang
+            normalized: "FRA"
+            token_index: -1
+          - type: sub_flag
+            normalized: "SUBS"
             token_index: -1
         remove: true
         confidence: 0.7
       - scope: bracket
         tokens: ["法文字幕"]
         emit:
-          - type: note
-            normalized: "法文字幕"
+          - type: sub_lang
+            normalized: "FRA"
+            token_index: -1
+          - type: sub_flag
+            normalized: "SUBS"
             token_index: -1
         remove: true
         confidence: 0.7
@@ -2956,24 +2971,93 @@ entries:
         remove: true
         confidence: 0.7
 
-  - id: note_vf
+  - id: audio_vf
     any_of:
       - scope: bracket
         tokens: ["vf"]
         emit:
-          - type: note
-            normalized: "VF"
+          - type: audio_lang
+            normalized: "FRA"
+            token_index: -1
+          - type: audio_flag
+            normalized: "DUB"
             token_index: -1
         remove: true
         confidence: 0.6
       - scope: paren
         tokens: ["vf"]
         emit:
-          - type: note
-            normalized: "VF"
+          - type: audio_lang
+            normalized: "FRA"
+            token_index: -1
+          - type: audio_flag
+            normalized: "DUB"
             token_index: -1
         remove: true
         confidence: 0.6
+
+  - id: audio_sub_vf_vostfr_combo
+    any_of:
+      - scope: plain
+        tokens: ["vf", "vostfr"]
+        emit:
+          - type: audio_lang
+            normalized: "FRA"
+            token_index: 0
+          - type: audio_flag
+            normalized: "DUB"
+            token_index: 0
+          - type: audio_flag
+            normalized: "DUAL_AUDIO"
+            token_index: 0
+          - type: sub_flag
+            normalized: "VOSTFR"
+            token_index: 1
+          - type: sub_lang
+            normalized: "FRA"
+            token_index: 1
+        remove: true
+        confidence: 0.78
+      - scope: plain
+        tokens: ["vf", "/", "vostfr"]
+        emit:
+          - type: audio_lang
+            normalized: "FRA"
+            token_index: 0
+          - type: audio_flag
+            normalized: "DUB"
+            token_index: 0
+          - type: audio_flag
+            normalized: "DUAL_AUDIO"
+            token_index: 0
+          - type: sub_flag
+            normalized: "VOSTFR"
+            token_index: 2
+          - type: sub_lang
+            normalized: "FRA"
+            token_index: 2
+        remove: true
+        confidence: 0.76
+      - scope: plain
+        tokens: ["vf", "-", "vostfr"]
+        emit:
+          - type: audio_lang
+            normalized: "FRA"
+            token_index: 0
+          - type: audio_flag
+            normalized: "DUB"
+            token_index: 0
+          - type: audio_flag
+            normalized: "DUAL_AUDIO"
+            token_index: 0
+          - type: sub_flag
+            normalized: "VOSTFR"
+            token_index: 2
+          - type: sub_lang
+            normalized: "FRA"
+            token_index: 2
+        remove: true
+        confidence: 0.76
 
   - id: note_vo
     any_of:
@@ -3679,20 +3763,26 @@ entries:
         remove: true
         confidence: 0.6
 
-  - id: note_vff
+  - id: audio_vff
     tokens: ["vff"]
     emit:
-      - type: note
-        normalized: "VFF"
+      - type: audio_lang
+        normalized: "FRA"
+        token_index: -1
+      - type: audio_flag
+        normalized: "DUB"
         token_index: -1
     remove: true
     confidence: 0.6
 
-  - id: note_vfq
+  - id: audio_vfq
     tokens: ["vfq"]
     emit:
-      - type: note
-        normalized: "VFQ"
+      - type: audio_lang
+        normalized: "FRA"
+        token_index: -1
+      - type: audio_flag
+        normalized: "DUB"
         token_index: -1
     remove: true
     confidence: 0.6
@@ -7657,6 +7747,44 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.7
+
+  - id: note_reencode
+    any_of:
+      - scope: bracket
+        tokens: ["reencode"]
+        emit:
+          - type: note
+            normalized: "REENCODE"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - scope: paren
+        tokens: ["reencode"]
+        emit:
+          - type: note
+            normalized: "REENCODE"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+
+  - id: note_special_version
+    any_of:
+      - scope: bracket
+        tokens: ["special", "version"]
+        emit:
+          - type: note
+            normalized: "SPECIAL_VERSION"
+            token_index: -1
+        remove: true
+        confidence: 0.72
+      - scope: paren
+        tokens: ["special", "version"]
+        emit:
+          - type: note
+            normalized: "SPECIAL_VERSION"
+            token_index: -1
+        remove: true
+        confidence: 0.72
 
   - id: note_weekly
     tokens: ["weekly"]

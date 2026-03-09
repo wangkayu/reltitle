@@ -2513,6 +2513,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	p.consumeTitleGapBatchTVMarkers(tokens, titleEnd, episodeIdx, episodeRangeIdx, attrs)
 	p.consumeAliasChainTokensByFinalAliases(tokens, groupSpan, finalTitle, finalAliases, episodeIdx, episodeRangeIdx, seasonIdx, attrs)
 	p.consumeGroupSpecificTitleChainDelimiters(tokens, groupSpan, group, episodeIdx, episodeRangeIdx, attrs)
+	consumeTailGroupTokensByCanonicalGroup(tokens, group)
 
 	res := &model.ParseResult{
 		RawTitle:           originalRawTitle,
@@ -5142,12 +5143,112 @@ func trimTitleTailByGroup(title string, group string) string {
 	if title == "" || group == "" {
 		return title
 	}
-	re := regexp.MustCompile(`(?i)\s*-\s*` + regexp.QuoteMeta(group) + `\s*$`)
-	out := strings.TrimSpace(re.ReplaceAllString(title, ""))
+	reExact := regexp.MustCompile(`(?i)\s*-\s*` + regexp.QuoteMeta(group) + `\s*$`)
+	out := strings.TrimSpace(reExact.ReplaceAllString(title, ""))
+	if out == title && strings.Contains(group, "-") {
+		partsRaw := strings.Split(group, "-")
+		parts := make([]string, 0, len(partsRaw))
+		for _, p := range partsRaw {
+			p = strings.TrimSpace(p)
+			if p == "" {
+				continue
+			}
+			parts = append(parts, regexp.QuoteMeta(p))
+		}
+		if len(parts) >= 2 {
+			flexGroup := strings.Join(parts, `\s*-\s*`)
+			reFlex := regexp.MustCompile(`(?i)\s*-\s*` + flexGroup + `\s*$`)
+			out = strings.TrimSpace(reFlex.ReplaceAllString(title, ""))
+		}
+	}
 	if out == "" {
 		return title
 	}
 	return out
+}
+
+func consumeTailGroupTokensByCanonicalGroup(tokens []model.Token, group string) {
+	group = strings.TrimSpace(normalizeGroupText(group))
+	if group == "" || len(tokens) == 0 {
+		return
+	}
+	partsRaw := strings.Split(group, "-")
+	parts := make([]string, 0, len(partsRaw))
+	for _, p := range partsRaw {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		parts = append(parts, p)
+	}
+	if len(parts) == 0 {
+		return
+	}
+
+	// Match split form near tail: "- Tsundere - Raws"
+	if len(parts) >= 2 {
+		last := parts[len(parts)-1]
+		for i := len(tokens) - 1; i >= 0; i-- {
+			if tokens[i].Removed || isInBracket(tokens, i) || isInParen(tokens, i) {
+				continue
+			}
+			if !strings.EqualFold(strings.TrimSpace(tokens[i].Text), last) {
+				continue
+			}
+			j := i - 1
+			k := len(parts) - 2
+			ok := true
+			for k >= 0 {
+				for j >= 0 && strings.TrimSpace(tokens[j].Text) == "" {
+					j--
+				}
+				if j < 0 || strings.TrimSpace(tokens[j].Text) != "-" {
+					ok = false
+					break
+				}
+				j--
+				for j >= 0 && strings.TrimSpace(tokens[j].Text) == "" {
+					j--
+				}
+				if j < 0 || !strings.EqualFold(strings.TrimSpace(tokens[j].Text), parts[k]) {
+					ok = false
+					break
+				}
+				k--
+				j--
+			}
+			if !ok {
+				continue
+			}
+			start := j + 1
+			leadDash := start - 1
+			if leadDash >= 0 && strings.TrimSpace(tokens[leadDash].Text) == "-" && !isInBracket(tokens, leadDash) && !isInParen(tokens, leadDash) {
+				tokens[leadDash].Removed = true
+			}
+			for x := start; x <= i && x < len(tokens); x++ {
+				if isInBracket(tokens, x) || isInParen(tokens, x) {
+					continue
+				}
+				tokens[x].Removed = true
+			}
+			return
+		}
+	}
+
+	// Match single token near tail: "-VARYG" / "VARYG".
+	for i := len(tokens) - 1; i >= 0; i-- {
+		if tokens[i].Removed || isInBracket(tokens, i) || isInParen(tokens, i) {
+			continue
+		}
+		if !strings.EqualFold(strings.TrimSpace(tokens[i].Text), group) {
+			continue
+		}
+		tokens[i].Removed = true
+		if i-1 >= 0 && strings.TrimSpace(tokens[i-1].Text) == "-" && !isInBracket(tokens, i-1) && !isInParen(tokens, i-1) {
+			tokens[i-1].Removed = true
+		}
+		return
+	}
 }
 
 func upsertTitleAttribute(attrs []model.Attribute, title string, source string) []model.Attribute {
@@ -5695,6 +5796,12 @@ func promoteFrenchMultiNoteToAudioFlag(attrs []model.Attribute) {
 	for i := range attrs {
 		if attrs[i].Type == model.AttrSubFlag {
 			if strings.EqualFold(strings.TrimSpace(attrs[i].Normalized), "VOSTFR") {
+				hasFrench = true
+				break
+			}
+		}
+		if attrs[i].Type == model.AttrAudioLang {
+			if strings.EqualFold(strings.TrimSpace(attrs[i].Normalized), "FRA") {
 				hasFrench = true
 				break
 			}

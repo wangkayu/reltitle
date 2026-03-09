@@ -3631,15 +3631,23 @@ func inferSPKindFromContentsAttrs(attrs []model.Attribute) string {
 		if a.Type != model.AttrContents {
 			continue
 		}
-		n := strings.ToUpper(strings.TrimSpace(a.Normalized))
-		switch n {
-		case "SPECIAL", "SP":
-			return "SP"
-		case "OVA", "OAD", "ONA", "EX", "PV", "NCOP", "NCED":
+		if n, ok := normalizeSPKindFromContents(a.Normalized); ok {
 			return n
 		}
 	}
 	return ""
+}
+
+func normalizeSPKindFromContents(v string) (string, bool) {
+	n := strings.ToUpper(strings.TrimSpace(v))
+	switch n {
+	case "SPECIAL", "SP":
+		return "SP", true
+	case "OVA", "OAD", "ONA", "NCOP", "NCED", "PV":
+		return n, true
+	default:
+		return "", false
+	}
 }
 
 func dropContentsAttrsInsideTitleSpan(attrs []model.Attribute, titleStart int, titleEnd int) []model.Attribute {
@@ -6728,7 +6736,7 @@ func normalizeParenContentMarkerToken(s string) (string, bool) {
 	switch low {
 	case "movie", "movies", "film", "films", "eiga", "gekijouban", "劇場版", "剧场版", "電影", "电影":
 		return "MOVIE", true
-	case "special", "specials", "sp", "spéciaux", "speciaux", "特典", "特别篇", "特別篇":
+	case "special", "specials", "sp", "spéciaux", "speciaux", "特典", "特典映像", "bonus", "bonuses", "bouns", "tokuten", "特别篇", "特別篇":
 		return "SPECIAL", true
 	case "ova":
 		return "OVA", true

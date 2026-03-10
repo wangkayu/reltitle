@@ -240,6 +240,29 @@ func TestParserAliasCleanup_StripsSPKindTailFromAlias(t *testing.T) {
 	}
 }
 
+func TestParserEpisodeDetect_TitleSeasonSuffixDoesNotPolluteEPSlot(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[桜都字幕组] 魔都精兵的奴隶 第二季 / Mato Seihei no Slave 2 [09][1080P][简体内嵌]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalEpisode(res); got != "9" {
+		t.Fatalf("episode=%q want=%q", got, "9")
+	}
+	if got := canonicalSeason(res); got != "2" {
+		t.Fatalf("season=%q want=%q", got, "2")
+	}
+	if got := canonicalTitle(res); got != "魔都精兵的奴隶" {
+		t.Fatalf("title=%q want=%q", got, "魔都精兵的奴隶")
+	}
+}
+
 func TestParserAliasCleanup_DashBridgeBilingualSeasonAlias(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

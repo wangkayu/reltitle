@@ -9799,6 +9799,17 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 						if next == "[" || next == "【" || next == "(" || next == "（" {
 							if n != "0" {
 								if n != "720" && n != "1080" && n != "2160" && n != "480" && n != "540" {
+									if hasLaterBracketEpisodeCandidate(tokens, i+1) {
+										if hasMatchingSeasonNumberAroundToken(tokens, i, 12) && !hasDashSeparatorAroundToken(tokens, i) {
+											continue
+										}
+										if i-1 >= 0 {
+											prev := strings.TrimSpace(tokens[i-1].Text)
+											if isLikelyBracketTitleWordToken(prev) && !strings.EqualFold(prev, "episode") && !strings.EqualFold(prev, "ep") {
+												continue
+											}
+										}
+									}
 									ok = true
 									if signalScore < 88 {
 										signalScore = 88
@@ -9956,6 +9967,35 @@ func hasMatchingSeasonNumberAroundToken(tokens []model.Token, idx int, window in
 				}
 			}
 		}
+	}
+	return false
+}
+
+func hasLaterBracketEpisodeCandidate(tokens []model.Token, from int) bool {
+	if from < 0 {
+		from = 0
+	}
+	for i := from; i < len(tokens); i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		if !isInBracket(tokens, i) || isInParen(tokens, i) {
+			continue
+		}
+		txt := strings.TrimSpace(tokens[i].Text)
+		if txt == "" || !episodeOfTotalPattern.MatchString(txt) {
+			continue
+		}
+		if looksLikeVolumeContextNumberToken(tokens, i) || yearPattern.MatchString(txt) {
+			continue
+		}
+		if isTitlePrefixedDigitRangeInBracket(tokens, i) {
+			continue
+		}
+		if hasMatchingSeasonNumberAroundToken(tokens, i, 12) && !hasDashSeparatorAroundToken(tokens, i) {
+			continue
+		}
+		return true
 	}
 	return false
 }

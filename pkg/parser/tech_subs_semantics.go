@@ -180,57 +180,53 @@ func extractTechSubsSemanticsAndRemoveFromTokens(tokens []model.Token, attrs *[]
 		}
 
 		flag := ""
+		rawLike := false
 		if strings.Contains(noSpace, "无字幕") || strings.Contains(noSpace, "無字幕") || strings.Contains(noSpace, "生肉") {
-			flag = "RAW"
+			rawLike = true
 		}
 		if strings.Contains(noSpaceLower, "nosub") || strings.Contains(noSpaceLower, "no-sub") || strings.Contains(noSpaceLower, "no_sub") {
-			flag = "NOSUB"
-		}
-		if strings.Contains(noSpace, "多字幕") || strings.Contains(noSpace, "多語") || strings.Contains(noSpace, "多语") || strings.Contains(noSpaceLower, "multi") {
-			if strings.Contains(noSpaceLower, "multisub") || strings.Contains(noSpaceLower, "multi-sub") || strings.Contains(noSpaceLower, "multi_sub") || strings.Contains(noSpaceLower, "multi subs") || strings.Contains(noSpace, "多字幕") {
-				flag = "MULTI_SUBS"
-			}
+			rawLike = true
 		}
 		if strings.Contains(noSpace, "外挂") || strings.Contains(noSpace, "外掛") || strings.Contains(noSpaceLower, "external") {
-			flag = "外挂"
+			flag = "ex"
 		}
 		if strings.Contains(noSpace, "内嵌") || strings.Contains(noSpace, "內嵌") || strings.Contains(noSpaceLower, "hardsub") || strings.Contains(noSpaceLower, "hardsub") {
-			flag = "内嵌"
+			flag = "hard"
 		}
 		if strings.Contains(noSpace, "内封") || strings.Contains(noSpace, "內封") || strings.Contains(noSpaceLower, "softsub") || strings.Contains(noSpaceLower, "soft") {
-			flag = "内封"
+			flag = "soft"
 		}
 
 		langs := map[string]bool{}
 		if strings.Contains(noSpace, "简繁") || strings.Contains(noSpace, "簡繁") || strings.Contains(noSpace, "繁简") || strings.Contains(noSpace, "繁簡") {
-			addLang(langs, "CHS")
-			addLang(langs, "CHT")
+			addLang(langs, "SC")
+			addLang(langs, "TC")
 		}
 		if strings.Contains(noSpace, "简中") || strings.Contains(noSpace, "簡中") || strings.Contains(noSpace, "简体") || strings.Contains(noSpace, "簡體") {
-			addLang(langs, "CHS")
+			addLang(langs, "SC")
 		}
 		if strings.Contains(noSpace, "繁中") || strings.Contains(noSpace, "繁体") || strings.Contains(noSpace, "繁體") {
-			addLang(langs, "CHT")
+			addLang(langs, "TC")
 		}
 		if strings.Contains(noSpace, "简日") || strings.Contains(noSpace, "簡日") || strings.Contains(noSpace, "繁日") || strings.Contains(noSpace, "繁日") || strings.Contains(noSpace, "简繁日") || strings.Contains(noSpace, "簡繁日") || strings.Contains(noSpace, "繁簡日") {
 			if !isYueAudioBilingual {
 				addLang(langs, "JPN")
 			}
 			if strings.Contains(noSpace, "简日") || strings.Contains(noSpace, "簡日") {
-				addLang(langs, "CHS")
+				addLang(langs, "SC")
 			}
 			if strings.Contains(noSpace, "繁日") {
-				addLang(langs, "CHT")
+				addLang(langs, "TC")
 			}
 		}
 		if strings.Contains(noSpaceLower, "jp") || strings.Contains(noSpaceLower, "jpn") {
 			addLang(langs, "JPN")
 		}
 		if strings.Contains(noSpaceLower, "chs") || strings.Contains(noSpaceLower, "gb") || strings.Contains(noSpaceLower, "sc") || strings.Contains(noSpaceLower, "zh-hans") || strings.Contains(noSpaceLower, "zh-cn") {
-			addLang(langs, "CHS")
+			addLang(langs, "SC")
 		}
 		if strings.Contains(noSpaceLower, "cht") || strings.Contains(noSpaceLower, "big5") || strings.Contains(noSpaceLower, "tc") || strings.Contains(noSpaceLower, "zh-hant") || strings.Contains(noSpaceLower, "zh-tw") || strings.Contains(noSpaceLower, "zh-hk") {
-			addLang(langs, "CHT")
+			addLang(langs, "TC")
 		}
 		if strings.Contains(noSpace, "英") || strings.Contains(noSpaceLower, "eng") {
 			addLang(langs, "ENG")
@@ -285,21 +281,26 @@ func extractTechSubsSemanticsAndRemoveFromTokens(tokens []model.Token, attrs *[]
 			addFmt(fmts, "SRT")
 		}
 		// "SUB" 在场景标题里大多表示 "有字幕"(例如 Sub_Esp)，不是字幕封装格式。
-		// 仅在明确 VOBSUB/PGS/ASS/SRT 等语义时才写入 sub_format。
-		if flag == "" && strings.Contains(noSpaceLower, "sub") {
-			flag = "SUBS"
-		}
+		// 强收敛模式下不再使用 sub_flag 表示“有字幕”，只输出 hard/soft/ex。
 
 		groups := map[string]bool{}
-		if langs["JPN"] && langs["CHS"] {
-			groups["CHS+JPN"] = true
+		if langs["JPN"] && langs["SC"] {
+			groups["JPSC"] = true
 		}
-		if langs["JPN"] && langs["CHT"] {
-			groups["CHT+JPN"] = true
+		if langs["JPN"] && langs["TC"] {
+			groups["JPTC"] = true
 		}
 		sawBilingual := strings.Contains(noSpace, "双语") || strings.Contains(noSpace, "雙語") || strings.Contains(noSpaceLower, "bilingual")
-		if sawBilingual && langs["CHS"] && langs["ENG"] {
-			groups["CHS+ENG"] = true
+		if sawBilingual && langs["SC"] && langs["ENG"] {
+			groups["SC+ENG"] = true
+		}
+		if sawBilingual && langs["TC"] && langs["ENG"] {
+			groups["TC+ENG"] = true
+		}
+		if rawLike {
+			langs = map[string]bool{"RAW": true}
+			groups = map[string]bool{}
+			flag = ""
 		}
 
 		emitted := false
@@ -308,7 +309,7 @@ func extractTechSubsSemanticsAndRemoveFromTokens(tokens []model.Token, attrs *[]
 			emitted = true
 		}
 
-		langOrder := []string{"CHS", "CHT", "JPN", "ENG", "KOR", "SPA", "CAT"}
+		langOrder := []string{"RAW", "SC", "TC", "JPN", "ENG", "KOR", "SPA", "CAT"}
 		for _, l := range langOrder {
 			if langs[l] {
 				addAttr(model.AttrSubLang, l, cutStart, end, conf)
@@ -322,7 +323,7 @@ func extractTechSubsSemanticsAndRemoveFromTokens(tokens []model.Token, attrs *[]
 				emitted = true
 			}
 		}
-		groupOrder := []string{"CHS+JPN", "CHT+JPN", "CHS+ENG"}
+		groupOrder := []string{"JPSC", "JPTC", "SC+ENG", "TC+ENG"}
 		for _, g := range groupOrder {
 			if groups[g] {
 				addAttr(model.AttrSubLangGroup, g, cutStart, end, conf)

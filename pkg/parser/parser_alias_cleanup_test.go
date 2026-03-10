@@ -1662,8 +1662,8 @@ func TestParserLexicon_CommaLanguageTokensAreConsumed(t *testing.T) {
 			t.Fatalf("comma language token leaked into alias: %v", aliases)
 		}
 	}
-	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "VOSTFR") {
-		t.Fatalf("expected sub_flag=VOSTFR, attrs=%v", attrValues(res, model.AttrSubFlag))
+	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "soft") {
+		t.Fatalf("expected sub_flag=soft, attrs=%v", attrValues(res, model.AttrSubFlag))
 	}
 }
 
@@ -1685,8 +1685,8 @@ func TestParserFrenchSignals_VfVostfrAreStructured(t *testing.T) {
 	if !hasAttrValue(attrValues(res, model.AttrAudioFlag), "DUB") {
 		t.Fatalf("expected audio_flag=DUB, got=%v", attrValues(res, model.AttrAudioFlag))
 	}
-	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "VOSTFR") {
-		t.Fatalf("expected sub_flag=VOSTFR, got=%v", attrValues(res, model.AttrSubFlag))
+	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "soft") {
+		t.Fatalf("expected sub_flag=soft, got=%v", attrValues(res, model.AttrSubFlag))
 	}
 	if !hasAttrValue(attrValues(res, model.AttrSubLang), "FRA") {
 		t.Fatalf("expected sub_lang=FRA, got=%v", attrValues(res, model.AttrSubLang))
@@ -1728,8 +1728,8 @@ func TestParserFrenchSignals_FrenchSubtitleStructured(t *testing.T) {
 	if !hasAttrValue(attrValues(res, model.AttrSubLang), "FRA") {
 		t.Fatalf("expected sub_lang=FRA, got=%v", attrValues(res, model.AttrSubLang))
 	}
-	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "SUBS") {
-		t.Fatalf("expected sub_flag=SUBS, got=%v", attrValues(res, model.AttrSubFlag))
+	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "soft") {
+		t.Fatalf("expected sub_flag=soft, got=%v", attrValues(res, model.AttrSubFlag))
 	}
 }
 
@@ -2148,8 +2148,8 @@ func TestParserLexicon_LangTagLatFreJapSubsStructured(t *testing.T) {
 	if !hasAttrValue(attrValues(res, model.AttrAudioFlag), "MULTI_AUDIO") {
 		t.Fatalf("expected audio_flag=MULTI_AUDIO, got=%v", attrValues(res, model.AttrAudioFlag))
 	}
-	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "SUBS") {
-		t.Fatalf("expected sub_flag=SUBS, got=%v", attrValues(res, model.AttrSubFlag))
+	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "soft") {
+		t.Fatalf("expected sub_flag=soft, got=%v", attrValues(res, model.AttrSubFlag))
 	}
 	if hasAttrValue(attrValues(res, model.AttrNote), "LAT-FRE-JAP+Subs") {
 		t.Fatalf("LAT-FRE-JAP+Subs should not remain in note, notes=%v", attrValues(res, model.AttrNote))
@@ -2209,8 +2209,8 @@ func TestParserLexicon_LangMarker_SubEspanolStructured(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse failed: %v", err)
 	}
-	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "SUBS") {
-		t.Fatalf("expected sub_flag=SUBS, got=%v", attrValues(res, model.AttrSubFlag))
+	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "soft") {
+		t.Fatalf("expected sub_flag=soft, got=%v", attrValues(res, model.AttrSubFlag))
 	}
 	if !hasAttrValue(attrValues(res, model.AttrSubLang), "SPA") {
 		t.Fatalf("expected sub_lang=SPA, got=%v", attrValues(res, model.AttrSubLang))
@@ -2743,14 +2743,14 @@ func TestParserLexicon_SubAndSearchMetaTokensAreConsumed(t *testing.T) {
 	if !hasAttrValue(notes, "SEARCH_HINT_META") {
 		t.Fatalf("expected note=SEARCH_HINT_META, got=%v", notes)
 	}
-	if !hasAttrValue(attrValues(res, model.AttrSubLang), "CHS") {
-		t.Fatalf("expected sub_lang=CHS, got=%v", attrValues(res, model.AttrSubLang))
+	if !hasAttrValue(attrValues(res, model.AttrSubLang), "SC") {
+		t.Fatalf("expected sub_lang=SC, got=%v", attrValues(res, model.AttrSubLang))
 	}
 	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "JPN") {
 		t.Fatalf("expected audio_lang=JPN, got=%v", attrValues(res, model.AttrAudioLang))
 	}
-	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "SUBS") {
-		t.Fatalf("expected sub_flag=SUBS, got=%v", attrValues(res, model.AttrSubFlag))
+	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "soft") {
+		t.Fatalf("expected sub_flag=soft, got=%v", attrValues(res, model.AttrSubFlag))
 	}
 	if hasAttrValue(notes, "CHS_SUBS") || hasAttrValue(notes, "JPN_AUDIO_CHS_SUBS") {
 		t.Fatalf("CHS/JPN_CHS note should be promoted, notes=%v", notes)
@@ -2808,11 +2808,11 @@ func TestParserLexicon_SubtitleStyleAndUncensoredMetaTokensAreConsumed(t *testin
 	if !hasAttrValue(attrValues(res, model.AttrAudioFlag), "DUAL_AUDIO") {
 		t.Fatalf("expected audio_flag=DUAL_AUDIO, got=%v", attrValues(res, model.AttrAudioFlag))
 	}
-	if !hasAttrValue(attrValues(res, model.AttrSubLang), "CHS") {
-		t.Fatalf("expected sub_lang=CHS, got=%v", attrValues(res, model.AttrSubLang))
+	if !hasAttrValue(attrValues(res, model.AttrSubLang), "SC") {
+		t.Fatalf("expected sub_lang=SC, got=%v", attrValues(res, model.AttrSubLang))
 	}
-	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "SUBS") {
-		t.Fatalf("expected sub_flag=SUBS, got=%v", attrValues(res, model.AttrSubFlag))
+	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "soft") {
+		t.Fatalf("expected sub_flag=soft, got=%v", attrValues(res, model.AttrSubFlag))
 	}
 	if hasAttrValue(notes, "CHN_AUDIO_CHS_SUBS") || hasAttrValue(notes, "ENG_AUDIO_CHS_SUBS") || hasAttrValue(notes, "CHN_YUE_AUDIO_SUBS") {
 		t.Fatalf("composite audio/sub notes should be promoted, notes=%v", notes)
@@ -2864,11 +2864,11 @@ func TestParserLexicon_HighFpsNoSubAndScheduleMetaTokensAreConsumed(t *testing.T
 	if !hasAttrValue(attrValues(res, model.AttrAudioFlag), "DUAL_AUDIO") {
 		t.Fatalf("expected audio_flag=DUAL_AUDIO, got=%v", attrValues(res, model.AttrAudioFlag))
 	}
-	if !hasAttrValue(attrValues(res, model.AttrSubLang), "CHT") {
-		t.Fatalf("expected sub_lang=CHT, got=%v", attrValues(res, model.AttrSubLang))
+	if !hasAttrValue(attrValues(res, model.AttrSubLang), "TC") {
+		t.Fatalf("expected sub_lang=TC, got=%v", attrValues(res, model.AttrSubLang))
 	}
-	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "HARDSUB") {
-		t.Fatalf("expected sub_flag=HARDSUB, got=%v", attrValues(res, model.AttrSubFlag))
+	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "hard") {
+		t.Fatalf("expected sub_flag=hard, got=%v", attrValues(res, model.AttrSubFlag))
 	}
 	if hasAttrValue(notes, "CHN_YUE_AUDIO") || hasAttrValue(notes, "CHT_HARDSUB") {
 		t.Fatalf("CHN_YUE_AUDIO/CHT_HARDSUB should be promoted, notes=%v", notes)
@@ -4167,11 +4167,11 @@ func TestLexiconDict_ConfigFirst_WEB1080PAndCNSubFlags(t *testing.T) {
 	if !hasAttrValue(attrValues(res, model.AttrResolution), "1080p") {
 		t.Fatalf("expected resolution 1080p, got=%v", attrValues(res, model.AttrResolution))
 	}
-	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "内封") {
-		t.Fatalf("expected sub_flag 内封, got=%v", attrValues(res, model.AttrSubFlag))
+	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "soft") {
+		t.Fatalf("expected sub_flag soft, got=%v", attrValues(res, model.AttrSubFlag))
 	}
-	if !hasAttrValue(attrValues(res, model.AttrSubLang), "CHS") || !hasAttrValue(attrValues(res, model.AttrSubLang), "CHT") {
-		t.Fatalf("expected sub_lang CHS/CHT, got=%v", attrValues(res, model.AttrSubLang))
+	if !hasAttrValue(attrValues(res, model.AttrSubLang), "SC") || !hasAttrValue(attrValues(res, model.AttrSubLang), "TC") {
+		t.Fatalf("expected sub_lang SC/TC, got=%v", attrValues(res, model.AttrSubLang))
 	}
 }
 
@@ -4194,8 +4194,8 @@ func TestLexiconDict_ConfigFirst_VCDRipAndYueSubs(t *testing.T) {
 	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "YUE") {
 		t.Fatalf("expected audio_lang YUE, got=%v", attrValues(res, model.AttrAudioLang))
 	}
-	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "中字") {
-		t.Fatalf("expected sub_flag 中字, got=%v", attrValues(res, model.AttrSubFlag))
+	if flags := attrValues(res, model.AttrSubFlag); len(flags) != 0 {
+		t.Fatalf("expected no sub_flag for 粤语中字 fallback, got=%v", flags)
 	}
 }
 
@@ -4676,8 +4676,8 @@ func TestJibaketaYueSample_SubtitleAndPlatformCleanup(t *testing.T) {
 	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "YUE") {
 		t.Fatalf("expected audio_lang YUE, got=%v", attrValues(res, model.AttrAudioLang))
 	}
-	if !hasAttrValue(attrValues(res, model.AttrSubLang), "CHT") {
-		t.Fatalf("expected sub_lang CHT, got=%v", attrValues(res, model.AttrSubLang))
+	if !hasAttrValue(attrValues(res, model.AttrSubLang), "TC") {
+		t.Fatalf("expected sub_lang TC, got=%v", attrValues(res, model.AttrSubLang))
 	}
 	if hasAttrValue(attrValues(res, model.AttrSubLang), "JPN") {
 		t.Fatalf("unexpected sub_lang JPN from 粵日雙語, got=%v", attrValues(res, model.AttrSubLang))
@@ -4948,8 +4948,8 @@ func TestLexiconDict_GluedTechTokensShouldBeConsumed(t *testing.T) {
 			raw:   "Chainsaw.Man.The.Movie.Reze.Arc.2025.REPACK.2160p.MA.WEB-DL.DUAL.DDP5.1.Atmos.DV.HDR10P.H.265-BYNDR",
 			token: "DV",
 			expectAttrs: map[model.AttrType]string{
-				model.AttrHDR: "DOLBY_VISION",
-				model.AttrAudioCodec:  "EAC3",
+				model.AttrHDR:        "DOLBY_VISION",
+				model.AttrAudioCodec: "EAC3",
 			},
 		},
 		{

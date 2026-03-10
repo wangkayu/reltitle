@@ -2592,6 +2592,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	attrs = dropRedundantNoteAttributes(attrs)
 	p.normalizePlatformAttrs(attrs)
 	p.normalizeSourceTypeAttrs(attrs)
+	attrs = p.normalizeSubtitleAttrs(attrs)
 	attrs = p.enrichBatchSourceTypeFromPackKind(attrs, contentKind)
 	attrs = dedupeAttributes(attrs)
 	attrs = collapseOverlappingSpecificAudioCodecs(attrs)
@@ -4332,6 +4333,174 @@ func (p *Parser) normalizeSourceTypeAttrs(attrs []model.Attribute) {
 		}
 		attrs[i].Normalized = p.normalizeSourceType(attrs[i].Normalized)
 	}
+}
+
+func normalizeSubLangToken(v string) string {
+	s := strings.ToUpper(strings.TrimSpace(v))
+	switch s {
+	case "CHS", "ZH-HANS", "ZH_CN", "ZH-CN", "SC":
+		return "SC"
+	case "CHT", "ZH-HANT", "ZH_TW", "ZH-TW", "BIG5", "TC":
+		return "TC"
+	case "CHS+JPN", "JPN+CHS", "JPSC":
+		return "JPSC"
+	case "CHT+JPN", "JPN+CHT", "JPTC":
+		return "JPTC"
+	case "RAW", "NOSUB", "NO_SUB", "NO-SUB":
+		return "RAW"
+	default:
+		return s
+	}
+}
+
+func normalizeSubLangGroupToken(v string) string {
+	s := strings.ToUpper(strings.TrimSpace(v))
+	switch s {
+	case "CHS+JPN", "JPN+CHS", "JPSC":
+		return "JPSC"
+	case "CHT+JPN", "JPN+CHT", "JPTC":
+		return "JPTC"
+	default:
+		s = strings.ReplaceAll(s, "CHS", "SC")
+		s = strings.ReplaceAll(s, "CHT", "TC")
+		return s
+	}
+}
+
+func normalizeSubFlagToken(v string) (string, bool, bool) {
+	s := strings.ToUpper(strings.TrimSpace(v))
+	switch s {
+	case "内嵌", "內嵌", "HARDSUB", "HARD":
+		return "hard", false, false
+	case "DUAL_SUBS", "MULTI_SUBS", "MULTI":
+		return "soft", false, true
+	case "BILINGUAL", "双语", "雙語":
+		return "", false, true
+	case "内封", "內封", "内挂", "內掛", "SOFTSUB", "SOFT", "SUBS", "SUBBED", "VOSTFR", "VOSTEN", "VF", "ENGSUB", "FANSUB", "字幕":
+		return "soft", false, false
+	case "外挂", "外掛", "EX", "EXTERNAL", "EXTERNAL_SUBS":
+		return "ex", false, false
+	case "RAW", "NOSUB", "NO-SUB", "NO_SUB":
+		return "", true, false
+	default:
+		return "", false, false
+	}
+}
+
+func (p *Parser) normalizeSubtitleAttrs(attrs []model.Attribute) []model.Attribute {
+	if len(attrs) == 0 {
+		return attrs
+	}
+	out := make([]model.Attribute, 0, len(attrs))
+	langSet := map[string]bool{}
+	groupSet := map[string]bool{}
+	flagSet := map[string]bool{}
+	rawMode := false
+	multiHint := false
+	for _, a := range attrs {
+		switch a.Type {
+		case model.AttrSubLang:
+			n := normalizeSubLangToken(a.Normalized)
+			if n == "" {
+				continue
+			}
+			if n == "RAW" {
+				rawMode = true
+			}
+			langSet[n] = true
+		case model.AttrSubLangGroup:
+			n := normalizeSubLangGroupToken(a.Normalized)
+			if n == "" {
+				continue
+			}
+			groupSet[n] = true
+		case model.AttrSubFlag:
+			n, isRaw, isMulti := normalizeSubFlagToken(a.Normalized)
+			if isRaw {
+				rawMode = true
+				continue
+			}
+			if isMulti {
+				multiHint = true
+			}
+			if n == "" {
+				continue
+			}
+			flagSet[n] = true
+		default:
+			out = append(out, a)
+		}
+	}
+
+	if groupSet["JPSC"] {
+		langSet["JPSC"] = true
+		delete(langSet, "SC")
+		delete(langSet, "JPN")
+	}
+	if groupSet["JPTC"] {
+		langSet["JPTC"] = true
+		delete(langSet, "TC")
+		delete(langSet, "JPN")
+	}
+	if groupSet["JPSC"] && groupSet["JPTC"] {
+		delete(langSet, "SC")
+		delete(langSet, "TC")
+		delete(langSet, "JPN")
+	}
+	if rawMode {
+		langSet = map[string]bool{"RAW": true}
+		groupSet = map[string]bool{}
+		flagSet = map[string]bool{}
+	} else if len(langSet) == 0 && len(groupSet) == 0 && multiHint {
+		langSet["MULTI"] = true
+	}
+	if len(langSet) > 1 {
+		delete(langSet, "MULTI")
+	}
+
+	langOrder := []string{"RAW", "MULTI", "SC", "TC", "JPSC", "JPTC", "JPN", "ENG", "KOR", "FRA", "SPA", "CAT", "RUS", "DEU", "ITA", "POR"}
+	for _, v := range langOrder {
+		if !langSet[v] {
+			continue
+		}
+		out = append(out, model.Attribute{
+			Type:       model.AttrSubLang,
+			Normalized: v,
+			TokenStart: -1,
+			TokenEnd:   -1,
+			Confidence: 0.8,
+			Source:     "subtitle_normalize",
+		})
+	}
+	groupOrder := []string{"JPSC", "JPTC", "SC+ENG", "TC+ENG"}
+	for _, v := range groupOrder {
+		if !groupSet[v] || rawMode {
+			continue
+		}
+		out = append(out, model.Attribute{
+			Type:       model.AttrSubLangGroup,
+			Normalized: v,
+			TokenStart: -1,
+			TokenEnd:   -1,
+			Confidence: 0.75,
+			Source:     "subtitle_normalize",
+		})
+	}
+	flagOrder := []string{"hard", "soft", "ex"}
+	for _, v := range flagOrder {
+		if !flagSet[v] || rawMode {
+			continue
+		}
+		out = append(out, model.Attribute{
+			Type:       model.AttrSubFlag,
+			Normalized: v,
+			TokenStart: -1,
+			TokenEnd:   -1,
+			Confidence: 0.8,
+			Source:     "subtitle_normalize",
+		})
+	}
+	return out
 }
 
 func (p *Parser) enrichBatchSourceTypeFromPackKind(attrs []model.Attribute, contentKind string) []model.Attribute {

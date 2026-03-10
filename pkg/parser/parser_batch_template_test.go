@@ -613,11 +613,11 @@ func TestParserBatchTemplate_ZhJpBilingualSubFlagExtracted(t *testing.T) {
 	if got := res.ContentKind; got != "TV_EP" {
 		t.Fatalf("content_kind=%q want=%q", got, "TV_EP")
 	}
-	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "双语") {
-		t.Fatalf("expected sub_flag=双语, got=%v", attrValues(res, model.AttrSubFlag))
+	if flags := attrValues(res, model.AttrSubFlag); len(flags) != 0 {
+		t.Fatalf("expected no sub_flag for 双语 marker without mode, got=%v", flags)
 	}
-	if !hasAttrValue(attrValues(res, model.AttrSubLang), "CHS") || !hasAttrValue(attrValues(res, model.AttrSubLang), "JPN") {
-		t.Fatalf("expected sub_lang CHS+JPN, got=%v", attrValues(res, model.AttrSubLang))
+	if !hasAttrValue(attrValues(res, model.AttrSubLang), "SC") || !hasAttrValue(attrValues(res, model.AttrSubLang), "JPN") {
+		t.Fatalf("expected sub_lang SC+JPN, got=%v", attrValues(res, model.AttrSubLang))
 	}
 }
 

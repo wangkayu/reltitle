@@ -39,23 +39,27 @@ canonical:
     - FOD
 
   sub_flag:
-    - SUBS
-    - MULTI_SUBS
-    - VOSTFR
-    - VOSTEN
-    - VF
-    - DUAL_SUBS
+    - hard
+    - soft
+    - ex
 
   sub_lang:
-    - CHS
-    - CHT
+    - RAW
+    - MULTI
+    - SC
+    - TC
+    - JPSC
+    - JPTC
     - JPN
     - ENG
+    - KOR
     - FRA
-    - RUS
     - SPA
+    - CAT
+    - RUS
     - DEU
     - ITA
+    - POR
 
   audio_flag:
     - DUB

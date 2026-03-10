@@ -3082,39 +3082,41 @@ func reconcileAudioSlotWithAttributes(slot *model.AudioSlot, attrs []model.Attri
 }
 
 func (p *Parser) promoteNoteAttributes(attrs []model.Attribute) []model.Attribute {
-	if p == nil || len(p.notePromotionRules) == 0 {
+	if p == nil {
 		return attrs
 	}
-	for i := range attrs {
-		if attrs[i].Type != model.AttrNote {
-			continue
-		}
-		n := strings.TrimSpace(attrs[i].Normalized)
-		if n == "" {
-			continue
-		}
-		low := strings.ToLower(n)
-		for _, rule := range p.notePromotionRules {
-			if _, ok := rule.values[low]; !ok {
+	if len(p.notePromotionRules) > 0 {
+		for i := range attrs {
+			if attrs[i].Type != model.AttrNote {
 				continue
 			}
-			attrs[i].Type = rule.targetType
-			if rule.normalizedFromToken {
-				switch rule.targetType {
-				case model.AttrPlatform:
-					attrs[i].Normalized = p.normalizePlatformCode(n)
-				case model.AttrSourceType:
-					attrs[i].Normalized = p.normalizeSourceType(n)
-				default:
-					attrs[i].Normalized = strings.TrimSpace(strings.ToUpper(n))
+			n := strings.TrimSpace(attrs[i].Normalized)
+			if n == "" {
+				continue
+			}
+			low := strings.ToLower(n)
+			for _, rule := range p.notePromotionRules {
+				if _, ok := rule.values[low]; !ok {
+					continue
 				}
-			} else if strings.TrimSpace(rule.normalized) != "" {
-				attrs[i].Normalized = strings.TrimSpace(rule.normalized)
+				attrs[i].Type = rule.targetType
+				if rule.normalizedFromToken {
+					switch rule.targetType {
+					case model.AttrPlatform:
+						attrs[i].Normalized = p.normalizePlatformCode(n)
+					case model.AttrSourceType:
+						attrs[i].Normalized = p.normalizeSourceType(n)
+					default:
+						attrs[i].Normalized = strings.TrimSpace(strings.ToUpper(n))
+					}
+				} else if strings.TrimSpace(rule.normalized) != "" {
+					attrs[i].Normalized = strings.TrimSpace(rule.normalized)
+				}
+				if attrs[i].Source == "" {
+					attrs[i].Source = "note_promote_dict"
+				}
+				break
 			}
-			if attrs[i].Source == "" {
-				attrs[i].Source = "note_promote_dict"
-			}
-			break
 		}
 	}
 	// Contextual promotion: ESP is ambiguous between audio/subtitle language.
@@ -3142,6 +3144,58 @@ func (p *Parser) promoteNoteAttributes(attrs []model.Attribute) []model.Attribut
 			if attrs[i].Source == "" {
 				attrs[i].Source = "note_promote_context"
 			}
+		}
+	}
+	// Composite subtitle/audio notes -> structured language attributes.
+	hasAttr := func(typ model.AttrType, norm string) bool {
+		for _, a := range attrs {
+			if a.Type != typ {
+				continue
+			}
+			if strings.EqualFold(strings.TrimSpace(a.Normalized), strings.TrimSpace(norm)) {
+				return true
+			}
+		}
+		return false
+	}
+	appendAttr := func(typ model.AttrType, norm string, ref model.Attribute) {
+		if hasAttr(typ, norm) {
+			return
+		}
+		attrs = append(attrs, model.Attribute{
+			Type:       typ,
+			Normalized: norm,
+			TokenStart: ref.TokenStart,
+			TokenEnd:   ref.TokenEnd,
+			Confidence: ref.Confidence,
+			Source:     "note_promote_context",
+		})
+	}
+	for i := range attrs {
+		if attrs[i].Type != model.AttrNote {
+			continue
+		}
+		n := strings.ToUpper(strings.TrimSpace(attrs[i].Normalized))
+		switch n {
+		case "CHS_SUBS":
+			attrs[i].Type = model.AttrSubLang
+			attrs[i].Normalized = "CHS"
+			appendAttr(model.AttrSubFlag, "SUBS", attrs[i])
+		case "JPN_AUDIO_CHS_SUBS":
+			attrs[i].Type = model.AttrAudioLang
+			attrs[i].Normalized = "JPN"
+			appendAttr(model.AttrSubLang, "CHS", attrs[i])
+			appendAttr(model.AttrSubFlag, "SUBS", attrs[i])
+		case "ENG_AUDIO_CHS_SUBS":
+			attrs[i].Type = model.AttrAudioLang
+			attrs[i].Normalized = "ENG"
+			appendAttr(model.AttrSubLang, "CHS", attrs[i])
+			appendAttr(model.AttrSubFlag, "SUBS", attrs[i])
+		case "CHN_AUDIO_CHS_SUBS":
+			attrs[i].Type = model.AttrAudioLang
+			attrs[i].Normalized = "CHN"
+			appendAttr(model.AttrSubLang, "CHS", attrs[i])
+			appendAttr(model.AttrSubFlag, "SUBS", attrs[i])
 		}
 	}
 	return attrs

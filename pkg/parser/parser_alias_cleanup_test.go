@@ -2559,17 +2559,23 @@ func TestParserLexicon_SubAndSearchMetaTokensAreConsumed(t *testing.T) {
 		}
 	}
 	notes := attrValues(res, model.AttrNote)
-	if !hasAttrValue(notes, "CHS_SUBS") {
-		t.Fatalf("expected note=CHS_SUBS, got=%v", notes)
-	}
 	if !hasAttrValue(notes, "FX_SUBS") {
 		t.Fatalf("expected note=FX_SUBS, got=%v", notes)
 	}
-	if !hasAttrValue(notes, "JPN_AUDIO_CHS_SUBS") {
-		t.Fatalf("expected note=JPN_AUDIO_CHS_SUBS, got=%v", notes)
-	}
 	if !hasAttrValue(notes, "SEARCH_HINT_META") {
 		t.Fatalf("expected note=SEARCH_HINT_META, got=%v", notes)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSubLang), "CHS") {
+		t.Fatalf("expected sub_lang=CHS, got=%v", attrValues(res, model.AttrSubLang))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "JPN") {
+		t.Fatalf("expected audio_lang=JPN, got=%v", attrValues(res, model.AttrAudioLang))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "SUBS") {
+		t.Fatalf("expected sub_flag=SUBS, got=%v", attrValues(res, model.AttrSubFlag))
+	}
+	if hasAttrValue(notes, "CHS_SUBS") || hasAttrValue(notes, "JPN_AUDIO_CHS_SUBS") {
+		t.Fatalf("CHS/JPN_CHS note should be promoted, notes=%v", notes)
 	}
 }
 
@@ -2600,9 +2606,7 @@ func TestParserLexicon_SubtitleStyleAndUncensoredMetaTokensAreConsumed(t *testin
 	}
 	notes := attrValues(res, model.AttrNote)
 	for _, want := range []string{
-		"CHN_AUDIO_CHS_SUBS",
 		"CHN_YUE_AUDIO_SUBS",
-		"ENG_AUDIO_CHS_SUBS",
 		"UNCENSORED_VERSION",
 		"WATERMARK_FREE",
 		"EXTERNAL_SUBS",
@@ -2614,6 +2618,21 @@ func TestParserLexicon_SubtitleStyleAndUncensoredMetaTokensAreConsumed(t *testin
 	}
 	if !hasAttrValue(attrValues(res, model.AttrPackProfile), "curated_pack") {
 		t.Fatalf("expected pack_profile=curated_pack, got=%v", attrValues(res, model.AttrPackProfile))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "CHN") {
+		t.Fatalf("expected audio_lang=CHN, got=%v", attrValues(res, model.AttrAudioLang))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "ENG") {
+		t.Fatalf("expected audio_lang=ENG, got=%v", attrValues(res, model.AttrAudioLang))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSubLang), "CHS") {
+		t.Fatalf("expected sub_lang=CHS, got=%v", attrValues(res, model.AttrSubLang))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "SUBS") {
+		t.Fatalf("expected sub_flag=SUBS, got=%v", attrValues(res, model.AttrSubFlag))
+	}
+	if hasAttrValue(notes, "CHN_AUDIO_CHS_SUBS") || hasAttrValue(notes, "ENG_AUDIO_CHS_SUBS") {
+		t.Fatalf("CHN/ENG_CHS note should be promoted, notes=%v", notes)
 	}
 	if hasAttrValue(notes, "CURATED_PACK") {
 		t.Fatalf("CURATED_PACK should be promoted from note, notes=%v", notes)

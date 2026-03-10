@@ -62,3 +62,43 @@ func TestPromoteNoteAttributes(t *testing.T) {
 	// non-promoted value should remain note
 	assertAttr(8, model.AttrNote, "WEEKLY")
 }
+
+func TestPromoteNoteAttributes_CompositeSubAudioNotes(t *testing.T) {
+	p := &Parser{}
+	in := []model.Attribute{
+		{Type: model.AttrNote, Normalized: "CHS_SUBS"},
+		{Type: model.AttrNote, Normalized: "JPN_AUDIO_CHS_SUBS"},
+		{Type: model.AttrNote, Normalized: "ENG_AUDIO_CHS_SUBS"},
+		{Type: model.AttrNote, Normalized: "CHN_AUDIO_CHS_SUBS"},
+	}
+	out := p.promoteNoteAttributes(in)
+
+	has := func(typ model.AttrType, norm string) bool {
+		for _, a := range out {
+			if a.Type == typ && a.Normalized == norm {
+				return true
+			}
+		}
+		return false
+	}
+	if !has(model.AttrSubLang, "CHS") {
+		t.Fatalf("expected sub_lang=CHS, got=%v", out)
+	}
+	for _, lang := range []string{"JPN", "ENG", "CHN"} {
+		if !has(model.AttrAudioLang, lang) {
+			t.Fatalf("expected audio_lang=%s, got=%v", lang, out)
+		}
+	}
+	if !has(model.AttrSubFlag, "SUBS") {
+		t.Fatalf("expected sub_flag=SUBS, got=%v", out)
+	}
+	for _, a := range out {
+		if a.Type == model.AttrNote &&
+			(a.Normalized == "CHS_SUBS" ||
+				a.Normalized == "JPN_AUDIO_CHS_SUBS" ||
+				a.Normalized == "ENG_AUDIO_CHS_SUBS" ||
+				a.Normalized == "CHN_AUDIO_CHS_SUBS") {
+			t.Fatalf("composite notes should be promoted, got=%v", out)
+		}
+	}
+}

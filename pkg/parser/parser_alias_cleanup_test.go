@@ -533,8 +533,11 @@ func TestParserSPKind_OvaDashEpisodeSlot(t *testing.T) {
 	if got := canonicalEpisode(res); got != "1" {
 		t.Fatalf("episode=%q want=%q", got, "1")
 	}
-	if got := canonicalSPKind(res); got != "OVA" {
-		t.Fatalf("sp_kind=%q want=%q", got, "OVA")
+	if got := canonicalSPKind(res); got != "" {
+		t.Fatalf("sp_kind should be empty for title-style OVA - 01, got=%q", got)
+	}
+	if title := canonicalTitle(res); !strings.Contains(strings.ToUpper(title), "OVA") {
+		t.Fatalf("title should keep OVA word, got=%q", title)
 	}
 }
 

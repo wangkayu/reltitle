@@ -12627,11 +12627,8 @@ func shouldAcceptSPKindToken(tokens []model.Token, idx int, kind string, suffix 
 	}
 	if k != "EX" {
 		// OVA/OAD/ONA/SP without numeric suffix is ambiguous in plain title text.
-		// Accept when an episode-like number is adjacent with clear boundary,
-		// or when it appears as a standalone tail marker before metadata blocks.
-		if hasNearbyEpisodeNumberToken(tokens, idx) {
-			return true
-		}
+		// Keep it as title word by default (e.g. "XXX OVA - 01"), and only accept
+		// explicit standalone marker forms (bracket/paren handled above) or tail meta form.
 		if hasSPTailMetaBoundary(tokens, idx) {
 			return true
 		}

@@ -1810,8 +1810,14 @@ func TestParserLexicon_MediaToken_R2JDVDISOConsumed(t *testing.T) {
 	if !hasAttrValue(attrValues(res, model.AttrEdition), "DVD_ISO") {
 		t.Fatalf("expected edition=DVD_ISO, got=%v", attrValues(res, model.AttrEdition))
 	}
+	if !hasAttrValue(attrValues(res, model.AttrEdition), "R2J") {
+		t.Fatalf("expected edition=R2J, got=%v", attrValues(res, model.AttrEdition))
+	}
 	if hasAttrValue(attrValues(res, model.AttrNote), "DVD_ISO") {
 		t.Fatalf("DVD_ISO should not remain in note, notes=%v", attrValues(res, model.AttrNote))
+	}
+	if hasAttrValue(attrValues(res, model.AttrNote), "R2J") {
+		t.Fatalf("R2J should not remain in note, notes=%v", attrValues(res, model.AttrNote))
 	}
 	if title := strings.ToLower(canonicalTitle(res)); strings.Contains(title, "iso") {
 		t.Fatalf("iso residual should not leak into title, title=%q", canonicalTitle(res))
@@ -1953,8 +1959,11 @@ func TestParserLexicon_MediaToken_LaserDiscBoxConsumed(t *testing.T) {
 	if !hasAttrValue(attrValues(res, model.AttrSourceType), "LD") {
 		t.Fatalf("expected source_type=LD, got=%v", attrValues(res, model.AttrSourceType))
 	}
-	if !hasAttrValue(attrValues(res, model.AttrNote), "LASER_DISC_BOX") {
-		t.Fatalf("expected note=LASER_DISC_BOX, got=%v", attrValues(res, model.AttrNote))
+	if !hasAttrValue(attrValues(res, model.AttrEdition), "LASER_DISC_BOX") {
+		t.Fatalf("expected edition=LASER_DISC_BOX, got=%v", attrValues(res, model.AttrEdition))
+	}
+	if hasAttrValue(attrValues(res, model.AttrNote), "LASER_DISC_BOX") {
+		t.Fatalf("LASER_DISC_BOX should not remain in note, notes=%v", attrValues(res, model.AttrNote))
 	}
 	if title := strings.ToLower(canonicalTitle(res)); strings.Contains(title, "laser disc box") {
 		t.Fatalf("laser disc box should be consumed from title, got=%q", canonicalTitle(res))
@@ -4567,7 +4576,7 @@ func TestLexiconDict_GluedTechTokensShouldBeConsumed(t *testing.T) {
 			token: "UHDBDRip",
 			expectAttrs: map[model.AttrType]string{
 				model.AttrSourceType: "BDRip",
-				model.AttrNote:       "UHD_BDRIP",
+				model.AttrEdition:    "UHD_BDRIP",
 			},
 		},
 		{
@@ -4576,7 +4585,7 @@ func TestLexiconDict_GluedTechTokensShouldBeConsumed(t *testing.T) {
 			token: "UHDRip",
 			expectAttrs: map[model.AttrType]string{
 				model.AttrSourceType: "HDRip",
-				model.AttrNote:       "UHDRIP",
+				model.AttrEdition:    "UHDRIP",
 			},
 		},
 		{
@@ -4713,7 +4722,7 @@ func TestLexiconDict_GluedTechTokensShouldBeConsumed(t *testing.T) {
 			token: "DVD9",
 			expectAttrs: map[model.AttrType]string{
 				model.AttrSourceType: "DVD",
-				model.AttrNote:       "DVD9",
+				model.AttrEdition:    "DVD9",
 			},
 		},
 		{
@@ -4722,7 +4731,7 @@ func TestLexiconDict_GluedTechTokensShouldBeConsumed(t *testing.T) {
 			token: "JDVD",
 			expectAttrs: map[model.AttrType]string{
 				model.AttrSourceType: "DVD",
-				model.AttrNote:       "JDVD",
+				model.AttrEdition:    "JDVD",
 			},
 		},
 		{
@@ -4730,7 +4739,7 @@ func TestLexiconDict_GluedTechTokensShouldBeConsumed(t *testing.T) {
 			raw:   "Dragon Ball DAIMA 2024 S01 Deluxe Edition JPN 2160p UHD Blu-ray 1080p Blu-ray BOX-GWXHBL [BDMV]",
 			token: "UHD",
 			expectAttrs: map[model.AttrType]string{
-				model.AttrNote: "UHD",
+				model.AttrEdition: "UHD",
 			},
 		},
 		{

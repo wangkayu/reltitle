@@ -286,8 +286,11 @@ func TestEditionToken_Restore4K2KHeadBlockConsumed(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse failed: %v", err)
 	}
-	if !hasParseAttrValue(res, model.AttrNote, "RESTORE_4K_2K_EDITION") {
-		t.Fatalf("expected note RESTORE_4K_2K_EDITION, notes=%v", attrValues(res, model.AttrNote))
+	if !hasParseAttrValue(res, model.AttrEdition, "RESTORE_4K_2K_EDITION") {
+		t.Fatalf("expected edition RESTORE_4K_2K_EDITION, editions=%v", attrValues(res, model.AttrEdition))
+	}
+	if hasParseAttrValue(res, model.AttrNote, "RESTORE_4K_2K_EDITION") {
+		t.Fatalf("RESTORE_4K_2K_EDITION should not remain in note, notes=%v", attrValues(res, model.AttrNote))
 	}
 	if g := canonicalGroup(res); !strings.Contains(strings.ToLower(strings.TrimSpace(g)), "suk") {
 		t.Fatalf("group=%q want contains SUK", g)

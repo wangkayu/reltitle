@@ -112,6 +112,34 @@ rules:
       type: hdr
       normalized: HDR
 
+  - id: note_to_bit_depth_hi10p
+    match:
+      note_values_case_insensitive: ["HI10P"]
+    promote_to:
+      type: bit_depth
+      normalized: "10bit"
+
+  - id: note_to_edition_uhd_variants
+    match:
+      note_values_case_insensitive: ["UHD", "UHDRIP", "UHD_BDRIP"]
+    promote_to:
+      type: edition
+      normalized_from_token: true
+
+  - id: note_to_edition_disc_variants
+    match:
+      note_values_case_insensitive: ["DVD9", "JDVD", "R2J", "LASER_DISC_BOX", "BD_BOX"]
+    promote_to:
+      type: edition
+      normalized_from_token: true
+
+  - id: note_to_edition_restore_4k_2k
+    match:
+      note_values_case_insensitive: ["RESTORE_4K_2K_EDITION"]
+    promote_to:
+      type: edition
+      normalized: "RESTORE_4K_2K_EDITION"
+
 note_whitelist:
   # 未命中 promotion 且属于白名单的 note 保留
   - 检索

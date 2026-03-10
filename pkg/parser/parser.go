@@ -100,7 +100,7 @@ type packProfileRule struct {
 	minContentsDistinct int
 }
 
-var wxhResolutionPattern = regexp.MustCompile(`(?i)^(\d{2,5})\s*[x×X]\s*(\d{2,5})$`)
+var wxhResolutionPattern = regexp.MustCompile(`(?i)^(\d{2,5})\s*[x×X]\s*(\d{2,5})(?:\s*([ip]))?$`)
 
 func extractWxHResolutionAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Attribute) {
 	if attrs == nil || len(tokens) == 0 {
@@ -119,7 +119,7 @@ func extractWxHResolutionAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[
 			continue
 		}
 		m := wxhResolutionPattern.FindStringSubmatch(t)
-		if len(m) != 3 {
+		if len(m) != 4 {
 			continue
 		}
 		w, _ := strconv.Atoi(m[1])
@@ -4698,6 +4698,7 @@ func (p *Parser) isAliasMetaOnlyToken(s string) bool {
 	if reAliasResolutionToken.MatchString(ss) ||
 		reAliasResolutionMetaPhrase.MatchString(ss) ||
 		reAliasSourceResolutionPhrase.MatchString(ss) ||
+		reAliasPlatformResolutionPhrase.MatchString(ss) ||
 		reAliasSourceMetaPhrase.MatchString(ss) ||
 		reAliasSubtitleMetaPhrase.MatchString(ss) ||
 		reAliasBitDepthMetaPhrase.MatchString(ss) ||
@@ -4915,9 +4916,10 @@ var reAliasTrimSeasonWordTail = regexp.MustCompile(`(?i)\s+(?:season|saison)\s*$
 var reAliasTrimEpisodeWordTail = regexp.MustCompile(`(?i)\s+(?:ep|episode)\s*$`)
 var reAliasTVContentPhrase = regexp.MustCompile(`(?i)\btv\b.*(?:season|series|ver(?:sion)?|reproduction|release|ova|oad|ona|movie|sp|s\d{1,2}|剪辑版|剪輯版|版|系列)`)
 var reAliasMovieIndexSingle = regexp.MustCompile(`(?i)^m\d{1,3}$`)
-var reAliasResolutionToken = regexp.MustCompile(`(?i)^(?:\d{3,4}p|[248]k|fhd|uhd|hd|sd)$`)
+var reAliasResolutionToken = regexp.MustCompile(`(?i)^(?:\d{3,4}p|[248]k|fhd|uhd|hd|sd|\d{3,4}\s*[x×]\s*\d{3,4}(?:[ip])?)$`)
 var reAliasResolutionMetaPhrase = regexp.MustCompile(`(?i)^(?:[248]k|fhd|uhd|hd|sd)(?:\s*(?:ver(?:sion)?|reproduction|restore(?:d)?|remaster(?:ed)?|upscal(?:e|ed)|收藏级画质|收藏級畫質|修复版|修復版|畫質|画质))?$`)
-var reAliasSourceResolutionPhrase = regexp.MustCompile(`(?i)^(?:ld|jdvd|dvd|bd|bdrip|webrip|web[- ]?dl)\s+\d{3,4}p$`)
+var reAliasSourceResolutionPhrase = regexp.MustCompile(`(?i)^(?:ld|jdvd|dvd|bd|bdrip|webrip|web[- ]?dl)\s+(?:\d{3,4}p|\d{3,4}\s*[x×]\s*\d{3,4}(?:[ip])?)$`)
+var reAliasPlatformResolutionPhrase = regexp.MustCompile(`(?i)^(?:[a-z0-9][a-z0-9._-]*)(?:\s+[a-z]{2,4})?\s+\d{3,4}\s*[x×]\s*\d{3,4}(?:[ip])?(?:\s+(?:avc|hevc|mpeg2|x26[45]|h\.?26[45]|aac|ac3|e-?ac-?3|ddp|flac|opus|mp3))?$`)
 var reAliasSourceMetaPhrase = regexp.MustCompile(`(?i)^(?:b[-_ ]?)?(?:j[-_ ]?dvd|dvd|bd|bdrip|bluray|blu[-_ ]?ray|webrip|web[-_ ]?dl)(?:\s+raw)?$`)
 var reAliasSubtitleMetaPhrase = regexp.MustCompile(`(?i)^(?:srt|ass|pgs)(?:\b|[\s\-_/+].*)$`)
 var reAliasBitDepthMetaPhrase = regexp.MustCompile(`(?i)^(?:ma(?:8|10|12)p|(?:8|10|12)\s*[-_ ]?bit)$`)
@@ -8517,6 +8519,8 @@ func detectSeasonKeyword(tokens []model.Token) (season string, tokenIdx int) {
 
 var episodeRangePattern = regexp.MustCompile(`(?i)^(\d{1,4})[-~](\d{1,4})$`)
 var episodeRangeEmbeddedPattern = regexp.MustCompile(`(?i)(\d{1,4})[-~](\d{1,4})`)
+var sxxExxEpisodeRangePattern = regexp.MustCompile(`(?i)^s\d{1,2}e(\d{1,4})[-~]e?(\d{1,4})$`)
+var sxxExxLeftPattern = regexp.MustCompile(`(?i)^s(\d{1,2})e(\d{1,4})$`)
 var episodeRangeLeftCJKPattern = regexp.MustCompile(`^(?:第)?(\d{1,4})$`)
 var episodeRangeRightCJKPattern = regexp.MustCompile(`^(\d{1,4})(?:集|话|話|回|章)?$`)
 var epPrefixedDigitsPattern = regexp.MustCompile(`(?i)^e(?:p)?(\d{1,4})$`)
@@ -8576,6 +8580,58 @@ func isTitlePrefixedDigitRangeInBracket(tokens []model.Token, idx int) bool {
 }
 
 func detectEpisodeRange(tokens []model.Token) (string, int) {
+	// Pattern: S01E08-E09 / S01E08-09 / S01E08~E09
+	for i := 0; i < len(tokens); i++ {
+		text := strings.TrimSpace(tokens[i].Text)
+		if m := sxxExxEpisodeRangePattern.FindStringSubmatch(text); len(m) == 3 {
+			l := strings.TrimLeft(strings.TrimSpace(m[1]), "0")
+			if l == "" {
+				l = "0"
+			}
+			r := strings.TrimLeft(strings.TrimSpace(m[2]), "0")
+			if r == "" {
+				r = "0"
+			}
+			if l != "0" && r != "0" {
+				return l + "-" + r, i
+			}
+		}
+	}
+	for i := 0; i+2 < len(tokens); i++ {
+		// The left SxxExx token may already be removed by season extraction.
+		// Keep matching this range pattern as long as separator/right token remain visible.
+		if tokens[i+1].Removed || tokens[i+2].Removed {
+			continue
+		}
+		left := strings.TrimSpace(tokens[i].Text)
+		sep := strings.TrimSpace(tokens[i+1].Text)
+		right := strings.TrimSpace(tokens[i+2].Text)
+		if sep != "-" && sep != "~" {
+			continue
+		}
+		lm := sxxExxLeftPattern.FindStringSubmatch(left)
+		if len(lm) != 3 {
+			continue
+		}
+		if rm := epPrefixedDigitsPattern.FindStringSubmatch(strings.ToLower(right)); len(rm) == 2 {
+			right = strings.TrimSpace(rm[1])
+		}
+		if !episodeOfTotalPattern.MatchString(right) {
+			continue
+		}
+		l := strings.TrimLeft(strings.TrimSpace(lm[2]), "0")
+		if l == "" {
+			l = "0"
+		}
+		r := strings.TrimLeft(strings.TrimSpace(right), "0")
+		if r == "" {
+			r = "0"
+		}
+		if l != "0" && r != "0" {
+			return l + "-" + r, i
+		}
+	}
+
 	// Pattern: Episode 27-40 / EP 01-12
 	for i := 0; i < len(tokens); i++ {
 		if tokens[i].Removed {

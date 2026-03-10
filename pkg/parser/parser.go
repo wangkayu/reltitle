@@ -4403,10 +4403,18 @@ func normalizeAudioLangToken(v string) string {
 
 func (p *Parser) normalizeAudioAttrs(attrs []model.Attribute) {
 	for i := range attrs {
-		if attrs[i].Type != model.AttrAudioLang {
-			continue
+		switch attrs[i].Type {
+		case model.AttrAudioLang:
+			attrs[i].Normalized = normalizeAudioLangToken(attrs[i].Normalized)
+		case model.AttrAudioCodec:
+			if v, ok := p.normalizeAudioCodecToken(attrs[i].Normalized); ok {
+				attrs[i].Normalized = v
+			}
+		case model.AttrAudioFlag:
+			if v, ok := p.normalizeAudioFlagToken(attrs[i].Normalized); ok {
+				attrs[i].Normalized = v
+			}
 		}
-		attrs[i].Normalized = normalizeAudioLangToken(attrs[i].Normalized)
 	}
 }
 

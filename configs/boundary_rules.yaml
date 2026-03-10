@@ -318,7 +318,7 @@ boundary_filtering:
       description: "过滤被强边界包围的token"
       examples:
         - input: "[LoliHouse] 药屋少女 招募翻译 - 01 [WebRip]"
-          filter: "招募翻译" (被TITLE和EPISODE包围)
+          filter: "招募翻译 (被TITLE和EPISODE包围)"
           output: "药屋少女"
 
 # ============================================================================

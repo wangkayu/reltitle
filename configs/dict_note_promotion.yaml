@@ -77,6 +77,55 @@ rules:
       type: resolution
       normalized: 1080p
 
+  - id: note_to_resolution_720p
+    match:
+      note_values_case_insensitive: ["720P"]
+    promote_to:
+      type: resolution
+      normalized: 720p
+
+  - id: note_to_resolution_2160p
+    match:
+      note_values_case_insensitive: ["2160P", "4K"]
+    promote_to:
+      type: resolution
+      normalized: 2160p
+
+  - id: note_to_resolution_480p
+    match:
+      note_values_case_insensitive: ["480P"]
+    promote_to:
+      type: resolution
+      normalized: 480p
+
+  - id: note_to_resolution_576p
+    match:
+      note_values_case_insensitive: ["576P"]
+    promote_to:
+      type: resolution
+      normalized: 576p
+
+  - id: note_to_resolution_540p
+    match:
+      note_values_case_insensitive: ["540P"]
+    promote_to:
+      type: resolution
+      normalized: 540p
+
+  - id: note_to_resolution_360p
+    match:
+      note_values_case_insensitive: ["360P"]
+    promote_to:
+      type: resolution
+      normalized: 360p
+
+  - id: note_to_resolution_1440x1080
+    match:
+      note_values_case_insensitive: ["1440X1080"]
+    promote_to:
+      type: resolution
+      normalized: 1440x1080
+
   - id: note_to_content_rating_age_restricted
     match:
       note_values_case_insensitive: ["AGE_RESTRICTED"]

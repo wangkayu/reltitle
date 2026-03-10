@@ -14,6 +14,13 @@ canonical:
     - HDRip
     - DVD
     - Remux
+    - VHS
+    - TS
+    - HDTC
+    - HDTS
+    - CAM
+    - LD
+    - TC
 
   platform:
     - NETFLIX
@@ -37,6 +44,13 @@ canonical:
     - LNTV
     - YUZUKITV
     - FOD
+    - TVB
+    - MUSE
+    - IQIYI
+    - HOY
+    - RTHK
+    - HULU
+    - DISNEY_NOW
 
   sub_flag:
     - hard
@@ -76,12 +90,18 @@ canonical:
     - ENG
     - FRA
     - RUS
+    - SPA
+    - KOR
 
   resolution:
     - 2160p
     - 1080p
     - 720p
     - 480p
+    - 576p
+    - 540p
+    - 360p
+    - 1440x1080
 
   video_codec:
     - HEVC
@@ -109,6 +129,8 @@ canonical:
     - MP4
     - AVI
     - TS
+    - ISO
+    - M2TS
 
   note_whitelist:
     # 仅保留在 note 的业务备注（示例）
@@ -138,3 +160,36 @@ canonical:
       hdtv: HDTV
       hdtvrip: HDTV
       hdrip: HDRip
+    source_type_aliases:
+      tc: TC
+      hdcam: CAM
+      telesync: TS
+    platform_aliases:
+      muse asia: MUSE
+      museasia: MUSE
+      iqi: IQIYI
+      disney now: DISNEY_NOW
+    audio_codec_aliases:
+      ddp: EAC3
+      dts-hdma: DTSHDMA
+    audio_flag_aliases:
+      dual: DUAL_AUDIO
+      dual audio: DUAL_AUDIO
+      dual_audio: DUAL_AUDIO
+      dubbed: DUB
+      japanese dub: DUB
+      japanese_dub: DUB
+      chinese dub: DUB
+      chinese_dub: DUB
+      spanish dub: DUB
+      spanish_dub: DUB
+      japanese audio: MULTI_AUDIO
+      japanese_audio: MULTI_AUDIO
+      audio_jpn: MULTI_AUDIO
+      audio_eng+jpn: MULTI_AUDIO
+      audio_chn+jpn: MULTI_AUDIO
+      audio_chn+eng+jpn: MULTI_AUDIO
+    audio_lang_aliases:
+      chn: CMN
+      chinese: CMN
+      mandarin: CMN

@@ -1659,22 +1659,55 @@ entries:
     any_of:
       - tokens: ["lat", "-", "fre", "-", "jap", "+", "subs"]
         emit:
-          - type: note
-            normalized: "LAT-FRE-JAP+Subs"
+          - type: audio_flag
+            normalized: "MULTI_AUDIO"
+            token_index: -1
+          - type: audio_lang
+            normalized: "SPA"
+            token_index: -1
+          - type: audio_lang
+            normalized: "FRA"
+            token_index: -1
+          - type: audio_lang
+            normalized: "JPN"
+            token_index: -1
+          - type: sub_flag
+            normalized: "SUBS"
             token_index: -1
         remove: true
         confidence: 0.7
       - tokens: ["lat", "-", "fre", "-", "jap", "+"]
         emit:
-          - type: note
-            normalized: "LAT-FRE-JAP+Subs"
+          - type: audio_flag
+            normalized: "MULTI_AUDIO"
+            token_index: -1
+          - type: audio_lang
+            normalized: "SPA"
+            token_index: -1
+          - type: audio_lang
+            normalized: "FRA"
+            token_index: -1
+          - type: audio_lang
+            normalized: "JPN"
+            token_index: -1
+          - type: sub_flag
+            normalized: "SUBS"
             token_index: -1
         remove: true
         confidence: 0.65
       - tokens: ["lat", "-", "fre", "-", "jap"]
         emit:
-          - type: note
-            normalized: "LAT-FRE-JAP"
+          - type: audio_flag
+            normalized: "MULTI_AUDIO"
+            token_index: -1
+          - type: audio_lang
+            normalized: "SPA"
+            token_index: -1
+          - type: audio_lang
+            normalized: "FRA"
+            token_index: -1
+          - type: audio_lang
+            normalized: "JPN"
             token_index: -1
         remove: true
         confidence: 0.65
@@ -1684,15 +1717,27 @@ entries:
     any_of:
       - tokens: ["rus", "+", "jap"]
         emit:
-          - type: note
-            normalized: "RUS+JAP"
+          - type: audio_flag
+            normalized: "DUAL_AUDIO"
+            token_index: -1
+          - type: audio_lang
+            normalized: "RUS"
+            token_index: -1
+          - type: audio_lang
+            normalized: "JPN"
             token_index: -1
         remove: true
         confidence: 0.7
       - tokens: ["rus", "jap"]
         emit:
-          - type: note
-            normalized: "RUS+JAP"
+          - type: audio_flag
+            normalized: "DUAL_AUDIO"
+            token_index: -1
+          - type: audio_lang
+            normalized: "RUS"
+            token_index: -1
+          - type: audio_lang
+            normalized: "JPN"
             token_index: -1
         remove: true
         confidence: 0.65
@@ -1702,7 +1747,7 @@ entries:
       - scope: plain
         tokens: ["rus"]
         emit:
-          - type: note
+          - type: audio_lang
             normalized: "RUS"
             token_index: -1
         remove: true
@@ -1710,7 +1755,7 @@ entries:
       - scope: bracket
         tokens: ["rus"]
         emit:
-          - type: note
+          - type: audio_lang
             normalized: "RUS"
             token_index: -1
         remove: true
@@ -1718,7 +1763,7 @@ entries:
       - scope: paren
         tokens: ["rus"]
         emit:
-          - type: note
+          - type: audio_lang
             normalized: "RUS"
             token_index: -1
         remove: true
@@ -3279,7 +3324,7 @@ entries:
   - id: note_chn
     tokens: ["chn"]
     emit:
-      - type: note
+      - type: audio_lang
         normalized: "CHN"
         token_index: -1
     remove: true

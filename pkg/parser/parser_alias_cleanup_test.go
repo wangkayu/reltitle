@@ -1976,10 +1976,64 @@ func TestParserLexicon_LangMarker_RusBracketConsumed(t *testing.T) {
 	if title := canonicalTitle(res); strings.Contains(strings.ToLower(title), "rus") {
 		t.Fatalf("rus marker should not leak into title, got=%q", title)
 	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "RUS") {
+		t.Fatalf("expected audio_lang=RUS, got=%v", attrValues(res, model.AttrAudioLang))
+	}
+	if hasAttrValue(attrValues(res, model.AttrNote), "RUS") {
+		t.Fatalf("RUS should not remain in note, notes=%v", attrValues(res, model.AttrNote))
+	}
 	for _, tok := range res.Tokens {
 		if strings.EqualFold(strings.TrimSpace(tok.Text), "Rus") && !tok.Removed {
 			t.Fatalf("rus token should be consumed, tokens=%v", res.Tokens)
 		}
+	}
+}
+
+func TestParserLexicon_LangTagLatFreJapSubsStructured(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[A&C] 足球小将.日语+西班牙语+法语.英文+法文.Captain Tsubasa (2018) - [01-14] [LAT-FRE-JAP+Subs] [BDrip1080p]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "SPA") ||
+		!hasAttrValue(attrValues(res, model.AttrAudioLang), "FRA") ||
+		!hasAttrValue(attrValues(res, model.AttrAudioLang), "JPN") {
+		t.Fatalf("expected audio_lang SPA/FRA/JPN, got=%v", attrValues(res, model.AttrAudioLang))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioFlag), "MULTI_AUDIO") {
+		t.Fatalf("expected audio_flag=MULTI_AUDIO, got=%v", attrValues(res, model.AttrAudioFlag))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "SUBS") {
+		t.Fatalf("expected sub_flag=SUBS, got=%v", attrValues(res, model.AttrSubFlag))
+	}
+	if hasAttrValue(attrValues(res, model.AttrNote), "LAT-FRE-JAP+Subs") {
+		t.Fatalf("LAT-FRE-JAP+Subs should not remain in note, notes=%v", attrValues(res, model.AttrNote))
+	}
+}
+
+func TestParserLexicon_LangMarker_CHNStructured(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "Hui Buh Das Schlossgespenst 2006 1080p CHN Blu-ray AVC DTS 5.1-bury"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "CHN") {
+		t.Fatalf("expected audio_lang=CHN, got=%v", attrValues(res, model.AttrAudioLang))
+	}
+	if hasAttrValue(attrValues(res, model.AttrNote), "CHN") {
+		t.Fatalf("CHN should not remain in note, notes=%v", attrValues(res, model.AttrNote))
 	}
 }
 
@@ -2199,6 +2253,18 @@ func TestParserPreEpisodePipeAliases_AreExtractedAndConsumed(t *testing.T) {
 	}
 	if !hasNonLatinAlias {
 		t.Fatalf("missing non-latin alias, got=%v", aliases)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "RUS") {
+		t.Fatalf("expected audio_lang=RUS, got=%v", attrValues(res, model.AttrAudioLang))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "JPN") {
+		t.Fatalf("expected audio_lang=JPN, got=%v", attrValues(res, model.AttrAudioLang))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioFlag), "DUAL_AUDIO") {
+		t.Fatalf("expected audio_flag=DUAL_AUDIO, got=%v", attrValues(res, model.AttrAudioFlag))
+	}
+	if hasAttrValue(attrValues(res, model.AttrNote), "RUS+JAP") {
+		t.Fatalf("RUS+JAP should not remain in note, notes=%v", attrValues(res, model.AttrNote))
 	}
 	for _, tok := range res.Tokens {
 		if strings.TrimSpace(tok.Text) == "|" && !tok.Removed {
@@ -2892,7 +2958,7 @@ func TestParserUnknownTemplate_TAliasMinimalAssigned(t *testing.T) {
 	}
 	p := New(cfg)
 
-	raw := "Mahou no Stage Fancy Lala  / Fancy Lala [Rus]"
+	raw := "Mahou no Stage Fancy Lala  / Fancy Lala"
 	res, err := p.Parse(raw)
 	if err != nil {
 		t.Fatalf("parse failed: %v", err)

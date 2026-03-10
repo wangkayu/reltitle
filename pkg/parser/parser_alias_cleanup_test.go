@@ -2067,6 +2067,54 @@ func TestParserLexicon_LangMarker_EspanoloParenConsumed(t *testing.T) {
 	}
 }
 
+func TestParserLexicon_LangMarker_SubEspanolStructured(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "Silent Witch: Chinmoku no Majo no Kakushigoto S01 Sub Español [1080p]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "SUBS") {
+		t.Fatalf("expected sub_flag=SUBS, got=%v", attrValues(res, model.AttrSubFlag))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSubLang), "SPA") {
+		t.Fatalf("expected sub_lang=SPA, got=%v", attrValues(res, model.AttrSubLang))
+	}
+	if hasAttrValue(attrValues(res, model.AttrNote), "ESP") {
+		t.Fatalf("ESP should not remain in note, notes=%v", attrValues(res, model.AttrNote))
+	}
+}
+
+func TestParserLexicon_LangMarker_EspanolLatinoStructured(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	cases := []string{
+		"[Tento] Yu-Gi-Oh! SEVENS [720p] (Doblaje Español Latino)",
+		"Dr. Slump 1997 [480] Español Latino",
+	}
+	for _, raw := range cases {
+		res, err := p.Parse(raw)
+		if err != nil {
+			t.Fatalf("parse failed for %q: %v", raw, err)
+		}
+		if !hasAttrValue(attrValues(res, model.AttrAudioLang), "SPA") {
+			t.Fatalf("expected audio_lang=SPA for %q, got=%v", raw, attrValues(res, model.AttrAudioLang))
+		}
+		if hasAttrValue(attrValues(res, model.AttrNote), "ESP") {
+			t.Fatalf("ESP should not remain in note for %q, notes=%v", raw, attrValues(res, model.AttrNote))
+		}
+	}
+}
+
 func TestParserStandaloneDVDSource_TokutenDVDSuffixConsumed(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

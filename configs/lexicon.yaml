@@ -1769,6 +1769,101 @@ entries:
         remove: true
         confidence: 0.7
 
+  - id: lang_tag_espanol_context
+    any_of:
+      - scope: plain
+        tokens: ["sub", "español"]
+        emit:
+          - type: sub_flag
+            normalized: "SUBS"
+            token_index: -1
+          - type: sub_lang
+            normalized: "SPA"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - scope: plain
+        tokens: ["sub", "espanol"]
+        emit:
+          - type: sub_flag
+            normalized: "SUBS"
+            token_index: -1
+          - type: sub_lang
+            normalized: "SPA"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - scope: plain
+        tokens: ["sub", "español", "latino"]
+        emit:
+          - type: sub_flag
+            normalized: "SUBS"
+            token_index: -1
+          - type: sub_lang
+            normalized: "SPA"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - scope: plain
+        tokens: ["sub", "espanol", "latino"]
+        emit:
+          - type: sub_flag
+            normalized: "SUBS"
+            token_index: -1
+          - type: sub_lang
+            normalized: "SPA"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - scope: paren
+        tokens: ["doblaje", "español", "latino"]
+        emit:
+          - type: audio_lang
+            normalized: "SPA"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - scope: paren
+        tokens: ["doblaje", "espanol", "latino"]
+        emit:
+          - type: audio_lang
+            normalized: "SPA"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - scope: plain
+        tokens: ["español", "latino"]
+        emit:
+          - type: audio_lang
+            normalized: "SPA"
+            token_index: -1
+        remove: true
+        confidence: 0.68
+      - scope: plain
+        tokens: ["espanol", "latino"]
+        emit:
+          - type: audio_lang
+            normalized: "SPA"
+            token_index: -1
+        remove: true
+        confidence: 0.68
+      - scope: bracket
+        tokens: ["español", "latino"]
+        emit:
+          - type: audio_lang
+            normalized: "SPA"
+            token_index: -1
+        remove: true
+        confidence: 0.68
+      - scope: bracket
+        tokens: ["espanol", "latino"]
+        emit:
+          - type: audio_lang
+            normalized: "SPA"
+            token_index: -1
+        remove: true
+        confidence: 0.68
+
   - id: note_lang_tag_espanol_variants
     any_of:
       - scope: plain

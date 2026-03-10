@@ -9786,6 +9786,13 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 								}
 							}
 						}
+						// Guard: title season suffix before bracket episode, e.g.
+						// "... Monogatari -2 [01] ...", should prefer [01].
+						if ok && !inBracket && hasLaterBracketEpisodeCandidate(tokens, i+1) {
+							if hasMatchingSeasonNumberAroundToken(tokens, i, 12) {
+								ok = false
+							}
+						}
 					} else if sep == "★" || sep == "☆" {
 						ok = true
 						if signalScore < 92 {
@@ -9800,7 +9807,7 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 							if n != "0" {
 								if n != "720" && n != "1080" && n != "2160" && n != "480" && n != "540" {
 									if hasLaterBracketEpisodeCandidate(tokens, i+1) {
-										if hasMatchingSeasonNumberAroundToken(tokens, i, 12) && !hasDashSeparatorAroundToken(tokens, i) {
+										if hasMatchingSeasonNumberAroundToken(tokens, i, 12) {
 											continue
 										}
 										if i-1 >= 0 {

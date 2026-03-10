@@ -263,6 +263,26 @@ func TestParserEpisodeDetect_TitleSeasonSuffixDoesNotPolluteEPSlot(t *testing.T)
 	}
 }
 
+func TestParserEpisodeDetect_DashSeasonSuffixBeforeBracketPrefersBracketEpisode(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[黑白字幕组]0岁儿童开始冲刺的故事 第二季/0-saiji Start Dash Monogatari -2  [01] [AVC-8bit 1080P AAC][CHS]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalEpisode(res); got != "1" {
+		t.Fatalf("episode=%q want=%q", got, "1")
+	}
+	if got := canonicalSeason(res); got != "2" {
+		t.Fatalf("season=%q want=%q", got, "2")
+	}
+}
+
 func TestParserAliasCleanup_DashBridgeBilingualSeasonAlias(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

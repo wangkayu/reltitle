@@ -3117,6 +3117,33 @@ func (p *Parser) promoteNoteAttributes(attrs []model.Attribute) []model.Attribut
 			break
 		}
 	}
+	// Contextual promotion: ESP is ambiguous between audio/subtitle language.
+	// Only promote to subtitle language when subtitle signal already exists.
+	hasSubSignal := false
+	for _, a := range attrs {
+		if a.Type == model.AttrSubFlag {
+			n := strings.ToUpper(strings.TrimSpace(a.Normalized))
+			if n == "SUBS" || n == "MULTI_SUBS" || n == "CC" {
+				hasSubSignal = true
+				break
+			}
+		}
+	}
+	if hasSubSignal {
+		for i := range attrs {
+			if attrs[i].Type != model.AttrNote {
+				continue
+			}
+			if !strings.EqualFold(strings.TrimSpace(attrs[i].Normalized), "ESP") {
+				continue
+			}
+			attrs[i].Type = model.AttrSubLang
+			attrs[i].Normalized = "SPA"
+			if attrs[i].Source == "" {
+				attrs[i].Source = "note_promote_context"
+			}
+		}
+	}
 	return attrs
 }
 

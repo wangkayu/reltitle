@@ -140,6 +140,13 @@ rules:
       type: edition
       normalized: "RESTORE_4K_2K_EDITION"
 
+  - id: note_to_pack_profile_curated
+    match:
+      note_values_case_insensitive: ["CURATED_PACK"]
+    promote_to:
+      type: pack_profile
+      normalized: "curated_pack"
+
 note_whitelist:
   # 未命中 promotion 且属于白名单的 note 保留
   - 检索

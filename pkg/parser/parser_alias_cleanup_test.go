@@ -2607,11 +2607,16 @@ func TestParserLexicon_SubtitleStyleAndUncensoredMetaTokensAreConsumed(t *testin
 		"WATERMARK_FREE",
 		"EXTERNAL_SUBS",
 		"STYLIZED_SUBS",
-		"CURATED_PACK",
 	} {
 		if !hasAttrValue(notes, want) {
 			t.Fatalf("expected note=%s, got=%v", want, notes)
 		}
+	}
+	if !hasAttrValue(attrValues(res, model.AttrPackProfile), "curated_pack") {
+		t.Fatalf("expected pack_profile=curated_pack, got=%v", attrValues(res, model.AttrPackProfile))
+	}
+	if hasAttrValue(notes, "CURATED_PACK") {
+		t.Fatalf("CURATED_PACK should be promoted from note, notes=%v", notes)
 	}
 }
 
@@ -2684,11 +2689,16 @@ func TestParserLexicon_RecruitmentPackAndRemasterVariantsAreConsumed(t *testing.
 		"CHN_JPN_AUDIO",
 		"BONUS_VIDEO",
 		"REMASTERED_VERSION",
-		"CURATED_PACK",
 	} {
 		if !hasAttrValue(notes, want) {
 			t.Fatalf("expected note=%s, got=%v", want, notes)
 		}
+	}
+	if !hasAttrValue(attrValues(res, model.AttrPackProfile), "curated_pack") {
+		t.Fatalf("expected pack_profile=curated_pack, got=%v", attrValues(res, model.AttrPackProfile))
+	}
+	if hasAttrValue(notes, "CURATED_PACK") {
+		t.Fatalf("CURATED_PACK should be promoted from note, notes=%v", notes)
 	}
 }
 

@@ -39,6 +39,8 @@ func TestPromoteNoteAttributes(t *testing.T) {
 		{Type: model.AttrNote, Normalized: "MULTI"},
 		{Type: model.AttrNote, Normalized: "Subs"},
 		{Type: model.AttrNote, Normalized: "VOSTFR"},
+		{Type: model.AttrNote, Normalized: "ESP"},
+		{Type: model.AttrSubFlag, Normalized: "SUBS"},
 		{Type: model.AttrNote, Normalized: "WEEKLY"},
 	}
 
@@ -56,6 +58,7 @@ func TestPromoteNoteAttributes(t *testing.T) {
 	assertAttr(3, model.AttrSubFlag, "MULTI_SUBS")
 	assertAttr(4, model.AttrSubFlag, "SUBS")
 	assertAttr(5, model.AttrSubFlag, "VOSTFR")
+	assertAttr(6, model.AttrSubLang, "SPA")
 	// non-promoted value should remain note
-	assertAttr(6, model.AttrNote, "WEEKLY")
+	assertAttr(8, model.AttrNote, "WEEKLY")
 }

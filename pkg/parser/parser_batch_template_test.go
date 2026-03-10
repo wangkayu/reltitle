@@ -438,8 +438,11 @@ func TestParserBatchTemplateRangePack_CuratedRangeSuffixAsRange(t *testing.T) {
 	if got := firstAttrValue(res, model.AttrPackKind); got != "合集" {
 		t.Fatalf("pack_kind=%q want=%q", got, "合集")
 	}
-	if !hasAttrValue(attrValues(res, model.AttrNote), "CURATED_PACK") {
-		t.Fatalf("expected note=CURATED_PACK")
+	if !hasAttrValue(attrValues(res, model.AttrPackProfile), "curated_pack") {
+		t.Fatalf("expected pack_profile=curated_pack, got=%v", attrValues(res, model.AttrPackProfile))
+	}
+	if hasAttrValue(attrValues(res, model.AttrNote), "CURATED_PACK") {
+		t.Fatalf("CURATED_PACK should be promoted from note, notes=%v", attrValues(res, model.AttrNote))
 	}
 	for _, tok := range res.Tokens {
 		if strings.EqualFold(strings.TrimSpace(tok.Text), "12修正合集") && !tok.Removed {

@@ -2479,7 +2479,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	origTitle := title
 	title = sanitizePrimaryTitleForOutput(title)
 	title = trimTitleTailByPackKind(title, packKind)
-	aliases = p.sanitizeAliasesForOutput(aliases, title, episode, season)
+	aliases = p.sanitizeAliasesForOutput(aliases, title, episode, season, spKind)
 	title, aliases = p.rebalanceGenericPrimaryTitleFromAliases(title, aliases)
 	if strings.TrimSpace(title) != "" && aliasSemanticKey(title) != aliasSemanticKey(origTitle) {
 		attrs = upsertTitleAttribute(attrs, title, "title_cleanup")
@@ -2571,7 +2571,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 		attrs = upsertGroupAttribute(attrs, group, "group_route_override")
 	}
 	// Group-route overrides may inject raw alias candidates; run final alias/title cleanup once more.
-	aliases = p.sanitizeAliasesForOutput(aliases, title, episode, season)
+	aliases = p.sanitizeAliasesForOutput(aliases, title, episode, season, spKind)
 	title, aliases = p.rebalanceGenericPrimaryTitleFromAliases(title, aliases)
 	packProfile := p.inferPackProfile(contentKind, packKind, season, seasonRange, attrs)
 	attrs = upsertTitleAttribute(attrs, title, "canonical")
@@ -5455,7 +5455,7 @@ func normalizeAliasTrailingAbsoluteEpisode(alias string, primaryEpisode string, 
 	return strings.TrimSpace(strings.Trim(prefix, "-_/;:,+ "))
 }
 
-func (p *Parser) sanitizeAliasesForOutput(aliases []string, title string, episode string, season string) []string {
+func (p *Parser) sanitizeAliasesForOutput(aliases []string, title string, episode string, season string, spKind string) []string {
 	if len(aliases) == 0 {
 		return nil
 	}
@@ -5469,6 +5469,7 @@ func (p *Parser) sanitizeAliasesForOutput(aliases []string, title string, episod
 			a = p.normalizeAliasCandidateForOutput(stripped)
 		}
 		a = normalizeAliasTrailingAbsoluteEpisode(a, episode, season)
+		a = trimAliasTailBySPKind(a, spKind)
 		if a == "" || !p.isValidAliasToken(a) {
 			continue
 		}
@@ -5505,6 +5506,37 @@ func (p *Parser) sanitizeAliasesForOutput(aliases []string, title string, episod
 		return nil
 	}
 	return out
+}
+
+var reAliasTrimOVATail = regexp.MustCompile(`(?i)\s*(?:[-_/|:()\[\]{}【】（）]|\s)+OVA\s*$`)
+var reAliasTrimOADTail = regexp.MustCompile(`(?i)\s*(?:[-_/|:()\[\]{}【】（）]|\s)+OAD\s*$`)
+var reAliasTrimONATail = regexp.MustCompile(`(?i)\s*(?:[-_/|:()\[\]{}【】（）]|\s)+ONA\s*$`)
+var reAliasTrimSPTail = regexp.MustCompile(`(?i)\s*(?:[-_/|:()\[\]{}【】（）]|\s)+(?:SP|SPECIAL)\s*$`)
+var reAliasTrimSPTailCJK = regexp.MustCompile(`\s*(?:[-_/|:()\[\]{}【】（）]|\s)+(?:特别篇|特別篇)\s*$`)
+
+func trimAliasTailBySPKind(alias string, spKind string) string {
+	alias = strings.TrimSpace(alias)
+	k := strings.ToUpper(strings.TrimSpace(spKind))
+	if alias == "" || k == "" {
+		return alias
+	}
+	prev := ""
+	for alias != prev {
+		prev = alias
+		switch k {
+		case "OVA":
+			alias = strings.TrimSpace(reAliasTrimOVATail.ReplaceAllString(alias, ""))
+		case "OAD":
+			alias = strings.TrimSpace(reAliasTrimOADTail.ReplaceAllString(alias, ""))
+		case "ONA":
+			alias = strings.TrimSpace(reAliasTrimONATail.ReplaceAllString(alias, ""))
+		case "SP":
+			alias = strings.TrimSpace(reAliasTrimSPTail.ReplaceAllString(alias, ""))
+			alias = strings.TrimSpace(reAliasTrimSPTailCJK.ReplaceAllString(alias, ""))
+		}
+		alias = strings.TrimSpace(strings.Trim(alias, "-_/|:,+ "))
+	}
+	return alias
 }
 
 func isGenericBridgeTitleToken(s string) bool {

@@ -219,6 +219,27 @@ func TestParserAliasCleanup_SingleSlashSpecialBridgeAddsAlias(t *testing.T) {
 	}
 }
 
+func TestParserAliasCleanup_StripsSPKindTailFromAlias(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "【幻櫻字幕組】【黃金神威 Golden Kamuy】【OVA】【05】【BDrip】【BIG5_MP4】【1280X720】"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	aliases := canonicalAliases(res)
+	if containsAlias(aliases, "Golden Kamuy OVA") {
+		t.Fatalf("sp-kind tail leaked into alias list: %v", aliases)
+	}
+	if !containsAlias(aliases, "Golden Kamuy") {
+		t.Fatalf("expected cleaned alias, got=%v", aliases)
+	}
+}
+
 func TestParserAliasCleanup_DashBridgeBilingualSeasonAlias(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

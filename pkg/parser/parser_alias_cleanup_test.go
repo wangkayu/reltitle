@@ -498,6 +498,69 @@ func TestParserSpecialMarker_WithoutEpisode_PromotesSPKind(t *testing.T) {
 	}
 }
 
+func TestParserSPKind_StandaloneOVAWithEpisodeSlot(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "【幻櫻字幕組】【黃金神威 Golden Kamuy】【OVA】【05】【BDrip】【BIG5_MP4】【1280X720】"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalEpisode(res); got != "5" {
+		t.Fatalf("episode=%q want=%q", got, "5")
+	}
+	if got := canonicalSPKind(res); got != "OVA" {
+		t.Fatalf("sp_kind=%q want=%q", got, "OVA")
+	}
+}
+
+func TestParserSPKind_OvaDashEpisodeSlot(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[shincaps] Futsuu no Joshikousei ga [Locodol] Yattemita. OVA - 01 (AT-X 1440x1080 MPEG2 AAC).ts"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalEpisode(res); got != "1" {
+		t.Fatalf("episode=%q want=%q", got, "1")
+	}
+	if got := canonicalSPKind(res); got != "OVA" {
+		t.Fatalf("sp_kind=%q want=%q", got, "OVA")
+	}
+}
+
+func TestParserSPKind_OvaAsTitleWord_NoSPKind(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Test] Futsuu no OVA Project - 01 [1080p][WEB-DL]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalEpisode(res); got != "1" {
+		t.Fatalf("episode=%q want=%q", got, "1")
+	}
+	if got := canonicalSPKind(res); got != "" {
+		t.Fatalf("sp_kind should be empty for title-word OVA, got=%q", got)
+	}
+	if title := canonicalTitle(res); !strings.Contains(strings.ToUpper(title), "OVA") {
+		t.Fatalf("title should keep OVA word, got=%q", title)
+	}
+}
+
 func TestParserAudioFlag_JpnDubPhraseConsumed(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

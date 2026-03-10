@@ -12610,7 +12610,7 @@ func isIsolatedInBracketOrParen(tokens []model.Token, idx int) bool {
 
 func shouldAcceptSPKindToken(tokens []model.Token, idx int, kind string, suffix string) bool {
 	k := strings.ToUpper(strings.TrimSpace(kind))
-	if k != "EX" {
+	if k != "EX" && k != "OVA" && k != "OAD" && k != "ONA" && k != "SP" {
 		return true
 	}
 	if strings.TrimSpace(suffix) != "" {
@@ -12624,6 +12624,18 @@ func shouldAcceptSPKindToken(tokens []model.Token, idx int, kind string, suffix 
 			return false
 		}
 		return true
+	}
+	if k != "EX" {
+		// OVA/OAD/ONA/SP without numeric suffix is ambiguous in plain title text.
+		// Accept when an episode-like number is adjacent with clear boundary,
+		// or when it appears as a standalone tail marker before metadata blocks.
+		if hasNearbyEpisodeNumberToken(tokens, idx) {
+			return true
+		}
+		if hasSPTailMetaBoundary(tokens, idx) {
+			return true
+		}
+		return false
 	}
 	prev := prevAliveToken(tokens, idx-1)
 	if prev >= 0 && prev < idx {
@@ -12645,6 +12657,54 @@ func shouldAcceptSPKindToken(tokens []model.Token, idx int, kind string, suffix 
 			between = strings.TrimSpace(tokens[idx+1].Text)
 		}
 		if isShortEpisodeNumberToken(tokens[next].Text) && isSimpleBoundarySep(between) {
+			return true
+		}
+	}
+	return false
+}
+
+func hasNearbyEpisodeNumberToken(tokens []model.Token, idx int) bool {
+	if idx < 0 || idx >= len(tokens) {
+		return false
+	}
+	if idx+1 < len(tokens) && !tokens[idx+1].Removed && isShortEpisodeNumberToken(tokens[idx+1].Text) {
+		return true
+	}
+	if idx+2 < len(tokens) && !tokens[idx+2].Removed {
+		sep := strings.TrimSpace(tokens[idx+1].Text)
+		if isSimpleBoundarySep(sep) && isShortEpisodeNumberToken(tokens[idx+2].Text) {
+			return true
+		}
+	}
+	if idx-1 >= 0 && !tokens[idx-1].Removed && isShortEpisodeNumberToken(tokens[idx-1].Text) {
+		return true
+	}
+	if idx-2 >= 0 && !tokens[idx-2].Removed {
+		sep := strings.TrimSpace(tokens[idx-1].Text)
+		if isSimpleBoundarySep(sep) && isShortEpisodeNumberToken(tokens[idx-2].Text) {
+			return true
+		}
+	}
+	return false
+}
+
+func hasSPTailMetaBoundary(tokens []model.Token, idx int) bool {
+	if idx < 0 || idx >= len(tokens) {
+		return false
+	}
+	// Immediate next alive token starts a meta block: "OVA (2015) [BD ...]"
+	next := nextAliveToken(tokens, idx+1)
+	if next >= 0 && next < len(tokens) {
+		nt := strings.TrimSpace(tokens[next].Text)
+		if isBracketOpen(nt) {
+			return true
+		}
+	}
+	// Allow one separator before the meta block.
+	if idx+2 < len(tokens) {
+		sep := strings.TrimSpace(tokens[idx+1].Text)
+		open := strings.TrimSpace(tokens[idx+2].Text)
+		if isSimpleBoundarySep(sep) && isBracketOpen(open) {
 			return true
 		}
 	}

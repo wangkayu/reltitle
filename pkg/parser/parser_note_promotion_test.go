@@ -27,9 +27,9 @@ func TestPromoteNoteAttributes(t *testing.T) {
 			makeRule([]string{"web"}, model.AttrSourceType, "WEBRip", false),
 			makeRule([]string{"bdrip"}, model.AttrSourceType, "BDRip", false),
 			makeRule([]string{"nf"}, model.AttrPlatform, "", true),
-			makeRule([]string{"multi"}, model.AttrSubFlag, "MULTI_SUBS", false),
-			makeRule([]string{"subs", "sub"}, model.AttrSubFlag, "SUBS", false),
-			makeRule([]string{"vostfr"}, model.AttrSubFlag, "", true),
+			makeRule([]string{"multi"}, model.AttrSubFlag, "MULTI", false),
+			makeRule([]string{"subs", "sub"}, model.AttrSubFlag, "soft", false),
+			makeRule([]string{"vostfr"}, model.AttrSubFlag, "soft", false),
 		},
 	}
 	in := []model.Attribute{
@@ -40,7 +40,7 @@ func TestPromoteNoteAttributes(t *testing.T) {
 		{Type: model.AttrNote, Normalized: "Subs"},
 		{Type: model.AttrNote, Normalized: "VOSTFR"},
 		{Type: model.AttrNote, Normalized: "ESP"},
-		{Type: model.AttrSubFlag, Normalized: "SUBS"},
+		{Type: model.AttrSubFlag, Normalized: "soft"},
 		{Type: model.AttrNote, Normalized: "WEEKLY"},
 	}
 
@@ -55,9 +55,9 @@ func TestPromoteNoteAttributes(t *testing.T) {
 	assertAttr(0, model.AttrSourceType, "WEBRip")
 	assertAttr(1, model.AttrSourceType, "BDRip")
 	assertAttr(2, model.AttrPlatform, "NETFLIX")
-	assertAttr(3, model.AttrSubFlag, "MULTI_SUBS")
-	assertAttr(4, model.AttrSubFlag, "SUBS")
-	assertAttr(5, model.AttrSubFlag, "VOSTFR")
+	assertAttr(3, model.AttrSubFlag, "MULTI")
+	assertAttr(4, model.AttrSubFlag, "soft")
+	assertAttr(5, model.AttrSubFlag, "soft")
 	assertAttr(6, model.AttrSubLang, "SPA")
 	// non-promoted value should remain note
 	assertAttr(8, model.AttrNote, "WEEKLY")
@@ -84,8 +84,8 @@ func TestPromoteNoteAttributes_CompositeSubAudioNotes(t *testing.T) {
 		}
 		return false
 	}
-	if !has(model.AttrSubLang, "CHS") {
-		t.Fatalf("expected sub_lang=CHS, got=%v", out)
+	if !has(model.AttrSubLang, "SC") {
+		t.Fatalf("expected sub_lang=SC, got=%v", out)
 	}
 	for _, lang := range []string{"JPN", "ENG", "CHN"} {
 		if !has(model.AttrAudioLang, lang) {
@@ -98,14 +98,14 @@ func TestPromoteNoteAttributes_CompositeSubAudioNotes(t *testing.T) {
 	if !has(model.AttrAudioFlag, "DUAL_AUDIO") {
 		t.Fatalf("expected audio_flag=DUAL_AUDIO, got=%v", out)
 	}
-	if !has(model.AttrSubLang, "CHT") {
-		t.Fatalf("expected sub_lang=CHT, got=%v", out)
+	if !has(model.AttrSubLang, "TC") {
+		t.Fatalf("expected sub_lang=TC, got=%v", out)
 	}
-	if !has(model.AttrSubFlag, "HARDSUB") {
-		t.Fatalf("expected sub_flag=HARDSUB, got=%v", out)
+	if !has(model.AttrSubFlag, "hard") {
+		t.Fatalf("expected sub_flag=hard, got=%v", out)
 	}
-	if !has(model.AttrSubFlag, "SUBS") {
-		t.Fatalf("expected sub_flag=SUBS, got=%v", out)
+	if !has(model.AttrSubFlag, "soft") {
+		t.Fatalf("expected sub_flag=soft, got=%v", out)
 	}
 	for _, a := range out {
 		if a.Type == model.AttrNote &&

@@ -3126,7 +3126,7 @@ func (p *Parser) promoteNoteAttributes(attrs []model.Attribute) []model.Attribut
 	for _, a := range attrs {
 		if a.Type == model.AttrSubFlag {
 			n := strings.ToUpper(strings.TrimSpace(a.Normalized))
-			if n == "SUBS" || n == "MULTI_SUBS" || n == "CC" {
+			if n == "SUBS" || n == "MULTI_SUBS" || n == "CC" || n == "SOFT" || n == "HARD" || n == "EX" {
 				hasSubSignal = true
 				break
 			}
@@ -3180,23 +3180,23 @@ func (p *Parser) promoteNoteAttributes(attrs []model.Attribute) []model.Attribut
 		switch n {
 		case "CHS_SUBS":
 			attrs[i].Type = model.AttrSubLang
-			attrs[i].Normalized = "CHS"
-			appendAttr(model.AttrSubFlag, "SUBS", attrs[i])
+			attrs[i].Normalized = "SC"
+			appendAttr(model.AttrSubFlag, "soft", attrs[i])
 		case "JPN_AUDIO_CHS_SUBS":
 			attrs[i].Type = model.AttrAudioLang
 			attrs[i].Normalized = "JPN"
-			appendAttr(model.AttrSubLang, "CHS", attrs[i])
-			appendAttr(model.AttrSubFlag, "SUBS", attrs[i])
+			appendAttr(model.AttrSubLang, "SC", attrs[i])
+			appendAttr(model.AttrSubFlag, "soft", attrs[i])
 		case "ENG_AUDIO_CHS_SUBS":
 			attrs[i].Type = model.AttrAudioLang
 			attrs[i].Normalized = "ENG"
-			appendAttr(model.AttrSubLang, "CHS", attrs[i])
-			appendAttr(model.AttrSubFlag, "SUBS", attrs[i])
+			appendAttr(model.AttrSubLang, "SC", attrs[i])
+			appendAttr(model.AttrSubFlag, "soft", attrs[i])
 		case "CHN_AUDIO_CHS_SUBS":
 			attrs[i].Type = model.AttrAudioLang
 			attrs[i].Normalized = "CHN"
-			appendAttr(model.AttrSubLang, "CHS", attrs[i])
-			appendAttr(model.AttrSubFlag, "SUBS", attrs[i])
+			appendAttr(model.AttrSubLang, "SC", attrs[i])
+			appendAttr(model.AttrSubFlag, "soft", attrs[i])
 		case "CHN_YUE_AUDIO":
 			attrs[i].Type = model.AttrAudioLang
 			attrs[i].Normalized = "CHN"
@@ -3207,11 +3207,11 @@ func (p *Parser) promoteNoteAttributes(attrs []model.Attribute) []model.Attribut
 			attrs[i].Normalized = "CHN"
 			appendAttr(model.AttrAudioLang, "YUE", attrs[i])
 			appendAttr(model.AttrAudioFlag, "DUAL_AUDIO", attrs[i])
-			appendAttr(model.AttrSubFlag, "SUBS", attrs[i])
+			appendAttr(model.AttrSubFlag, "soft", attrs[i])
 		case "CHT_HARDSUB":
 			attrs[i].Type = model.AttrSubLang
-			attrs[i].Normalized = "CHT"
-			appendAttr(model.AttrSubFlag, "HARDSUB", attrs[i])
+			attrs[i].Normalized = "TC"
+			appendAttr(model.AttrSubFlag, "hard", attrs[i])
 		}
 	}
 	return attrs
@@ -4896,11 +4896,10 @@ func classifyAndEmitStreamMeta(part string, attrs *[]model.Attribute) {
 	}
 	up := strings.ToUpper(p)
 	if strings.Contains(up, "SUB") {
-		if strings.Contains(up, "MULTI") {
-			*attrs = append(*attrs, model.Attribute{Type: model.AttrSubFlag, Normalized: "MULTI_SUBS", Confidence: 0.6, Source: "route_streaming_release_v1"})
-		} else {
-			*attrs = append(*attrs, model.Attribute{Type: model.AttrSubFlag, Normalized: "SUBS", Confidence: 0.6, Source: "route_streaming_release_v1"})
+		if strings.Contains(up, "MULTI") || strings.Contains(up, "BILINGUAL") {
+			*attrs = append(*attrs, model.Attribute{Type: model.AttrSubLang, Normalized: "MULTI", Confidence: 0.6, Source: "route_streaming_release_v1"})
 		}
+		*attrs = append(*attrs, model.Attribute{Type: model.AttrSubFlag, Normalized: "soft", Confidence: 0.6, Source: "route_streaming_release_v1"})
 	}
 	if strings.Contains(up, "DUB") {
 		if strings.Contains(up, "ENGLISH") {

@@ -57,10 +57,10 @@ func passGroupSubsX2Override(tokens []model.Token, attrs *[]model.Attribute, ctx
 		if format != "" {
 			addAttr(model.AttrSubFormat, format, i, i+1, 0.75)
 		}
-		// v1 override semantics: SRTx2/ASSx2 => CHS + CHT softsubs.
-		addAttr(model.AttrSubLang, "CHS", i, i+1, 0.75)
-		addAttr(model.AttrSubLang, "CHT", i, i+1, 0.75)
-		addAttr(model.AttrSubFlag, "内封", i, i+1, 0.75)
+		// SRTx2/ASSx2 => SC + TC softsubs.
+		addAttr(model.AttrSubLang, "SC", i, i+1, 0.75)
+		addAttr(model.AttrSubLang, "TC", i, i+1, 0.75)
+		addAttr(model.AttrSubFlag, "soft", i, i+1, 0.75)
 
 		tokens[i].Removed = true
 	}

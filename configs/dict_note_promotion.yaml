@@ -40,21 +40,21 @@ rules:
       note_values_case_insensitive: ["MULTI", "MULTISUB"]
     promote_to:
       type: sub_flag
-      normalized: MULTI_SUBS
+      normalized: MULTI
 
   - id: note_to_sub_flag_subs
     match:
       note_values_case_insensitive: ["SUBS", "SUB"]
     promote_to:
       type: sub_flag
-      normalized: SUBS
+      normalized: soft
 
   - id: note_to_sub_flag_vost
     match:
       note_values_case_insensitive: ["VOSTFR", "VOSTEN", "VF"]
     promote_to:
       type: sub_flag
-      normalized_from_token: true
+      normalized: soft
 
   - id: note_to_release_status
     match:

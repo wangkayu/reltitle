@@ -253,13 +253,13 @@ func extractPackAudioSubMetaAndRemoveFromTokens(tokens []model.Token) []model.At
 		low := strings.ToLower(strings.TrimSpace(s))
 		codes := make([]string, 0, 4)
 		if strings.Contains(low, "简繁") || strings.Contains(low, "簡繁") || strings.Contains(low, "繁简") || strings.Contains(low, "繁簡") {
-			codes = append(codes, "CHS", "CHT")
+			codes = append(codes, "SC", "TC")
 		}
 		if strings.Contains(low, "简中") || strings.Contains(low, "簡中") || strings.Contains(low, "简体") || strings.Contains(low, "簡體") || strings.Contains(low, "gb") {
-			codes = append(codes, "CHS")
+			codes = append(codes, "SC")
 		}
 		if strings.Contains(low, "繁中") || strings.Contains(low, "繁體") || strings.Contains(low, "繁体") || strings.Contains(low, "big5") {
-			codes = append(codes, "CHT")
+			codes = append(codes, "TC")
 		}
 		if strings.Contains(low, "英文") || strings.Contains(low, "英语") || strings.Contains(low, "英語") {
 			codes = append(codes, "ENG")
@@ -405,13 +405,13 @@ func extractPackAudioSubMetaAndRemoveFromTokens(tokens []model.Token) []model.At
 			removeRange(segStart, segEnd)
 		} else if strings.Contains(low, "字幕") || strings.Contains(low, "sub") {
 			if strings.Contains(text, "外挂") || strings.Contains(text, "外掛") {
-				addSubFlag("外挂", segStart, segEnd, 0.75)
+				addSubFlag("ex", segStart, segEnd, 0.75)
 			}
 			if strings.Contains(text, "内嵌") || strings.Contains(text, "內嵌") {
-				addSubFlag("内嵌", segStart, segEnd, 0.75)
+				addSubFlag("hard", segStart, segEnd, 0.75)
 			}
 			if strings.Contains(text, "内封") || strings.Contains(text, "內封") {
-				addSubFlag("内封", segStart, segEnd, 0.75)
+				addSubFlag("soft", segStart, segEnd, 0.75)
 			}
 			langs := parseSubLangCodes(text)
 			for _, c := range langs {

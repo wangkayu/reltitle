@@ -8,6 +8,29 @@ import (
 	"title-parser/pkg/model"
 )
 
+var legacySubLangValues = map[string]struct{}{
+	"CHS":        {},
+	"CHT":        {},
+	"CHS+JPN":    {},
+	"CHT+JPN":    {},
+	"MULTI_SUBS": {},
+}
+
+var legacySubFlagValues = map[string]struct{}{
+	"SUBS":       {},
+	"MULTI_SUBS": {},
+	"VOSTFR":     {},
+	"VOSTEN":     {},
+	"VF":         {},
+	"HARDSUB":    {},
+	"内封":         {},
+	"內封":         {},
+	"内嵌":         {},
+	"內嵌":         {},
+	"外挂":         {},
+	"外掛":         {},
+}
+
 func TestTechSubs_SubEspMarker_ShouldNotEmitSubFormatSUB(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {
@@ -92,6 +115,35 @@ func TestTechSubs_ConcreteLangShouldOverrideMultiMarker(t *testing.T) {
 	}
 	if hasAttrValueLocal(attrValuesLocal(res, model.AttrSubLang), "MULTI") {
 		t.Fatalf("unexpected sub_lang MULTI when concrete languages exist, got=%v", attrValuesLocal(res, model.AttrSubLang))
+	}
+}
+
+func TestTechSubs_FinalSchema_ShouldNotLeakLegacySubtitleValues(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "A Couple of Cuckoos S02E07-09 MULTi 1080p WEB x264 AAC -Tsundere-Raws (CR) (VF, FRENCH, VOSTFR, Kakkou no Iinazuke Season 2)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	for _, v := range attrValuesLocal(res, model.AttrSubLang) {
+		if _, ok := legacySubLangValues[strings.ToUpper(strings.TrimSpace(v))]; ok {
+			t.Fatalf("legacy sub_lang leaked: %q all=%v", v, attrValuesLocal(res, model.AttrSubLang))
+		}
+	}
+	for _, v := range attrValuesLocal(res, model.AttrSubFlag) {
+		n := strings.TrimSpace(v)
+		if n != "hard" && n != "soft" && n != "ex" {
+			t.Fatalf("sub_flag must be hard/soft/ex, got=%q all=%v", n, attrValuesLocal(res, model.AttrSubFlag))
+		}
+		if _, ok := legacySubFlagValues[n]; ok {
+			t.Fatalf("legacy sub_flag leaked: %q all=%v", n, attrValuesLocal(res, model.AttrSubFlag))
+		}
 	}
 }
 

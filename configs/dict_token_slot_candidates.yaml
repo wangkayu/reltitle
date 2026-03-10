@@ -9,7 +9,7 @@ candidates:
   - token: "MULTI"
     slot_candidates:
       - slot: sub_flag
-        normalized: MULTI_SUBS
+        normalized: MULTI
         priority: 90
         when:
           nearby_tokens_any: ["sub", "subs", "subtitle", "vostfr", "vf"]
@@ -30,7 +30,7 @@ candidates:
         when:
           nearby_tokens_any: ["audio", "aac", "ac3", "flac"]
       - slot: sub_flag
-        normalized: DUAL_SUBS
+        normalized: soft
         priority: 70
         when:
           nearby_tokens_any: ["sub", "subs", "subtitle"]

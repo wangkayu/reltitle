@@ -26,7 +26,6 @@ overrides:
     match:
       group_in: ["晚街与灯", "晚街與燈"]
       require_episode_with_title: true
-      episode_title_sep_in: ["space"]
     output:
       force_route_id: "group_epseg_fate_sf_wgjd_v1"
 

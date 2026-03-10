@@ -3082,6 +3082,33 @@ func TestParserGroupRouteOverride_GroupEPRouteWGDL(t *testing.T) {
 	}
 }
 
+func TestParserGroupRouteOverride_GroupEPRouteWGDLUnderscoreSeparatorApplied(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[晚街与灯][这里是充满笑容的职场。_Egao no Taenai Shokuba Desu][11_亲身体验是很重要的。][WEB-DL Remux][1080P_AVC_AAC][简繁日双语内封]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalEpisode(res); got != "11" {
+		t.Fatalf("episode=%q want=%q", got, "11")
+	}
+	if res.EPSlot == nil || res.EPSlot.Primary == nil || strings.TrimSpace(res.EPSlot.Primary.Source) != "group_route_override" {
+		t.Fatalf("expected group_route_override source, got=%+v", res.EPSlot)
+	}
+	if got := canonicalTitle(res); got == "" || strings.Contains(got, "_") {
+		t.Fatalf("unexpected title=%q", got)
+	}
+	aliases := canonicalAliases(res)
+	if !containsAlias(aliases, "Egao no Taenai Shokuba Desu") {
+		t.Fatalf("expected alias Egao no Taenai Shokuba Desu, got=%v", aliases)
+	}
+}
+
 func TestParserGroupRouteOverride_AtlasUnderscoreSeparatorApplied(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

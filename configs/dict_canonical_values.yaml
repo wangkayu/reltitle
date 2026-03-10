@@ -46,6 +46,7 @@ canonical:
   sub_lang:
     - RAW
     - MULTI
+    - ZH
     - SC
     - TC
     - JPSC
@@ -69,7 +70,7 @@ canonical:
     - ATMOS
 
   audio_lang:
-    - CHN
+    - CMN
     - YUE
     - JPN
     - ENG

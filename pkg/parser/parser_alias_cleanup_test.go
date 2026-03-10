@@ -2168,8 +2168,8 @@ func TestParserLexicon_LangMarker_CHNStructured(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse failed: %v", err)
 	}
-	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "CHN") {
-		t.Fatalf("expected audio_lang=CHN, got=%v", attrValues(res, model.AttrAudioLang))
+	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "CMN") {
+		t.Fatalf("expected audio_lang=CMN, got=%v", attrValues(res, model.AttrAudioLang))
 	}
 	if hasAttrValue(attrValues(res, model.AttrNote), "CHN") {
 		t.Fatalf("CHN should not remain in note, notes=%v", attrValues(res, model.AttrNote))
@@ -2743,8 +2743,8 @@ func TestParserLexicon_SubAndSearchMetaTokensAreConsumed(t *testing.T) {
 	if !hasAttrValue(notes, "SEARCH_HINT_META") {
 		t.Fatalf("expected note=SEARCH_HINT_META, got=%v", notes)
 	}
-	if !hasAttrValue(attrValues(res, model.AttrSubLang), "SC") {
-		t.Fatalf("expected sub_lang=SC, got=%v", attrValues(res, model.AttrSubLang))
+	if !hasAttrValue(attrValues(res, model.AttrSubLang), "ZH") {
+		t.Fatalf("expected sub_lang=ZH, got=%v", attrValues(res, model.AttrSubLang))
 	}
 	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "JPN") {
 		t.Fatalf("expected audio_lang=JPN, got=%v", attrValues(res, model.AttrAudioLang))
@@ -2796,8 +2796,8 @@ func TestParserLexicon_SubtitleStyleAndUncensoredMetaTokensAreConsumed(t *testin
 	if !hasAttrValue(attrValues(res, model.AttrPackProfile), "curated_pack") {
 		t.Fatalf("expected pack_profile=curated_pack, got=%v", attrValues(res, model.AttrPackProfile))
 	}
-	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "CHN") {
-		t.Fatalf("expected audio_lang=CHN, got=%v", attrValues(res, model.AttrAudioLang))
+	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "CMN") {
+		t.Fatalf("expected audio_lang=CMN, got=%v", attrValues(res, model.AttrAudioLang))
 	}
 	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "YUE") {
 		t.Fatalf("expected audio_lang=YUE, got=%v", attrValues(res, model.AttrAudioLang))
@@ -2808,8 +2808,8 @@ func TestParserLexicon_SubtitleStyleAndUncensoredMetaTokensAreConsumed(t *testin
 	if !hasAttrValue(attrValues(res, model.AttrAudioFlag), "DUAL_AUDIO") {
 		t.Fatalf("expected audio_flag=DUAL_AUDIO, got=%v", attrValues(res, model.AttrAudioFlag))
 	}
-	if !hasAttrValue(attrValues(res, model.AttrSubLang), "SC") {
-		t.Fatalf("expected sub_lang=SC, got=%v", attrValues(res, model.AttrSubLang))
+	if !hasAttrValue(attrValues(res, model.AttrSubLang), "ZH") {
+		t.Fatalf("expected sub_lang=ZH, got=%v", attrValues(res, model.AttrSubLang))
 	}
 	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "soft") {
 		t.Fatalf("expected sub_flag=soft, got=%v", attrValues(res, model.AttrSubFlag))
@@ -2858,8 +2858,8 @@ func TestParserLexicon_HighFpsNoSubAndScheduleMetaTokensAreConsumed(t *testing.T
 			t.Fatalf("expected note=%s, got=%v", want, notes)
 		}
 	}
-	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "CHN") || !hasAttrValue(attrValues(res, model.AttrAudioLang), "YUE") {
-		t.Fatalf("expected audio_lang CHN+YUE, got=%v", attrValues(res, model.AttrAudioLang))
+	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "CMN") || !hasAttrValue(attrValues(res, model.AttrAudioLang), "YUE") {
+		t.Fatalf("expected audio_lang CMN+YUE, got=%v", attrValues(res, model.AttrAudioLang))
 	}
 	if !hasAttrValue(attrValues(res, model.AttrAudioFlag), "DUAL_AUDIO") {
 		t.Fatalf("expected audio_flag=DUAL_AUDIO, got=%v", attrValues(res, model.AttrAudioFlag))
@@ -3328,8 +3328,8 @@ func TestParserGroupRouteOverride_FurretarDubPrefixCleanup(t *testing.T) {
 	if title != "入间同学入魔了！" {
 		t.Fatalf("title=%q want=%q", title, "入间同学入魔了！")
 	}
-	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "CHN") {
-		t.Fatalf("expected audio_lang CHN, got=%v", attrValues(res, model.AttrAudioLang))
+	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "CMN") {
+		t.Fatalf("expected audio_lang CMN, got=%v", attrValues(res, model.AttrAudioLang))
 	}
 }
 
@@ -4194,8 +4194,31 @@ func TestLexiconDict_ConfigFirst_VCDRipAndYueSubs(t *testing.T) {
 	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "YUE") {
 		t.Fatalf("expected audio_lang YUE, got=%v", attrValues(res, model.AttrAudioLang))
 	}
+	if !hasAttrValue(attrValues(res, model.AttrSubLang), "ZH") {
+		t.Fatalf("expected sub_lang ZH for 粤语中字, got=%v", attrValues(res, model.AttrSubLang))
+	}
 	if flags := attrValues(res, model.AttrSubFlag); len(flags) != 0 {
 		t.Fatalf("expected no sub_flag for 粤语中字 fallback, got=%v", flags)
+	}
+}
+
+func TestLexiconDict_ConfigFirst_GuoyuZhongzi_ToCMNAndZH(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[TestGroup] Sample Show - 01 [国语中字][MP4]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "CMN") {
+		t.Fatalf("expected audio_lang CMN for 国语, got=%v", attrValues(res, model.AttrAudioLang))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSubLang), "ZH") {
+		t.Fatalf("expected sub_lang ZH for 中字, got=%v", attrValues(res, model.AttrSubLang))
 	}
 }
 

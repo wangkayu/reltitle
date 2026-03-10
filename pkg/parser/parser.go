@@ -2592,11 +2592,13 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	attrs = dropRedundantNoteAttributes(attrs)
 	p.normalizePlatformAttrs(attrs)
 	p.normalizeSourceTypeAttrs(attrs)
-	attrs = p.normalizeSubtitleAttrs(attrs)
+	p.normalizeAudioAttrs(attrs)
+	attrs = p.normalizeSubtitleAttrs(attrs, tokens)
 	attrs = p.enrichBatchSourceTypeFromPackKind(attrs, contentKind)
 	attrs = dedupeAttributes(attrs)
 	attrs = collapseOverlappingSpecificAudioCodecs(attrs)
 	ctx.AudioSlot = reconcileAudioSlotWithAttributes(ctx.AudioSlot, attrs)
+	normalizeAudioSlotLanguages(ctx.AudioSlot)
 	epslot = ensureSPPrimaryFromSPKind(epslot, season, episode, episodeRange, episodeList, spKind)
 	epslot = adjudicateEPSlotPrimaryAxis(epslot, tokens, season)
 	epslot = pruneBatchEPSlotForConservativeOutput(epslot, contentKind, episode, episodeRange, spKind)
@@ -4342,6 +4344,8 @@ func normalizeSubLangToken(v string) string {
 		return "SC"
 	case "CHT", "ZH-HANT", "ZH_TW", "ZH-TW", "BIG5", "TC":
 		return "TC"
+	case "ZH", "CHI", "ZHO":
+		return "ZH"
 	case "CHS+JPN", "JPN+CHS", "JPSC":
 		return "JPSC"
 	case "CHT+JPN", "JPN+CHT", "JPTC":
@@ -4387,7 +4391,68 @@ func normalizeSubFlagToken(v string) (string, bool, bool) {
 	}
 }
 
-func (p *Parser) normalizeSubtitleAttrs(attrs []model.Attribute) []model.Attribute {
+func normalizeAudioLangToken(v string) string {
+	s := strings.ToUpper(strings.TrimSpace(v))
+	switch s {
+	case "CHN", "CMN", "MANDARIN", "PUTONGHUA", "GUOYU", "ZH", "ZH-CN", "ZH_CN":
+		return "CMN"
+	default:
+		return s
+	}
+}
+
+func (p *Parser) normalizeAudioAttrs(attrs []model.Attribute) {
+	for i := range attrs {
+		if attrs[i].Type != model.AttrAudioLang {
+			continue
+		}
+		attrs[i].Normalized = normalizeAudioLangToken(attrs[i].Normalized)
+	}
+}
+
+func normalizeAudioSlotLanguages(slot *model.AudioSlot) {
+	if slot == nil || len(slot.Tracks) == 0 {
+		return
+	}
+	for i := range slot.Tracks {
+		slot.Tracks[i].Language = normalizeAudioLangToken(slot.Tracks[i].Language)
+	}
+}
+
+func subtitleSpanText(tokens []model.Token, a model.Attribute) string {
+	if len(tokens) == 0 || a.TokenStart < 0 || a.TokenEnd <= a.TokenStart || a.TokenEnd > len(tokens) {
+		return ""
+	}
+	parts := make([]string, 0, a.TokenEnd-a.TokenStart)
+	for i := a.TokenStart; i < a.TokenEnd; i++ {
+		t := strings.TrimSpace(tokens[i].Text)
+		if t == "" {
+			continue
+		}
+		parts = append(parts, t)
+	}
+	return strings.TrimSpace(strings.Join(parts, " "))
+}
+
+func shouldUseGenericZHFromSpan(span string) bool {
+	s := strings.TrimSpace(span)
+	if s == "" {
+		return false
+	}
+	// Must contain generic subtitle markers.
+	hasGeneric := strings.Contains(s, "中字") || strings.Contains(s, "字幕") || strings.Contains(strings.ToUpper(s), "SUB")
+	if !hasGeneric {
+		return false
+	}
+	// Explicit script markers should keep SC/TC precision.
+	up := strings.ToUpper(s)
+	if strings.Contains(s, "简") || strings.Contains(s, "簡") || strings.Contains(s, "繁") || strings.Contains(up, "CHS") || strings.Contains(up, "CHT") || strings.Contains(up, "SC") || strings.Contains(up, "TC") || strings.Contains(up, "BIG5") || strings.Contains(up, "GB") {
+		return false
+	}
+	return true
+}
+
+func (p *Parser) normalizeSubtitleAttrs(attrs []model.Attribute, tokens []model.Token) []model.Attribute {
 	if len(attrs) == 0 {
 		return attrs
 	}
@@ -4403,6 +4468,9 @@ func (p *Parser) normalizeSubtitleAttrs(attrs []model.Attribute) []model.Attribu
 			n := normalizeSubLangToken(a.Normalized)
 			if n == "" {
 				continue
+			}
+			if (n == "SC" || n == "TC") && shouldUseGenericZHFromSpan(subtitleSpanText(tokens, a)) {
+				n = "ZH"
 			}
 			if n == "RAW" {
 				rawMode = true
@@ -4458,7 +4526,7 @@ func (p *Parser) normalizeSubtitleAttrs(attrs []model.Attribute) []model.Attribu
 		delete(langSet, "MULTI")
 	}
 
-	langOrder := []string{"RAW", "MULTI", "SC", "TC", "JPSC", "JPTC", "JPN", "ENG", "KOR", "FRA", "SPA", "CAT", "RUS", "DEU", "ITA", "POR"}
+	langOrder := []string{"RAW", "MULTI", "ZH", "SC", "TC", "JPSC", "JPTC", "JPN", "ENG", "KOR", "FRA", "SPA", "CAT", "RUS", "DEU", "ITA", "POR"}
 	for _, v := range langOrder {
 		if !langSet[v] {
 			continue

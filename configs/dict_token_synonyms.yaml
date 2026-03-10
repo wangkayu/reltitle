@@ -377,21 +377,21 @@ rules:
     raw_tokens: ["vostfr"]
     emit:
       type: sub_flag
-      normalized: VOSTFR
+      normalized: soft
     priority: 90
 
   - id: sub_flag_vosten
     raw_tokens: ["vosten"]
     emit:
       type: sub_flag
-      normalized: VOSTEN
+      normalized: soft
     priority: 90
 
   - id: sub_flag_vf
     raw_tokens: ["vf"]
     emit:
       type: sub_flag
-      normalized: VF
+      normalized: soft
     priority: 90
 
   - id: sub_lang_fra

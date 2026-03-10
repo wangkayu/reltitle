@@ -70,6 +70,9 @@ func TestPromoteNoteAttributes_CompositeSubAudioNotes(t *testing.T) {
 		{Type: model.AttrNote, Normalized: "JPN_AUDIO_CHS_SUBS"},
 		{Type: model.AttrNote, Normalized: "ENG_AUDIO_CHS_SUBS"},
 		{Type: model.AttrNote, Normalized: "CHN_AUDIO_CHS_SUBS"},
+		{Type: model.AttrNote, Normalized: "CHN_YUE_AUDIO"},
+		{Type: model.AttrNote, Normalized: "CHN_YUE_AUDIO_SUBS"},
+		{Type: model.AttrNote, Normalized: "CHT_HARDSUB"},
 	}
 	out := p.promoteNoteAttributes(in)
 
@@ -89,6 +92,18 @@ func TestPromoteNoteAttributes_CompositeSubAudioNotes(t *testing.T) {
 			t.Fatalf("expected audio_lang=%s, got=%v", lang, out)
 		}
 	}
+	if !has(model.AttrAudioLang, "YUE") {
+		t.Fatalf("expected audio_lang=YUE, got=%v", out)
+	}
+	if !has(model.AttrAudioFlag, "DUAL_AUDIO") {
+		t.Fatalf("expected audio_flag=DUAL_AUDIO, got=%v", out)
+	}
+	if !has(model.AttrSubLang, "CHT") {
+		t.Fatalf("expected sub_lang=CHT, got=%v", out)
+	}
+	if !has(model.AttrSubFlag, "HARDSUB") {
+		t.Fatalf("expected sub_flag=HARDSUB, got=%v", out)
+	}
 	if !has(model.AttrSubFlag, "SUBS") {
 		t.Fatalf("expected sub_flag=SUBS, got=%v", out)
 	}
@@ -97,7 +112,10 @@ func TestPromoteNoteAttributes_CompositeSubAudioNotes(t *testing.T) {
 			(a.Normalized == "CHS_SUBS" ||
 				a.Normalized == "JPN_AUDIO_CHS_SUBS" ||
 				a.Normalized == "ENG_AUDIO_CHS_SUBS" ||
-				a.Normalized == "CHN_AUDIO_CHS_SUBS") {
+				a.Normalized == "CHN_AUDIO_CHS_SUBS" ||
+				a.Normalized == "CHN_YUE_AUDIO" ||
+				a.Normalized == "CHN_YUE_AUDIO_SUBS" ||
+				a.Normalized == "CHT_HARDSUB") {
 			t.Fatalf("composite notes should be promoted, got=%v", out)
 		}
 	}

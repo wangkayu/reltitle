@@ -3196,6 +3196,21 @@ func (p *Parser) promoteNoteAttributes(attrs []model.Attribute) []model.Attribut
 			attrs[i].Normalized = "CHN"
 			appendAttr(model.AttrSubLang, "CHS", attrs[i])
 			appendAttr(model.AttrSubFlag, "SUBS", attrs[i])
+		case "CHN_YUE_AUDIO":
+			attrs[i].Type = model.AttrAudioLang
+			attrs[i].Normalized = "CHN"
+			appendAttr(model.AttrAudioLang, "YUE", attrs[i])
+			appendAttr(model.AttrAudioFlag, "DUAL_AUDIO", attrs[i])
+		case "CHN_YUE_AUDIO_SUBS":
+			attrs[i].Type = model.AttrAudioLang
+			attrs[i].Normalized = "CHN"
+			appendAttr(model.AttrAudioLang, "YUE", attrs[i])
+			appendAttr(model.AttrAudioFlag, "DUAL_AUDIO", attrs[i])
+			appendAttr(model.AttrSubFlag, "SUBS", attrs[i])
+		case "CHT_HARDSUB":
+			attrs[i].Type = model.AttrSubLang
+			attrs[i].Normalized = "CHT"
+			appendAttr(model.AttrSubFlag, "HARDSUB", attrs[i])
 		}
 	}
 	return attrs

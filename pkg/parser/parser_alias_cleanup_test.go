@@ -2606,7 +2606,6 @@ func TestParserLexicon_SubtitleStyleAndUncensoredMetaTokensAreConsumed(t *testin
 	}
 	notes := attrValues(res, model.AttrNote)
 	for _, want := range []string{
-		"CHN_YUE_AUDIO_SUBS",
 		"UNCENSORED_VERSION",
 		"WATERMARK_FREE",
 		"EXTERNAL_SUBS",
@@ -2622,8 +2621,14 @@ func TestParserLexicon_SubtitleStyleAndUncensoredMetaTokensAreConsumed(t *testin
 	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "CHN") {
 		t.Fatalf("expected audio_lang=CHN, got=%v", attrValues(res, model.AttrAudioLang))
 	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "YUE") {
+		t.Fatalf("expected audio_lang=YUE, got=%v", attrValues(res, model.AttrAudioLang))
+	}
 	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "ENG") {
 		t.Fatalf("expected audio_lang=ENG, got=%v", attrValues(res, model.AttrAudioLang))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioFlag), "DUAL_AUDIO") {
+		t.Fatalf("expected audio_flag=DUAL_AUDIO, got=%v", attrValues(res, model.AttrAudioFlag))
 	}
 	if !hasAttrValue(attrValues(res, model.AttrSubLang), "CHS") {
 		t.Fatalf("expected sub_lang=CHS, got=%v", attrValues(res, model.AttrSubLang))
@@ -2631,8 +2636,8 @@ func TestParserLexicon_SubtitleStyleAndUncensoredMetaTokensAreConsumed(t *testin
 	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "SUBS") {
 		t.Fatalf("expected sub_flag=SUBS, got=%v", attrValues(res, model.AttrSubFlag))
 	}
-	if hasAttrValue(notes, "CHN_AUDIO_CHS_SUBS") || hasAttrValue(notes, "ENG_AUDIO_CHS_SUBS") {
-		t.Fatalf("CHN/ENG_CHS note should be promoted, notes=%v", notes)
+	if hasAttrValue(notes, "CHN_AUDIO_CHS_SUBS") || hasAttrValue(notes, "ENG_AUDIO_CHS_SUBS") || hasAttrValue(notes, "CHN_YUE_AUDIO_SUBS") {
+		t.Fatalf("composite audio/sub notes should be promoted, notes=%v", notes)
 	}
 	if hasAttrValue(notes, "CURATED_PACK") {
 		t.Fatalf("CURATED_PACK should be promoted from note, notes=%v", notes)
@@ -2666,8 +2671,6 @@ func TestParserLexicon_HighFpsNoSubAndScheduleMetaTokensAreConsumed(t *testing.T
 	notes := attrValues(res, model.AttrNote)
 	for _, want := range []string{
 		"HIGH_FPS",
-		"CHN_YUE_AUDIO",
-		"CHT_HARDSUB",
 		"JPN_AUDIO_NO_SUB",
 		"JPN_AUDIO_CHS_CHT_SUBS",
 		"RECRUITMENT",
@@ -2676,6 +2679,21 @@ func TestParserLexicon_HighFpsNoSubAndScheduleMetaTokensAreConsumed(t *testing.T
 		if !hasAttrValue(notes, want) {
 			t.Fatalf("expected note=%s, got=%v", want, notes)
 		}
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "CHN") || !hasAttrValue(attrValues(res, model.AttrAudioLang), "YUE") {
+		t.Fatalf("expected audio_lang CHN+YUE, got=%v", attrValues(res, model.AttrAudioLang))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioFlag), "DUAL_AUDIO") {
+		t.Fatalf("expected audio_flag=DUAL_AUDIO, got=%v", attrValues(res, model.AttrAudioFlag))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSubLang), "CHT") {
+		t.Fatalf("expected sub_lang=CHT, got=%v", attrValues(res, model.AttrSubLang))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "HARDSUB") {
+		t.Fatalf("expected sub_flag=HARDSUB, got=%v", attrValues(res, model.AttrSubFlag))
+	}
+	if hasAttrValue(notes, "CHN_YUE_AUDIO") || hasAttrValue(notes, "CHT_HARDSUB") {
+		t.Fatalf("CHN_YUE_AUDIO/CHT_HARDSUB should be promoted, notes=%v", notes)
 	}
 }
 

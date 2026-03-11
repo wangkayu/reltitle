@@ -9,6 +9,7 @@ type Config struct {
 	RouteFamilies      RouteFamiliesConfig      `json:"route_families,omitempty"`
 	GroupSlot2Platform GroupSlot2PlatformConfig `json:"group_slot2_platform,omitempty"`
 	PackProfileRules   PackProfileRulesConfig   `json:"pack_profile_rules,omitempty"`
+	BatchService       BatchServiceConfig       `json:"batch_service,omitempty"`
 
 	DictCanonicalValues     DictCanonicalValuesConfig     `json:"dict_canonical_values,omitempty"`
 	DictTokenSynonyms       DictTokenSynonymsConfig       `json:"dict_token_synonyms,omitempty"`
@@ -19,6 +20,28 @@ type Config struct {
 	AttributeConfig map[string]any `json:"attribute_config,omitempty"`
 	BoundaryRules   map[string]any `json:"boundary_rules,omitempty"`
 	// TailgroupWhitelist removed - now using GroupList only
+}
+
+type BatchServiceConfig struct {
+	BatchMaxSize     int `yaml:"batch_max_size" json:"batch_max_size"`
+	WorkerCount      int `yaml:"worker_count" json:"worker_count"`
+	RequestTimeoutMs int `yaml:"request_timeout_ms" json:"request_timeout_ms"`
+	MaxInflight      int `yaml:"max_inflight" json:"max_inflight"`
+}
+
+func (c *BatchServiceConfig) ApplyDefaults() {
+	if c.BatchMaxSize <= 0 {
+		c.BatchMaxSize = 256
+	}
+	if c.WorkerCount <= 0 {
+		c.WorkerCount = 8
+	}
+	if c.RequestTimeoutMs <= 0 {
+		c.RequestTimeoutMs = 15000
+	}
+	if c.MaxInflight <= 0 {
+		c.MaxInflight = 32
+	}
 }
 
 type LexiconConfig struct {

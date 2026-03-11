@@ -36,7 +36,7 @@ func LoadAll(baseDir string) (*Config, error) {
 	groupListPath := filepath.Join(baseDir, "grouplist.yaml")
 	if err := loadYAMLFile(groupListPath, &cfg.GroupList); err != nil {
 		// GroupList is optional, log but don't fail
-		fmt.Printf("Warning: failed to load grouplist.yaml: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Warning: failed to load grouplist.yaml: %v\n", err)
 	}
 
 	_ = loadYAMLFile(filepath.Join(baseDir, "dict_canonical_values.yaml"), &cfg.DictCanonicalValues)
@@ -48,6 +48,8 @@ func LoadAll(baseDir string) (*Config, error) {
 	_ = loadYAMLFile(filepath.Join(baseDir, "route_families.yaml"), &cfg.RouteFamilies)
 	_ = loadYAMLFile(filepath.Join(baseDir, "group_slot2_platform_rules.yaml"), &cfg.GroupSlot2Platform)
 	_ = loadYAMLFile(filepath.Join(baseDir, "pack_profile_rules.yaml"), &cfg.PackProfileRules)
+	_ = loadYAMLFile(filepath.Join(baseDir, "batch_service.yaml"), &cfg.BatchService)
+	cfg.BatchService.ApplyDefaults()
 
 	return cfg, nil
 }

@@ -34,6 +34,7 @@ v2流程: Lexicon → 信号检测 → Content Type推理 → 模板匹配(过�
 - `configs/boundary_rules.yaml` - 边界识别规则
 - `configs/lexicon.yaml` - Lexicon字典
 - `configs/tailgroup_whitelist.yaml` - TAILGROUP白名单
+- `configs/batch_service.yaml` - serve 模式批处理并发/超时配置
 
 ### 3. 分层架构 (9层)
 ```
@@ -144,6 +145,28 @@ go run ./cmd/server
 ### 运行测试
 ```bash
 go test ./...
+```
+
+### Batch 常驻服务模式（stdio JSON 行协议）
+```bash
+# 启动服务（stdout 只输出协议 JSON，日志在 stderr）
+go run ./cmd/serve -- -config configs
+```
+
+请求/响应（每行一个 JSON）：
+```json
+{"id":"req-1","method":"health"}
+{"id":"req-1","ok":true,"result":{"status":"ok","batch_max_size":256,"worker_count":8,"request_timeout_ms":15000,"max_inflight":32}}
+```
+
+```json
+{"id":"req-2","method":"parse_batch","params":{"items":[{"title":"[LoliHouse] Title - 01 [1080p]","site":"dmhy"}],"options":{"best_pick":true,"include_raw":true,"include_score":true}}}
+{"id":"req-2","ok":true,"result":{"items":[{"index":0,"site":"dmhy","parsed":{"raw_title":"[LoliHouse] Title - 01 [1080p]","content_kind":"TV_EP"},"raw":"[LoliHouse] Title - 01 [1080p]","score":0.91}],"best_index":0}}
+```
+
+```json
+{"id":"req-3","method":"reload"}
+{"id":"req-3","ok":true,"result":{"reloaded":true,"batch_max_size":256,"worker_count":8,"request_timeout_ms":15000,"max_inflight":32}}
 ```
 
 
@@ -281,4 +304,3 @@ title-parser 作为独立服务运行，通过 HTTP API 与 downstream backend �
 ## License
 
 MIT
-

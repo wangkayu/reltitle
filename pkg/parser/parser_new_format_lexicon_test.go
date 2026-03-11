@@ -114,3 +114,24 @@ func TestLexiconNewFormat_PlatformUNEXTVariants(t *testing.T) {
 		t.Fatalf("expected epslot primary for S01E04 title")
 	}
 }
+
+func TestLexiconNewFormat_VOSTFRSeasonBatchKeepsFrenchSubLang(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "Ave Mujica - The Die is Cast S01 VOSTFR 1080p WEB x264 AAC -Tsundere-Raws (CR) (Multi-Subs, BanG Dream! Ave Mujica)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	if !hasAttrNormalized(res.Attributes, model.AttrSubLang, "FRA") {
+		t.Fatalf("expected sub_lang=FRA for VOSTFR marker, attrs=%v", res.Attributes)
+	}
+	if !hasAttrNormalized(res.Attributes, model.AttrSubFlag, "soft") {
+		t.Fatalf("expected sub_flag=soft for VOSTFR marker, attrs=%v", res.Attributes)
+	}
+}

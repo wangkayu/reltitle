@@ -9025,6 +9025,29 @@ func detectEpisodeRange(tokens []model.Token) (string, int) {
 			if episodeOfTotalPattern.MatchString(strings.TrimSpace(tokens[i].Text)) && strings.TrimSpace(tokens[i+1].Text) == "-" {
 				rawR := strings.TrimSpace(tokens[i+2].Text)
 				if episodeOfTotalPattern.MatchString(rawR) {
+					// Plain text range like "... - 241-248 ..."
+					// Keep a year guard to avoid interpreting year spans as episodes.
+					if !inBracket && !inParen {
+						leftRaw := strings.TrimSpace(tokens[i].Text)
+						if len(leftRaw) == 4 && len(rawR) == 4 {
+							if y1, err1 := strconv.Atoi(leftRaw); err1 == nil {
+								if y2, err2 := strconv.Atoi(rawR); err2 == nil {
+									if y1 >= 1900 && y1 <= 2099 && y2 >= 1900 && y2 <= 2099 {
+										continue
+									}
+								}
+							}
+						}
+						l := strings.TrimLeft(leftRaw, "0")
+						if l == "" {
+							l = "0"
+						}
+						r := strings.TrimLeft(rawR, "0")
+						if r == "" {
+							r = "0"
+						}
+						return l + "-" + r, i
+					}
 					if inBracket {
 						if isTitlePrefixedDigitRangeInBracket(tokens, i) {
 							continue
@@ -9700,6 +9723,35 @@ func hasDashSeparatorAroundToken(tokens []model.Token, idx int) bool {
 	return false
 }
 
+func isStandaloneNumericBracketBlock(tokens []model.Token, idx int) bool {
+	if idx < 0 || idx >= len(tokens) {
+		return false
+	}
+	if !isInBracket(tokens, idx) {
+		return false
+	}
+	openIdx, closeIdx, ok := bracketBoundsAt(tokens, idx)
+	if !ok {
+		return false
+	}
+	found := false
+	for j := openIdx + 1; j < closeIdx; j++ {
+		if tokens[j].Removed {
+			continue
+		}
+		t := strings.TrimSpace(tokens[j].Text)
+		if t == "" {
+			continue
+		}
+		if j == idx && episodeOfTotalPattern.MatchString(t) {
+			found = true
+			continue
+		}
+		return false
+	}
+	return found
+}
+
 func looksLikeVolumeContextNumberToken(tokens []model.Token, idx int) bool {
 	if idx < 0 || idx >= len(tokens) {
 		return false
@@ -9964,7 +10016,7 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 				if looksLikeVolumeContextNumberToken(tokens, i) {
 					continue
 				}
-				if hasMatchingSeasonNumberAroundToken(tokens, i, 12) && !hasDashSeparatorAroundToken(tokens, i) {
+				if hasMatchingSeasonNumberAroundToken(tokens, i, 12) && !hasDashSeparatorAroundToken(tokens, i) && !isStandaloneNumericBracketBlock(tokens, i) {
 					continue
 				}
 				if i-2 >= 0 {
@@ -10167,7 +10219,7 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 			if prefix == "" && looksLikeVolumeContextNumberToken(tokens, i) {
 				continue
 			}
-			if prefix == "" && inBracket && hasMatchingSeasonNumberAroundToken(tokens, i, 12) && !hasDashSeparatorAroundToken(tokens, i) {
+			if prefix == "" && inBracket && hasMatchingSeasonNumberAroundToken(tokens, i, 12) && !hasDashSeparatorAroundToken(tokens, i) && !isStandaloneNumericBracketBlock(tokens, i) {
 				continue
 			}
 			signalScore := 0
@@ -10443,7 +10495,7 @@ func hasLaterBracketEpisodeCandidate(tokens []model.Token, from int) bool {
 		if isTitlePrefixedDigitRangeInBracket(tokens, i) {
 			continue
 		}
-		if hasMatchingSeasonNumberAroundToken(tokens, i, 12) && !hasDashSeparatorAroundToken(tokens, i) {
+		if hasMatchingSeasonNumberAroundToken(tokens, i, 12) && !hasDashSeparatorAroundToken(tokens, i) && !isStandaloneNumericBracketBlock(tokens, i) {
 			continue
 		}
 		return true

@@ -6715,6 +6715,7 @@ func isLikelyGroupLikeTitleFallback(s string) bool {
 
 var tailGroupFromRawTitlePattern = regexp.MustCompile(`(?i)(?:^|\s)-(?:\s*)?([A-Za-z][A-Za-z0-9]{1,24}(?:-[A-Za-z0-9]{1,24}){0,4}-(?:Raws|Subs))\b`)
 var tailGroupFromRawTitleAnyPattern = regexp.MustCompile(`(?i)-(\s*)?([A-Za-z][A-Za-z0-9]{2,20})\s*$`)
+var tailGroupFromRawTitleBracketPattern = regexp.MustCompile(`(?:\[([^\[\]]{1,80})\]|【([^【】]{1,80})】)\s*$`)
 
 func detectTailGroupFromRawTitle(rawTitle string) string {
 	s := strings.TrimSpace(rawTitle)
@@ -6734,7 +6735,32 @@ func detectTailGroupFromRawTitle(rawTitle string) string {
 			return g
 		}
 	}
+	// Tail bracket group like "... [SnC-Fansub]".
+	if m := tailGroupFromRawTitleBracketPattern.FindStringSubmatch(s); len(m) == 3 {
+		cand := strings.TrimSpace(m[1])
+		if cand == "" {
+			cand = strings.TrimSpace(m[2])
+		}
+		cand = normalizeGroupText(cand)
+		if isTailBracketGroupCandidate(cand) {
+			return cand
+		}
+	}
 	return ""
+}
+
+func isTailBracketGroupCandidate(s string) bool {
+	s = normalizeGroupText(s)
+	if s == "" {
+		return false
+	}
+	if !isGroupCandidateText(s) {
+		return false
+	}
+	if isLikelyMetaBracketText(s) || isEpisodeLikeBracketText(s) {
+		return false
+	}
+	return hasStrongGroupKeyword(s)
 }
 
 func detectHeadBracketGroupFromRawTitle(rawTitle string) string {
@@ -8805,8 +8831,8 @@ func detectEpisodeRange(tokens []model.Token) (string, int) {
 		}
 	}
 
-	// Pattern: "01 a 12" (Spanish/Portuguese range) in plain text.
-	// We normalize it into a single token "01-12" to avoid leaving "a 12" as tail noise.
+	// Pattern: "01 a 12" / "01 à 12" in plain text.
+	// We normalize it into a single token "01-12" to avoid leaving connector + right bound as tail noise.
 	for i := 0; i+2 < len(tokens); i++ {
 		if tokens[i].Removed || tokens[i+1].Removed || tokens[i+2].Removed {
 			continue
@@ -8820,7 +8846,7 @@ func detectEpisodeRange(tokens []model.Token) (string, int) {
 		if !episodeOfTotalPattern.MatchString(lraw) || !episodeOfTotalPattern.MatchString(rraw) {
 			continue
 		}
-		if !strings.EqualFold(mid, "a") {
+		if !isEpisodeRangeWordConnector(mid) {
 			continue
 		}
 		l := strings.TrimLeft(lraw, "0")
@@ -9062,6 +9088,15 @@ func detectEpisodeRange(tokens []model.Token) (string, int) {
 		}
 	}
 	return "", -1
+}
+
+func isEpisodeRangeWordConnector(s string) bool {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "a", "à":
+		return true
+	default:
+		return false
+	}
 }
 
 func normalizeEpisodeRangeText(s string) string {

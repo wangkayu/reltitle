@@ -1856,6 +1856,50 @@ entries:
         remove: true
         confidence: 0.75
       - scope: plain
+        tokens: ["sub", ".", "español"]
+        emit:
+          - type: sub_flag
+            normalized: "soft"
+            token_index: -1
+          - type: sub_lang
+            normalized: "SPA"
+            token_index: -1
+        remove: true
+        confidence: 0.78
+      - scope: plain
+        tokens: ["sub", ".", "espanol"]
+        emit:
+          - type: sub_flag
+            normalized: "soft"
+            token_index: -1
+          - type: sub_lang
+            normalized: "SPA"
+            token_index: -1
+        remove: true
+        confidence: 0.78
+      - scope: paren
+        tokens: ["sub", ".", "español"]
+        emit:
+          - type: sub_flag
+            normalized: "soft"
+            token_index: -1
+          - type: sub_lang
+            normalized: "SPA"
+            token_index: -1
+        remove: true
+        confidence: 0.78
+      - scope: paren
+        tokens: ["sub", ".", "espanol"]
+        emit:
+          - type: sub_flag
+            normalized: "soft"
+            token_index: -1
+          - type: sub_lang
+            normalized: "SPA"
+            token_index: -1
+        remove: true
+        confidence: 0.78
+      - scope: plain
         tokens: ["sub", "español", "latino"]
         emit:
           - type: sub_flag
@@ -6007,6 +6051,95 @@ entries:
         remove: true
         confidence: 0.6
 
+  - id: sub_meta_multi_audio_sub_dotted
+    any_of:
+      - tokens: ["multi", ".", "audio", ".", "sub"]
+        emit:
+          - type: audio_flag
+            normalized: "MULTI_AUDIO"
+            token_index: -1
+          - type: sub_flag
+            normalized: "soft"
+            token_index: -1
+          - type: note
+            normalized: "MULTI_AUDIO_SUB"
+            token_index: -1
+        remove: true
+        confidence: 0.72
+      - tokens: ["multi", ".", "audio", ".", "subs"]
+        emit:
+          - type: audio_flag
+            normalized: "MULTI_AUDIO"
+            token_index: -1
+          - type: sub_flag
+            normalized: "soft"
+            token_index: -1
+          - type: note
+            normalized: "MULTI_AUDIO_SUB"
+            token_index: -1
+        remove: true
+        confidence: 0.72
+
+  - id: sub_lang_bracket_iso3_bundle
+    scope: bracket
+    any_of:
+      - tokens: ["fre"]
+        emit:
+          - type: sub_lang
+            normalized: "FRA"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["eng"]
+        emit:
+          - type: sub_lang
+            normalized: "ENG"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["ger"]
+        emit:
+          - type: sub_lang
+            normalized: "DEU"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["ita"]
+        emit:
+          - type: sub_lang
+            normalized: "ITA"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["spa"]
+        emit:
+          - type: sub_lang
+            normalized: "SPA"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["por"]
+        emit:
+          - type: sub_lang
+            normalized: "POR"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["chi"]
+        emit:
+          - type: sub_lang
+            normalized: "CMN"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["ara"]
+        emit:
+          - type: sub_lang
+            normalized: "ARA"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+
   - id: note_multi
     tokens: ["multi"]
     emit:
@@ -7351,6 +7484,27 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.8
+      - tokens: ["u", ".", "next"]
+        emit:
+          - type: platform
+            normalized: "UNEXT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["u", "_", "next"]
+        emit:
+          - type: platform
+            normalized: "UNEXT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["u", "next"]
+        emit:
+          - type: platform
+            normalized: "UNEXT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
 
   - id: platform_amazon
     any_of:
@@ -8584,6 +8738,19 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.8
+
+  - id: season_version_compact_s01v2
+    any_of:
+      - tokens: ["s01v2"]
+        emit:
+          - type: season
+            normalized: "1"
+            token_index: -1
+          - type: version
+            normalized: "V2"
+            token_index: -1
+        remove: true
+        confidence: 0.72
 
   - id: version_ver
     any_of:

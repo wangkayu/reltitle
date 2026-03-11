@@ -152,3 +152,27 @@ overrides:
         - "發行商再版粵語"
         - "发行商粤语"
         - "发行商再版粤语"
+
+  - id: "underscore_delimiter_route_family_v1"
+    enabled: true
+    priority: 90
+    match:
+      group_in:
+        - "FS"
+        - "WZF"
+        - "Kashikoi"
+        - "SyncRajo"
+        - "Kaerizaki -"
+        - "Kaerizaki-Fansub"
+        - "ALS"
+        - "NTA"
+        - "EA"
+        - "LS -"
+      raw_must_contain_any:
+        - "_"
+    output:
+      force_route_id: "group_underscore_delim_v1"
+      title_strip_prefixes:
+        - "_"
+      alias_strip_prefixes:
+        - "_"

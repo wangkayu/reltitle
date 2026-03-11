@@ -145,6 +145,54 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.8
+      - scope: bracket
+        tokens: ["映画"]
+        emit:
+          - type: contents
+            normalized: "MOVIE"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - scope: paren
+        tokens: ["映画"]
+        emit:
+          - type: contents
+            normalized: "MOVIE"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - scope: bracket
+        tokens: ["eiga"]
+        emit:
+          - type: contents
+            normalized: "MOVIE"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - scope: paren
+        tokens: ["eiga"]
+        emit:
+          - type: contents
+            normalized: "MOVIE"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - scope: bracket
+        tokens: ["gekijouban"]
+        emit:
+          - type: contents
+            normalized: "MOVIE"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - scope: paren
+        tokens: ["gekijouban"]
+        emit:
+          - type: contents
+            normalized: "MOVIE"
+            token_index: -1
+        remove: true
+        confidence: 0.75
 
   - id: contents_main_plus_ova_cn
     any_of:
@@ -637,6 +685,20 @@ entries:
         emit:
           - type: note
             normalized: "CHS_SUBS"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["繁体中文"]
+        emit:
+          - type: sub_lang
+            normalized: "TC"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["繁體中文"]
+        emit:
+          - type: sub_lang
+            normalized: "TC"
             token_index: -1
         remove: true
         confidence: 0.75
@@ -1315,7 +1377,7 @@ entries:
         confidence: 0.75
 
   - id: lang_ita_standalone
-    scope: plain
+    scope: bracket
     tokens: ["ita"]
     emit:
       - type: sub_lang
@@ -6893,6 +6955,23 @@ entries:
         remove: true
         confidence: 0.8
 
+  - id: video_codec_quicktime
+    any_of:
+      - tokens: ["v", "_", "quicktime"]
+        emit:
+          - type: video_codec
+            normalized: "QUICKTIME"
+            token_index: 0
+        remove: true
+        confidence: 0.8
+      - tokens: ["quicktime"]
+        emit:
+          - type: video_codec
+            normalized: "QUICKTIME"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+
   - id: bit_depth_10bit
     any_of:
       - tokens: ["10bit"]
@@ -7515,6 +7594,438 @@ entries:
         remove: true
         confidence: 0.8
 
+  - id: platform_bs_ntv
+    any_of:
+      - tokens: ["bs-ntv"]
+        emit:
+          - type: platform
+            normalized: "BS-NTV"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["bs", "-", "ntv"]
+        emit:
+          - type: platform
+            normalized: "BS-NTV"
+            token_index: 0
+        remove: true
+        confidence: 0.8
+      - tokens: ["bs", "ntv"]
+        emit:
+          - type: platform
+            normalized: "BS-NTV"
+            token_index: 0
+        remove: true
+        confidence: 0.8
+
+  - id: platform_tver
+    any_of:
+      - tokens: ["tver"]
+        emit:
+          - type: platform
+            normalized: "TVER"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["tver", ".", "web", "-", "dl"]
+        emit:
+          - type: platform
+            normalized: "TVER"
+            token_index: 0
+        remove: true
+        confidence: 0.82
+
+  - id: platform_tx
+    any_of:
+      - scope: paren
+        tokens: ["tx"]
+        emit:
+          - type: platform
+            normalized: "TX"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - scope: bracket
+        tokens: ["tx"]
+        emit:
+          - type: platform
+            normalized: "TX"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+
+  - id: platform_tbs
+    any_of:
+      - scope: paren
+        tokens: ["tbs"]
+        emit:
+          - type: platform
+            normalized: "TBS"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - scope: bracket
+        tokens: ["tbs"]
+        emit:
+          - type: platform
+            normalized: "TBS"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+
+  - id: platform_cx
+    any_of:
+      - scope: paren
+        tokens: ["cx"]
+        emit:
+          - type: platform
+            normalized: "CX"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - scope: bracket
+        tokens: ["cx"]
+        emit:
+          - type: platform
+            normalized: "CX"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+
+  - id: platform_mx
+    any_of:
+      - scope: paren
+        tokens: ["mx"]
+        emit:
+          - type: platform
+            normalized: "MX"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - scope: bracket
+        tokens: ["mx"]
+        emit:
+          - type: platform
+            normalized: "MX"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+
+  - id: platform_ntv
+    any_of:
+      - scope: paren
+        tokens: ["ntv"]
+        emit:
+          - type: platform
+            normalized: "NTV"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - scope: bracket
+        tokens: ["ntv"]
+        emit:
+          - type: platform
+            normalized: "NTV"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+
+  - id: platform_tvo
+    any_of:
+      - scope: paren
+        tokens: ["tvo"]
+        emit:
+          - type: platform
+            normalized: "TVO"
+            token_index: -1
+        remove: true
+        confidence: 0.78
+      - scope: bracket
+        tokens: ["tvo"]
+        emit:
+          - type: platform
+            normalized: "TVO"
+            token_index: -1
+        remove: true
+        confidence: 0.72
+
+  - id: platform_ktv
+    any_of:
+      - scope: paren
+        tokens: ["ktv"]
+        emit:
+          - type: platform
+            normalized: "KTV"
+            token_index: -1
+        remove: true
+        confidence: 0.78
+      - scope: bracket
+        tokens: ["ktv"]
+        emit:
+          - type: platform
+            normalized: "KTV"
+            token_index: -1
+        remove: true
+        confidence: 0.72
+
+  - id: platform_bs_tx
+    any_of:
+      - tokens: ["bs-tx"]
+        emit:
+          - type: platform
+            normalized: "BS-TX"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["bs", "-", "tx"]
+        emit:
+          - type: platform
+            normalized: "BS-TX"
+            token_index: 0
+        remove: true
+        confidence: 0.8
+
+  - id: platform_bs_fuji
+    any_of:
+      - tokens: ["bs-fuji"]
+        emit:
+          - type: platform
+            normalized: "BS-FUJI"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["bs", "-", "fuji"]
+        emit:
+          - type: platform
+            normalized: "BS-FUJI"
+            token_index: 0
+        remove: true
+        confidence: 0.8
+
+  - id: platform_bs_tbs
+    any_of:
+      - tokens: ["bs-tbs"]
+        emit:
+          - type: platform
+            normalized: "BS-TBS"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["bs", "-", "tbs"]
+        emit:
+          - type: platform
+            normalized: "BS-TBS"
+            token_index: 0
+        remove: true
+        confidence: 0.8
+
+  - id: platform_bs12
+    any_of:
+      - tokens: ["bs12"]
+        emit:
+          - type: platform
+            normalized: "BS12"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["bs", "12"]
+        emit:
+          - type: platform
+            normalized: "BS12"
+            token_index: 0
+        remove: true
+        confidence: 0.8
+
+  - id: platform_bs4
+    any_of:
+      - tokens: ["bs4"]
+        emit:
+          - type: platform
+            normalized: "BS4"
+            token_index: -1
+        remove: true
+        confidence: 0.78
+      - tokens: ["bs", "4"]
+        emit:
+          - type: platform
+            normalized: "BS4"
+            token_index: 0
+        remove: true
+        confidence: 0.78
+
+  - id: platform_bs8
+    any_of:
+      - tokens: ["bs8"]
+        emit:
+          - type: platform
+            normalized: "BS8"
+            token_index: -1
+        remove: true
+        confidence: 0.78
+      - tokens: ["bs", "8"]
+        emit:
+          - type: platform
+            normalized: "BS8"
+            token_index: 0
+        remove: true
+        confidence: 0.78
+
+  - id: platform_nhke
+    any_of:
+      - tokens: ["nhke"]
+        emit:
+          - type: platform
+            normalized: "NHK-E"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["nhk", "e"]
+        emit:
+          - type: platform
+            normalized: "NHK-E"
+            token_index: 0
+        remove: true
+        confidence: 0.78
+
+  - id: platform_nhkg
+    any_of:
+      - tokens: ["nhkg"]
+        emit:
+          - type: platform
+            normalized: "NHK-G"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["nhk", "g"]
+        emit:
+          - type: platform
+            normalized: "NHK-G"
+            token_index: 0
+        remove: true
+        confidence: 0.78
+
+  - id: platform_bs_animax
+    any_of:
+      - tokens: ["bs-animax"]
+        emit:
+          - type: platform
+            normalized: "BS-ANIMAX"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["bs", "-", "animax"]
+        emit:
+          - type: platform
+            normalized: "BS-ANIMAX"
+            token_index: 0
+        remove: true
+        confidence: 0.8
+
+  - id: platform_cs_ex2
+    any_of:
+      - tokens: ["cs-ex2"]
+        emit:
+          - type: platform
+            normalized: "CS-EX2"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["cs", "-", "ex2"]
+        emit:
+          - type: platform
+            normalized: "CS-EX2"
+            token_index: 0
+        remove: true
+        confidence: 0.8
+
+  - id: platform_fujitwo
+    any_of:
+      - tokens: ["fujitwo"]
+        emit:
+          - type: platform
+            normalized: "FUJI_TWO"
+            token_index: -1
+        remove: true
+        confidence: 0.78
+      - tokens: ["fuji", "two"]
+        emit:
+          - type: platform
+            normalized: "FUJI_TWO"
+            token_index: 0
+        remove: true
+        confidence: 0.75
+
+  - id: platform_famigeki
+    any_of:
+      - tokens: ["famigeki"]
+        emit:
+          - type: platform
+            normalized: "FAMIGEKI"
+            token_index: -1
+        remove: true
+        confidence: 0.78
+      - tokens: ["family", "gekijou"]
+        emit:
+          - type: platform
+            normalized: "FAMIGEKI"
+            token_index: 0
+        remove: true
+        confidence: 0.75
+
+  - id: platform_wowow
+    tokens: ["wowow"]
+    emit:
+      - type: platform
+        normalized: "WOWOW"
+        token_index: -1
+    remove: true
+    confidence: 0.8
+
+  - id: platform_gaora
+    tokens: ["gaora"]
+    emit:
+      - type: platform
+        normalized: "GAORA"
+        token_index: -1
+    remove: true
+    confidence: 0.78
+
+  - id: platform_kids_station
+    any_of:
+      - scope: paren
+        tokens: ["kids"]
+        emit:
+          - type: platform
+            normalized: "KIDS_STATION"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - scope: bracket
+        tokens: ["kids"]
+        emit:
+          - type: platform
+            normalized: "KIDS_STATION"
+            token_index: -1
+        remove: true
+        confidence: 0.72
+
+  - id: platform_bs_yoshimoto
+    any_of:
+      - tokens: ["bs-yoshimoto"]
+        emit:
+          - type: platform
+            normalized: "BS-YOSHIMOTO"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["bs", "-", "yoshimoto"]
+        emit:
+          - type: platform
+            normalized: "BS-YOSHIMOTO"
+            token_index: 0
+        remove: true
+        confidence: 0.8
+
   - id: platform_bs_ex_channel
     any_of:
       - tokens: ["bs-ex"]
@@ -7578,6 +8089,23 @@ entries:
         token_index: -1
     remove: true
     confidence: 0.75
+
+  - id: platform_aniplus
+    any_of:
+      - tokens: ["aniplus"]
+        emit:
+          - type: platform
+            normalized: "ANIPLUS"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["ani", "plus"]
+        emit:
+          - type: platform
+            normalized: "ANIPLUS"
+            token_index: 0
+        remove: true
+        confidence: 0.75
 
   - id: platform_bstation
     tokens: ["bstation"]

@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"regexp"
 	"strings"
 
 	"title-parser/pkg/model"
@@ -13,6 +14,9 @@ func inferTitleAndAliasesFromTitleCore(title string, aliasValid func(string) boo
 	}
 	s = normalizeSpacedUnderscore(s)
 	if strings.Contains(s, "_") && !strings.ContainsAny(s, "/／") {
+		if main, aliases, ok := inferTitleAliasFromUnderscoreBridge(s, aliasValid); ok {
+			return main, aliases
+		}
 		return s, nil
 	}
 	rawHasSlash := strings.ContainsAny(s, "/／")
@@ -271,6 +275,44 @@ func inferTitleAndAliasesFromTitleCore(title string, aliasValid func(string) boo
 	}
 
 	return normalizeTitleMain(s), nil
+}
+
+var underscoreAliasTechTailPattern = regexp.MustCompile(`(?i)\b(?:\d{3,4}p|x26[45]|h\.?26[45]|hevc|avc|aac|flac|mp4|mkv|webrip|web[- ]?dl|bdrip|dvdrip)\b`)
+
+func inferTitleAliasFromUnderscoreBridge(s string, aliasValid func(string) bool) (string, []string, bool) {
+	if strings.Count(s, "_") == 0 {
+		return "", nil, false
+	}
+	parts := strings.Split(s, "_")
+	if len(parts) < 2 {
+		return "", nil, false
+	}
+	left := cleanTitleToken(parts[0])
+	if left == "" || !hasCJK(left) {
+		return "", nil, false
+	}
+
+	rightRaw := strings.TrimSpace(strings.Join(parts[1:], " "))
+	rightRaw = strings.TrimSpace(strings.Trim(rightRaw, "_- "))
+	if rightRaw == "" || !hasLatin(rightRaw) {
+		return "", nil, false
+	}
+	if underscoreAliasTechTailPattern.MatchString(rightRaw) {
+		return "", nil, false
+	}
+	alias := cleanAliasToken(rightRaw)
+	if !aliasValid(alias) {
+		return "", nil, false
+	}
+
+	main := normalizeTitleMain(left)
+	if strings.TrimSpace(main) == "" {
+		main = strings.TrimSpace(left)
+	}
+	if main == "" {
+		return "", nil, false
+	}
+	return main, []string{alias}, true
 }
 
 func looksLikeSeriesBridgeText(s string) bool {

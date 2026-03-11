@@ -3397,6 +3397,90 @@ func TestParserGroupRouteOverride_AniSpecialWithEpisodeStaysTVEP(t *testing.T) {
 	}
 }
 
+func TestParserGroupRouteOverride_UnderscoreDelimiterRouteFS(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[FS]_Azur_Lane_-_01~12_[BD_1920X1080_x264_AAC][Sub_Esp][MP4]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalTitle(res); got != "Azur Lane" {
+		t.Fatalf("title=%q want=%q", got, "Azur Lane")
+	}
+	if strings.Contains(canonicalTitle(res), "_") {
+		t.Fatalf("underscore should be consumed in title, got=%q", canonicalTitle(res))
+	}
+	if got := canonicalEpisodeRange(res); got != "1-12" {
+		t.Fatalf("episode_range=%q want=%q", got, "1-12")
+	}
+}
+
+func TestParserGroupRouteOverride_UnderscoreDelimiterRouteKaerizaki(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Kaerizaki-Fansub]_One_Piece_1144_[VERSION_LIGHT][VOSTFR][FHD_1920x1080].mp4"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalTitle(res); got != "One Piece 1144" {
+		t.Fatalf("title=%q want=%q", got, "One Piece 1144")
+	}
+	if strings.Contains(canonicalTitle(res), "_") {
+		t.Fatalf("underscore should be consumed in title, got=%q", canonicalTitle(res))
+	}
+}
+
+func TestParserTitleAlias_BracketUnderscoreBridgeCJKLatin(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[悠哈璃羽字幕社][RPG不动产_RPG Fudousan][01][x264 1080p][CHS]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalTitle(res); got != "RPG不动产" {
+		t.Fatalf("title=%q want=%q", got, "RPG不动产")
+	}
+	aliases := canonicalAliases(res)
+	if !containsAlias(aliases, "RPG Fudousan") {
+		t.Fatalf("expected alias RPG Fudousan, got=%v", aliases)
+	}
+}
+
+func TestParserTitleAlias_BracketUnderscoreBridge_NoSplitForLatinOnly(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Test][One_Piece][01][1080p]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalTitle(res); got != "One Piece" {
+		t.Fatalf("title=%q want=%q", got, "One Piece")
+	}
+	if aliases := canonicalAliases(res); len(aliases) != 0 {
+		t.Fatalf("latin-only underscore should not create alias, got=%v", aliases)
+	}
+}
+
 func TestParserAliasCleanup_FurretarDropsMovieMetaAlias(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

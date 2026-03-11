@@ -64,7 +64,7 @@ content_type_inference:
     confidence: 0.75
     description: "PT标准电影发布: Title + Year + Tech (无season/episode/range)"
 
-  - name: "movie_by_tech_only"
+  - name: "movie_by_tech_and_keyword"
     priority: 83
     condition:
       has_tech: true
@@ -74,11 +74,11 @@ content_type_inference:
       has_pack_kind: false
       has_sp_kind: false
       has_movie_index: false
-      no_movie_keyword: true
+      has_movie_keyword: true
       no_year: true
     result: "MOVIE"
-    confidence: 0.6
-    description: "弱电影推断: Title + Tech 但缺少episode/season/pack/movie等强信号，按单条资源处理"
+    confidence: 0.7
+    description: "电影关键词+Tech（无年份）时推断为MOVIE；不再对纯Tech无关键词样本做电影推断"
   
   # 优先级2: TV Episode
   - name: "tv_ep_by_episode"

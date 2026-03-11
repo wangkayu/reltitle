@@ -2481,6 +2481,9 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	title = trimTitleTailByPackKind(title, packKind)
 	aliases = p.sanitizeAliasesForOutput(aliases, title, episode, season, spKind)
 	title, aliases = p.rebalanceGenericPrimaryTitleFromAliases(title, aliases)
+	if bridgedTitle, bridgedAliases, ok := applyBracketUnderscoreAliasBridge(rawTitle, title, aliases); ok {
+		title, aliases = bridgedTitle, bridgedAliases
+	}
 	if strings.TrimSpace(title) != "" && aliasSemanticKey(title) != aliasSemanticKey(origTitle) {
 		attrs = upsertTitleAttribute(attrs, title, "title_cleanup")
 	}
@@ -3457,9 +3460,51 @@ func applyGroupTitleAliasSpecialization(rawTitle string, routeID string, title s
 	switch rid {
 	case "group_epseg_fate_sf_wgjd_v1", "group_epseg_fate_sf_atlas_v1":
 		return applyFateStrangeFakeTitleAliasSpecialization(rawTitle, title, aliases)
+	case "group_underscore_delim_v1":
+		return applyUnderscoreDelimiterTitleAliasSpecialization(rawTitle, title, aliases)
 	default:
 		return title, aliases
 	}
+}
+
+func applyBracketUnderscoreAliasBridge(rawTitle string, title string, aliases []string) (string, []string, bool) {
+	if strings.TrimSpace(rawTitle) == "" {
+		return title, aliases, false
+	}
+	if len(aliases) > 0 {
+		return title, aliases, false
+	}
+	matches := bracketSegmentPattern.FindAllStringSubmatch(rawTitle, -1)
+	if len(matches) < 2 {
+		return title, aliases, false
+	}
+	seg2 := strings.TrimSpace(matches[1][1])
+	if seg2 == "" || strings.ContainsAny(seg2, "/／") {
+		return title, aliases, false
+	}
+	parts := strings.SplitN(seg2, "_", 2)
+	if len(parts) != 2 {
+		return title, aliases, false
+	}
+	left := cleanTitleToken(parts[0])
+	right := cleanTitleToken(parts[1])
+	if left == "" || right == "" {
+		return title, aliases, false
+	}
+	if !hasCJK(left) || !hasLatin(right) {
+		return title, aliases, false
+	}
+	if underscoreAliasTechTailPattern.MatchString(strings.ToLower(right)) {
+		return title, aliases, false
+	}
+	right = strings.TrimSpace(strings.ReplaceAll(right, "／", "/"))
+	right = strings.Join(strings.Fields(right), " ")
+	if right == "" {
+		return title, aliases, false
+	}
+	merged := mergeAliases([]string{right}, aliases)
+	merged = dropAliasFragmentsOfPrimary(left, merged)
+	return left, merged, true
 }
 
 func applyFateStrangeFakeTitleAliasSpecialization(rawTitle string, title string, aliases []string) (string, []string) {
@@ -3485,6 +3530,67 @@ func applyFateStrangeFakeTitleAliasSpecialization(rawTitle string, title string,
 	merged := mergeAliases([]string{alias}, aliases)
 	merged = dropAliasFragmentsOfPrimary(alias, merged)
 	return mainTitle, merged
+}
+
+var titleUnderscoreEdgePattern = regexp.MustCompile(`^[\s_-]+|[\s_-]+$`)
+var titleUnderscoreRunPattern = regexp.MustCompile(`_+`)
+var titleSpaceRunPattern = regexp.MustCompile(`\s+`)
+
+func applyUnderscoreDelimiterTitleAliasSpecialization(rawTitle string, title string, aliases []string) (string, []string) {
+	orig := strings.TrimSpace(title)
+	if orig == "" {
+		return title, aliases
+	}
+
+	// CJK + Latin split bridge: "中文标题_English Title"
+	if strings.Count(orig, "_") == 1 {
+		parts := strings.SplitN(orig, "_", 2)
+		left := normalizeUnderscoreDelimiterTitleToken(parts[0])
+		right := normalizeUnderscoreDelimiterTitleToken(parts[1])
+		if left != "" && right != "" && hasCJK(left) && hasLatin(right) {
+			merged := mergeAliases([]string{right}, aliases)
+			merged = dropAliasFragmentsOfPrimary(left, merged)
+			return left, merged
+		}
+	}
+
+	cleanTitle := normalizeUnderscoreDelimiterTitleToken(orig)
+	if cleanTitle == "" {
+		cleanTitle = cleanTitleToken(orig)
+	}
+	if cleanTitle == "" {
+		cleanTitle = strings.TrimSpace(orig)
+	}
+	if cleanTitle == "" {
+		return title, aliases
+	}
+
+	if len(aliases) == 0 {
+		return cleanTitle, aliases
+	}
+	outAliases := make([]string, 0, len(aliases))
+	for _, a := range aliases {
+		aa := normalizeUnderscoreDelimiterTitleToken(a)
+		if aa == "" {
+			continue
+		}
+		outAliases = append(outAliases, aa)
+	}
+	outAliases = mergeAliases(nil, outAliases)
+	outAliases = dropAliasFragmentsOfPrimary(cleanTitle, outAliases)
+	return cleanTitle, outAliases
+}
+
+func normalizeUnderscoreDelimiterTitleToken(s string) string {
+	s = cleanTitleToken(s)
+	if s == "" {
+		return ""
+	}
+	s = strings.TrimSpace(titleUnderscoreEdgePattern.ReplaceAllString(s, ""))
+	s = titleUnderscoreRunPattern.ReplaceAllString(s, " ")
+	s = titleSpaceRunPattern.ReplaceAllString(s, " ")
+	s = strings.TrimSpace(strings.Trim(s, "-_"))
+	return s
 }
 
 func dropAliasFragmentsOfPrimary(primary string, aliases []string) []string {
@@ -3662,10 +3768,13 @@ func hasMovieKeywordInRawTitle(raw string) bool {
 	if low == "" {
 		return false
 	}
-	if strings.Contains(low, "movie") || strings.Contains(low, "movies") || strings.Contains(low, "film") || strings.Contains(low, "films") || strings.Contains(low, "gekijouban") || strings.Contains(low, "eiga") {
+	if strings.Contains(low, "movie") || strings.Contains(low, "movies") || strings.Contains(low, "film") || strings.Contains(low, "films") {
 		return true
 	}
-	if strings.Contains(raw, "劇場版") || strings.Contains(raw, "剧场版") || strings.Contains(raw, "映画") || strings.Contains(raw, "大电影") || strings.Contains(raw, "大電影") {
+	if strings.Contains(raw, "劇場版") || strings.Contains(raw, "剧场版") || strings.Contains(raw, "大电影") || strings.Contains(raw, "大電影") {
+		return true
+	}
+	if rawStandaloneMovieJPTagPattern.MatchString(raw) {
 		return true
 	}
 	return rawMovieTagPattern.MatchString(raw)
@@ -13179,14 +13288,16 @@ var movieRangeDigitPattern = regexp.MustCompile(`^0*(\d{1,3})$`)
 var moviePartSignalPattern = regexp.MustCompile(`(?i)\b(?:part|day|chapter)\s*[-:：]?\s*0*(\d{1,3})\b|(?:第\s*0*(\d{1,3})\s*部)|(?:前篇|後篇|后篇|完结篇|完結篇)`)
 var movieBracketEpisodePattern = regexp.MustCompile(`[\[【(（]\s*0*(\d{1,3})\s*[\]】)）]`)
 var rawMovieTagPattern = regexp.MustCompile(`(?i)[\[【(（]\s*(?:movie|film|電影|电影)\s*[\]】)）]`)
+var rawStandaloneMovieJPTagPattern = regexp.MustCompile(`(?i)[\[【(（]\s*(?:映画|eiga|gekijouban)\s*[\]】)）]`)
 var movieDashEpisodePattern = regexp.MustCompile(`(?i)\b(?:movie|film)\s*0*\d{1,3}\s*[-:：]\s*0*\d{1,3}\b`)
 
 func isMovieKeywordText(text string) bool {
 	lt := strings.ToLower(strings.TrimSpace(text))
-	if lt == "movie" || lt == "themovie" || lt == "eiga" || lt == "gekijouban" || lt == "film" {
+	if lt == "movie" || lt == "themovie" || lt == "film" {
 		return true
 	}
-	return strings.Contains(text, "劇場版") || strings.Contains(text, "剧场版") || strings.Contains(text, "映画") || strings.Contains(text, "大电影") || strings.Contains(text, "大電影")
+	trimmed := strings.TrimSpace(text)
+	return trimmed == "劇場版" || trimmed == "剧场版" || trimmed == "大电影" || trimmed == "大電影"
 }
 
 func hasMovieContextAround(tokens []model.Token, idx int) bool {

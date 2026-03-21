@@ -135,3 +135,37 @@ func TestLexiconNewFormat_VOSTFRSeasonBatchKeepsFrenchSubLang(t *testing.T) {
 		t.Fatalf("expected sub_flag=soft for VOSTFR marker, attrs=%v", res.Attributes)
 	}
 }
+
+func TestLexiconNewFormat_HiResConsumedAsNoteNotTailGroup(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "【TSDM字幕组】[超时空辉夜姬][Cosmic Princess Kaguya][HEVC-10bit 1080p AAC][MKV][简日内封字幕]付『超かぐや姫！』劇中歌集10首自购Hi-Res"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	if !hasAttrNormalized(res.Attributes, model.AttrGroup, "TSDM 字幕组") {
+		t.Fatalf("expected group=TSDM 字幕组, attrs=%v", res.Attributes)
+	}
+	if !hasAttrNormalized(res.Attributes, model.AttrTitle, "超时空辉夜姬") {
+		t.Fatalf("expected title=超时空辉夜姬, attrs=%v", res.Attributes)
+	}
+	if hasAttrNormalized(res.Attributes, model.AttrGroup, "Res") {
+		t.Fatalf("Hi-Res tail should not be parsed as group=Res, attrs=%v", res.Attributes)
+	}
+	for _, a := range res.Attributes {
+		if a.Type == model.AttrTitleAlias && strings.EqualFold(strings.TrimSpace(a.Normalized), "Hi Res") {
+			t.Fatalf("Hi-Res should not leak into title_alias, attrs=%v", res.Attributes)
+		}
+	}
+	for _, tk := range res.Tokens {
+		if (strings.EqualFold(strings.TrimSpace(tk.Text), "Hi") || strings.EqualFold(strings.TrimSpace(tk.Text), "Res")) && !tk.Removed {
+			t.Fatalf("Hi-Res tokens should be consumed, tokens=%v", res.Tokens)
+		}
+	}
+}

@@ -3540,6 +3540,37 @@ entries:
     remove: true
     confidence: 0.7
 
+  - id: note_hi_res
+    any_of:
+      - tokens: ["hi-res"]
+        emit:
+          - type: note
+            normalized: "HI_RES"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["hi", "-", "res"]
+        emit:
+          - type: note
+            normalized: "HI_RES"
+            token_index: 0
+        remove: true
+        confidence: 0.7
+      - tokens: ["hi", "res"]
+        emit:
+          - type: note
+            normalized: "HI_RES"
+            token_index: 0
+        remove: true
+        confidence: 0.65
+      - tokens: ["hires"]
+        emit:
+          - type: note
+            normalized: "HI_RES"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+
   - id: sub_vostfr
     any_of:
       - tokens: ["vostfr"]

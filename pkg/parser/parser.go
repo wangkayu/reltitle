@@ -6722,6 +6722,9 @@ func detectTailGroupFromRawTitle(rawTitle string) string {
 	if s == "" {
 		return ""
 	}
+	if regexp.MustCompile(`(?i)\bhi[\s_-]*res\b\s*$`).MatchString(s) {
+		return ""
+	}
 	if m := tailGroupFromRawTitlePattern.FindStringSubmatch(s); len(m) == 2 {
 		g := strings.TrimSpace(m[1])
 		if g != "" {

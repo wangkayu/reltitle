@@ -2564,6 +2564,50 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 			}
 		}
 	}
+	if overrideApplied && strings.EqualFold(strings.TrimSpace(routeID), "group_aptx4869_conan_bracket_ep_v1") {
+		if forcedTitle, ep, epTitle, ok := extractAPTX4869ConanEpisodeTitleRoute(rawTitle); ok {
+			title = forcedTitle
+			episode = ep
+			episodeIdx = -1
+			episodeList = ""
+			episodeRange = ""
+			episodeRangeIdx = -1
+			attrs = removeAttributeType(attrs, model.AttrEpisode)
+			attrs = removeAttributeType(attrs, model.AttrEpisodeList)
+			attrs = removeAttributeType(attrs, model.AttrEpisodeRange)
+			aliases = pruneEpisodeLikeAliases(aliases)
+			if strings.TrimSpace(epTitle) != "" {
+				attrs = append(attrs, model.Attribute{
+					Type:       model.AttrNote,
+					Normalized: strings.TrimSpace(epTitle),
+					TokenStart: -1,
+					TokenEnd:   -1,
+					Confidence: 0.7,
+					Source:     "group_route_override",
+				})
+			}
+			primary := &model.EPEntity{
+				Kind:       "EP",
+				Axis:       "ABS",
+				Episode:    episode,
+				TokenStart: -1,
+				TokenEnd:   -1,
+				Source:     "group_route_override",
+			}
+			epslot = &model.EPSlot{
+				Primary:    primary,
+				Candidates: []model.EPEntity{*primary},
+			}
+			movieRouteHardExcluded = hasMovieRouteHardExclusion(rawTitle, attrs, episodeRange, season, seasonRange, packKind)
+			movieContentSignal = hasMovieContentSignal(attrs, hasMovieKeyword, movieIndex, spKind)
+			epRoute = computeEpRoute(tokens, episode, episodeRange, season, seasonRange, spKind, movieIndex, hasMovieKeyword, movieRouteHardExcluded)
+			contentKind, contentConf = inferContentKind(p.cfg, episode, episodeRange, season, seasonRange, packKind, spKind, movieIndex, movieIndexRange, hasTech, hasMovieKeyword, hasYear, movieRouteHardExcluded, movieContentSignal)
+			if tid, tconf, _ := matchTemplate(p.cfg, epRoute, contentKind, group, episode, episodeRange, season, packKind, spKind, movieIndex, hasTech, hasMovieKeyword, attrs, tokens); strings.TrimSpace(tid) != "" && tid != "TF_UNKNOWN_DEFAULT" {
+				templateID = tid
+				templateConf = tconf
+			}
+		}
+	}
 	if overrideApplied {
 		title, aliases = applyGroupTitleAliasSpecialization(rawTitle, routeID, title, aliases)
 	}
@@ -3651,10 +3695,46 @@ var episodeLikeThirdBracketPattern = regexp.MustCompile(`(?i)^\s*(\d{1,4})(?:\s*
 var spKindLeadPattern = regexp.MustCompile(`(?i)^(SP|OVA|OAD|ONA|NCOP|NCED|PV|CM)\b`)
 var episodeLikeAliasPattern = regexp.MustCompile(`(?i)^\s*\d{1,4}(?:\s*([_ .-]|&)\s*.*)?$`)
 var bracketDatePattern = regexp.MustCompile(`\[(\d{4}[./-]\d{2}[./-]\d{2})\]`)
+var aptx4869ConanEpisodeTitlePattern = regexp.MustCompile(`^\s*(名[侦偵]探柯南)\s+0*(\d{1,4})\s+(.+?)\s*$`)
 
 func extractEpisodeLikeFromThirdBracket(rawTitle string) (episode string, spKind string, ok bool) {
 	ep, sp, _, _, ok := extractEpisodeLikeFromThirdBracketDetailedWithSep(rawTitle)
 	return ep, sp, ok
+}
+
+func extractAPTX4869ConanEpisodeTitleRoute(rawTitle string) (title string, episode string, epTitle string, ok bool) {
+	if strings.TrimSpace(rawTitle) == "" {
+		return "", "", "", false
+	}
+	matches := bracketSegmentPattern.FindAllStringSubmatch(rawTitle, -1)
+	if len(matches) < 3 {
+		return "", "", "", false
+	}
+	if !strings.EqualFold(strings.TrimSpace(matches[1][1]), "CONAN") {
+		return "", "", "", false
+	}
+	seg := strings.TrimSpace(matches[2][1])
+	if seg == "" {
+		return "", "", "", false
+	}
+	m := aptx4869ConanEpisodeTitlePattern.FindStringSubmatch(seg)
+	if len(m) != 4 {
+		return "", "", "", false
+	}
+	title = normalizeTitleMain(cleanTitleToken(m[1]))
+	if title == "" {
+		return "", "", "", false
+	}
+	epNum, err := strconv.Atoi(strings.TrimSpace(m[2]))
+	if err != nil || epNum <= 0 {
+		return "", "", "", false
+	}
+	episode = strconv.Itoa(epNum)
+	epTitle = normalizeTitleMain(cleanTitleToken(m[3]))
+	if epTitle == "" {
+		return "", "", "", false
+	}
+	return title, episode, epTitle, true
 }
 
 func extractEpisodeLikeFromThirdBracketDetailed(rawTitle string) (episode string, spKind string, epTitle string, ok bool) {

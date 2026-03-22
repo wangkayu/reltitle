@@ -49,6 +49,17 @@ overrides:
       force_content_kind: "TV_EP"
       force_route_id: "group_epseg_maruko_v1"
 
+  - id: "aptx4869_conan_bracket_ep_title"
+    enabled: true
+    priority: 95
+    match:
+      group_in: ["APTX4869"]
+      raw_must_contain_any:
+        - "[CONAN][名侦探柯南 "
+        - "[CONAN][名偵探柯南 "
+    output:
+      force_route_id: "group_aptx4869_conan_bracket_ep_v1"
+
   - id: "ani_special_no_ep_streaming"
     enabled: true
     priority: 94

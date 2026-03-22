@@ -8992,7 +8992,20 @@ func detectEpisodeRange(tokens []model.Token) (string, int) {
 
 	for i := 0; i < len(tokens); i++ {
 		if tokens[i].Removed {
-			continue
+			// Single-episode extraction can consume the left bound before range detection
+			// runs, e.g. "Prism Rondo - 01 ~ 20 ...". Preserve detection when the removed
+			// token is still the left edge of an explicit numeric range.
+			if i+2 >= len(tokens) {
+				continue
+			}
+			leftRaw := strings.TrimSpace(tokens[i].Text)
+			sep := strings.TrimSpace(tokens[i+1].Text)
+			if !episodeOfTotalPattern.MatchString(leftRaw) {
+				continue
+			}
+			if sep != "-" && sep != "~" && !isEpisodeRangeWordConnector(sep) {
+				continue
+			}
 		}
 		inBracket := isInBracket(tokens, i)
 		inParen := isInParen(tokens, i)
@@ -9108,7 +9121,8 @@ func detectEpisodeRange(tokens []model.Token) (string, int) {
 					}
 				}
 			}
-			if episodeOfTotalPattern.MatchString(strings.TrimSpace(tokens[i].Text)) && strings.TrimSpace(tokens[i+1].Text) == "-" {
+			sep = strings.TrimSpace(tokens[i+1].Text)
+			if episodeOfTotalPattern.MatchString(strings.TrimSpace(tokens[i].Text)) && (sep == "-" || sep == "~" || isEpisodeRangeWordConnector(sep)) {
 				rawR := strings.TrimSpace(tokens[i+2].Text)
 				if episodeOfTotalPattern.MatchString(rawR) {
 					// Plain text range like "... - 241-248 ..."

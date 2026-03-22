@@ -29,3 +29,27 @@ func TestParserEpisodeRange_PlainDashAfterTitleDelimiter(t *testing.T) {
 		t.Fatalf("group=%q want=%q", got, "shincaps")
 	}
 }
+
+func TestParserEpisodeRange_SpacedTildeBatchAfterEpisodePreconsume(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Erai-raws] Prism Rondo - 01 ~ 20 [1080p NF WEBRip HEVC EAC3][MultiSub] [BATCH]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	if got := canonicalEpisodeRange(res); got != "1-20" {
+		t.Fatalf("episode_range=%q want=%q", got, "1-20")
+	}
+	if got := canonicalEpisode(res); got != "" {
+		t.Fatalf("episode=%q want empty when range detected", got)
+	}
+	if got := res.ContentKind; got != "BATCH" {
+		t.Fatalf("content_kind=%q want=%q", got, "BATCH")
+	}
+}

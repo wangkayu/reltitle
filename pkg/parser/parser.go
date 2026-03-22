@@ -6722,6 +6722,9 @@ func detectTailGroupFromRawTitle(rawTitle string) string {
 	if s == "" {
 		return ""
 	}
+	if regexp.MustCompile(`(?i)\bcustom\b\s*$`).MatchString(s) {
+		return ""
+	}
 	if regexp.MustCompile(`(?i)\bhi[\s_-]*res\b\s*$`).MatchString(s) {
 		return ""
 	}
@@ -11127,6 +11130,9 @@ func isTailGroupToken(s string) bool {
 		return false
 	}
 	if up == "DL" || up == "WEB" || up == "WEBRIP" || up == "WEB-DL" || up == "BLURAY" || up == "BDRIP" || up == "DVDRIP" {
+		return false
+	}
+	if up == "CUSTOM" {
 		return false
 	}
 	if up == "H264" || up == "H265" || up == "X264" || up == "X265" || up == "HEVC" || up == "AVC" || up == "AAC" {

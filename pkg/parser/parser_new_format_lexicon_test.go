@@ -169,3 +169,30 @@ func TestLexiconNewFormat_HiResConsumedAsNoteNotTailGroup(t *testing.T) {
 		}
 	}
 }
+
+func TestLexiconNewFormat_TailCustomNotParsedAsTailGroup(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[EssAirTé] JoJo's Bizarre Adventure STEEL BALL RUN - EP01 VOSTFR-custom"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	if hasAttrNormalized(res.Attributes, model.AttrGroup, "custom") {
+		t.Fatalf("tail custom should not be parsed as group, attrs=%v", res.Attributes)
+	}
+	if hasAttrNormalized(res.Attributes, model.AttrTailGroup, "custom") {
+		t.Fatalf("tail custom should not be parsed as tail_group, attrs=%v", res.Attributes)
+	}
+	if got := canonicalEpisode(res); got != "1" {
+		t.Fatalf("episode=%q want=%q", got, "1")
+	}
+	if strings.Contains(strings.ToLower(strings.TrimSpace(canonicalTitle(res))), "custom") {
+		t.Fatalf("tail custom should not pollute title, title=%q", canonicalTitle(res))
+	}
+}

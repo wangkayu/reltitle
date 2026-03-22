@@ -1,0 +1,7 @@
+enabled: false
+alias_lookup: ../training/artifacts/knowledge/anidb/anidb_title_lookup.json
+aid_index: ../training/artifacts/knowledge/anidb/anidb_aid_index.json
+lock_min_score: 0.90
+lock_min_gap: 0.08
+min_title_runes: 3
+max_alias_export: 8

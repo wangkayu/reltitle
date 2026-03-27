@@ -2371,6 +2371,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	if rawMarkers := extractContentsFromRawParens(rawTitle); len(rawMarkers) > 0 {
 		emitContentsAttrs(&attrs, rawMarkers, "raw_paren_contents_marker")
 	}
+	attrs = appendEmbeddedJapaneseDubAttrs(attrs, rawTitle)
 	attrs = dropContentsAttrsInsideTitleSpan(attrs, titleStart, titleEnd)
 	if strings.TrimSpace(spKind) == "" {
 		spKind = inferSPKindFromContentsAttrs(attrs)
@@ -3655,6 +3656,52 @@ func dropAliasFragmentsOfPrimary(primary string, aliases []string) []string {
 		out = append(out, aa)
 	}
 	return out
+}
+
+var embeddedJapaneseDubRawPattern = regexp.MustCompile(`(?i)(?:日配版|日语配音版|日語配音版|\b(?:Japanese|JPN|JP)\s+Dub\b)`)
+
+func appendEmbeddedJapaneseDubAttrs(attrs []model.Attribute, rawTitle string) []model.Attribute {
+	if strings.TrimSpace(rawTitle) == "" {
+		return attrs
+	}
+	if !embeddedJapaneseDubRawPattern.MatchString(rawTitle) {
+		return attrs
+	}
+	hasAudioLang := false
+	hasDub := false
+	for _, a := range attrs {
+		switch a.Type {
+		case model.AttrAudioLang:
+			if strings.EqualFold(strings.TrimSpace(normalizeAudioLangToken(a.Normalized)), "JPN") {
+				hasAudioLang = true
+			}
+		case model.AttrAudioFlag:
+			if strings.EqualFold(strings.TrimSpace(a.Normalized), "JAPANESE_DUB") || strings.EqualFold(strings.TrimSpace(a.Normalized), "DUB") {
+				hasDub = true
+			}
+		}
+	}
+	if !hasAudioLang {
+		attrs = append(attrs, model.Attribute{
+			Type:       model.AttrAudioLang,
+			Normalized: "JPN",
+			TokenStart: -1,
+			TokenEnd:   -1,
+			Confidence: 0.65,
+			Source:     "raw_audio_meta",
+		})
+	}
+	if !hasDub {
+		attrs = append(attrs, model.Attribute{
+			Type:       model.AttrAudioFlag,
+			Normalized: "JAPANESE_DUB",
+			TokenStart: -1,
+			TokenEnd:   -1,
+			Confidence: 0.65,
+			Source:     "raw_audio_meta",
+		})
+	}
+	return attrs
 }
 
 func normalizeEpisodeTitleSepConstraint(raw string) string {
@@ -11829,6 +11876,10 @@ func normalizeTitleMain(s string) string {
 	// Keep other parenthetical notes like "（※似乎可行？）".
 	reRegion := regexp.MustCompile(`（\s*仅限港澳台地区\s*）|（\s*僅限港澳台地區\s*）|\(\s*仅限港澳台地区\s*\)|\(\s*僅限港澳台地區\s*\)`)
 	s = reRegion.ReplaceAllString(s, "")
+	// Remove embedded audio-version notes that should be structured as audio metadata
+	// rather than retained in the canonical title surface.
+	reAudioMeta := regexp.MustCompile(`（\s*(?:日配版|日语配音版|日語配音版)\s*）|\(\s*(?:(?:Japanese|JPN|JP)\s+(?:Dub|Audio))\s*\)`)
+	s = reAudioMeta.ReplaceAllString(s, "")
 	s = strings.TrimSpace(s)
 	// Compact spaces around hyphen only for very short left parts (e.g. "X - Clamp" -> "X-Clamp").
 	reSingleLetterHyphen := regexp.MustCompile(`(?i)\b([a-z0-9])\s*-\s*([a-z0-9]{2,})\b`)

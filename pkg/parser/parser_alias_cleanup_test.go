@@ -658,6 +658,29 @@ func TestParserAudioFlag_JpnDubPhraseConsumed(t *testing.T) {
 	}
 }
 
+func TestParserAudioFlag_JpnDubCnMarkerRemovedFromTitle(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[黒ネズミたち] 时光代理人 英都篇（日配版） - 08 (ABEMA 1280x720 AVC AAC MP4)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalTitle(res); got != "时光代理人 英都篇" {
+		t.Fatalf("title=%q want=%q", got, "时光代理人 英都篇")
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "JPN") {
+		t.Fatalf("expected audio_lang=JPN, got=%v", attrValues(res, model.AttrAudioLang))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioFlag), "DUB") {
+		t.Fatalf("expected audio_flag=DUB, got=%v", attrValues(res, model.AttrAudioFlag))
+	}
+}
+
 func TestParserSpecialMarkerCnToken_IsConsumedAndMappedToContents(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

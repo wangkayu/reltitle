@@ -4332,6 +4332,9 @@ entries:
         confidence: 0.65
       - tokens: ["日语配音版"]
         emit:
+          - type: audio_lang
+            normalized: "JPN"
+            token_index: -1
           - type: audio_flag
             normalized: "JAPANESE_DUB"
             token_index: -1
@@ -4339,6 +4342,9 @@ entries:
         confidence: 0.7
       - tokens: ["日語配音版"]
         emit:
+          - type: audio_lang
+            normalized: "JPN"
+            token_index: -1
           - type: audio_flag
             normalized: "JAPANESE_DUB"
             token_index: -1
@@ -4346,6 +4352,9 @@ entries:
         confidence: 0.7
       - tokens: ["日配版"]
         emit:
+          - type: audio_lang
+            normalized: "JPN"
+            token_index: -1
           - type: audio_flag
             normalized: "JAPANESE_DUB"
             token_index: -1

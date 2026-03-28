@@ -8029,7 +8029,7 @@ func titleStartAfterLeadingEmptyBracketBlocks(tokens []model.Token) int {
 		}
 		if innerHasVisible {
 			blockText := strings.TrimSpace(strings.Join(innerParts, " "))
-			if isLikelyMetaBracketText(blockText) || looksLikeLeadingTitleMeta(blockText) {
+			if isLeadingHeadNoiseText(blockText) || isLikelyMetaBracketText(blockText) || looksLikeLeadingTitleMeta(blockText) {
 				i = end + 1
 				continue
 			}
@@ -8057,13 +8057,26 @@ var reMonthNewShow = regexp.MustCompile(`^\d{1,2}月新番$`)
 var reMetaHDRWithKToken = regexp.MustCompile(`(?i)(?:4k|8k).*hdr|hdr.*(?:4k|8k)`)
 var reEditionMetaText = regexp.MustCompile(`(?i)\b(?:uncut(?:\s*(?:ver|version)\.?)?|uncensored(?:\s*(?:ver|version)\.?)?|director'?s\s*cut|extended\s*cut|remaster(?:ed)?(?:\s*(?:ver|version)\.?)?|audio[_ -]?commentary(?:\s*(?:ver|version)\.?)?|encode\s*ver)\b`)
 
+func isLeadingHeadNoiseText(s string) bool {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return false
+	}
+	s = strings.TrimSpace(strings.Trim(s, "★☆"))
+	switch s {
+	case "搬运", "搬運", "整理搬运", "整理搬運":
+		return true
+	}
+	return false
+}
+
 func looksLikeLeadingTitleMeta(s string) bool {
 	s = strings.TrimSpace(s)
 	if s == "" {
 		return false
 	}
 	s = strings.TrimSpace(strings.Trim(s, "★☆"))
-	if s == "整理搬运" || s == "整理搬運" {
+	if isLeadingHeadNoiseText(s) {
 		return true
 	}
 	if reMonthNewShow.MatchString(s) {
@@ -8369,7 +8382,7 @@ func extractHeadBracketGroup(tokens []model.Token) (string, [2]int) {
 		if g == "" {
 			continue
 		}
-		if g == "整理搬运" || g == "整理搬運" {
+		if isLeadingHeadNoiseText(g) {
 			continue
 		}
 		if !isGroupCandidateText(g) {
@@ -8425,7 +8438,7 @@ func areLeadingHeadBlocksMeta(tokens []model.Token, blocks [][3]int) bool {
 		if text == "" {
 			continue
 		}
-		if isLikelyMetaBracketText(text) || isEpisodeLikeBracketText(text) {
+		if isLeadingHeadNoiseText(text) || isLikelyMetaBracketText(text) || isEpisodeLikeBracketText(text) {
 			continue
 		}
 		return false

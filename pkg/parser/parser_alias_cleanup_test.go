@@ -4181,6 +4181,46 @@ func TestParserNoiseWrapper_UnwrapTransportNestedBracket(t *testing.T) {
 	}
 }
 
+func TestParserNoiseWrapper_SkipsLeadingTransportNoiseBracket(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	cases := []struct {
+		name string
+		raw  string
+	}{
+		{
+			name: "traditional",
+			raw:  "[搬運][ANi] 轉生之後的我變成了龍蛋～目標是世界最強～ - 01 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]",
+		},
+		{
+			name: "simplified",
+			raw:  "[搬运][ANi] 轉生之後的我變成了龍蛋～目標是世界最強～ - 01 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			res, err := p.Parse(tc.raw)
+			if err != nil {
+				t.Fatalf("parse failed: %v", err)
+			}
+			if got := canonicalGroup(res); !strings.EqualFold(strings.TrimSpace(got), "ANi") {
+				t.Fatalf("group=%q want=%q", got, "ANi")
+			}
+			if got := canonicalTitle(res); strings.Contains(got, "搬運") || strings.Contains(got, "搬运") {
+				t.Fatalf("title leaked leading transport noise: %q", got)
+			}
+			if got := canonicalEpisode(res); got != "1" {
+				t.Fatalf("episode=%q want=%q", got, "1")
+			}
+		})
+	}
+}
+
 func TestParserNormalizeRawTitle_StripsZeroWidthPrefix(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

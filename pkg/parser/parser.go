@@ -2372,6 +2372,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 		emitContentsAttrs(&attrs, rawMarkers, "raw_paren_contents_marker")
 	}
 	attrs = appendEmbeddedJapaneseDubAttrs(attrs, rawTitle)
+	attrs = appendEmbeddedEnglishSubAttrs(attrs, rawTitle)
 	attrs = dropContentsAttrsInsideTitleSpan(attrs, titleStart, titleEnd)
 	if strings.TrimSpace(spKind) == "" {
 		spKind = inferSPKindFromContentsAttrs(attrs)
@@ -3659,6 +3660,7 @@ func dropAliasFragmentsOfPrimary(primary string, aliases []string) []string {
 }
 
 var embeddedJapaneseDubRawPattern = regexp.MustCompile(`(?i)(?:日配版|日语配音版|日語配音版|\b(?:Japanese|JPN|JP)\s+Dub\b)`)
+var embeddedEnglishSubRawPattern = regexp.MustCompile(`(?i)\b(?:English|ENG)[-_ ]Sub\b`)
 
 func appendEmbeddedJapaneseDubAttrs(attrs []model.Attribute, rawTitle string) []model.Attribute {
 	if strings.TrimSpace(rawTitle) == "" {
@@ -3699,6 +3701,51 @@ func appendEmbeddedJapaneseDubAttrs(attrs []model.Attribute, rawTitle string) []
 			TokenEnd:   -1,
 			Confidence: 0.65,
 			Source:     "raw_audio_meta",
+		})
+	}
+	return attrs
+}
+
+func appendEmbeddedEnglishSubAttrs(attrs []model.Attribute, rawTitle string) []model.Attribute {
+	if strings.TrimSpace(rawTitle) == "" {
+		return attrs
+	}
+	if !embeddedEnglishSubRawPattern.MatchString(rawTitle) {
+		return attrs
+	}
+	hasSubLang := false
+	hasSubFlag := false
+	for _, a := range attrs {
+		switch a.Type {
+		case model.AttrSubLang:
+			if strings.EqualFold(strings.TrimSpace(normalizeSubLangToken(a.Normalized)), "ENG") {
+				hasSubLang = true
+			}
+		case model.AttrSubFlag:
+			n, _, _ := normalizeSubFlagToken(a.Normalized)
+			if strings.EqualFold(strings.TrimSpace(n), "soft") {
+				hasSubFlag = true
+			}
+		}
+	}
+	if !hasSubLang {
+		attrs = append(attrs, model.Attribute{
+			Type:       model.AttrSubLang,
+			Normalized: "ENG",
+			TokenStart: -1,
+			TokenEnd:   -1,
+			Confidence: 0.65,
+			Source:     "raw_sub_meta",
+		})
+	}
+	if !hasSubFlag {
+		attrs = append(attrs, model.Attribute{
+			Type:       model.AttrSubFlag,
+			Normalized: "ENGSUB",
+			TokenStart: -1,
+			TokenEnd:   -1,
+			Confidence: 0.65,
+			Source:     "raw_sub_meta",
 		})
 	}
 	return attrs

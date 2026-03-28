@@ -163,6 +163,19 @@ func extractTechAudioSlotAndRemoveFromTokens(tokens []model.Token, attrs *[]mode
 		return false
 	}
 
+	isSubtitleMarkerToken := func(s string) bool {
+		s = strings.TrimSpace(s)
+		if s == "" {
+			return false
+		}
+		low := strings.ToLower(s)
+		switch low {
+		case "sub", "subs", "subbed", "subtitle", "subtitles", "esub", "engsub":
+			return true
+		}
+		return strings.Contains(low, "sub")
+	}
+
 	addAttr := func(t model.AttrType, val string, start int, end int, conf float64) {
 		val = strings.TrimSpace(val)
 		if val == "" {
@@ -179,6 +192,33 @@ func extractTechAudioSlotAndRemoveFromTokens(tokens []model.Token, attrs *[]mode
 			end = len(tokens)
 		}
 		if end <= start {
+			return nil, false
+		}
+
+		containsSubtitleMarker := false
+		containsAudioCodecOrDub := false
+		for k := start; k < end && k < len(tokens); k++ {
+			t := strings.TrimSpace(tokens[k].Text)
+			if t == "" {
+				continue
+			}
+			if isSubtitleMarkerToken(t) {
+				containsSubtitleMarker = true
+			}
+			if codec, cnt := parseCodecWithCount(t); codec != "" && cnt > 0 {
+				containsAudioCodecOrDub = true
+				continue
+			}
+			if codec, _ := isAudioCodecToken(t); codec != "" {
+				containsAudioCodecOrDub = true
+				continue
+			}
+			low := strings.ToLower(t)
+			if strings.Contains(low, "dub") || strings.Contains(low, "audio") {
+				containsAudioCodecOrDub = true
+			}
+		}
+		if containsSubtitleMarker && !containsAudioCodecOrDub {
 			return nil, false
 		}
 

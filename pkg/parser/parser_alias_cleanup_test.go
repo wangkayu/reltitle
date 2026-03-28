@@ -681,6 +681,29 @@ func TestParserAudioFlag_JpnDubCnMarkerRemovedFromTitle(t *testing.T) {
 	}
 }
 
+func TestParserSubtitleSignals_EnglishSubDoesNotLeakToAudio(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[ToonsHub] High School Kimengumi 2026 S01E12 1080p AMZN WEB-DL DDP2.0 H.264 (English-Sub)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if hasAttrValue(attrValues(res, model.AttrAudioLang), "ENG") {
+		t.Fatalf("English-Sub should not produce audio_lang=ENG, got=%v", attrValues(res, model.AttrAudioLang))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSubLang), "ENG") {
+		t.Fatalf("expected sub_lang=ENG, got=%v", attrValues(res, model.AttrSubLang))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "soft") {
+		t.Fatalf("expected sub_flag=soft for English-Sub, got=%v", attrValues(res, model.AttrSubFlag))
+	}
+}
+
 func TestParserSpecialMarkerCnToken_IsConsumedAndMappedToContents(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

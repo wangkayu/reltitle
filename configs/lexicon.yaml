@@ -3669,6 +3669,26 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.7
+      - tokens: ["english", "sub"]
+        emit:
+          - type: sub_flag
+            normalized: "ENGSUB"
+            token_index: -1
+          - type: sub_lang
+            normalized: "ENG"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["english-sub"]
+        emit:
+          - type: sub_flag
+            normalized: "ENGSUB"
+            token_index: -1
+          - type: sub_lang
+            normalized: "ENG"
+            token_index: -1
+        remove: true
+        confidence: 0.7
 
   - id: sub_engsub_cn
     any_of:

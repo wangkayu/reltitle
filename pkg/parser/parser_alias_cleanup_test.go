@@ -704,6 +704,29 @@ func TestParserSubtitleSignals_EnglishSubDoesNotLeakToAudio(t *testing.T) {
 	}
 }
 
+func TestParserSubtitleSignals_MultiSubsAliasDoesNotLeakFakeEnglish(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[ToonsHub] A Misanthrope Teaches a Class for Demi-Humans S01E12 1080p CR WEB-DL AAC2.0 H.264 (Jingai Kyoushitsu no Ningengirai Kyoushi, Multi-Subs)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if hasAttrValue(attrValues(res, model.AttrSubLang), "ENG") {
+		t.Fatalf("romanized alias should not leak sub_lang=ENG, got=%v", attrValues(res, model.AttrSubLang))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSubLang), "MULTI") {
+		t.Fatalf("expected sub_lang=MULTI, got=%v", attrValues(res, model.AttrSubLang))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "soft") {
+		t.Fatalf("expected sub_flag=soft for Multi-Subs, got=%v", attrValues(res, model.AttrSubFlag))
+	}
+}
+
 func TestParserSpecialMarkerCnToken_IsConsumedAndMappedToContents(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

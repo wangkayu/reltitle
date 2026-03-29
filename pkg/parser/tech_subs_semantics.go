@@ -6,6 +6,38 @@ import (
 	"title-parser/pkg/model"
 )
 
+func containsASCIIWordLike(s string, markers ...string) bool {
+	if strings.TrimSpace(s) == "" || len(markers) == 0 {
+		return false
+	}
+	low := strings.ToLower(s)
+	isAlphaNum := func(b byte) bool {
+		return (b >= 'a' && b <= 'z') || (b >= '0' && b <= '9')
+	}
+	for _, marker := range markers {
+		marker = strings.ToLower(strings.TrimSpace(marker))
+		if marker == "" {
+			continue
+		}
+		searchFrom := 0
+		for searchFrom < len(low) {
+			idx := strings.Index(low[searchFrom:], marker)
+			if idx < 0 {
+				break
+			}
+			idx += searchFrom
+			beforeOK := idx == 0 || !isAlphaNum(low[idx-1])
+			after := idx + len(marker)
+			afterOK := after >= len(low) || !isAlphaNum(low[after])
+			if beforeOK && afterOK {
+				return true
+			}
+			searchFrom = idx + 1
+		}
+	}
+	return false
+}
+
 func extractTechSubsSemanticsAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Attribute) {
 	if len(tokens) == 0 || attrs == nil {
 		return
@@ -219,25 +251,25 @@ func extractTechSubsSemanticsAndRemoveFromTokens(tokens []model.Token, attrs *[]
 				addLang(langs, "TC")
 			}
 		}
-		if strings.Contains(noSpaceLower, "jp") || strings.Contains(noSpaceLower, "jpn") {
+		if containsASCIIWordLike(noSpaceLower, "jp", "jpn", "japanese") {
 			addLang(langs, "JPN")
 		}
-		if strings.Contains(noSpaceLower, "chs") || strings.Contains(noSpaceLower, "gb") || strings.Contains(noSpaceLower, "sc") || strings.Contains(noSpaceLower, "zh-hans") || strings.Contains(noSpaceLower, "zh-cn") {
+		if containsASCIIWordLike(noSpaceLower, "chs", "gb", "sc", "zh-hans", "zh-cn") {
 			addLang(langs, "SC")
 		}
-		if strings.Contains(noSpaceLower, "cht") || strings.Contains(noSpaceLower, "big5") || strings.Contains(noSpaceLower, "tc") || strings.Contains(noSpaceLower, "zh-hant") || strings.Contains(noSpaceLower, "zh-tw") || strings.Contains(noSpaceLower, "zh-hk") {
+		if containsASCIIWordLike(noSpaceLower, "cht", "big5", "tc", "zh-hant", "zh-tw", "zh-hk") {
 			addLang(langs, "TC")
 		}
-		if strings.Contains(noSpace, "英") || strings.Contains(noSpaceLower, "eng") {
+		if strings.Contains(noSpace, "英") || containsASCIIWordLike(noSpaceLower, "eng", "english") {
 			addLang(langs, "ENG")
 		}
-		if strings.Contains(noSpaceLower, "español") || strings.Contains(noSpaceLower, "espanol") || strings.Contains(noSpaceLower, "spanish") {
+		if containsASCIIWordLike(noSpaceLower, "español", "espanol", "spanish") {
 			addLang(langs, "SPA")
 		}
-		if strings.Contains(noSpaceLower, "valenci") {
+		if containsASCIIWordLike(noSpaceLower, "valenci") {
 			addLang(langs, "CAT")
 		}
-		if strings.Contains(noSpace, "韩") || strings.Contains(noSpace, "韓") || strings.Contains(noSpaceLower, "kor") {
+		if strings.Contains(noSpace, "韩") || strings.Contains(noSpace, "韓") || containsASCIIWordLike(noSpaceLower, "kor", "korean") {
 			addLang(langs, "KOR")
 		}
 		if strings.Contains(noSpace, "日") {

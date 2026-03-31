@@ -1439,6 +1439,38 @@ func TestParserSpecial_DashSpecialPhrasePromotesEPSlotPrimarySP(t *testing.T) {
 	}
 }
 
+func TestParserSpecial_DashSPBeforeTechParenPromotesSpecial(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[shincaps] Marika-chan no Koukando wa Bukkowareteiru - SP (BS11 1920x1080 MPEG2 AAC).ts"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalTitle(res); got != "Marika-chan no Koukando wa Bukkowareteiru" {
+		t.Fatalf("title=%q want=%q", got, "Marika-chan no Koukando wa Bukkowareteiru")
+	}
+	if got := res.ContentKind; got != "SPECIAL" {
+		t.Fatalf("content_kind=%q want=%q", got, "SPECIAL")
+	}
+	if got := canonicalSPKind(res); got != "SP" {
+		t.Fatalf("sp_kind=%q want=%q", got, "SP")
+	}
+	if res.EPSlot == nil || res.EPSlot.Primary == nil {
+		t.Fatalf("epslot.primary should be promoted for dash SP before tech paren, epslot=%+v", res.EPSlot)
+	}
+	if got := strings.ToUpper(strings.TrimSpace(res.EPSlot.Primary.Kind)); got != "SP" {
+		t.Fatalf("epslot.primary.kind=%q want=SP", got)
+	}
+	if got := strings.ToUpper(strings.TrimSpace(res.EPSlot.Primary.SPKind)); got != "SP" {
+		t.Fatalf("epslot.primary.sp_kind=%q want=SP", got)
+	}
+}
+
 func TestParserEPSlotAxis_BracketEpisodeUsesABS(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

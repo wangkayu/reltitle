@@ -2482,6 +2482,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	origTitle := title
 	title = sanitizePrimaryTitleForOutput(title)
 	title = trimTitleTailByPackKind(title, packKind)
+	title = trimAliasTailBySPKind(title, spKind)
 	aliases = p.sanitizeAliasesForOutput(aliases, title, episode, season, spKind)
 	title, aliases = p.rebalanceGenericPrimaryTitleFromAliases(title, aliases)
 	if bridgedTitle, bridgedAliases, ok := applyBracketUnderscoreAliasBridge(rawTitle, title, aliases); ok {
@@ -2501,6 +2502,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 		}
 		title = trimTitleTailByGroup(title, a.Normalized)
 	}
+	title = trimAliasTailBySPKind(title, spKind)
 	if overrideApplied && strings.HasPrefix(routeID, "group_epseg_") {
 		if ep, sp, epTitle, ok := extractEpisodeLikeFromThirdBracketDetailed(rawTitle); ok {
 			episode = ep
@@ -13529,6 +13531,21 @@ func hasSPTailMetaBoundary(tokens []model.Token, idx int) bool {
 	if idx < 0 || idx >= len(tokens) {
 		return false
 	}
+	// Immediate raw token opens a meta block, even if that token was already
+	// removed by earlier tech/source extraction: "Title - SP (BS11 ...)".
+	if idx+1 < len(tokens) {
+		if isBracketOpen(strings.TrimSpace(tokens[idx+1].Text)) {
+			return true
+		}
+	}
+	// Allow one separator before the raw meta opener.
+	if idx+2 < len(tokens) {
+		sep := strings.TrimSpace(tokens[idx+1].Text)
+		open := strings.TrimSpace(tokens[idx+2].Text)
+		if isSimpleBoundarySep(sep) && isBracketOpen(open) {
+			return true
+		}
+	}
 	// Immediate next alive token starts a meta block: "OVA (2015) [BD ...]"
 	next := nextAliveToken(tokens, idx+1)
 	if next >= 0 && next < len(tokens) {
@@ -13537,7 +13554,7 @@ func hasSPTailMetaBoundary(tokens []model.Token, idx int) bool {
 			return true
 		}
 	}
-	// Allow one separator before the meta block.
+	// Allow one separator before the alive-token meta block.
 	if idx+2 < len(tokens) {
 		sep := strings.TrimSpace(tokens[idx+1].Text)
 		open := strings.TrimSpace(tokens[idx+2].Text)

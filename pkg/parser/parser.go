@@ -3848,6 +3848,9 @@ func extractEpisodeLikeFromThirdBracketDetailedWithSep(rawTitle string) (episode
 	if seg == "" {
 		return "", "", "", "", false
 	}
+	if dateYMDPattern.MatchString(seg) {
+		return "", "", "", "", false
+	}
 	m := episodeLikeThirdBracketPattern.FindStringSubmatch(seg)
 	if len(m) == 0 {
 		return "", "", "", "", false
@@ -6766,7 +6769,7 @@ func (p *Parser) inferAliasesFromAdjacentBrackets(tokens []model.Token, titleEnd
 			i = end
 			continue
 		}
-		if isLikelyMetaBracketText(inner) {
+		if isLikelyMetaBracketText(inner) || looksLikeDateOrTimeText(inner) {
 			i = end
 			continue
 		}
@@ -9840,7 +9843,8 @@ func looksLikeDateOrTimeText(s string) bool {
 	if strings.Contains(low, "整理时间") || strings.Contains(low, "整理時間") {
 		return true
 	}
-	if dateYMDPattern.MatchString(low) {
+	compact := regexp.MustCompile(`\s*([./-])\s*`).ReplaceAllString(low, "$1")
+	if dateYMDPattern.MatchString(low) || dateYMDPattern.MatchString(compact) {
 		return true
 	}
 	return false

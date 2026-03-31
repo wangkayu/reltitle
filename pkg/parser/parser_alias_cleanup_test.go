@@ -3398,6 +3398,35 @@ func TestParserGroupRouteOverride_GroupEPRouteMarukoNotMovie(t *testing.T) {
 	}
 }
 
+func TestParserGroupRouteOverride_MarukoAirdateDoesNotBecomeEpisode(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[丸子家族][樱桃小丸子(Chibi Maruko-chan)]樱花盛开 祝大家幸福！春季1小时特别篇[2026.03.29][GB][1080P][MP4]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalGroup(res); got != "丸子家族" {
+		t.Fatalf("group=%q want=%q", got, "丸子家族")
+	}
+	if got := canonicalEpisode(res); got != "" {
+		t.Fatalf("episode=%q want empty", got)
+	}
+	if got := res.ContentKind; got == "TV_EP" && res.EPSlot != nil && res.EPSlot.Primary != nil && strings.TrimSpace(res.EPSlot.Primary.Source) == "group_route_override" {
+		t.Fatalf("date-only third bracket should not trigger maruko episode override, epslot=%+v", res.EPSlot)
+	}
+	if aliases := canonicalAliases(res); containsAlias(aliases, "2026.03 29") || containsAlias(aliases, "2026.03.29") {
+		t.Fatalf("date bracket should not become title alias, aliases=%v", aliases)
+	}
+	if got := canonicalTitle(res); !strings.Contains(got, "特别篇") && !strings.Contains(got, "特別篇") {
+		t.Fatalf("title=%q should keep special title text", got)
+	}
+}
+
 func TestParserGroupRouteOverride_FurretarDubPrefixCleanup(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

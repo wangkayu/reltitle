@@ -6074,6 +6074,20 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.7
+      - tokens: ["multisub"]
+        emit:
+          - type: note
+            normalized: "MULTISUB"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["multi", "sub"]
+        emit:
+          - type: note
+            normalized: "MULTISUB"
+            token_index: -1
+        remove: true
+        confidence: 0.7
 
   - id: sub_meta_subs_word
     any_of:

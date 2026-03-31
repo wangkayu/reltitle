@@ -727,6 +727,26 @@ func TestParserSubtitleSignals_MultiSubsAliasDoesNotLeakFakeEnglish(t *testing.T
 	}
 }
 
+func TestParserSubtitleSignals_MultiSubSingleTokenRecognized(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Erai-raws] Niwatori Fighter - 03 [1080p CR WEB-DL AVC AAC][MultiSub][55DB271A]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSubLang), "MULTI") {
+		t.Fatalf("expected sub_lang=MULTI, got=%v", attrValues(res, model.AttrSubLang))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "soft") {
+		t.Fatalf("expected sub_flag=soft, got=%v", attrValues(res, model.AttrSubFlag))
+	}
+}
+
 func TestParserSpecialMarkerCnToken_IsConsumedAndMappedToContents(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

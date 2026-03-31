@@ -4064,6 +4064,16 @@ entries:
 
   - id: audio_chinese_dub
     any_of:
+      - tokens: ["中配"]
+        emit:
+          - type: audio_flag
+            normalized: "CHINESE_DUB"
+            token_index: -1
+          - type: audio_lang
+            normalized: "CHN"
+            token_index: -1
+        remove: true
+        confidence: 0.65
       - tokens: ["中文配音"]
         emit:
           - type: audio_flag

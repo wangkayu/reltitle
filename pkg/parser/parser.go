@@ -2372,6 +2372,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 		emitContentsAttrs(&attrs, rawMarkers, "raw_paren_contents_marker")
 	}
 	attrs = appendEmbeddedJapaneseDubAttrs(attrs, rawTitle)
+	attrs = appendEmbeddedChineseDubAttrs(attrs, rawTitle)
 	attrs = appendEmbeddedEnglishSubAttrs(attrs, rawTitle)
 	attrs = dropContentsAttrsInsideTitleSpan(attrs, titleStart, titleEnd)
 	if strings.TrimSpace(spKind) == "" {
@@ -3660,6 +3661,7 @@ func dropAliasFragmentsOfPrimary(primary string, aliases []string) []string {
 }
 
 var embeddedJapaneseDubRawPattern = regexp.MustCompile(`(?i)(?:日配版|日语配音版|日語配音版|\b(?:Japanese|JPN|JP)\s+Dub\b)`)
+var embeddedChineseDubRawPattern = regexp.MustCompile(`(?i)(?:中配版?|中文配音版?|国语配音|國語配音|\b(?:Mandarin(?:\s+Chinese)?|Chinese)\s+Dub\b)`)
 var embeddedEnglishSubRawPattern = regexp.MustCompile(`(?i)\b(?:English|ENG)[-_ ]Sub\b`)
 
 func appendEmbeddedJapaneseDubAttrs(attrs []model.Attribute, rawTitle string) []model.Attribute {
@@ -3697,6 +3699,51 @@ func appendEmbeddedJapaneseDubAttrs(attrs []model.Attribute, rawTitle string) []
 		attrs = append(attrs, model.Attribute{
 			Type:       model.AttrAudioFlag,
 			Normalized: "JAPANESE_DUB",
+			TokenStart: -1,
+			TokenEnd:   -1,
+			Confidence: 0.65,
+			Source:     "raw_audio_meta",
+		})
+	}
+	return attrs
+}
+
+func appendEmbeddedChineseDubAttrs(attrs []model.Attribute, rawTitle string) []model.Attribute {
+	if strings.TrimSpace(rawTitle) == "" {
+		return attrs
+	}
+	if !embeddedChineseDubRawPattern.MatchString(rawTitle) {
+		return attrs
+	}
+	hasAudioLang := false
+	hasDub := false
+	for _, a := range attrs {
+		switch a.Type {
+		case model.AttrAudioLang:
+			if strings.EqualFold(strings.TrimSpace(normalizeAudioLangToken(a.Normalized)), "CMN") {
+				hasAudioLang = true
+			}
+		case model.AttrAudioFlag:
+			n := strings.TrimSpace(a.Normalized)
+			if strings.EqualFold(n, "CHINESE_DUB") || strings.EqualFold(n, "DUB") {
+				hasDub = true
+			}
+		}
+	}
+	if !hasAudioLang {
+		attrs = append(attrs, model.Attribute{
+			Type:       model.AttrAudioLang,
+			Normalized: "CHN",
+			TokenStart: -1,
+			TokenEnd:   -1,
+			Confidence: 0.65,
+			Source:     "raw_audio_meta",
+		})
+	}
+	if !hasDub {
+		attrs = append(attrs, model.Attribute{
+			Type:       model.AttrAudioFlag,
+			Normalized: "CHINESE_DUB",
 			TokenStart: -1,
 			TokenEnd:   -1,
 			Confidence: 0.65,
@@ -11942,7 +11989,7 @@ func normalizeTitleMain(s string) string {
 	s = reRegion.ReplaceAllString(s, "")
 	// Remove embedded audio-version notes that should be structured as audio metadata
 	// rather than retained in the canonical title surface.
-	reAudioMeta := regexp.MustCompile(`（\s*(?:日配版|日语配音版|日語配音版)\s*）|\(\s*(?:(?:Japanese|JPN|JP)\s+(?:Dub|Audio))\s*\)`)
+	reAudioMeta := regexp.MustCompile(`（\s*(?:日配版|日语配音版|日語配音版|中配版?|中文配音版?|中文配音|国语配音|國語配音)\s*）|\(\s*(?:(?:Japanese|JPN|JP)\s+(?:Dub|Audio)|(?:Mandarin(?:\s+Chinese)?|Chinese)\s+Dub)\s*\)`)
 	s = reAudioMeta.ReplaceAllString(s, "")
 	s = strings.TrimSpace(s)
 	// Compact spaces around hyphen only for very short left parts (e.g. "X - Clamp" -> "X-Clamp").

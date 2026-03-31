@@ -681,6 +681,55 @@ func TestParserAudioFlag_JpnDubCnMarkerRemovedFromTitle(t *testing.T) {
 	}
 }
 
+func TestParserAudioFlag_ChineseDubMarkerRemovedFromTitle(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Doomdos] - 名侦探柯南（中配） - 第1254话 - [1080P].mp4"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalTitle(res); got != "名侦探柯南" {
+		t.Fatalf("title=%q want=%q", got, "名侦探柯南")
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "CMN") {
+		t.Fatalf("expected audio_lang=CMN, got=%v", attrValues(res, model.AttrAudioLang))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioFlag), "DUB") {
+		t.Fatalf("expected audio_flag=DUB, got=%v", attrValues(res, model.AttrAudioFlag))
+	}
+}
+
+func TestParserAudioFlag_ChineseDubMarkerRemovedFromSeasonTitle(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Doomdos] - 超常技能开启奇幻世界美食之旅 第二季（中配版） - 第08话 - [1080P].mp4"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalTitle(res); got != "超常技能开启奇幻世界美食之旅" {
+		t.Fatalf("title=%q want=%q", got, "超常技能开启奇幻世界美食之旅")
+	}
+	if got := canonicalSeason(res); got != "2" {
+		t.Fatalf("season=%q want=%q", got, "2")
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "CMN") {
+		t.Fatalf("expected audio_lang=CMN, got=%v", attrValues(res, model.AttrAudioLang))
+	}
+	if !hasAttrValue(attrValues(res, model.AttrAudioFlag), "DUB") {
+		t.Fatalf("expected audio_flag=DUB, got=%v", attrValues(res, model.AttrAudioFlag))
+	}
+}
+
 func TestParserSubtitleSignals_EnglishSubDoesNotLeakToAudio(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

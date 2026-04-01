@@ -77,7 +77,7 @@ func buildEPSlotCandidates(tokens []model.Token, season string, seasonIdx int, e
 		}
 		// SP tokens with optional index like OVA1 / SP01.
 		if m := spKindPattern.FindStringSubmatch(txt); len(m) >= 2 {
-			k := strings.ToUpper(strings.TrimSpace(m[1]))
+			k := normalizeSPKindToken(m[1])
 			suffix := ""
 			if len(m) >= 3 {
 				suffix = strings.TrimSpace(m[2])

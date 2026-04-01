@@ -6092,7 +6092,7 @@ func (p *Parser) sanitizeAliasesForOutput(aliases []string, title string, episod
 var reAliasTrimOVATail = regexp.MustCompile(`(?i)\s*(?:[-_/|:()\[\]{}【】（）]|\s)+OVA\s*$`)
 var reAliasTrimOADTail = regexp.MustCompile(`(?i)\s*(?:[-_/|:()\[\]{}【】（）]|\s)+OAD\s*$`)
 var reAliasTrimONATail = regexp.MustCompile(`(?i)\s*(?:[-_/|:()\[\]{}【】（）]|\s)+ONA\s*$`)
-var reAliasTrimSPTail = regexp.MustCompile(`(?i)\s*(?:[-_/|:()\[\]{}【】（）]|\s)+(?:SP|SPECIAL)\s*$`)
+var reAliasTrimSPTail = regexp.MustCompile(`(?i)\s*(?:[-_/|:()\[\]{}【】（）]\s*)+(?:SP|SPECIAL)\s*$`)
 var reAliasTrimSPTailCJK = regexp.MustCompile(`\s*(?:[-_/|:()\[\]{}【】（）]|\s)+(?:特别篇|特別篇)\s*$`)
 
 func trimAliasTailBySPKind(alias string, spKind string) string {
@@ -13362,7 +13362,17 @@ func detectPackKind(cfg *config.Config, rawTitle string) string {
 	return ""
 }
 
-var spKindPattern = regexp.MustCompile(`(?i)^(sp|ova|oad|ona|ex|ncop|nced|pv)(\d{1,3})?$`)
+var spKindPattern = regexp.MustCompile(`(?i)^(sp|special|ova|oad|ona|ex|ncop|nced|pv)(\d{1,3})?$`)
+
+func normalizeSPKindToken(kind string) string {
+	k := strings.ToUpper(strings.TrimSpace(kind))
+	switch k {
+	case "SPECIAL":
+		return "SP"
+	default:
+		return k
+	}
+}
 var shortEpisodeNumberPattern = regexp.MustCompile(`^\d{1,3}$`)
 
 func isShortEpisodeNumberToken(raw string) bool {
@@ -13451,7 +13461,7 @@ func isIsolatedInBracketOrParen(tokens []model.Token, idx int) bool {
 }
 
 func shouldAcceptSPKindToken(tokens []model.Token, idx int, kind string, suffix string) bool {
-	k := strings.ToUpper(strings.TrimSpace(kind))
+	k := normalizeSPKindToken(kind)
 	if k != "EX" && k != "OVA" && k != "OAD" && k != "ONA" && k != "SP" {
 		return true
 	}
@@ -13573,7 +13583,7 @@ func detectSPKind(tokens []model.Token) string {
 		}
 		if tokens[i].Removed {
 			if m := spKindPattern.FindStringSubmatch(txt); len(m) >= 2 {
-				kind := strings.ToUpper(strings.TrimSpace(m[1]))
+				kind := normalizeSPKindToken(m[1])
 				// Removed EX token is often part of channel/source markers (BS-EX/CS-EX1),
 				// so we do not infer sp_kind=EX from removed tokens.
 				if kind != "EX" {
@@ -13583,11 +13593,11 @@ func detectSPKind(tokens []model.Token) string {
 			continue
 		}
 		if m := regexp.MustCompile(`(?i)^0?\d{1,3}\s*(?:&|＆)\s*(sp|ova|oad|ona|ex|ncop|nced|pv)\b`).FindStringSubmatch(txt); len(m) == 2 {
-			return strings.ToUpper(m[1])
+			return normalizeSPKindToken(m[1])
 		}
 		m := spKindPattern.FindStringSubmatch(txt)
 		if len(m) >= 2 {
-			kind := strings.ToUpper(strings.TrimSpace(m[1]))
+			kind := normalizeSPKindToken(m[1])
 			suffix := ""
 			if len(m) >= 3 {
 				suffix = strings.TrimSpace(m[2])

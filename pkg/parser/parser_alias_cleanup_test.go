@@ -1471,6 +1471,35 @@ func TestParserSpecial_DashSPBeforeTechParenPromotesSpecial(t *testing.T) {
 	}
 }
 
+func TestParserSpecial_EnglishSpecialTailMarkerPromotesSpecial(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Erai-raws] Isekai de Cheat Skill o Te ni Shita Ore wa, Genjitsu Sekai o mo Musou Suru: Level Up wa Jinsei o Kaeta Special - Special [1080p CR WEBRip HEVC AAC][MultiSub][7FFDB43A]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalTitle(res); got != "Isekai de Cheat Skill o Te ni Shita Ore wa, Genjitsu Sekai o mo Musou Suru : Level Up wa Jinsei o Kaeta Special" {
+		t.Fatalf("title=%q", got)
+	}
+	if got := res.ContentKind; got != "SPECIAL" {
+		t.Fatalf("content_kind=%q want=%q", got, "SPECIAL")
+	}
+	if got := canonicalSPKind(res); got != "SP" {
+		t.Fatalf("sp_kind=%q want=%q", got, "SP")
+	}
+	if res.EPSlot == nil || res.EPSlot.Primary == nil {
+		t.Fatalf("epslot.primary should not be nil, epslot=%+v", res.EPSlot)
+	}
+	if got := strings.ToUpper(strings.TrimSpace(res.EPSlot.Primary.Kind)); got != "SP" {
+		t.Fatalf("epslot.primary.kind=%q want=SP", got)
+	}
+}
+
 func TestParserEPSlotAxis_BracketEpisodeUsesABS(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

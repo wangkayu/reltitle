@@ -57,6 +57,30 @@ Layer 9: Output Building (输出构建)
   → episode_range=01-12, contents=["MOVIE", "OVA"]
 ```
 
+### 5. EP 语义输出（硬切）
+当前输出以顶层 `ep_semantics` 作为 **唯一 episode/season/range 语义契约**：
+
+```json
+{
+  "ep_semantics": {
+    "kind": "EP | EP_LIST | RANGE | SEASON_RANGE | SP | NONE",
+    "axis": "SE | ABS | TV | OVA | SP | UNKNOWN",
+    "season": "4",
+    "season_range": "S1-S3",
+    "episode": "25",
+    "episode_list": ["804", "805"],
+    "range_start": "1",
+    "range_end": "12",
+    "sp_kind": "OVA",
+    "source": "episode_final"
+  }
+}
+```
+
+- `epslot` 不再作为 JSON 输出字段公开。
+- `attributes` 中不再序列化 `episode / episode_list / episode_range / season / season_range / sp_kind` 这些旧 EP 语义字段。
+- 下游应统一读取 `ep_semantics`，不要再从旧字段组合推理主语义。
+
 ## 项目结构
 
 ```

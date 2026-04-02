@@ -300,14 +300,8 @@ func main() {
 				st.StreamingMetaAliasBad++
 			}
 		}
-		if res.EPSlot != nil {
-			st.NonEmpty["epslot"]++
-			if res.EPSlot.Primary != nil {
-				st.NonEmpty["epslot_primary"]++
-			}
-			if len(res.EPSlot.Candidates) > 0 {
-				st.NonEmpty["epslot_candidates"]++
-			}
+		if res.CanonicalEPSemantics() != nil {
+			st.NonEmpty["ep_semantics"]++
 		}
 	}
 

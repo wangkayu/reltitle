@@ -37,10 +37,10 @@ func TestParserGroupRouteOverride_APTX4869ConanBracketEpisodeTitle(t *testing.T)
 	if notes := attrValues(res, model.AttrNote); !containsAlias(notes, "猪肉味增汤是舍命留下的暗号") {
 		t.Fatalf("missing episode title note, notes=%v", notes)
 	}
-	if res.EPSlot == nil || res.EPSlot.Primary == nil {
-		t.Fatalf("epslot.primary should not be nil")
+	if sem := canonicalEPSemantics(res); sem == nil {
+		t.Fatalf("ep_semantics should not be nil")
 	}
-	if got := res.EPSlot.Primary.Source; got != "group_route_override" {
-		t.Fatalf("epslot.primary.source=%q want=%q", got, "group_route_override")
+	if got := canonicalEPSource(res); got != "group_route_override" {
+		t.Fatalf("ep_semantics.source=%q want=%q", got, "group_route_override")
 	}
 }

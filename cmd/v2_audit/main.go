@@ -367,7 +367,7 @@ func main() {
 				ContentConfidence:  res.ContentConfidence,
 				TemplateID:         res.TemplateID,
 				TemplateConfidence: res.TemplateConfidence,
-				EPSlot:             res.EPSlot,
+				EPSemantics:        res.CanonicalEPSemantics(),
 				AudioSlot:          res.AudioSlot,
 				Attributes:         res.Attributes,
 				Tokens:             res.Tokens,
@@ -497,56 +497,23 @@ func buildAttrHits(res *model.ParseResult) []AttrHit {
 
 func buildEPSummary(res *model.ParseResult) EPSummary {
 	var s EPSummary
-	if res == nil || res.EPSlot == nil {
+	if res == nil {
 		return s
 	}
-	if res.EPSlot.Primary != nil {
-		s.PrimaryKind = res.EPSlot.Primary.Kind
-		s.PrimarySeason = res.EPSlot.Primary.Season
-		s.PrimaryEpisode = res.EPSlot.Primary.Episode
-		s.PrimaryEpisodeRange = res.EPSlot.Primary.EpisodeRange
+	sem := res.CanonicalEPSemantics()
+	if sem == nil {
+		return s
+	}
+	s.PrimaryKind = sem.Kind
+	s.PrimarySeason = sem.Season
+	s.PrimaryEpisode = sem.Episode
+	if strings.TrimSpace(sem.RangeStart) != "" && strings.TrimSpace(sem.RangeEnd) != "" {
+		s.PrimaryEpisodeRange = strings.TrimSpace(sem.RangeStart) + "-" + strings.TrimSpace(sem.RangeEnd)
 	}
 
 	epSet := map[string]bool{}
 	rSet := map[string]bool{}
-	susp := make([]string, 0, 4)
-
-	isRangeLeftEndpoint := func(ep string) bool {
-		ep = strings.TrimSpace(ep)
-		if ep == "" {
-			return false
-		}
-		// Primary range.
-		if pr := strings.TrimSpace(s.PrimaryEpisodeRange); pr != "" {
-			left := strings.TrimSpace(strings.Split(pr, "-")[0])
-			if left == ep {
-				return true
-			}
-			left = strings.TrimSpace(strings.Split(pr, "~")[0])
-			if left == ep {
-				return true
-			}
-		}
-		// Any range candidates.
-		for _, c := range res.EPSlot.Candidates {
-			if c.Kind != "RANGE" {
-				continue
-			}
-			val := strings.TrimSpace(c.EpisodeRange)
-			if val == "" {
-				continue
-			}
-			left := strings.TrimSpace(strings.Split(val, "-")[0])
-			if left == ep {
-				return true
-			}
-			left = strings.TrimSpace(strings.Split(val, "~")[0])
-			if left == ep {
-				return true
-			}
-		}
-		return false
-	}
+	susp := make([]string, 0, 2)
 
 	addEP := func(v string) {
 		v = strings.TrimSpace(v)
@@ -554,37 +521,7 @@ func buildEPSummary(res *model.ParseResult) EPSummary {
 			return
 		}
 		epSet[v] = true
-		if n, err := strconv.Atoi(strings.Split(v, ".")[0]); err == nil {
-			if n >= 100 {
-				if isRangeLeftEndpoint(v) {
-					return
-				}
-				// If the original token text is a CJK "第NNN集/话" style episode marker, do not
-				// treat it as suspicious (common for long-running series).
-				isCJKMarked := false
-				if res != nil {
-					for _, c := range res.EPSlot.Candidates {
-						if c.Kind != "EP" {
-							continue
-						}
-						if strings.TrimSpace(c.Episode) != v {
-							continue
-						}
-						if c.TokenStart >= 0 && c.TokenStart < len(res.Tokens) {
-							tok := strings.TrimSpace(res.Tokens[c.TokenStart].Text)
-							if regexp.MustCompile(`(?i)^第?\d{1,4}(?:集|话|話|回|章)$`).MatchString(tok) {
-								isCJKMarked = true
-								break
-							}
-						}
-					}
-				}
-				if !isCJKMarked {
-					susp = append(susp, v)
-				}
-			}
-		}
-		if v == "0" {
+		if n, err := strconv.Atoi(strings.Split(v, ".")[0]); err == nil && (n >= 100 || v == "0") {
 			susp = append(susp, v)
 		}
 	}
@@ -596,18 +533,15 @@ func buildEPSummary(res *model.ParseResult) EPSummary {
 		rSet[v] = true
 	}
 
-	if res.EPSlot.Primary != nil {
-		addEP(res.EPSlot.Primary.Episode)
-		addR(res.EPSlot.Primary.EpisodeRange)
-	}
-	for _, c := range res.EPSlot.Candidates {
-		if c.Kind == "EP" {
-			addEP(c.Episode)
+	addEP(sem.Episode)
+	for _, item := range sem.EpisodeList {
+		if strings.Contains(item, "-") || strings.Contains(item, "~") {
+			addR(item)
+			continue
 		}
-		if c.Kind == "RANGE" {
-			addR(c.EpisodeRange)
-		}
+		addEP(item)
 	}
+	addR(s.PrimaryEpisodeRange)
 
 	s.UniqueEpisodes = keysSorted(epSet)
 	s.UniqueRanges = keysSorted(rSet)

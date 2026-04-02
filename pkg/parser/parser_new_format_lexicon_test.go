@@ -21,8 +21,8 @@ func TestLexiconNewFormat_SeasonVersionCompactS01V2(t *testing.T) {
 		t.Fatalf("parse failed: %v", err)
 	}
 
-	if !hasAttrNormalized(res.Attributes, model.AttrSeason, "1") {
-		t.Fatalf("expected season=1 from S01v2, attrs=%v", res.Attributes)
+	if got := canonicalSeason(res); got != "1" {
+		t.Fatalf("expected season=1 from S01v2, got=%q", got)
 	}
 	if !hasAttrNormalized(res.Attributes, model.AttrVersion, "V2") {
 		t.Fatalf("expected version=V2 from S01v2, attrs=%v", res.Attributes)
@@ -110,8 +110,8 @@ func TestLexiconNewFormat_PlatformUNEXTVariants(t *testing.T) {
 	if !hasAttrNormalized(res.Attributes, model.AttrPlatform, "UNEXT") {
 		t.Fatalf("expected platform=UNEXT for U.NEXT variant, attrs=%v", res.Attributes)
 	}
-	if res.EPSlot == nil || res.EPSlot.Primary == nil {
-		t.Fatalf("expected epslot primary for S01E04 title")
+	if sem := canonicalEPSemantics(res); sem == nil {
+		t.Fatalf("expected ep semantics for S01E04 title")
 	}
 }
 

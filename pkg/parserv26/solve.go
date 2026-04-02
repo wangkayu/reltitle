@@ -42,46 +42,16 @@ func solveStructure(tokens []model.Token, cands []SpanCandidate) (model.ParseRes
 	}
 
 	season, episode := pickBestEpisodeAndSeason(tokens, cands)
+	seasonValue := ""
 	if season != nil {
 		sol.Season = season
-		result.Attributes = append(result.Attributes, model.Attribute{
-			Type:       model.AttrSeason,
-			Normalized: season.Value,
-			TokenStart: season.TokenStart,
-			TokenEnd:   season.TokenEnd,
-			Confidence: season.Score,
-			Source:     "v26_solve",
-		})
+		seasonValue = strings.TrimSpace(season.Value)
 	}
 	if episode != nil {
 		sol.Episode = episode
 		episodeValue := strings.TrimSpace(episode.Value)
 		episodeRange := strings.TrimSpace(episode.EpisodeRange)
 		episodeList := append([]string(nil), episode.EpisodeList...)
-		if episodeRange == "" && len(episodeList) == 0 && episodeValue != "" {
-			result.Attributes = append(result.Attributes, model.Attribute{
-				Type:       model.AttrEpisode,
-				Normalized: episodeValue,
-				TokenStart: episode.TokenStart,
-				TokenEnd:   episode.TokenEnd,
-				Confidence: episode.Score,
-				Source:     "v26_solve",
-			})
-		}
-		if episodeRange != "" {
-			result.Attributes = append(result.Attributes, model.Attribute{
-				Type:       model.AttrEpisodeRange,
-				Normalized: episodeRange,
-				TokenStart: episode.TokenStart,
-				TokenEnd:   episode.TokenEnd,
-				Confidence: episode.Score,
-				Source:     "v26_solve",
-			})
-		}
-		seasonValue := ""
-		if season != nil {
-			seasonValue = strings.TrimSpace(season.Value)
-		}
 		primary := &model.EPEntity{
 			TokenStart: episode.TokenStart,
 			TokenEnd:   episode.TokenEnd,
@@ -96,43 +66,15 @@ func solveStructure(tokens []model.Token, cands []SpanCandidate) (model.ParseRes
 		case episodeRange != "":
 			primary.Kind = "RANGE"
 			primary.EpisodeRange = episodeRange
+		case len(episodeList) > 0:
+			primary.Kind = "EP_LIST"
+			primary.Episode = firstV26EpisodeListHead(episodeList)
+			primary.EpisodeList = strings.Join(episodeList, ",")
 		case episodeValue != "":
 			primary.Kind = "EP"
 			primary.Episode = episodeValue
 		}
-
-		candidates := make([]model.EPEntity, 0, len(episodeList))
-		for _, item := range episodeList {
-			v := strings.TrimSpace(item)
-			if v == "" {
-				continue
-			}
-			ent := model.EPEntity{
-				Kind:       "EP",
-				Axis:       primary.Axis,
-				Season:     seasonValue,
-				TokenStart: episode.TokenStart,
-				TokenEnd:   episode.TokenEnd,
-				Source:     "v26_solve_list",
-				Episode:    v,
-			}
-			if strings.Contains(v, "-") {
-				ent.Kind = "RANGE"
-				ent.Episode = ""
-				ent.EpisodeRange = v
-			}
-			candidates = append(candidates, ent)
-		}
-		if primary.Kind == "" && len(candidates) > 0 {
-			first := candidates[0]
-			primary = &first
-		}
-		if primary.Kind != "" {
-			result.EPSlot = &model.EPSlot{
-				Primary:    primary,
-				Candidates: candidates,
-			}
-		}
+		result.EPSemantics = buildV26EPSemantics(primary, seasonValue)
 	}
 
 	blocked := make([]bool, len(tokens))
@@ -176,7 +118,7 @@ func solveStructure(tokens []model.Token, cands []SpanCandidate) (model.ParseRes
 		}
 	}
 
-	if result.EPSlot != nil && result.EPSlot.Primary != nil && result.EPSlot.Primary.Kind != "" {
+	if result.EPSemantics != nil && strings.TrimSpace(result.EPSemantics.Kind) != "" {
 		result.ContentKind = "TV_EP"
 		result.ContentConfidence = 0.7
 	} else if strings.TrimSpace(result.CanonicalTitle()) != "" {
@@ -869,4 +811,67 @@ func containsTitleRune(s string) bool {
 		}
 	}
 	return false
+}
+
+func firstV26EpisodeListHead(items []string) string {
+	for _, item := range items {
+		v := strings.TrimSpace(item)
+		if v == "" {
+			continue
+		}
+		if idx := strings.IndexAny(v, "-~"); idx >= 0 {
+			v = strings.TrimSpace(v[:idx])
+		}
+		if v != "" {
+			return v
+		}
+	}
+	return ""
+}
+
+func splitV26EpisodeRange(v string) (string, string) {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return "", ""
+	}
+	parts := strings.FieldsFunc(v, func(r rune) bool {
+		return r == '-' || r == '~'
+	})
+	if len(parts) != 2 {
+		return "", ""
+	}
+	return strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])
+}
+
+func buildV26EPSemantics(primary *model.EPEntity, season string) *model.EPSemantics {
+	if primary == nil {
+		return nil
+	}
+	kind := strings.ToUpper(strings.TrimSpace(primary.Kind))
+	if kind == "" {
+		return nil
+	}
+	out := &model.EPSemantics{
+		Kind:   kind,
+		Axis:   strings.ToUpper(strings.TrimSpace(primary.Axis)),
+		Season: strings.TrimSpace(season),
+		SPKind: strings.TrimSpace(primary.SPKind),
+		Source: strings.TrimSpace(primary.Source),
+	}
+	switch kind {
+	case "EP":
+		out.Episode = strings.TrimSpace(primary.Episode)
+	case "EP_LIST":
+		out.Episode = strings.TrimSpace(primary.Episode)
+		if v := strings.TrimSpace(primary.EpisodeList); v != "" {
+			out.EpisodeList = strings.Split(v, ",")
+		}
+	case "RANGE":
+		out.RangeStart, out.RangeEnd = splitV26EpisodeRange(primary.EpisodeRange)
+	case "SP":
+		// no-op
+	default:
+		return nil
+	}
+	return out
 }

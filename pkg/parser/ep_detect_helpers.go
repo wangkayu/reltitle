@@ -79,16 +79,8 @@ func detectSeasonRangeByKeyword(tokens []model.Token) (seasonRange string, seaso
 
 func detectSeasonOnlyLoose(tokens []model.Token) (season string, tokenIdx int) {
 	for i := 0; i < len(tokens); i++ {
-		if tokens[i].Removed {
-			continue
-		}
-		m := seasonOnlyPattern.FindStringSubmatch(tokens[i].Text)
-		if len(m) == 2 {
-			return strings.TrimLeft(m[1], "0"), i
-		}
-		m2 := seasonEmbeddedPattern.FindStringSubmatch(tokens[i].Text)
-		if len(m2) == 2 {
-			return strings.TrimLeft(m2[1], "0"), i
+		if s := seasonTokenValue(tokens[i].Text); s != "" {
+			return s, i
 		}
 	}
 	return "", -1
@@ -129,6 +121,15 @@ func detectSeasonBeforeDashEpisode(tokens []model.Token) (season string, tokenId
 		}
 		prev := strings.TrimSpace(tokens[i-1].Text)
 		if prev == "" || prev == "-" || prev == "/" || prev == "|" || prev == "\\" {
+			continue
+		}
+		// Guard: explicit season syntax like "Season 2 - 01" should be handled by
+		// detectSeasonKeyword so both the season word and number are removed cleanly.
+		if seasonWordLoosePattern.MatchString(prev) {
+			continue
+		}
+		// Guard: "Part/Cour N - EP" uses N as title partition index, not season number.
+		if partIndexLeadPattern.MatchString(prev) {
 			continue
 		}
 		season = strings.TrimLeft(sn, "0")
@@ -356,20 +357,25 @@ func parseSmallSeasonNumberToken(s string) string {
 
 func detectSeasonOnly(tokens []model.Token) (season string, tokenIdx int) {
 	for i := 0; i < len(tokens); i++ {
-		if tokens[i].Removed {
-			continue
-		}
 		if isInBracket(tokens, i) || isInParen(tokens, i) {
 			continue
 		}
-		m := seasonOnlyPattern.FindStringSubmatch(tokens[i].Text)
-		if len(m) == 2 {
-			return strings.TrimLeft(m[1], "0"), i
-		}
-		m2 := seasonEmbeddedPattern.FindStringSubmatch(tokens[i].Text)
-		if len(m2) == 2 {
-			return strings.TrimLeft(m2[1], "0"), i
+		if s := seasonTokenValue(tokens[i].Text); s != "" {
+			return s, i
 		}
 	}
 	return "", -1
+}
+
+func seasonTokenValue(text string) string {
+	if m := seasonOnlyPattern.FindStringSubmatch(text); len(m) == 2 {
+		return strings.TrimLeft(m[1], "0")
+	}
+	if m := seasonOnlyVersionPattern.FindStringSubmatch(text); len(m) == 2 {
+		return strings.TrimLeft(m[1], "0")
+	}
+	if m := seasonEmbeddedPattern.FindStringSubmatch(text); len(m) == 2 {
+		return strings.TrimLeft(m[1], "0")
+	}
+	return ""
 }

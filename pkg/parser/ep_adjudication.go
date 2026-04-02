@@ -543,8 +543,12 @@ func buildCanonicalEPSemantics(epslot *model.EPSlot, season string, seasonRange 
 
 	if epslot != nil && epslot.Primary != nil {
 		p := epslot.Primary
+		kind := strings.ToUpper(strings.TrimSpace(p.Kind))
+		if kind == "" || kind == "NONE" {
+			goto fallback
+		}
 		out := &model.EPSemantics{
-			Kind:   strings.ToUpper(strings.TrimSpace(p.Kind)),
+			Kind:   kind,
 			Axis:   strings.ToUpper(strings.TrimSpace(p.Axis)),
 			Season: firstNonEmpty(strings.TrimSpace(p.Season), season),
 			SPKind: firstNonEmpty(strings.TrimSpace(p.SPKind), spKind),
@@ -565,6 +569,7 @@ func buildCanonicalEPSemantics(epslot *model.EPSlot, season string, seasonRange 
 		}
 		return out
 	}
+fallback:
 	if seasonRange != "" {
 		return &model.EPSemantics{
 			Kind:        "SEASON_RANGE",
@@ -572,6 +577,14 @@ func buildCanonicalEPSemantics(epslot *model.EPSlot, season string, seasonRange 
 			Season:      season,
 			SeasonRange: seasonRange,
 			Source:      "canonical",
+		}
+	}
+	if season != "" && episode == "" && episodeList == "" && episodeRange == "" && spKind == "" {
+		return &model.EPSemantics{
+			Kind:   "SEASON",
+			Axis:   "SE",
+			Season: season,
+			Source: "canonical",
 		}
 	}
 	switch {
@@ -623,10 +636,7 @@ func buildCanonicalEPSemantics(epslot *model.EPSlot, season string, seasonRange 
 			Source: "canonical",
 		}
 	default:
-		return &model.EPSemantics{
-			Kind:   "NONE",
-			Source: "canonical",
-		}
+		return nil
 	}
 }
 

@@ -17,15 +17,6 @@ func TestParseResultMarshalJSON_HardCutsLegacyEPSemanticsFields(t *testing.T) {
 			Episode: "1",
 			Source:  "episode_final",
 		},
-		EPSlot: &EPSlot{
-			Primary: &EPEntity{
-				Kind:    "EP",
-				Axis:    "SE",
-				Season:  "2",
-				Episode: "1",
-				Source:  "episode_final",
-			},
-		},
 		Attributes: []Attribute{
 			{Type: AttrTitle, Normalized: "Sample"},
 			{Type: AttrSeason, Normalized: "2"},
@@ -52,21 +43,17 @@ func TestParseResultMarshalJSON_HardCutsLegacyEPSemanticsFields(t *testing.T) {
 	}
 }
 
-func TestCanonicalEPSemantics_FallbacksFromLegacyFields(t *testing.T) {
+func TestCanonicalEPSemantics_NoLegacyFallbacks(t *testing.T) {
 	res := &ParseResult{
-		Attributes: []Attribute{
-			{Type: AttrSeasonRange, Normalized: "S1-S3"},
-			{Type: AttrSeason, Normalized: "1"},
-		},
+		Attributes: []Attribute{{Type: AttrSeason, Normalized: "2"}, {Type: AttrEpisode, Normalized: "1"}},
 	}
-	sem := res.CanonicalEPSemantics()
-	if sem == nil {
-		t.Fatalf("semantics should not be nil")
+	if sem := res.CanonicalEPSemantics(); sem != nil {
+		t.Fatalf("expected no fallback semantics, got=%+v", sem)
 	}
-	if sem.Kind != "SEASON_RANGE" {
-		t.Fatalf("kind=%q want=%q", sem.Kind, "SEASON_RANGE")
+	if got := res.CanonicalEpisode(); got != "" {
+		t.Fatalf("canonical episode=%q want empty", got)
 	}
-	if sem.SeasonRange != "S1-S3" {
-		t.Fatalf("season_range=%q want=%q", sem.SeasonRange, "S1-S3")
+	if got := res.CanonicalSeason(); got != "" {
+		t.Fatalf("canonical season=%q want empty", got)
 	}
 }

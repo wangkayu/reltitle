@@ -24,19 +24,16 @@ func detectSeasonFromAttrs(attrs []model.Attribute) (season string, tokenIdx int
 	seenAny := false
 	for _, a := range attrs {
 		s := strings.TrimSpace(a.Normalized)
-		if a.Type == model.AttrNote {
-			// Some lexicon rules emit season markers like "S2" as note and remove the token.
-			// Treat these as season candidates to avoid losing season info.
-			if m := regexp.MustCompile(`(?i)^s(\d{1,2})$`).FindStringSubmatch(s); len(m) == 2 {
-				s = strings.TrimLeft(m[1], "0")
-				if s == "" {
-					s = m[1]
-				}
-			} else {
-				continue
+		if a.Type != model.AttrNote {
+			continue
+		}
+		// Some early passes emit season markers like "S2" as note and remove the token.
+		// Treat these as season candidates to avoid losing season info.
+		if m := regexp.MustCompile(`(?i)^s(\d{1,2})$`).FindStringSubmatch(s); len(m) == 2 {
+			s = strings.TrimLeft(m[1], "0")
+			if s == "" {
+				s = m[1]
 			}
-		} else if a.Type == model.AttrSeason {
-			// keep as-is
 		} else {
 			continue
 		}
@@ -434,16 +431,6 @@ func passDetectEpisodeRangeAndEpisode(tokens []model.Token, attrs *[]model.Attri
 			ctx.EpisodeListIdx = idx
 			ctx.Episode = firstEp
 			ctx.EpisodeIdx = idx
-			if attrs != nil {
-				*attrs = append(*attrs, model.Attribute{
-					Type:       model.AttrEpisodeList,
-					Normalized: epList,
-					TokenStart: idx,
-					TokenEnd:   idx + 1,
-					Confidence: 0.75,
-					Source:     "episode_list",
-				})
-			}
 		}
 	}
 	if strings.TrimSpace(ctx.Episode) == "" || ctx.EpisodeIdx < 0 {

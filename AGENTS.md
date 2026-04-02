@@ -6,7 +6,7 @@
 
 ## OVERVIEW
 
-Config-driven anime/film torrent title parser (v2.5). Extracts title, episode, season, group, tech specs from release titles. Runtime path is pure rule parser (no ML/ONNX dependency).
+Config-driven anime/film torrent title parser (v2.5). Extracts title, group, EP semantics, and tech specs from release titles. Runtime path is pure rule parser (no ML/ONNX dependency).
 
 ## STRUCTURE
 
@@ -46,7 +46,7 @@ title-parser/
 | Add lexicon entry | `configs/lexicon.yaml` | No code changes needed |
 | Add parsing template | `configs/template_catalog.yaml` | 33 templates exist |
 | HTTP API | `pkg/api/handler.go` | `/api/v1/parse`, `/api/v1/parse/batch` |
-| Canonical output helpers | `pkg/model/canonical.go` | Access canonical attrs/epslot |
+| Canonical output helpers | `pkg/model/canonical.go` | Access canonical attrs / `ep_semantics` |
 | Training pipeline | `training/scripts/run_student_structured_ml_pipeline_v0.py` | Main ML loop |
 | Regression tests | `tests/baselines/` | Golden file testing |
 | Add new CLI tool | `cmd/<tool>/main.go` | Follow existing patterns |
@@ -78,8 +78,8 @@ title-parser/
 ## UNIQUE STYLES
 
 - **9-layer pipeline**: Tokenize → Lexicon → Signal → ContentType → Template → Extract → Inference → Clean → Output
-- **Slot-based**: HEAD (group/title), EP (episode/season), TECH (resolution/codec), TAIL (tailgroup)
-- **EPSlot pattern**: Episode candidates with primary + alternatives
+- **Slot-based internals**: HEAD (group/title), EP candidates, TECH (resolution/codec), TAIL (tailgroup)
+- **Public EP contract**: external consumers should read `ep_semantics`; `EPSlot` is internal parser machinery, not output contract
 - **Template routing**: Templates classified by streaming vs standard release
 
 ## COMMANDS
@@ -114,4 +114,5 @@ python training/scripts/run_student_structured_ml_pipeline_v0.py --do-export --d
 - **No internal/ package**: All packages in `pkg/` are technically public
 - **Large training data**: `training/` contains ~22GB of artifacts, not in gitignore
 - **Content Kind before template**: v2 infers content type before template matching (unlike v1)
+- **EP schema**: top-level episode semantics are emitted via `ParseResult.EPSemantics` / JSON `ep_semantics`; legacy EP attrs are filtered from serialized output
 - **Known issue**: `parser.test`, `test_crf` binaries in root are legacy

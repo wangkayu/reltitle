@@ -1,10 +1,10 @@
 # Parser Package
 
-Core parsing engine for anime/film torrent titles. 9-layer pipeline extracts group, title, episode, season, tech specs.
+Core parsing engine for anime/film torrent titles. 9-layer pipeline extracts group, title, EP semantics, and tech specs.
 
 ## OVERVIEW
 
-Config-driven parser at `pkg/parser/parser.go` (5351 lines). Orchestrates tokenization, lexicon matching, content type inference, template matching, and field extraction.
+Config-driven parser centered on `pkg/parser/parser.go`. Orchestrates tokenization, lexicon matching, EP adjudication, content type inference, template matching, and field extraction.
 
 ## STRUCTURE
 
@@ -20,7 +20,8 @@ pkg/parser/
 ├── pass_group_subs_override.go  # Group overrides
 ├── pass_tag_code.go       # Tag/code extraction
 ├── ep_detect_helpers.go   # Episode detection helpers
-├── epslot.go              # EPSlot, EPEntity types
+├── ep_adjudication.go     # EP candidate adjudication + canonical semantics
+├── epslot.go              # Internal EP candidate container
 ├── audio_slot.go          # AudioSlot extraction
 ├── bracket_title_alias.go # Bracket alias logic
 ├── title_alias_infer.go   # Alias inference
@@ -36,7 +37,8 @@ pkg/parser/
 | Entry point | `parser.go` | `Parser.Parse()` |
 | Add new pass | `pass_registry.go` | Register in `allPasses` |
 | Modify EP detection | `pass_ep_detect.go` | `detectEpisodeRangeAndEpisode()` |
-| EPSlot structure | `epslot.go` | `EPSlot`, `EPEntity` |
+| Modify EP adjudication | `ep_adjudication.go` | `adjudicateEPDecisionIntoContext()` / `buildCanonicalEPSemantics()` |
+| Internal EP candidates | `epslot.go` | `buildEPSlotCandidates()` |
 | Audio extraction | `audio_slot.go` | `extractAudioSlot()` |
 | Pack detection | `pack_extract.go` | `ExtractPackContents()` |
 | Parse hints | `hints.go` | `ParseHints` |
@@ -53,7 +55,9 @@ type parseContext struct {
     RawTitle, Group, PackKind string
     Season, SeasonIdx, SeasonRange string
     Episode, EpisodeIdx, EpisodeRange string
+    // Transitional internal state only.
     EPSlot *model.EPSlot
+    EPDecision *epDecision
     // ...
 }
 
@@ -71,12 +75,20 @@ type parsePass func(tokens []model.Token, attrs *[]model.Attribute, ctx *parseCo
 7. `detect_season_sp_movie` - Season/SP/Movie detection
 8. `detect_episode_range_and_episode` - Episode detection
 
+## OUTPUT CONTRACT
+
+- Public output lives in `pkg/model.ParseResult`
+- Top-level EP contract is `ep_semantics`
+- `EPSlot` / `EPEntity` are internal parser mechanics and should not be treated as downstream schema
+- Serialized output filters legacy EP attrs (`episode`, `episode_range`, `season`, `sp_kind`, etc.)
+
 ## CONVENTIONS
 
 - **Pass-based**: Each pass modifies `parseContext` and `attrs`
 - **Token removal**: Set `token.Removed = true` to exclude from title
 - **Attribute emission**: Append to `*attrs` slice
 - **Config access**: Use `p.cfg` for lexicon, templates, inference rules
+- **EP semantics**: internal passes may use transitional EP fields, but final external semantics must converge into `ep_semantics`
 
 ## ANTI-PATTERNS
 

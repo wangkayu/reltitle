@@ -1,0 +1,20 @@
+# Build outputs
+/bin/
+/dist/
+/server
+/parser.test
+
+# Tooling state
+/.kilocode/
+/.qoder/
+
+# Python caches
+**/__pycache__/
+*.py[cod]
+
+# Local test outputs
+/test_results/
+/clearml_train21_log.png
+
+# Generated report payloads
+/docs/teacher_unknown_pipeline/qwen_capability_report*.json

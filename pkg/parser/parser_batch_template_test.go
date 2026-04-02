@@ -366,6 +366,35 @@ func TestParserEpisodeCompactEndFlag_NotBatch(t *testing.T) {
 	}
 }
 
+func TestParserEpisodeCompactEndFlag_WithUnderscore_NotBatch(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[雪飄工作室][公主協奏管弦樂/Princession_Orchestra/プリンセッション・オーケストラ][48_END][繁]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "TV_EP" {
+		t.Fatalf("content_kind=%q want=%q", got, "TV_EP")
+	}
+	if got := canonicalEpisode(res); got != "48" {
+		t.Fatalf("episode=%q want=%q", got, "48")
+	}
+	if got := firstAttrValue(res, model.AttrReleaseStatus); got != "END" {
+		t.Fatalf("release_status=%q want=%q", got, "END")
+	}
+	if hasAttrValue(attrValues(res, model.AttrNote), "END") {
+		t.Fatalf("END should not remain in note after release_status promotion, notes=%v", attrValues(res, model.AttrNote))
+	}
+	if aliases := canonicalAliases(res); hasAttrValue(aliases, "48 END") {
+		t.Fatalf("episode marker leaked into aliases: %v", aliases)
+	}
+}
+
 func TestParserBatchTemplateRangePack_TVQuanJiWithExtrasStillKeepsRange(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {
@@ -668,6 +697,9 @@ func TestParserBatchTemplate_SxxPartIndexWithoutStrongEP_PrefersSeasonPack(t *te
 	if got := canonicalEpisode(res); got != "" {
 		t.Fatalf("episode=%q want empty", got)
 	}
+	if got := canonicalEpisodeRange(res); got != "" {
+		t.Fatalf("episode_range=%q want empty", got)
+	}
 }
 
 func TestParserBatchTemplate_SxxPartIndexWithStrongEP_StillKeepsEpisode(t *testing.T) {
@@ -690,5 +722,15 @@ func TestParserBatchTemplate_SxxPartIndexWithStrongEP_StillKeepsEpisode(t *testi
 	}
 	if got := canonicalEpisode(res); got != "3" {
 		t.Fatalf("episode=%q want=%q", got, "3")
+	}
+	if got := canonicalEpisodeRange(res); got != "" {
+		t.Fatalf("episode_range=%q want empty", got)
+	}
+	if res.EPSlot != nil {
+		for _, c := range res.EPSlot.Candidates {
+			if strings.TrimSpace(c.EpisodeRange) == "1-3" {
+				t.Fatalf("part index must not leak as false range candidate, epslot=%+v", res.EPSlot)
+			}
+		}
 	}
 }

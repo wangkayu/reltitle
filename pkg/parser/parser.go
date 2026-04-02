@@ -2138,9 +2138,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 			ctx.EpisodeRangeIdx = -1
 			ctx.EpisodeList = ""
 			ctx.EpisodeListIdx = -1
-			// Rebuild EPSlot for consistency.
-			ctx.EPSlot = buildEPSlotCandidates(tokens, ctx.Season, ctx.SeasonIdx, ctx.EpisodeFromSxxExx, ctx.SxxExxIdx, ctx.Episode, ctx.EpisodeIdx, ctx.EpisodeRange, ctx.EpisodeRangeIdx, ctx.EpisodeList, ctx.EpisodeListIdx, ctx.SPKind)
-			finalizeEPSlotPrimary(ctx.EPSlot, ctx.Season, ctx.Episode, ctx.EpisodeRange, ctx.EpisodeList, ctx.SPKind, ctx.EpisodeIdx, ctx.EpisodeRangeIdx, ctx.EpisodeListIdx, ctx.SxxExxIdx)
+			ctx.EPSlot = syncEPSlotWithCanonicalSignals(ctx.EPSlot, ctx.Season, ctx.Episode, ctx.EpisodeRange, ctx.EpisodeList, ctx.SPKind, ctx.EpisodeIdx, ctx.EpisodeRangeIdx, ctx.EpisodeListIdx)
 			epslot = ctx.EPSlot
 		}
 		if hints.OverrideTitleStart >= 0 && hints.OverrideTitleEnd > hints.OverrideTitleStart {
@@ -2404,7 +2402,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	}
 	movieRouteHardExcluded := hasMovieRouteHardExclusion(rawTitle, attrs, episodeRange, season, seasonRange, packKind)
 	movieContentSignal := hasMovieContentSignal(attrs, hasMovieKeyword, movieIndex, spKind)
-	epRoute := computeEpRoute(tokens, episode, episodeRange, season, seasonRange, spKind, movieIndex, hasMovieKeyword, movieRouteHardExcluded)
+	epRoute := computeEpRoute(tokens, episode, episodeList, episodeRange, season, seasonRange, spKind, movieIndex, hasMovieKeyword, movieRouteHardExcluded)
 	contentKind, contentConf := inferContentKind(p.cfg, episode, episodeRange, season, seasonRange, packKind, spKind, movieIndex, movieIndexRange, hasTech, hasMovieKeyword, hasYear, movieRouteHardExcluded, movieContentSignal)
 	if ep2, mi2, epIdx2, miIdx2, changed := normalizeMovieEpisodeSignals(rawTitle, contentKind, episode, episodeRange, season, seasonRange, packKind, hasMovieKeyword, movieIndex, movieIndexRange, episodeIdx, movieIndexIdx); changed {
 		episode, movieIndex, episodeIdx, movieIndexIdx = ep2, mi2, epIdx2, miIdx2
@@ -2413,7 +2411,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 		attrs = removeAttributeType(attrs, model.AttrEpisode)
 		movieRouteHardExcluded = hasMovieRouteHardExclusion(rawTitle, attrs, episodeRange, season, seasonRange, packKind)
 		movieContentSignal = hasMovieContentSignal(attrs, hasMovieKeyword, movieIndex, spKind)
-		epRoute = computeEpRoute(tokens, episode, episodeRange, season, seasonRange, spKind, movieIndex, hasMovieKeyword, movieRouteHardExcluded)
+		epRoute = computeEpRoute(tokens, episode, episodeList, episodeRange, season, seasonRange, spKind, movieIndex, hasMovieKeyword, movieRouteHardExcluded)
 		contentKind, contentConf = inferContentKind(p.cfg, episode, episodeRange, season, seasonRange, packKind, spKind, movieIndex, movieIndexRange, hasTech, hasMovieKeyword, hasYear, movieRouteHardExcluded, movieContentSignal)
 	}
 	templateID, templateConf, routeID := matchTemplate(p.cfg, epRoute, contentKind, group, episode, episodeRange, season, packKind, spKind, movieIndex, hasTech, hasMovieKeyword, attrs, tokens)
@@ -2447,7 +2445,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	}
 	movieRouteHardExcluded = hasMovieRouteHardExclusion(rawTitle, attrs, episodeRange, season, seasonRange, packKind)
 	movieContentSignal = hasMovieContentSignal(attrs, hasMovieKeyword, movieIndex, spKind)
-	epRoute = computeEpRoute(tokens, episode, episodeRange, season, seasonRange, spKind, movieIndex, hasMovieKeyword, movieRouteHardExcluded)
+	epRoute = computeEpRoute(tokens, episode, episodeList, episodeRange, season, seasonRange, spKind, movieIndex, hasMovieKeyword, movieRouteHardExcluded)
 	contentKind, contentConf = inferContentKind(p.cfg, episode, episodeRange, season, seasonRange, packKind, spKind, movieIndex, movieIndexRange, hasTech, hasMovieKeyword, hasYear, movieRouteHardExcluded, movieContentSignal)
 	if shouldDropEpisodeRangeForMovieRange(rawTitle, movieIndexRange, episode, episodeRange) {
 		episode = ""
@@ -2461,7 +2459,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 		attrs = removeAttributeType(attrs, model.AttrEpisodeRange)
 		movieRouteHardExcluded = hasMovieRouteHardExclusion(rawTitle, attrs, episodeRange, season, seasonRange, packKind)
 		movieContentSignal = hasMovieContentSignal(attrs, hasMovieKeyword, movieIndex, spKind)
-		epRoute = computeEpRoute(tokens, episode, episodeRange, season, seasonRange, spKind, movieIndex, hasMovieKeyword, movieRouteHardExcluded)
+		epRoute = computeEpRoute(tokens, episode, episodeList, episodeRange, season, seasonRange, spKind, movieIndex, hasMovieKeyword, movieRouteHardExcluded)
 		contentKind, contentConf = inferContentKind(p.cfg, episode, episodeRange, season, seasonRange, packKind, spKind, movieIndex, movieIndexRange, hasTech, hasMovieKeyword, hasYear, movieRouteHardExcluded, movieContentSignal)
 	}
 	if ep2, mi2, epIdx2, miIdx2, changed := normalizeMovieEpisodeSignals(rawTitle, contentKind, episode, episodeRange, season, seasonRange, packKind, hasMovieKeyword, movieIndex, movieIndexRange, episodeIdx, movieIndexIdx); changed {
@@ -2471,7 +2469,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 		attrs = removeAttributeType(attrs, model.AttrEpisode)
 		movieRouteHardExcluded = hasMovieRouteHardExclusion(rawTitle, attrs, episodeRange, season, seasonRange, packKind)
 		movieContentSignal = hasMovieContentSignal(attrs, hasMovieKeyword, movieIndex, spKind)
-		epRoute = computeEpRoute(tokens, episode, episodeRange, season, seasonRange, spKind, movieIndex, hasMovieKeyword, movieRouteHardExcluded)
+		epRoute = computeEpRoute(tokens, episode, episodeList, episodeRange, season, seasonRange, spKind, movieIndex, hasMovieKeyword, movieRouteHardExcluded)
 		contentKind, contentConf = inferContentKind(p.cfg, episode, episodeRange, season, seasonRange, packKind, spKind, movieIndex, movieIndexRange, hasTech, hasMovieKeyword, hasYear, movieRouteHardExcluded, movieContentSignal)
 	}
 	templateID, templateConf, routeID = matchTemplate(p.cfg, epRoute, contentKind, group, episode, episodeRange, season, packKind, spKind, movieIndex, hasTech, hasMovieKeyword, attrs, tokens)
@@ -2561,7 +2559,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 			}
 			movieRouteHardExcluded = hasMovieRouteHardExclusion(rawTitle, attrs, episodeRange, season, seasonRange, packKind)
 			movieContentSignal = hasMovieContentSignal(attrs, hasMovieKeyword, movieIndex, spKind)
-			epRoute = computeEpRoute(tokens, episode, episodeRange, season, seasonRange, spKind, movieIndex, hasMovieKeyword, movieRouteHardExcluded)
+			epRoute = computeEpRoute(tokens, episode, episodeList, episodeRange, season, seasonRange, spKind, movieIndex, hasMovieKeyword, movieRouteHardExcluded)
 			contentKind, contentConf = inferContentKind(p.cfg, episode, episodeRange, season, seasonRange, packKind, spKind, movieIndex, movieIndexRange, hasTech, hasMovieKeyword, hasYear, movieRouteHardExcluded, movieContentSignal)
 			if tid, tconf, _ := matchTemplate(p.cfg, epRoute, contentKind, group, episode, episodeRange, season, packKind, spKind, movieIndex, hasTech, hasMovieKeyword, attrs, tokens); strings.TrimSpace(tid) != "" && tid != "TF_UNKNOWN_DEFAULT" {
 				templateID = tid
@@ -2605,7 +2603,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 			}
 			movieRouteHardExcluded = hasMovieRouteHardExclusion(rawTitle, attrs, episodeRange, season, seasonRange, packKind)
 			movieContentSignal = hasMovieContentSignal(attrs, hasMovieKeyword, movieIndex, spKind)
-			epRoute = computeEpRoute(tokens, episode, episodeRange, season, seasonRange, spKind, movieIndex, hasMovieKeyword, movieRouteHardExcluded)
+			epRoute = computeEpRoute(tokens, episode, episodeList, episodeRange, season, seasonRange, spKind, movieIndex, hasMovieKeyword, movieRouteHardExcluded)
 			contentKind, contentConf = inferContentKind(p.cfg, episode, episodeRange, season, seasonRange, packKind, spKind, movieIndex, movieIndexRange, hasTech, hasMovieKeyword, hasYear, movieRouteHardExcluded, movieContentSignal)
 			if tid, tconf, _ := matchTemplate(p.cfg, epRoute, contentKind, group, episode, episodeRange, season, packKind, spKind, movieIndex, hasTech, hasMovieKeyword, attrs, tokens); strings.TrimSpace(tid) != "" && tid != "TF_UNKNOWN_DEFAULT" {
 				templateID = tid
@@ -2651,7 +2649,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	attrs = collapseOverlappingSpecificAudioCodecs(attrs)
 	ctx.AudioSlot = reconcileAudioSlotWithAttributes(ctx.AudioSlot, attrs)
 	normalizeAudioSlotLanguages(ctx.AudioSlot)
-	epslot = ensureSPPrimaryFromSPKind(epslot, season, episode, episodeRange, episodeList, spKind)
+	epslot = syncEPSlotWithCanonicalSignals(epslot, season, episode, episodeRange, episodeList, spKind, episodeIdx, episodeRangeIdx, ctx.EpisodeListIdx)
 	epslot = adjudicateEPSlotPrimaryAxis(epslot, tokens, season)
 	epslot = pruneBatchEPSlotForConservativeOutput(epslot, contentKind, episode, episodeRange, spKind)
 	if isUnknownOutput(contentKind, templateID) {
@@ -2677,6 +2675,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 		ContentConfidence:  contentConf,
 		TemplateID:         templateID,
 		TemplateConfidence: templateConf,
+		EPSemantics:        buildCanonicalEPSemantics(epslot, season, seasonRange, episode, episodeList, episodeRange, spKind),
 		EPSlot:             epslot,
 		AudioSlot:          ctx.AudioSlot,
 		Attributes:         attrs,
@@ -2698,12 +2697,56 @@ func pruneBatchEPSlotForConservativeOutput(epslot *model.EPSlot, contentKind str
 	// explicit canonical episode-like fields. Otherwise candidate-only epslot is
 	// often noisy (e.g. digits inside title fragments) and should be suppressed.
 	if epslot.Primary != nil {
+		if shouldPruneWeakBatchRangePrimary(epslot, episodeRange, spKind) {
+			return nil
+		}
 		return epslot
 	}
 	if strings.TrimSpace(episode) != "" || strings.TrimSpace(episodeRange) != "" || strings.TrimSpace(spKind) != "" {
 		return epslot
 	}
 	return nil
+}
+
+func shouldPruneWeakBatchRangePrimary(epslot *model.EPSlot, episodeRange string, spKind string) bool {
+	if epslot == nil || epslot.Primary == nil {
+		return false
+	}
+	if !strings.EqualFold(strings.TrimSpace(epslot.Primary.Kind), "RANGE") {
+		return false
+	}
+	if strings.TrimSpace(spKind) != "" {
+		return false
+	}
+	rangeText := strings.TrimSpace(episodeRange)
+	if rangeText == "" {
+		rangeText = strings.TrimSpace(epslot.Primary.EpisodeRange)
+	}
+	if rangeText == "" {
+		return false
+	}
+	source := strings.ToLower(strings.TrimSpace(epslot.Primary.Source))
+	if source != "episode_range" && source != "episode_range_final" {
+		return false
+	}
+	bounds := strings.SplitN(normalizeEpisodeRangeText(rangeText), "-", 2)
+	if len(bounds) != 2 {
+		return false
+	}
+	left := strings.TrimSpace(bounds[0])
+	right := strings.TrimSpace(bounds[1])
+	for _, c := range epslot.Candidates {
+		kind := strings.ToUpper(strings.TrimSpace(c.Kind))
+		if kind != "EP" && kind != "EP_LIST" {
+			continue
+		}
+		ep := strings.TrimSpace(c.Episode)
+		if ep == "" || ep == left || ep == right {
+			continue
+		}
+		return true
+	}
+	return false
 }
 
 func ensureSPPrimaryFromSPKind(epslot *model.EPSlot, season string, episode string, episodeRange string, episodeList string, spKind string) *model.EPSlot {
@@ -4389,9 +4432,9 @@ func collectContentsSet(attrs []model.Attribute) map[string]struct{} {
 	return out
 }
 
-func computeEpRoute(tokens []model.Token, episode string, episodeRange string, season string, seasonRange string, spKind string, movieIndex string, hasMovieKeyword bool, movieRouteHardExcluded bool) string {
+func computeEpRoute(tokens []model.Token, episode string, episodeList string, episodeRange string, season string, seasonRange string, spKind string, movieIndex string, hasMovieKeyword bool, movieRouteHardExcluded bool) string {
 	// Priority (high -> low):
-	// RANGE (TV signal) > SXXEXX > ABS_EP > PLAIN_EP > MOVIE_ONLY > SP_ONLY > NONE
+	// RANGE (TV signal) > EP_LIST > SXXEXX > ABS_EP > PLAIN_EP > MOVIE_ONLY > SP_ONLY > NONE
 	if strings.TrimSpace(episodeRange) != "" {
 		return "RANGE"
 	}
@@ -4410,6 +4453,9 @@ func computeEpRoute(tokens []model.Token, episode string, episodeRange string, s
 	}
 	if hasSxxExxInTokens(tokens) && strings.TrimSpace(season) != "" && strings.TrimSpace(episode) != "" {
 		return "SXXEXX"
+	}
+	if strings.TrimSpace(episodeList) != "" {
+		return "EP_LIST"
 	}
 	// Tagged ABS episode like ABS:12.
 	for i := 0; i < len(tokens); i++ {
@@ -9151,6 +9197,12 @@ func detectEpisodeRange(tokens []model.Token) (string, int) {
 
 	for i := 0; i < len(tokens); i++ {
 		if tokens[i].Removed {
+			if i-1 >= 0 {
+				prevRaw := strings.TrimSpace(tokens[i-1].Text)
+				if seasonWordLoosePattern.MatchString(prevRaw) {
+					continue
+				}
+			}
 			// Single-episode extraction can consume the left bound before range detection
 			// runs, e.g. "Prism Rondo - 01 ~ 20 ...". Preserve detection when the removed
 			// token is still the left edge of an explicit numeric range.
@@ -9159,6 +9211,9 @@ func detectEpisodeRange(tokens []model.Token) (string, int) {
 			}
 			leftRaw := strings.TrimSpace(tokens[i].Text)
 			sep := strings.TrimSpace(tokens[i+1].Text)
+			if hasPartIndexLeadBeforeToken(tokens, i) {
+				continue
+			}
 			if !episodeOfTotalPattern.MatchString(leftRaw) {
 				continue
 			}
@@ -9212,6 +9267,9 @@ func detectEpisodeRange(tokens []model.Token) (string, int) {
 			}
 		}
 		if episodeRangePattern.MatchString(tokens[i].Text) {
+			if hasPartIndexLeadBeforeToken(tokens, i) {
+				continue
+			}
 			m := episodeRangePattern.FindStringSubmatch(tokens[i].Text)
 			if len(m) == 3 {
 				if len(m[1]) == 4 && len(m[2]) == 4 {
@@ -9227,6 +9285,9 @@ func detectEpisodeRange(tokens []model.Token) (string, int) {
 			return normalizeEpisodeRangeText(tokens[i].Text), i
 		}
 		if m := episodeRangeEmbeddedPattern.FindStringSubmatch(tokens[i].Text); len(m) == 3 {
+			if hasPartIndexLeadBeforeToken(tokens, i) {
+				continue
+			}
 			if len(m[1]) == 4 && len(m[2]) == 4 {
 				if y1, err1 := strconv.Atoi(m[1]); err1 == nil {
 					if y2, err2 := strconv.Atoi(m[2]); err2 == nil {
@@ -9282,6 +9343,9 @@ func detectEpisodeRange(tokens []model.Token) (string, int) {
 			}
 			sep = strings.TrimSpace(tokens[i+1].Text)
 			if episodeOfTotalPattern.MatchString(strings.TrimSpace(tokens[i].Text)) && (sep == "-" || sep == "~" || isEpisodeRangeWordConnector(sep)) {
+				if hasPartIndexLeadBeforeToken(tokens, i) {
+					continue
+				}
 				rawR := strings.TrimSpace(tokens[i+2].Text)
 				if episodeOfTotalPattern.MatchString(rawR) {
 					// Plain text range like "... - 241-248 ..."
@@ -10267,6 +10331,28 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 			}
 			continue
 		}
+		// Split end-flag episode token inside a bracket block, e.g. "48_END" / "48-FIN".
+		if inBracket && i+2 < len(tokens) && !tokens[i+1].Removed && !tokens[i+2].Removed {
+			cur := strings.TrimSpace(tokens[i].Text)
+			sep := strings.TrimSpace(tokens[i+1].Text)
+			next := strings.ToUpper(strings.TrimSpace(tokens[i+2].Text))
+			if episodeOfTotalPattern.MatchString(cur) && (sep == "_" || sep == "-") && (next == "END" || next == "FIN" || next == "FINAL") {
+				n := strings.TrimLeft(cur, "0")
+				if n == "" {
+					n = "0"
+				}
+				if n != "0" {
+					score := len(cur) + 96
+					if score > bestScore {
+						bestScore = score
+						bestIdx = i
+						best = n
+						bestVer = ""
+					}
+				}
+				continue
+			}
+		}
 		if inBracket {
 			if looksLikeBracketCodecNumber(tokens, i) {
 				continue
@@ -10674,6 +10760,17 @@ func hasSeasonSignalAroundToken(tokens []model.Token, idx int, window int) bool 
 		}
 	}
 	return false
+}
+
+func hasPartIndexLeadBeforeToken(tokens []model.Token, idx int) bool {
+	if idx <= 0 || idx >= len(tokens) {
+		return false
+	}
+	prev := strings.TrimSpace(tokens[idx-1].Text)
+	if prev == "" {
+		return false
+	}
+	return partIndexLeadPattern.MatchString(prev)
 }
 
 func hasMatchingSeasonNumberAroundToken(tokens []model.Token, idx int, window int) bool {
@@ -13373,6 +13470,7 @@ func normalizeSPKindToken(kind string) string {
 		return k
 	}
 }
+
 var shortEpisodeNumberPattern = regexp.MustCompile(`^\d{1,3}$`)
 
 func isShortEpisodeNumberToken(raw string) bool {

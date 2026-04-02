@@ -1,0 +1,672 @@
+package parser
+
+import (
+	"strconv"
+	"strings"
+
+	"title-parser/pkg/model"
+)
+
+type epSeasonHint struct {
+	Season   string
+	TokenIdx int
+	Source   string
+}
+
+type epSuppressedCandidate struct {
+	Candidate model.EPEntity
+	Reason    string
+}
+
+type epDecision struct {
+	Candidates  []model.EPEntity
+	SeasonHints []epSeasonHint
+	Primary     *model.EPEntity
+	Suppressed  []epSuppressedCandidate
+}
+
+func newEPDecision() *epDecision {
+	return &epDecision{}
+}
+
+func (d *epDecision) addSeasonHint(season string, tokenIdx int, source string) {
+	if d == nil {
+		return
+	}
+	season = strings.TrimSpace(season)
+	source = strings.TrimSpace(source)
+	if season == "" {
+		return
+	}
+	for _, h := range d.SeasonHints {
+		if h.Season == season && h.TokenIdx == tokenIdx && strings.EqualFold(h.Source, source) {
+			return
+		}
+	}
+	d.SeasonHints = append(d.SeasonHints, epSeasonHint{
+		Season:   season,
+		TokenIdx: tokenIdx,
+		Source:   source,
+	})
+}
+
+func (d *epDecision) replaceCandidates(cands []model.EPEntity) {
+	if d == nil {
+		return
+	}
+	if len(cands) == 0 {
+		d.Candidates = nil
+		return
+	}
+	out := make([]model.EPEntity, 0, len(cands))
+	seen := make(map[string]struct{}, len(cands))
+	for _, c := range cands {
+		key := epslotCandidateKey(c)
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		out = append(out, c)
+	}
+	d.Candidates = out
+}
+
+func epslotCandidateKey(c model.EPEntity) string {
+	return strings.TrimSpace(c.Kind) + "|" +
+		strings.TrimSpace(c.Axis) + "|" +
+		strings.TrimSpace(c.Season) + "|" +
+		strings.TrimSpace(c.Episode) + "|" +
+		strings.TrimSpace(c.EpisodeRange) + "|" +
+		strings.TrimSpace(c.EpisodeList) + "|" +
+		strings.TrimSpace(c.SPKind) + "|" +
+		strconv.Itoa(c.TokenStart) + ":" + strconv.Itoa(c.TokenEnd) + "|" +
+		strings.TrimSpace(c.Source)
+}
+
+func scoreSeasonHint(h epSeasonHint) int {
+	switch strings.ToLower(strings.TrimSpace(h.Source)) {
+	case "sxxexx":
+		return 150
+	case "attr":
+		return 140
+	case "season_keyword":
+		return 135
+	case "season_before_dash":
+		return 130
+	case "season_in_paren":
+		return 125
+	case "season_only":
+		return 115
+	case "season_only_loose":
+		return 105
+	case "season_range_keyword":
+		return 100
+	default:
+		return 90
+	}
+}
+
+func selectBestSeasonHint(hints []epSeasonHint) *epSeasonHint {
+	if len(hints) == 0 {
+		return nil
+	}
+	bestIdx := -1
+	bestScore := -1
+	bestTokenIdx := 1 << 30
+	for i, h := range hints {
+		score := scoreSeasonHint(h)
+		tokenIdx := h.TokenIdx
+		if tokenIdx < 0 {
+			tokenIdx = 1 << 29
+		}
+		if score > bestScore || (score == bestScore && tokenIdx < bestTokenIdx) {
+			bestIdx = i
+			bestScore = score
+			bestTokenIdx = tokenIdx
+		}
+	}
+	if bestIdx < 0 {
+		return nil
+	}
+	h := hints[bestIdx]
+	return &h
+}
+
+func looksLikeExplicitRangeToken(tokens []model.Token, idx int) bool {
+	if idx < 0 || idx >= len(tokens) {
+		return false
+	}
+	text := strings.TrimSpace(tokens[idx].Text)
+	if text == "" {
+		return false
+	}
+	if taggedRangePattern.FindStringSubmatch(text) != nil {
+		return true
+	}
+	if episodeRangePattern.MatchString(text) {
+		return true
+	}
+	if m := episodeRangeEmbeddedPattern.FindStringSubmatch(text); len(m) == 3 {
+		return true
+	}
+	return false
+}
+
+func hasSeasonLeadForRange(tokens []model.Token, idx int, seasonHint *epSeasonHint) bool {
+	if idx < 0 || idx >= len(tokens) {
+		return false
+	}
+	if idx-1 >= 0 {
+		prev := strings.TrimSpace(tokens[idx-1].Text)
+		if seasonWordLoosePattern.MatchString(prev) {
+			return true
+		}
+	}
+	if seasonHint == nil {
+		return false
+	}
+	if seasonHint.TokenIdx == idx {
+		return true
+	}
+	if seasonHint.TokenIdx == idx-1 && idx-1 >= 0 {
+		prev := strings.TrimSpace(tokens[idx-1].Text)
+		if seasonWordLoosePattern.MatchString(prev) {
+			return true
+		}
+	}
+	return false
+}
+
+func hasEpisodeCandidateNear(cands []model.EPEntity, idx int) bool {
+	for _, c := range cands {
+		kind := strings.ToUpper(strings.TrimSpace(c.Kind))
+		if kind != "EP" && kind != "EP_LIST" {
+			continue
+		}
+		if c.TokenStart < 0 {
+			continue
+		}
+		if c.TokenStart >= idx && c.TokenStart <= idx+2 {
+			return true
+		}
+	}
+	return false
+}
+
+func shouldSuppressRangeCandidate(tokens []model.Token, c model.EPEntity, seasonHint *epSeasonHint, cands []model.EPEntity) (string, bool) {
+	if !strings.EqualFold(strings.TrimSpace(c.Kind), "RANGE") {
+		return "", false
+	}
+	if c.TokenStart < 0 || c.TokenStart >= len(tokens) {
+		return "", false
+	}
+	if hasPartIndexLeadBeforeToken(tokens, c.TokenStart) && hasEpisodeCandidateNear(cands, c.TokenStart+1) {
+		return "part_index_range_conflict", true
+	}
+	if hasSeasonLeadForRange(tokens, c.TokenStart, seasonHint) && hasEpisodeCandidateNear(cands, c.TokenStart+1) {
+		return "season_episode_range_conflict", true
+	}
+	return "", false
+}
+
+func scoreEPCandidate(tokens []model.Token, c model.EPEntity) int {
+	kind := strings.ToUpper(strings.TrimSpace(c.Kind))
+	source := strings.ToLower(strings.TrimSpace(c.Source))
+	switch kind {
+	case "EP":
+		switch {
+		case strings.Contains(source, "sxxexx"):
+			return 150
+		case strings.Contains(source, "tagged_ep"):
+			return 142
+		case source == "episode":
+			return 120
+		case source == "ep_digit_token":
+			return 92
+		default:
+			return 108
+		}
+	case "EP_LIST":
+		return 132
+	case "RANGE":
+		switch {
+		case strings.Contains(source, "tagged_range"):
+			return 140
+		case source == "range_token":
+			return 136
+		case looksLikeExplicitRangeToken(tokens, c.TokenStart):
+			return 134
+		case source == "episode_range":
+			return 128
+		default:
+			return 124
+		}
+	case "SP":
+		if strings.TrimSpace(c.Episode) != "" {
+			return 104
+		}
+		return 70
+	default:
+		return 0
+	}
+}
+
+func choosePrimaryCandidate(tokens []model.Token, cands []model.EPEntity, seasonHint *epSeasonHint) (*model.EPEntity, []model.EPEntity, []epSuppressedCandidate) {
+	if len(cands) == 0 {
+		return nil, nil, nil
+	}
+	kept := make([]model.EPEntity, 0, len(cands))
+	suppressed := make([]epSuppressedCandidate, 0, 4)
+	bestIdx := -1
+	bestScore := -1
+	for _, cand := range cands {
+		c := cand
+		if strings.TrimSpace(c.Season) == "" && seasonHint != nil {
+			c.Season = strings.TrimSpace(seasonHint.Season)
+		}
+		if reason, drop := shouldSuppressRangeCandidate(tokens, c, seasonHint, cands); drop {
+			suppressed = append(suppressed, epSuppressedCandidate{
+				Candidate: c,
+				Reason:    reason,
+			})
+			continue
+		}
+		score := scoreEPCandidate(tokens, c)
+		if score <= 0 {
+			continue
+		}
+		kept = append(kept, c)
+		curIdx := len(kept) - 1
+		if score > bestScore {
+			bestIdx = curIdx
+			bestScore = score
+			continue
+		}
+		if score == bestScore {
+			best := kept[bestIdx]
+			bestKind := strings.ToUpper(strings.TrimSpace(best.Kind))
+			curKind := strings.ToUpper(strings.TrimSpace(c.Kind))
+			if bestKind == "SP" && curKind != "SP" {
+				bestIdx = curIdx
+				continue
+			}
+			if bestKind == "EP" && curKind == "RANGE" {
+				bestIdx = curIdx
+				continue
+			}
+		}
+	}
+	if bestIdx < 0 {
+		return nil, kept, suppressed
+	}
+	best := kept[bestIdx]
+	return &best, kept, suppressed
+}
+
+func buildCanonicalPrimaryEntity(season string, episode string, episodeRange string, episodeList string, spKind string, episodeIdx int, episodeRangeIdx int, episodeListIdx int) *model.EPEntity {
+	season = strings.TrimSpace(season)
+	episode = strings.TrimSpace(episode)
+	episodeRange = strings.TrimSpace(episodeRange)
+	episodeList = strings.TrimSpace(episodeList)
+	spKind = strings.ToUpper(strings.TrimSpace(spKind))
+	axis := "ABS"
+	if season != "" {
+		axis = "SE"
+	}
+	switch {
+	case episodeRange != "":
+		return &model.EPEntity{
+			Kind:         "RANGE",
+			Axis:         axis,
+			Season:       season,
+			EpisodeRange: episodeRange,
+			TokenStart:   episodeRangeIdx,
+			TokenEnd:     episodeRangeIdx + 1,
+			Source:       "canonical",
+		}
+	case episodeList != "":
+		first := episode
+		if first == "" {
+			if parts := strings.Split(episodeList, ","); len(parts) > 0 {
+				first = strings.TrimSpace(parts[0])
+			}
+		}
+		return &model.EPEntity{
+			Kind:        "EP_LIST",
+			Axis:        axis,
+			Season:      season,
+			Episode:     first,
+			EpisodeList: episodeList,
+			TokenStart:  episodeListIdx,
+			TokenEnd:    episodeListIdx + 1,
+			Source:      "canonical",
+		}
+	case episode != "":
+		return &model.EPEntity{
+			Kind:       "EP",
+			Axis:       axis,
+			Season:     season,
+			Episode:    episode,
+			TokenStart: episodeIdx,
+			TokenEnd:   episodeIdx + 1,
+			Source:     "canonical",
+		}
+	case spKind != "":
+		return &model.EPEntity{
+			Kind:   "SP",
+			Axis:   spKind,
+			Season: season,
+			SPKind: spKind,
+			Source: "canonical",
+		}
+	default:
+		return nil
+	}
+}
+
+func canonicalPrimaryMatches(c model.EPEntity, primary *model.EPEntity) bool {
+	if primary == nil {
+		return false
+	}
+	cRange := strings.TrimSpace(c.EpisodeRange)
+	pRange := strings.TrimSpace(primary.EpisodeRange)
+	if cRange != "" || pRange != "" {
+		cRange = normalizeEpisodeRangeText(cRange)
+		pRange = normalizeEpisodeRangeText(pRange)
+	}
+	return strings.EqualFold(strings.TrimSpace(c.Kind), strings.TrimSpace(primary.Kind)) &&
+		strings.TrimSpace(c.Season) == strings.TrimSpace(primary.Season) &&
+		strings.TrimSpace(c.Episode) == strings.TrimSpace(primary.Episode) &&
+		cRange == pRange &&
+		strings.TrimSpace(c.EpisodeList) == strings.TrimSpace(primary.EpisodeList) &&
+		strings.EqualFold(strings.TrimSpace(c.SPKind), strings.TrimSpace(primary.SPKind))
+}
+
+func syncEPSlotWithCanonicalSignals(epslot *model.EPSlot, season string, episode string, episodeRange string, episodeList string, spKind string, episodeIdx int, episodeRangeIdx int, episodeListIdx int) *model.EPSlot {
+	primary := buildCanonicalPrimaryEntity(season, episode, episodeRange, episodeList, spKind, episodeIdx, episodeRangeIdx, episodeListIdx)
+	if primary == nil {
+		if epslot == nil || len(epslot.Candidates) == 0 {
+			return nil
+		}
+		epslot.Primary = nil
+		return epslot
+	}
+	if epslot == nil {
+		return &model.EPSlot{
+			Primary:    primary,
+			Candidates: []model.EPEntity{*primary},
+		}
+	}
+	resolvedPrimary := *primary
+	if epslot.Primary != nil && canonicalPrimaryMatches(*epslot.Primary, primary) {
+		resolvedPrimary = *epslot.Primary
+		resolvedPrimary.Season = primary.Season
+		resolvedPrimary.Episode = primary.Episode
+		resolvedPrimary.EpisodeRange = primary.EpisodeRange
+		resolvedPrimary.EpisodeList = primary.EpisodeList
+		resolvedPrimary.SPKind = primary.SPKind
+	}
+	cands := make([]model.EPEntity, 0, len(epslot.Candidates)+1)
+	seen := map[string]struct{}{}
+	add := func(c model.EPEntity) {
+		key := epslotCandidateKey(c)
+		if _, ok := seen[key]; ok {
+			return
+		}
+		seen[key] = struct{}{}
+		cands = append(cands, c)
+	}
+	add(resolvedPrimary)
+	for _, c := range epslot.Candidates {
+		if canonicalPrimaryMatches(c, primary) {
+			continue
+		}
+		add(c)
+	}
+	epslot.Primary = &resolvedPrimary
+	epslot.Candidates = cands
+	return epslot
+}
+
+func adjudicateEPDecisionIntoContext(tokens []model.Token, ctx *parseContext) {
+	if ctx == nil {
+		return
+	}
+	if ctx.EPDecision == nil {
+		ctx.EPDecision = newEPDecision()
+	}
+	seasonHint := selectBestSeasonHint(ctx.EPDecision.SeasonHints)
+	if seasonHint != nil {
+		ctx.Season = strings.TrimSpace(seasonHint.Season)
+		ctx.SeasonIdx = seasonHint.TokenIdx
+	}
+	primary, kept, suppressed := choosePrimaryCandidate(tokens, ctx.EPDecision.Candidates, seasonHint)
+	ctx.EPDecision.Primary = primary
+	ctx.EPDecision.Suppressed = suppressed
+
+	if primary == nil {
+		ctx.Episode = ""
+		ctx.EpisodeIdx = -1
+		ctx.EpisodeRange = ""
+		ctx.EpisodeRangeIdx = -1
+		ctx.EpisodeList = ""
+		ctx.EpisodeListIdx = -1
+		ctx.EpisodeVersion = ""
+		ctx.EpisodeVersionIdx = -1
+		if len(kept) > 0 {
+			ctx.EPSlot = &model.EPSlot{Candidates: kept}
+		} else {
+			ctx.EPSlot = nil
+		}
+		return
+	}
+
+	primaryCopy := *primary
+	primaryCopy.Source = finalizeEPCandidateSource(primaryCopy)
+	if strings.TrimSpace(primaryCopy.Season) == "" && seasonHint != nil {
+		primaryCopy.Season = strings.TrimSpace(seasonHint.Season)
+	}
+	ctx.Episode = ""
+	ctx.EpisodeIdx = -1
+	ctx.EpisodeRange = ""
+	ctx.EpisodeRangeIdx = -1
+	ctx.EpisodeList = ""
+	ctx.EpisodeListIdx = -1
+	switch strings.ToUpper(strings.TrimSpace(primaryCopy.Kind)) {
+	case "RANGE":
+		ctx.EpisodeRange = strings.TrimSpace(primaryCopy.EpisodeRange)
+		ctx.EpisodeRangeIdx = primaryCopy.TokenStart
+		ctx.EpisodeVersion = ""
+		ctx.EpisodeVersionIdx = -1
+	case "EP_LIST":
+		ctx.Episode = strings.TrimSpace(primaryCopy.Episode)
+		ctx.EpisodeIdx = primaryCopy.TokenStart
+		ctx.EpisodeList = strings.TrimSpace(primaryCopy.EpisodeList)
+		ctx.EpisodeListIdx = primaryCopy.TokenStart
+		ctx.EpisodeVersion = ""
+		ctx.EpisodeVersionIdx = -1
+	case "EP":
+		ctx.Episode = strings.TrimSpace(primaryCopy.Episode)
+		ctx.EpisodeIdx = primaryCopy.TokenStart
+		if ctx.EpisodeVersionIdx != ctx.EpisodeIdx {
+			ctx.EpisodeVersion = ""
+			ctx.EpisodeVersionIdx = -1
+		}
+	case "SP":
+		ctx.EpisodeVersion = ""
+		ctx.EpisodeVersionIdx = -1
+	}
+	if strings.TrimSpace(primaryCopy.Season) != "" {
+		ctx.Season = strings.TrimSpace(primaryCopy.Season)
+	}
+	if strings.TrimSpace(primaryCopy.SPKind) != "" {
+		ctx.SPKind = strings.ToUpper(strings.TrimSpace(primaryCopy.SPKind))
+	}
+	ctx.EPSlot = &model.EPSlot{
+		Primary:    &primaryCopy,
+		Candidates: kept,
+	}
+}
+
+func finalizeEPCandidateSource(c model.EPEntity) string {
+	source := strings.TrimSpace(c.Source)
+	switch {
+	case strings.EqualFold(source, "sxxexx"):
+		return "sxxexx_final"
+	case strings.EqualFold(source, "episode_list"):
+		return "episode_list_final"
+	case strings.EqualFold(source, "episode_range"):
+		return "episode_range_final"
+	case strings.EqualFold(source, "episode"):
+		return "episode_final"
+	case strings.EqualFold(source, "tagged_ep"):
+		return "tagged_ep_final"
+	case strings.EqualFold(source, "tagged_range"):
+		return "tagged_range_final"
+	case strings.EqualFold(source, "sp_kind"), strings.EqualFold(source, "sp_token"):
+		return "sp_kind_final"
+	default:
+		if source == "" {
+			return "canonical"
+		}
+		return source
+	}
+}
+
+func buildCanonicalEPSemantics(epslot *model.EPSlot, season string, seasonRange string, episode string, episodeList string, episodeRange string, spKind string) *model.EPSemantics {
+	season = strings.TrimSpace(season)
+	seasonRange = strings.TrimSpace(seasonRange)
+	episode = strings.TrimSpace(episode)
+	episodeList = strings.TrimSpace(episodeList)
+	episodeRange = strings.TrimSpace(episodeRange)
+	spKind = strings.TrimSpace(spKind)
+
+	if epslot != nil && epslot.Primary != nil {
+		p := epslot.Primary
+		out := &model.EPSemantics{
+			Kind:   strings.ToUpper(strings.TrimSpace(p.Kind)),
+			Axis:   strings.ToUpper(strings.TrimSpace(p.Axis)),
+			Season: firstNonEmpty(strings.TrimSpace(p.Season), season),
+			SPKind: firstNonEmpty(strings.TrimSpace(p.SPKind), spKind),
+			Source: strings.TrimSpace(p.Source),
+		}
+		switch out.Kind {
+		case "EP":
+			out.Episode = strings.TrimSpace(p.Episode)
+		case "EP_LIST":
+			out.Episode = strings.TrimSpace(p.Episode)
+			out.EpisodeList = splitEpisodeListCSV(strings.TrimSpace(p.EpisodeList))
+		case "RANGE":
+			start, end := splitNormalizedRangeBounds(firstNonEmpty(strings.TrimSpace(p.EpisodeRange), episodeRange))
+			out.RangeStart = start
+			out.RangeEnd = end
+		case "SP":
+			// no-op
+		}
+		return out
+	}
+	if seasonRange != "" {
+		return &model.EPSemantics{
+			Kind:        "SEASON_RANGE",
+			Axis:        "SE",
+			Season:      season,
+			SeasonRange: seasonRange,
+			Source:      "canonical",
+		}
+	}
+	switch {
+	case episodeRange != "":
+		start, end := splitNormalizedRangeBounds(episodeRange)
+		axis := "ABS"
+		if season != "" {
+			axis = "SE"
+		}
+		return &model.EPSemantics{
+			Kind:       "RANGE",
+			Axis:       axis,
+			Season:     season,
+			RangeStart: start,
+			RangeEnd:   end,
+			Source:     "canonical",
+		}
+	case episodeList != "":
+		axis := "ABS"
+		if season != "" {
+			axis = "SE"
+		}
+		return &model.EPSemantics{
+			Kind:        "EP_LIST",
+			Axis:        axis,
+			Season:      season,
+			Episode:     episode,
+			EpisodeList: splitEpisodeListCSV(episodeList),
+			Source:      "canonical",
+		}
+	case episode != "":
+		axis := "ABS"
+		if season != "" {
+			axis = "SE"
+		}
+		return &model.EPSemantics{
+			Kind:    "EP",
+			Axis:    axis,
+			Season:  season,
+			Episode: episode,
+			Source:  "canonical",
+		}
+	case spKind != "":
+		return &model.EPSemantics{
+			Kind:   "SP",
+			Axis:   strings.ToUpper(spKind),
+			Season: season,
+			SPKind: strings.ToUpper(spKind),
+			Source: "canonical",
+		}
+	default:
+		return &model.EPSemantics{
+			Kind:   "NONE",
+			Source: "canonical",
+		}
+	}
+}
+
+func splitEpisodeListCSV(s string) []string {
+	if s == "" {
+		return nil
+	}
+	parts := strings.Split(s, ",")
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		out = append(out, part)
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+func splitNormalizedRangeBounds(s string) (string, string) {
+	s = normalizeEpisodeRangeText(strings.TrimSpace(s))
+	if s == "" {
+		return "", ""
+	}
+	parts := strings.SplitN(s, "-", 2)
+	if len(parts) != 2 {
+		return "", ""
+	}
+	return strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		v = strings.TrimSpace(v)
+		if v != "" {
+			return v
+		}
+	}
+	return ""
+}

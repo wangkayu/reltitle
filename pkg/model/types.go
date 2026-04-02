@@ -17,15 +17,29 @@ type Token struct {
 }
 
 type ParseResult struct {
-	RawTitle           string      `json:"raw_title"`
-	ContentKind        string      `json:"content_kind,omitempty"`
-	ContentConfidence  float64     `json:"content_confidence,omitempty"`
-	TemplateID         string      `json:"template_id,omitempty"`
-	TemplateConfidence float64     `json:"template_confidence,omitempty"`
-	EPSlot             *EPSlot     `json:"epslot,omitempty"`
-	AudioSlot          *AudioSlot  `json:"audio_slot,omitempty"`
-	Attributes         []Attribute `json:"attributes,omitempty"`
-	Tokens             []Token     `json:"tokens,omitempty"`
+	RawTitle           string       `json:"raw_title"`
+	ContentKind        string       `json:"content_kind,omitempty"`
+	ContentConfidence  float64      `json:"content_confidence,omitempty"`
+	TemplateID         string       `json:"template_id,omitempty"`
+	TemplateConfidence float64      `json:"template_confidence,omitempty"`
+	EPSemantics        *EPSemantics `json:"ep_semantics,omitempty"`
+	EPSlot             *EPSlot      `json:"-"`
+	AudioSlot          *AudioSlot   `json:"audio_slot,omitempty"`
+	Attributes         []Attribute  `json:"attributes,omitempty"`
+	Tokens             []Token      `json:"tokens,omitempty"`
+}
+
+type EPSemantics struct {
+	Kind        string   `json:"kind,omitempty"` // NONE | EP | EP_LIST | RANGE | SEASON_RANGE | SP
+	Axis        string   `json:"axis,omitempty"` // SE | ABS | TV | OVA | SP | UNKNOWN
+	Season      string   `json:"season,omitempty"`
+	SeasonRange string   `json:"season_range,omitempty"` // e.g. S1-S3
+	Episode     string   `json:"episode,omitempty"`
+	EpisodeList []string `json:"episode_list,omitempty"`
+	RangeStart  string   `json:"range_start,omitempty"`
+	RangeEnd    string   `json:"range_end,omitempty"`
+	SPKind      string   `json:"sp_kind,omitempty"`
+	Source      string   `json:"source,omitempty"`
 }
 
 type EPSlot struct {

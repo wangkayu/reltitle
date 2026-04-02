@@ -179,6 +179,11 @@ func matchTemplate(cfg *config.Config, epRoute string, contentKind string, group
 			return "TF_UNKNOWN_DEFAULT", 0, ""
 		}
 	}
+	if epRoute == "EP_LIST" {
+		if strings.TrimSpace(episode) == "" {
+			return "TF_UNKNOWN_DEFAULT", 0, ""
+		}
+	}
 	if epRoute == "MOVIE_ONLY" {
 		if !hasMovieKeyword && strings.TrimSpace(movieIndex) == "" {
 			return "TF_UNKNOWN_DEFAULT", 0, ""
@@ -266,7 +271,7 @@ func matchTemplate(cfg *config.Config, epRoute string, contentKind string, group
 		prefCats := preferredTemplateCategories(family)
 		strictFilter := strictTemplateFilterEnabled(family)
 		allowedRouteIDs := allowedRouteIDSet(family)
-		if len(prefCats) > 0 && (epRoute == "ABS_EP" || epRoute == "PLAIN_EP" || epRoute == "NONE") {
+		if len(prefCats) > 0 && (epRoute == "ABS_EP" || epRoute == "PLAIN_EP" || epRoute == "EP_LIST" || epRoute == "NONE") {
 			for _, cat := range prefCats {
 				candidates := templatesByCategory(cfg, cat)
 				if strictFilter && len(allowedRouteIDs) > 0 {
@@ -338,7 +343,7 @@ func templatesByEpRoute(cfg *config.Config, epRoute string) []config.TemplateDef
 		return cfg.TemplateCatalog.BatchTemplates
 	case "MOVIE_ONLY":
 		return cfg.TemplateCatalog.MovieTemplates
-	case "SXXEXX", "ABS_EP", "PLAIN_EP", "SP_ONLY":
+	case "SXXEXX", "ABS_EP", "PLAIN_EP", "EP_LIST", "SP_ONLY":
 		return cfg.TemplateCatalog.TVEpisodeTemplates
 	case "NONE":
 		return nil

@@ -263,6 +263,39 @@ func TestParserEpisodeDetect_TitleSeasonSuffixDoesNotPolluteEPSlot(t *testing.T)
 	}
 }
 
+func TestParserEpisodeDetect_SeasonWordDashEpisodeCleansTitle(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[shincaps] Saikyou no Ousama, Nidome no Jinsei wa Nani wo Suru Season 2 - 01 (AT-X 1440x1080 MPEG2 AAC).ts"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalSeason(res); got != "2" {
+		t.Fatalf("season=%q want=%q", got, "2")
+	}
+	if got := canonicalEpisode(res); got != "1" {
+		t.Fatalf("episode=%q want=%q", got, "1")
+	}
+	if got := canonicalEpisodeRange(res); got != "" {
+		t.Fatalf("episode_range=%q want empty", got)
+	}
+	if got := canonicalTitle(res); got != "Saikyou no Ousama, Nidome no Jinsei wa Nani wo Suru" {
+		t.Fatalf("title=%q want=%q", got, "Saikyou no Ousama, Nidome no Jinsei wa Nani wo Suru")
+	}
+	if res.EPSlot != nil {
+		for _, c := range res.EPSlot.Candidates {
+			if strings.EqualFold(strings.TrimSpace(c.Kind), "RANGE") {
+				t.Fatalf("false season/episode range should be suppressed, epslot=%+v", res.EPSlot)
+			}
+		}
+	}
+}
+
 func TestParserEpisodeDetect_DashSeasonSuffixBeforeBracketPrefersBracketEpisode(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {
@@ -280,6 +313,88 @@ func TestParserEpisodeDetect_DashSeasonSuffixBeforeBracketPrefersBracketEpisode(
 	}
 	if got := canonicalSeason(res); got != "2" {
 		t.Fatalf("season=%q want=%q", got, "2")
+	}
+}
+
+func TestParserEpisodeDetect_PartIndexDoesNotBecomeSeason_BilingualTitle(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[黒ネズミたち] Dr.STONE 新石纪 第四季 / Dr. Stone: Science Future Part 3 - 25 (CR 1920x1080 AVC AAC MKV)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "TV_EP" {
+		t.Fatalf("content_kind=%q want=%q", got, "TV_EP")
+	}
+	if got := canonicalSeason(res); got != "4" {
+		t.Fatalf("season=%q want=%q", got, "4")
+	}
+	if got := canonicalEpisode(res); got != "25" {
+		t.Fatalf("episode=%q want=%q", got, "25")
+	}
+	if got := canonicalEpisodeRange(res); got != "" {
+		t.Fatalf("episode_range=%q want empty", got)
+	}
+	if got := canonicalTitle(res); got != "Dr.STONE 新石纪" {
+		t.Fatalf("title=%q want=%q", got, "Dr.STONE 新石纪")
+	}
+	aliases := canonicalAliases(res)
+	if !containsAlias(aliases, "Dr.Stone Science Future Part 3") {
+		t.Fatalf("expected english part alias to remain, aliases=%v", aliases)
+	}
+	if res.EPSlot != nil {
+		for _, c := range res.EPSlot.Candidates {
+			if strings.TrimSpace(c.EpisodeRange) == "3-25" {
+				t.Fatalf("part index must not survive as false range candidate, epslot=%+v", res.EPSlot)
+			}
+			if strings.TrimSpace(c.Episode) == "3" {
+				t.Fatalf("part index should not remain as epslot candidate, epslot=%+v", res.EPSlot)
+			}
+		}
+	}
+}
+
+func TestParserEpisodeDetect_PartIndexDoesNotBecomeSeason_EnglishTitle(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Dynamis One] Dr. Stone: Science Future Part 3 - 25 (CR 1920x1080 AVC AAC MKV) [323BB689].mkv"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != "TV_EP" {
+		t.Fatalf("content_kind=%q want=%q", got, "TV_EP")
+	}
+	if got := canonicalSeason(res); got != "" {
+		t.Fatalf("season=%q want empty", got)
+	}
+	if got := canonicalEpisode(res); got != "25" {
+		t.Fatalf("episode=%q want=%q", got, "25")
+	}
+	if got := canonicalEpisodeRange(res); got != "" {
+		t.Fatalf("episode_range=%q want empty", got)
+	}
+	if got := canonicalTitle(res); got != "Dr.Stone : Science Future Part 3" {
+		t.Fatalf("title=%q want=%q", got, "Dr.Stone : Science Future Part 3")
+	}
+	if res.EPSlot != nil {
+		for _, c := range res.EPSlot.Candidates {
+			if strings.TrimSpace(c.EpisodeRange) == "3-25" {
+				t.Fatalf("part index must not survive as false range candidate, epslot=%+v", res.EPSlot)
+			}
+			if strings.TrimSpace(c.Episode) == "3" {
+				t.Fatalf("part index should not remain as epslot candidate, epslot=%+v", res.EPSlot)
+			}
+		}
 	}
 }
 

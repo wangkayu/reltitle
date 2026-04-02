@@ -39,6 +39,8 @@ type parseContext struct {
 
 	EPSlot *model.EPSlot
 
+	EPDecision *epDecision
+
 	ForcedTitle      string
 	ForcedAliases    []string
 	ForcedTitleStart int
@@ -62,5 +64,6 @@ func newParseContext(rawTitle string, packKind string, tailParenBlock string) *p
 		EpisodeRangeIdx:    -1,
 		EpisodeListIdx:     -1,
 		EpisodeVersionIdx:  -1,
+		EPDecision:         newEPDecision(),
 	}
 }

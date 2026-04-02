@@ -40,33 +40,24 @@ func canonicalGroup(res *model.ParseResult) string {
 }
 
 func canonicalEpisode(res *model.ParseResult) string {
-	if res != nil && res.EPSlot != nil && res.EPSlot.Primary != nil {
-		v := strings.TrimSpace(res.EPSlot.Primary.Episode)
-		if v != "" {
-			return v
-		}
+	if res == nil {
+		return ""
 	}
-	return firstAttrValue(res, model.AttrEpisode)
+	return strings.TrimSpace(res.CanonicalEpisode())
 }
 
 func canonicalEpisodeRange(res *model.ParseResult) string {
-	if res != nil && res.EPSlot != nil && res.EPSlot.Primary != nil {
-		v := strings.TrimSpace(res.EPSlot.Primary.EpisodeRange)
-		if v != "" {
-			return v
-		}
+	if res == nil {
+		return ""
 	}
-	return firstAttrValue(res, model.AttrEpisodeRange)
+	return strings.TrimSpace(res.CanonicalEpisodeRange())
 }
 
 func canonicalSeason(res *model.ParseResult) string {
-	if res != nil && res.EPSlot != nil && res.EPSlot.Primary != nil {
-		v := strings.TrimSpace(res.EPSlot.Primary.Season)
-		if v != "" {
-			return v
-		}
+	if res == nil {
+		return ""
 	}
-	return firstAttrValue(res, model.AttrSeason)
+	return strings.TrimSpace(res.CanonicalSeason())
 }
 
 func canonicalVersion(res *model.ParseResult) string {
@@ -74,13 +65,10 @@ func canonicalVersion(res *model.ParseResult) string {
 }
 
 func canonicalSPKind(res *model.ParseResult) string {
-	if res != nil && res.EPSlot != nil && res.EPSlot.Primary != nil {
-		v := strings.TrimSpace(res.EPSlot.Primary.SPKind)
-		if v != "" {
-			return v
-		}
+	if res == nil {
+		return ""
 	}
-	return firstAttrValue(res, model.AttrSPKind)
+	return strings.TrimSpace(res.CanonicalSPKind())
 }
 
 func canonicalAliases(res *model.ParseResult) []string {

@@ -65,57 +65,53 @@ func detectSeasonFromAttrs(attrs []model.Attribute) (season string, tokenIdx int
 }
 
 func passDetectSeasonSPMovie(tokens []model.Token, attrs *[]model.Attribute, ctx *parseContext) {
+	if ctx.EPDecision == nil {
+		ctx.EPDecision = newEPDecision()
+	}
+	addSeasonHint := func(season string, idx int, source string) {
+		ctx.EPDecision.addSeasonHint(season, idx, source)
+	}
 	if ctx.SeasonRange == "" {
 		if sr, s, idx := detectSeasonRangeByKeyword(tokens); sr != "" {
 			ctx.SeasonRange = sr
-			if ctx.Season == "" && s != "" {
-				ctx.Season = s
-				ctx.SeasonIdx = idx
+			if s != "" {
+				addSeasonHint(s, idx, "season_range_keyword")
 			}
 		}
 	}
-	if ctx.Season == "" && attrs != nil {
+	if attrs != nil {
 		if s, idx := detectSeasonFromAttrs(*attrs); s != "" {
-			ctx.Season = s
-			ctx.SeasonIdx = idx
+			addSeasonHint(s, idx, "attr")
 		}
 	}
-	if ctx.Season == "" {
-		if s, idx := detectSeasonBeforeDashEpisode(tokens); s != "" {
-			ctx.Season = s
-			ctx.SeasonIdx = idx
-		}
+	if s, idx := detectSeasonBeforeDashEpisode(tokens); s != "" {
+		addSeasonHint(s, idx, "season_before_dash")
 	}
 	seasonSxx, epFromSxxExx, sxxIdx := detectSxxExx(tokens)
 	ctx.EpisodeFromSxxExx = epFromSxxExx
 	ctx.SxxExxIdx = sxxIdx
-	if ctx.Season == "" {
-		ctx.Season = seasonSxx
-		ctx.SeasonIdx = sxxIdx
+	if seasonSxx != "" {
+		addSeasonHint(seasonSxx, sxxIdx, "sxxexx")
 	}
-	if ctx.Season == "" {
-		if s, idx := detectSeasonOnly(tokens); s != "" {
-			ctx.Season = s
-			ctx.SeasonIdx = idx
-		}
+	if s, idx := detectSeasonOnly(tokens); s != "" {
+		addSeasonHint(s, idx, "season_only")
 	}
-	if ctx.Season == "" {
-		if s, idx := detectSeasonKeyword(tokens); s != "" {
-			ctx.Season = s
-			ctx.SeasonIdx = idx
-		}
+	if s, idx := detectSeasonKeyword(tokens); s != "" {
+		addSeasonHint(s, idx, "season_keyword")
 	}
-	if ctx.Season == "" {
-		if s, idx := detectSeasonInParen(tokens); s != "" {
-			ctx.Season = s
-			ctx.SeasonIdx = idx
-		}
+	if s, idx := detectSeasonInParen(tokens); s != "" {
+		addSeasonHint(s, idx, "season_in_paren")
 	}
-	if ctx.Season == "" && ctx.PackKind != "" {
+	if ctx.PackKind != "" {
 		if s, idx := detectSeasonOnlyLoose(tokens); s != "" {
-			ctx.Season = s
-			ctx.SeasonIdx = idx
+			addSeasonHint(s, idx, "season_only_loose")
 		}
+	}
+	ctx.Season = ""
+	ctx.SeasonIdx = -1
+	if hint := selectBestSeasonHint(ctx.EPDecision.SeasonHints); hint != nil {
+		ctx.Season = strings.TrimSpace(hint.Season)
+		ctx.SeasonIdx = hint.TokenIdx
 	}
 	if ctx.Season != "" && ctx.SeasonIdx >= 0 {
 		removeSeasonTokens(tokens, ctx.SeasonIdx)
@@ -532,24 +528,15 @@ func passDetectEpisodeRangeAndEpisode(tokens []model.Token, attrs *[]model.Attri
 			}
 		}
 	}
-	ctx.EPSlot = buildEPSlotCandidates(tokens, ctx.Season, ctx.SeasonIdx, ctx.EpisodeFromSxxExx, ctx.SxxExxIdx, ctx.Episode, ctx.EpisodeIdx, ctx.EpisodeRange, ctx.EpisodeRangeIdx, ctx.EpisodeList, ctx.EpisodeListIdx, ctx.SPKind)
-	if ctx.EpisodeRangeIdx >= 0 && ctx.EpisodeRange != "" {
-		ctx.Episode = ""
-		ctx.EpisodeIdx = -1
-		ctx.EpisodeVersion = ""
-		ctx.EpisodeVersionIdx = -1
-		ctx.EpisodeList = ""
-		ctx.EpisodeListIdx = -1
+	if ctx.EPDecision == nil {
+		ctx.EPDecision = newEPDecision()
 	}
-	if ctx.EpisodeFromSxxExx != "" {
-		ctx.Episode = ctx.EpisodeFromSxxExx
-		ctx.EpisodeIdx = ctx.SxxExxIdx
-		ctx.EpisodeVersion = ""
-		ctx.EpisodeVersionIdx = -1
-		ctx.EpisodeList = ""
-		ctx.EpisodeListIdx = -1
+	if epslot := buildEPSlotCandidates(tokens, ctx.Season, ctx.SeasonIdx, ctx.EpisodeFromSxxExx, ctx.SxxExxIdx, ctx.Episode, ctx.EpisodeIdx, ctx.EpisodeRange, ctx.EpisodeRangeIdx, ctx.EpisodeList, ctx.EpisodeListIdx, ctx.SPKind); epslot != nil {
+		ctx.EPDecision.replaceCandidates(epslot.Candidates)
+	} else {
+		ctx.EPDecision.replaceCandidates(nil)
 	}
-	finalizeEPSlotPrimary(ctx.EPSlot, ctx.Season, ctx.Episode, ctx.EpisodeRange, ctx.EpisodeList, ctx.SPKind, ctx.EpisodeIdx, ctx.EpisodeRangeIdx, ctx.EpisodeListIdx, ctx.SxxExxIdx)
+	adjudicateEPDecisionIntoContext(tokens, ctx)
 }
 
 func normalizeEpisodeRangeTVPackSuffix(tokens []model.Token, attrs *[]model.Attribute, rangeIdx int) string {

@@ -118,7 +118,7 @@ func TestParserMovieRoute_BatchRangePackTemplatePreferred(t *testing.T) {
 	if got := res.ContentKind; got != "BATCH" {
 		t.Fatalf("content_kind=%q want=%q", got, "BATCH")
 	}
-	if got := firstAttrValue(res, model.AttrEpisodeRange); got != "1-12" {
+	if got := canonicalEpisodeRange(res); got != "1-12" {
 		t.Fatalf("episode_range=%q want=%q", got, "1-12")
 	}
 	if got := res.TemplateID; got != "TF_BATCH_RANGE_PACK_01" {
@@ -144,7 +144,7 @@ func TestParserMovieRoute_CommaGroupRangePackTemplatePreferred(t *testing.T) {
 	if got := firstAttrValue(res, model.AttrGroup); got == "" {
 		t.Fatalf("group should not be empty")
 	}
-	if got := firstAttrValue(res, model.AttrEpisodeRange); got != "1-12" {
+	if got := canonicalEpisodeRange(res); got != "1-12" {
 		t.Fatalf("episode_range=%q want=%q", got, "1-12")
 	}
 	if got := res.TemplateID; got != "TF_BATCH_RANGE_PACK_01" {
@@ -170,7 +170,7 @@ func TestParserMovieRoute_AtGroupRangePackTemplatePreferred(t *testing.T) {
 	if got := firstAttrValue(res, model.AttrGroup); got != "Jsum@U2" {
 		t.Fatalf("group=%q want=%q", got, "Jsum@U2")
 	}
-	if got := firstAttrValue(res, model.AttrEpisodeRange); got != "1-12" {
+	if got := canonicalEpisodeRange(res); got != "1-12" {
 		t.Fatalf("episode_range=%q want=%q", got, "1-12")
 	}
 	if got := res.TemplateID; got != "TF_BATCH_RANGE_PACK_01" {
@@ -193,11 +193,8 @@ func TestParserMovieRoute_DashCodecNumberNotEpisode(t *testing.T) {
 	if got := res.ContentKind; got != "MOVIE" {
 		t.Fatalf("content_kind=%q want=%q", got, "MOVIE")
 	}
-	if got := firstAttrValue(res, model.AttrEpisode); got != "" {
+	if got := canonicalEpisode(res); got != "" {
 		t.Fatalf("episode=%q want empty", got)
-	}
-	if res.EPSlot != nil && res.EPSlot.Primary != nil && res.EPSlot.Primary.Episode != "" {
-		t.Fatalf("epslot.primary.episode=%q want empty", res.EPSlot.Primary.Episode)
 	}
 }
 
@@ -216,7 +213,7 @@ func TestParserMovieRoute_DayIndexDemotedToMovieIndex(t *testing.T) {
 	if got := res.ContentKind; got != "MOVIE" {
 		t.Fatalf("content_kind=%q want=%q", got, "MOVIE")
 	}
-	if got := firstAttrValue(res, model.AttrEpisode); got != "" {
+	if got := canonicalEpisode(res); got != "" {
 		t.Fatalf("episode=%q want empty", got)
 	}
 	if got := firstAttrValue(res, model.AttrMovieIndex); got != "1" {
@@ -239,7 +236,7 @@ func TestParserMovieRoute_SeasonPartTvEpisodeNotDemoted(t *testing.T) {
 	if got := res.ContentKind; got == "MOVIE" {
 		t.Fatalf("content_kind=%q should not be MOVIE", got)
 	}
-	if got := firstAttrValue(res, model.AttrEpisode); got != "41" {
+	if got := canonicalEpisode(res); got != "41" {
 		t.Fatalf("episode=%q want=%q", got, "41")
 	}
 }
@@ -259,7 +256,7 @@ func TestParserMovieRoute_OVAWithYearTech_PrefersSpecial(t *testing.T) {
 	if got := res.ContentKind; got != "SPECIAL" {
 		t.Fatalf("content_kind=%q want=%q", got, "SPECIAL")
 	}
-	if got := firstAttrValue(res, model.AttrSPKind); got != "OVA" {
+	if got := canonicalSPKind(res); got != "OVA" {
 		t.Fatalf("sp_kind=%q want=%q", got, "OVA")
 	}
 }
@@ -313,7 +310,7 @@ func TestParserMovieRoute_TrailingMovieNumberDemotedToMovieIndex(t *testing.T) {
 	if got := res.ContentKind; got != "MOVIE" {
 		t.Fatalf("content_kind=%q want=%q", got, "MOVIE")
 	}
-	if got := firstAttrValue(res, model.AttrEpisode); got != "" {
+	if got := canonicalEpisode(res); got != "" {
 		t.Fatalf("episode=%q want empty", got)
 	}
 	if got := firstAttrValue(res, model.AttrMovieIndex); got != "2" {
@@ -339,7 +336,7 @@ func TestParserMovieRoute_MovieDashEpisodeTailNotInTitle(t *testing.T) {
 	if got := firstAttrValue(res, model.AttrMovieIndex); got != "31" {
 		t.Fatalf("movie_index=%q want=%q", got, "31")
 	}
-	if got := firstAttrValue(res, model.AttrEpisode); got != "" {
+	if got := canonicalEpisode(res); got != "" {
 		t.Fatalf("episode=%q want empty", got)
 	}
 	if got := canonicalTitle(res); got == "" || strings.HasSuffix(got, " 01") {
@@ -408,7 +405,7 @@ func TestParserMovieRoute_MShortIndexWithoutMovieContextIgnored(t *testing.T) {
 	if got := firstAttrValue(res, model.AttrMovieIndex); got != "" {
 		t.Fatalf("movie_index=%q want empty", got)
 	}
-	if got := firstAttrValue(res, model.AttrEpisode); got != "3" {
+	if got := canonicalEpisode(res); got != "3" {
 		t.Fatalf("episode=%q want=%q", got, "3")
 	}
 }
@@ -501,7 +498,7 @@ func TestParserMovieRoute_BracketEpisodeAsMovieIndexWithMovieContext(t *testing.
 	if got := firstAttrValue(res, model.AttrMovieIndex); got != "1" {
 		t.Fatalf("movie_index=%q want=%q", got, "1")
 	}
-	if got := firstAttrValue(res, model.AttrEpisode); got != "" {
+	if got := canonicalEpisode(res); got != "" {
 		t.Fatalf("episode=%q want empty", got)
 	}
 }
@@ -521,7 +518,7 @@ func TestParserMovieRoute_MovieRangeBracketExtracted(t *testing.T) {
 	if got := firstAttrValue(res, model.AttrMovieIndexRange); got != "1-2" {
 		t.Fatalf("movie_index_range=%q want=%q", got, "1-2")
 	}
-	if got := firstAttrValue(res, model.AttrEpisodeRange); got != "" {
+	if got := canonicalEpisodeRange(res); got != "" {
 		t.Fatalf("episode_range=%q want empty", got)
 	}
 	if got := firstAttrValue(res, model.AttrMovieIndex); got != "" {
@@ -547,10 +544,10 @@ func TestParserMovieRoute_PlainMovieRangeIsBatchWithoutEpisode(t *testing.T) {
 	if got := firstAttrValue(res, model.AttrMovieIndexRange); got != "1-3" {
 		t.Fatalf("movie_index_range=%q want=%q", got, "1-3")
 	}
-	if got := firstAttrValue(res, model.AttrEpisodeRange); got != "" {
+	if got := canonicalEpisodeRange(res); got != "" {
 		t.Fatalf("episode_range=%q want empty", got)
 	}
-	if got := firstAttrValue(res, model.AttrEpisode); got != "" {
+	if got := canonicalEpisode(res); got != "" {
 		t.Fatalf("episode=%q want empty", got)
 	}
 	if got := canonicalTitle(res); got == "" || strings.HasSuffix(got, " 01") {
@@ -573,13 +570,13 @@ func TestParserMovieRoute_TVMovieMixedRangeNoSingleIndex(t *testing.T) {
 	if got := firstAttrValue(res, model.AttrMovieIndexRange); got != "1-4" {
 		t.Fatalf("movie_index_range=%q want=%q", got, "1-4")
 	}
-	if got := firstAttrValue(res, model.AttrEpisodeRange); got != "1-101" {
+	if got := canonicalEpisodeRange(res); got != "1-101" {
 		t.Fatalf("episode_range=%q want=%q", got, "1-101")
 	}
 	if got := firstAttrValue(res, model.AttrMovieIndex); got != "" {
 		t.Fatalf("movie_index=%q want empty", got)
 	}
-	if got := firstAttrValue(res, model.AttrEpisode); got != "" {
+	if got := canonicalEpisode(res); got != "" {
 		t.Fatalf("episode=%q want empty", got)
 	}
 }

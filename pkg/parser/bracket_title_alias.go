@@ -188,7 +188,7 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 		if s == "" {
 			return false
 		}
-		if regexp.MustCompile(`(?i)^0?\d{1,4}\s*(?:end|fin|final)$`).MatchString(s) {
+		if regexp.MustCompile(`(?i)^0?\d{1,4}(?:\s|[_-])*(?:end|fin|final)$`).MatchString(s) {
 			return true
 		}
 		// Batch range forms should stay in token stream for episode_range detection.
@@ -257,7 +257,7 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 		if s == "" {
 			return false
 		}
-		if regexp.MustCompile(`(?i)^0?\d{1,4}\s*(?:end|fin|final)$`).MatchString(s) {
+		if regexp.MustCompile(`(?i)^0?\d{1,4}(?:\s|[_-])*(?:end|fin|final)$`).MatchString(s) {
 			return true
 		}
 		if regexp.MustCompile(`(?i)^\d{1,4}(?:\s*(?:&|＆|\+|＋|/|／|,|，|、)\s*\d{1,4})+$`).MatchString(s) {
@@ -582,7 +582,7 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 			i = end
 			continue
 		}
-		if containsEpisodeMarker(inner) {
+		if containsEpisodeMarker(inner) || containsEpisodeMarker(innerRaw) {
 			// Keep this block in tokens for episode detection. Do not consume it
 			// into title/alias candidates.
 			i = end
@@ -654,7 +654,7 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 		if isLikelyTechLike(inner) {
 			break
 		}
-		if looksLikeEpOnly(inner) {
+		if looksLikeEpOnly(inner) || looksLikeEpOnly(innerRaw) {
 			if len(blocks) == 0 {
 				i = end
 				continue
@@ -718,6 +718,9 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 	if mainTitle == "" {
 		return "", searchHintAliases, -1, -1
 	}
+	if s := extractExplicitSeasonNumber(blocks[mainIdx].inner); s != "" {
+		*attrs = append(*attrs, model.Attribute{Type: model.AttrNote, Normalized: "S" + s, TokenStart: -1, TokenEnd: -1, Confidence: 0.65, Source: "main_title_season"})
+	}
 	aliases := make([]string, 0, len(blocks))
 	seen := map[string]bool{}
 	seen[strings.ToLower(strings.TrimSpace(mainTitle))] = true
@@ -727,7 +730,7 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 		}
 		// Extract season from the raw alias block before cleanAliasToken/stripExplicitSeasonSuffix drops it.
 		if s := extractExplicitSeasonNumber(blocks[i].inner); s != "" {
-			*attrs = append(*attrs, model.Attribute{Type: model.AttrSeason, Normalized: s, TokenStart: -1, TokenEnd: -1, Confidence: 0.65, Source: "alias_season"})
+			*attrs = append(*attrs, model.Attribute{Type: model.AttrNote, Normalized: "S" + s, TokenStart: -1, TokenEnd: -1, Confidence: 0.65, Source: "alias_season"})
 		}
 		a := cleanAliasToken(blocks[i].inner)
 		if stripped := stripExplicitSeasonSuffix(a); stripped != "" {

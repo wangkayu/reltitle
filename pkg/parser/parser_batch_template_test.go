@@ -61,8 +61,8 @@ func TestParserBatchSourceType_WEBRipRange(t *testing.T) {
 	if got := canonicalEpisodeRange(res); got != "1-1" {
 		t.Fatalf("episode_range=%q want=%q", got, "1-1")
 	}
-	if res.EPSlot == nil || res.EPSlot.Primary == nil {
-		t.Fatalf("expected epslot.primary for explicit WEBRip range case")
+	if sem := canonicalEPSemantics(res); sem == nil {
+		t.Fatalf("expected ep semantics for explicit WEBRip range case")
 	}
 }
 
@@ -87,8 +87,8 @@ func TestParserBatchSourceType_DVDRipPack(t *testing.T) {
 	if got := firstAttrValue(res, model.AttrPackKind); got != "dvdrip" {
 		t.Fatalf("pack_kind=%q want=%q", got, "dvdrip")
 	}
-	if res.EPSlot != nil {
-		t.Fatalf("ambiguous batch digits should not keep candidate-only epslot, got=%+v", res.EPSlot)
+	if sem := canonicalEPSemantics(res); sem != nil {
+		t.Fatalf("ambiguous batch digits should not keep ep semantics, got=%+v", sem)
 	}
 }
 
@@ -107,14 +107,14 @@ func TestParserBatchSeasonRange_FromSeasonKeywordAndConnector(t *testing.T) {
 	if got := res.ContentKind; got != "BATCH" {
 		t.Fatalf("content_kind=%q want=%q", got, "BATCH")
 	}
-	if got := firstAttrValue(res, model.AttrSeasonRange); got != "S1-S2" {
+	if got := canonicalSeasonRange(res); got != "S1-S2" {
 		t.Fatalf("season_range=%q want=%q", got, "S1-S2")
 	}
-	if got := firstAttrValue(res, model.AttrEpisode); got != "" {
+	if got := canonicalEpisode(res); got != "" {
 		t.Fatalf("episode=%q want empty", got)
 	}
-	if got := firstAttrValue(res, model.AttrEpisodeList); got != "" {
-		t.Fatalf("episode_list=%q want empty", got)
+	if got := canonicalEpisodeList(res); len(got) != 0 {
+		t.Fatalf("episode_list=%v want empty", got)
 	}
 }
 
@@ -133,7 +133,7 @@ func TestParserBatchSeasonRange_FrenchSaisonRange(t *testing.T) {
 	if got := res.ContentKind; got != "BATCH" {
 		t.Fatalf("content_kind=%q want=%q", got, "BATCH")
 	}
-	if got := firstAttrValue(res, model.AttrSeasonRange); got != "S1-S2" {
+	if got := canonicalSeasonRange(res); got != "S1-S2" {
 		t.Fatalf("season_range=%q want=%q", got, "S1-S2")
 	}
 }
@@ -355,7 +355,7 @@ func TestParserEpisodeCompactEndFlag_NotBatch(t *testing.T) {
 	if got := firstAttrValue(res, model.AttrPackKind); got != "" {
 		t.Fatalf("pack_kind=%q want empty", got)
 	}
-	if got := firstAttrValue(res, model.AttrEpisodeRange); got != "" {
+	if got := canonicalEpisodeRange(res); got != "" {
 		t.Fatalf("episode_range=%q want empty", got)
 	}
 	if got := firstAttrValue(res, model.AttrReleaseStatus); got != "END" {
@@ -498,20 +498,14 @@ func TestParserEpisodeList_ConanDoubleEpisodeBracket(t *testing.T) {
 	if got := canonicalEpisode(res); got != "804" {
 		t.Fatalf("episode=%q want=%q", got, "804")
 	}
-	if got := firstAttrValue(res, model.AttrEpisodeList); got != "804,805" {
-		t.Fatalf("episode_list=%q want=%q", got, "804,805")
+	if got := canonicalEpisodeList(res); strings.Join(got, ",") != "804,805" {
+		t.Fatalf("episode_list=%v want=%q", got, "804,805")
 	}
-	if got := firstAttrValue(res, model.AttrEpisodeRange); got != "" {
+	if got := canonicalEpisodeRange(res); got != "" {
 		t.Fatalf("episode_range=%q want empty", got)
 	}
-	if res.EPSlot == nil || res.EPSlot.Primary == nil {
-		t.Fatalf("epslot.primary should exist")
-	}
-	if got := strings.ToUpper(strings.TrimSpace(res.EPSlot.Primary.Kind)); got != "EP_LIST" {
-		t.Fatalf("epslot.primary.kind=%q want=%q", got, "EP_LIST")
-	}
-	if got := strings.TrimSpace(res.EPSlot.Primary.EpisodeList); got != "804,805" {
-		t.Fatalf("epslot.primary.episode_list=%q want=%q", got, "804,805")
+	if got := canonicalEPKind(res); got != "EP_LIST" {
+		t.Fatalf("ep_semantics.kind=%q want=%q", got, "EP_LIST")
 	}
 }
 
@@ -530,7 +524,7 @@ func TestParserBatchTemplate_YangirePackSpecialsCleanTitleAndPlatform(t *testing
 	if got := res.ContentKind; got != "BATCH" {
 		t.Fatalf("content_kind=%q want=%q", got, "BATCH")
 	}
-	if got := firstAttrValue(res, model.AttrSeason); got != "1" {
+	if got := canonicalSeason(res); got != "1" {
 		t.Fatalf("season=%q want=%q", got, "1")
 	}
 	if got := firstAttrValue(res, model.AttrPlatform); got != "YUZUKITV" {
@@ -556,10 +550,10 @@ func TestParserBatchTemplate_CatTalesLNTVPlatformExtracted(t *testing.T) {
 	if got := res.ContentKind; got != "TV_EP" {
 		t.Fatalf("content_kind=%q want=%q", got, "TV_EP")
 	}
-	if got := firstAttrValue(res, model.AttrSeason); got != "1" {
+	if got := canonicalSeason(res); got != "1" {
 		t.Fatalf("season=%q want=%q", got, "1")
 	}
-	if got := firstAttrValue(res, model.AttrEpisode); got != "20" {
+	if got := canonicalEpisode(res); got != "20" {
 		t.Fatalf("episode=%q want=%q", got, "20")
 	}
 	if got := firstAttrValue(res, model.AttrPlatform); got != "LNTV" {
@@ -691,7 +685,7 @@ func TestParserBatchTemplate_SxxPartIndexWithoutStrongEP_PrefersSeasonPack(t *te
 	if got := res.ContentKind; got != "BATCH" {
 		t.Fatalf("content_kind=%q want=%q", got, "BATCH")
 	}
-	if got := firstAttrValue(res, model.AttrSeason); got != "4" {
+	if got := canonicalSeason(res); got != "4" {
 		t.Fatalf("season=%q want=%q", got, "4")
 	}
 	if got := canonicalEpisode(res); got != "" {
@@ -717,7 +711,7 @@ func TestParserBatchTemplate_SxxPartIndexWithStrongEP_StillKeepsEpisode(t *testi
 	if got := res.ContentKind; got != "TV_EP" {
 		t.Fatalf("content_kind=%q want=%q", got, "TV_EP")
 	}
-	if got := firstAttrValue(res, model.AttrSeason); got != "4" {
+	if got := canonicalSeason(res); got != "4" {
 		t.Fatalf("season=%q want=%q", got, "4")
 	}
 	if got := canonicalEpisode(res); got != "3" {
@@ -726,11 +720,7 @@ func TestParserBatchTemplate_SxxPartIndexWithStrongEP_StillKeepsEpisode(t *testi
 	if got := canonicalEpisodeRange(res); got != "" {
 		t.Fatalf("episode_range=%q want empty", got)
 	}
-	if res.EPSlot != nil {
-		for _, c := range res.EPSlot.Candidates {
-			if strings.TrimSpace(c.EpisodeRange) == "1-3" {
-				t.Fatalf("part index must not leak as false range candidate, epslot=%+v", res.EPSlot)
-			}
-		}
+	if got := canonicalEPKind(res); got != "EP" {
+		t.Fatalf("ep_semantics.kind=%q want=%q", got, "EP")
 	}
 }

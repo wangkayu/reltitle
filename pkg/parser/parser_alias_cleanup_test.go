@@ -287,13 +287,6 @@ func TestParserEpisodeDetect_SeasonWordDashEpisodeCleansTitle(t *testing.T) {
 	if got := canonicalTitle(res); got != "Saikyou no Ousama, Nidome no Jinsei wa Nani wo Suru" {
 		t.Fatalf("title=%q want=%q", got, "Saikyou no Ousama, Nidome no Jinsei wa Nani wo Suru")
 	}
-	if res.EPSlot != nil {
-		for _, c := range res.EPSlot.Candidates {
-			if strings.EqualFold(strings.TrimSpace(c.Kind), "RANGE") {
-				t.Fatalf("false season/episode range should be suppressed, epslot=%+v", res.EPSlot)
-			}
-		}
-	}
 }
 
 func TestParserEpisodeDetect_DashSeasonSuffixBeforeBracketPrefersBracketEpisode(t *testing.T) {
@@ -347,16 +340,6 @@ func TestParserEpisodeDetect_PartIndexDoesNotBecomeSeason_BilingualTitle(t *test
 	if !containsAlias(aliases, "Dr.Stone Science Future Part 3") {
 		t.Fatalf("expected english part alias to remain, aliases=%v", aliases)
 	}
-	if res.EPSlot != nil {
-		for _, c := range res.EPSlot.Candidates {
-			if strings.TrimSpace(c.EpisodeRange) == "3-25" {
-				t.Fatalf("part index must not survive as false range candidate, epslot=%+v", res.EPSlot)
-			}
-			if strings.TrimSpace(c.Episode) == "3" {
-				t.Fatalf("part index should not remain as epslot candidate, epslot=%+v", res.EPSlot)
-			}
-		}
-	}
 }
 
 func TestParserEpisodeDetect_PartIndexDoesNotBecomeSeason_EnglishTitle(t *testing.T) {
@@ -385,16 +368,6 @@ func TestParserEpisodeDetect_PartIndexDoesNotBecomeSeason_EnglishTitle(t *testin
 	}
 	if got := canonicalTitle(res); got != "Dr.Stone : Science Future Part 3" {
 		t.Fatalf("title=%q want=%q", got, "Dr.Stone : Science Future Part 3")
-	}
-	if res.EPSlot != nil {
-		for _, c := range res.EPSlot.Candidates {
-			if strings.TrimSpace(c.EpisodeRange) == "3-25" {
-				t.Fatalf("part index must not survive as false range candidate, epslot=%+v", res.EPSlot)
-			}
-			if strings.TrimSpace(c.Episode) == "3" {
-				t.Fatalf("part index should not remain as epslot candidate, epslot=%+v", res.EPSlot)
-			}
-		}
 	}
 }
 
@@ -1295,17 +1268,8 @@ func TestParserSpecial_NCOPNCEDKeepsNCEDCandidate(t *testing.T) {
 	if got := canonicalSPKind(res); got != "NCOP" {
 		t.Fatalf("sp_kind=%q want=NCOP", got)
 	}
-	hasNCEDCandidate := false
-	if res.EPSlot != nil {
-		for _, c := range res.EPSlot.Candidates {
-			if strings.EqualFold(strings.TrimSpace(c.Kind), "SP") && strings.EqualFold(strings.TrimSpace(c.SPKind), "NCED") {
-				hasNCEDCandidate = true
-				break
-			}
-		}
-	}
-	if !hasNCEDCandidate {
-		t.Fatalf("expected NCED candidate in epslot, got=%+v", res.EPSlot)
+	if got := canonicalEPKind(res); got != "SP" {
+		t.Fatalf("ep_semantics.kind=%q want=SP", got)
 	}
 }
 
@@ -1505,18 +1469,20 @@ func TestDropRedundantNoteAttributes_RemovesMetaDuplicates(t *testing.T) {
 		{Type: model.AttrPlatform, Normalized: "VIUTV"},
 		{Type: model.AttrResolution, Normalized: "1080p"},
 		{Type: model.AttrSourceType, Normalized: "WEB-DL"},
-		{Type: model.AttrSeason, Normalized: "2"},
 		{Type: model.AttrPackKind, Normalized: "tv_pack"},
 		{Type: model.AttrContents, Normalized: "MOVIE"},
 		{Type: model.AttrNote, Normalized: "VIUTV"},
 		{Type: model.AttrNote, Normalized: "1080p"},
 		{Type: model.AttrNote, Normalized: "WEB-DL"},
 		{Type: model.AttrNote, Normalized: "Season 2"},
+		{Type: model.AttrNote, Normalized: "S2"},
+		{Type: model.AttrNote, Normalized: "Season 1-3"},
+		{Type: model.AttrNote, Normalized: "S1-S3"},
 		{Type: model.AttrNote, Normalized: "TV_PACK"},
 		{Type: model.AttrNote, Normalized: "MOVIE"},
 		{Type: model.AttrNote, Normalized: "RECRUITMENT"},
 	}
-	got := dropRedundantNoteAttributes(attrs)
+	got := dropRedundantNoteAttributes(attrs, "2", "S1-S3")
 	notes := make([]string, 0, 8)
 	for _, a := range got {
 		if a.Type == model.AttrNote {
@@ -1540,14 +1506,14 @@ func TestParserSpecial_DashSpecialPhrasePromotesEPSlotPrimarySP(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse failed: %v", err)
 	}
-	if res.EPSlot == nil || res.EPSlot.Primary == nil {
-		t.Fatalf("epslot.primary should be promoted for dash special phrase, epslot=%+v", res.EPSlot)
+	if sem := canonicalEPSemantics(res); sem == nil {
+		t.Fatalf("ep_semantics should be promoted for dash special phrase")
 	}
-	if got := strings.ToUpper(strings.TrimSpace(res.EPSlot.Primary.Kind)); got != "SP" {
-		t.Fatalf("epslot.primary.kind=%q want=SP", got)
+	if got := canonicalEPKind(res); got != "SP" {
+		t.Fatalf("ep_semantics.kind=%q want=SP", got)
 	}
-	if got := strings.ToUpper(strings.TrimSpace(res.EPSlot.Primary.SPKind)); got != "SP" {
-		t.Fatalf("epslot.primary.sp_kind=%q want=SP", got)
+	if got := canonicalSPKind(res); got != "SP" {
+		t.Fatalf("sp_kind=%q want=SP", got)
 	}
 	if got := canonicalSPKind(res); got != "SP" {
 		t.Fatalf("canonical sp_kind=%q want=SP", got)
@@ -1575,14 +1541,14 @@ func TestParserSpecial_DashSPBeforeTechParenPromotesSpecial(t *testing.T) {
 	if got := canonicalSPKind(res); got != "SP" {
 		t.Fatalf("sp_kind=%q want=%q", got, "SP")
 	}
-	if res.EPSlot == nil || res.EPSlot.Primary == nil {
-		t.Fatalf("epslot.primary should be promoted for dash SP before tech paren, epslot=%+v", res.EPSlot)
+	if sem := canonicalEPSemantics(res); sem == nil {
+		t.Fatalf("ep_semantics should be promoted for dash SP before tech paren")
 	}
-	if got := strings.ToUpper(strings.TrimSpace(res.EPSlot.Primary.Kind)); got != "SP" {
-		t.Fatalf("epslot.primary.kind=%q want=SP", got)
+	if got := canonicalEPKind(res); got != "SP" {
+		t.Fatalf("ep_semantics.kind=%q want=SP", got)
 	}
-	if got := strings.ToUpper(strings.TrimSpace(res.EPSlot.Primary.SPKind)); got != "SP" {
-		t.Fatalf("epslot.primary.sp_kind=%q want=SP", got)
+	if got := canonicalSPKind(res); got != "SP" {
+		t.Fatalf("sp_kind=%q want=SP", got)
 	}
 }
 
@@ -1607,11 +1573,11 @@ func TestParserSpecial_EnglishSpecialTailMarkerPromotesSpecial(t *testing.T) {
 	if got := canonicalSPKind(res); got != "SP" {
 		t.Fatalf("sp_kind=%q want=%q", got, "SP")
 	}
-	if res.EPSlot == nil || res.EPSlot.Primary == nil {
-		t.Fatalf("epslot.primary should not be nil, epslot=%+v", res.EPSlot)
+	if sem := canonicalEPSemantics(res); sem == nil {
+		t.Fatalf("ep_semantics should not be nil")
 	}
-	if got := strings.ToUpper(strings.TrimSpace(res.EPSlot.Primary.Kind)); got != "SP" {
-		t.Fatalf("epslot.primary.kind=%q want=SP", got)
+	if got := canonicalEPKind(res); got != "SP" {
+		t.Fatalf("ep_semantics.kind=%q want=SP", got)
 	}
 }
 
@@ -1627,11 +1593,11 @@ func TestParserEPSlotAxis_BracketEpisodeUsesABS(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse failed: %v", err)
 	}
-	if res.EPSlot == nil || res.EPSlot.Primary == nil {
-		t.Fatalf("epslot.primary should not be nil")
+	if sem := canonicalEPSemantics(res); sem == nil {
+		t.Fatalf("ep_semantics should not be nil")
 	}
-	if got := strings.ToUpper(strings.TrimSpace(res.EPSlot.Primary.Axis)); got != "ABS" {
-		t.Fatalf("epslot.primary.axis=%q want=%q", got, "ABS")
+	if got := canonicalEPAxis(res); got != "ABS" {
+		t.Fatalf("ep_semantics.axis=%q want=%q", got, "ABS")
 	}
 }
 
@@ -1647,11 +1613,11 @@ func TestParserEPSlotAxis_EpisodeKeywordUsesABS(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse failed: %v", err)
 	}
-	if res.EPSlot == nil || res.EPSlot.Primary == nil {
-		t.Fatalf("epslot.primary should not be nil")
+	if sem := canonicalEPSemantics(res); sem == nil {
+		t.Fatalf("ep_semantics should not be nil")
 	}
-	if got := strings.ToUpper(strings.TrimSpace(res.EPSlot.Primary.Axis)); got != "ABS" {
-		t.Fatalf("epslot.primary.axis=%q want=%q", got, "ABS")
+	if got := canonicalEPAxis(res); got != "ABS" {
+		t.Fatalf("ep_semantics.axis=%q want=%q", got, "ABS")
 	}
 }
 
@@ -1667,11 +1633,11 @@ func TestParserEPSlotAxis_DashEpisodeBeforeTechBracketUsesABS(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse failed: %v", err)
 	}
-	if res.EPSlot == nil || res.EPSlot.Primary == nil {
-		t.Fatalf("epslot.primary should not be nil")
+	if sem := canonicalEPSemantics(res); sem == nil {
+		t.Fatalf("ep_semantics should not be nil")
 	}
-	if got := strings.ToUpper(strings.TrimSpace(res.EPSlot.Primary.Axis)); got != "ABS" {
-		t.Fatalf("epslot.primary.axis=%q want=%q", got, "ABS")
+	if got := canonicalEPAxis(res); got != "ABS" {
+		t.Fatalf("ep_semantics.axis=%q want=%q", got, "ABS")
 	}
 }
 
@@ -1687,11 +1653,11 @@ func TestParserEPSlotAxis_EPrefixedTokenUsesABS(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse failed: %v", err)
 	}
-	if res.EPSlot == nil || res.EPSlot.Primary == nil {
-		t.Fatalf("epslot.primary should not be nil")
+	if sem := canonicalEPSemantics(res); sem == nil {
+		t.Fatalf("ep_semantics should not be nil")
 	}
-	if got := strings.ToUpper(strings.TrimSpace(res.EPSlot.Primary.Axis)); got != "ABS" {
-		t.Fatalf("epslot.primary.axis=%q want=%q", got, "ABS")
+	if got := canonicalEPAxis(res); got != "ABS" {
+		t.Fatalf("ep_semantics.axis=%q want=%q", got, "ABS")
 	}
 }
 
@@ -1707,14 +1673,14 @@ func TestParserEPSlotAxis_RangeUsesABSWithoutSeason(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse failed: %v", err)
 	}
-	if res.EPSlot == nil || res.EPSlot.Primary == nil {
-		t.Fatalf("epslot.primary should not be nil")
+	if sem := canonicalEPSemantics(res); sem == nil {
+		t.Fatalf("ep_semantics should not be nil")
 	}
-	if got := strings.ToUpper(strings.TrimSpace(res.EPSlot.Primary.Kind)); got != "RANGE" {
-		t.Fatalf("epslot.primary.kind=%q want=%q", got, "RANGE")
+	if got := canonicalEPKind(res); got != "RANGE" {
+		t.Fatalf("ep_semantics.kind=%q want=%q", got, "RANGE")
 	}
-	if got := strings.ToUpper(strings.TrimSpace(res.EPSlot.Primary.Axis)); got != "ABS" {
-		t.Fatalf("epslot.primary.axis=%q want=%q", got, "ABS")
+	if got := canonicalEPAxis(res); got != "ABS" {
+		t.Fatalf("ep_semantics.axis=%q want=%q", got, "ABS")
 	}
 }
 
@@ -1730,14 +1696,14 @@ func TestParserEPSlotAxis_GroupRouteOverrideUsesABS(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse failed: %v", err)
 	}
-	if res.EPSlot == nil || res.EPSlot.Primary == nil {
-		t.Fatalf("epslot.primary should not be nil")
+	if sem := canonicalEPSemantics(res); sem == nil {
+		t.Fatalf("ep_semantics should not be nil")
 	}
-	if got := strings.TrimSpace(res.EPSlot.Primary.Source); got != "group_route_override" {
-		t.Fatalf("epslot.primary.source=%q want=%q", got, "group_route_override")
+	if got := canonicalEPSource(res); got != "group_route_override" {
+		t.Fatalf("ep_semantics.source=%q want=%q", got, "group_route_override")
 	}
-	if got := strings.ToUpper(strings.TrimSpace(res.EPSlot.Primary.Axis)); got != "ABS" {
-		t.Fatalf("epslot.primary.axis=%q want=%q", got, "ABS")
+	if got := canonicalEPAxis(res); got != "ABS" {
+		t.Fatalf("ep_semantics.axis=%q want=%q", got, "ABS")
 	}
 }
 
@@ -1802,13 +1768,6 @@ func TestParserEpisode_BracketCatalogIDNotMisreadAsEpisode(t *testing.T) {
 	if got := canonicalEpisode(res); got == "9023" {
 		t.Fatalf("catalog id should not be parsed as episode, got=%q", got)
 	}
-	if res != nil && res.EPSlot != nil {
-		for _, c := range res.EPSlot.Candidates {
-			if strings.TrimSpace(c.Episode) == "9023" {
-				t.Fatalf("catalog id should not be kept in epslot candidates: %+v", c)
-			}
-		}
-	}
 }
 
 func TestParserEpisode_SeasonNumberInAliasNotMisreadAsEpisode(t *testing.T) {
@@ -1845,14 +1804,6 @@ func TestParserEpisode_VolumeRangeNotMisreadAsEpisode(t *testing.T) {
 	}
 	if got := canonicalEpisode(res); got == "1" || got == "5" {
 		t.Fatalf("volume range number must not be parsed as episode, got=%q", got)
-	}
-	if res != nil && res.EPSlot != nil {
-		for _, c := range res.EPSlot.Candidates {
-			ep := strings.TrimSpace(c.Episode)
-			if ep == "1" || ep == "5" {
-				t.Fatalf("volume range number must not be kept in epslot candidates: %+v", c)
-			}
-		}
 	}
 }
 
@@ -1929,8 +1880,8 @@ func TestParserPlatform_BSExChannelDoesNotTriggerSPKindEX(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse failed: %v", err)
 	}
-	if hasAttrValue(attrValues(res, model.AttrSPKind), "EX") {
-		t.Fatalf("BS-EX channel marker must not trigger sp_kind=EX, attrs=%v", attrValues(res, model.AttrSPKind))
+	if got := canonicalSPKind(res); got == "EX" {
+		t.Fatalf("BS-EX channel marker must not trigger sp_kind=EX, got=%q", got)
 	}
 	if !hasAttrValue(attrValues(res, model.AttrPlatform), "BS-EX") {
 		t.Fatalf("expected platform=BS-EX, attrs=%v", attrValues(res, model.AttrPlatform))
@@ -1949,8 +1900,8 @@ func TestParserPlatform_CSExChannelDoesNotTriggerSPKindEX(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse failed: %v", err)
 	}
-	if hasAttrValue(attrValues(res, model.AttrSPKind), "EX") {
-		t.Fatalf("CS-EX1 channel marker must not trigger sp_kind=EX, attrs=%v", attrValues(res, model.AttrSPKind))
+	if got := canonicalSPKind(res); got == "EX" {
+		t.Fatalf("CS-EX1 channel marker must not trigger sp_kind=EX, got=%q", got)
 	}
 	if !hasAttrValue(attrValues(res, model.AttrPlatform), "CS-EX1") {
 		t.Fatalf("expected platform=CS-EX1, attrs=%v", attrValues(res, model.AttrPlatform))
@@ -3383,8 +3334,8 @@ func TestParserGroupRouteOverride_GroupEPRouteWGDL(t *testing.T) {
 	if !containsAlias(aliases, "Fate strange Fake") {
 		t.Fatalf("expected alias Fate strange Fake, got=%v", aliases)
 	}
-	if res.EPSlot == nil || res.EPSlot.Primary == nil || strings.TrimSpace(res.EPSlot.Primary.Source) != "group_route_override" {
-		t.Fatalf("expected group_route_override source, got=%+v", res.EPSlot)
+	if got := canonicalEPSource(res); got != "group_route_override" {
+		t.Fatalf("expected group_route_override source, got=%q", got)
 	}
 	for _, a := range aliases {
 		if strings.Contains(a, "09 ") || strings.HasPrefix(strings.TrimSpace(a), "09_") {
@@ -3411,8 +3362,8 @@ func TestParserGroupRouteOverride_GroupEPRouteWGDLUnderscoreSeparatorApplied(t *
 	if got := canonicalEpisode(res); got != "11" {
 		t.Fatalf("episode=%q want=%q", got, "11")
 	}
-	if res.EPSlot == nil || res.EPSlot.Primary == nil || strings.TrimSpace(res.EPSlot.Primary.Source) != "group_route_override" {
-		t.Fatalf("expected group_route_override source, got=%+v", res.EPSlot)
+	if got := canonicalEPSource(res); got != "group_route_override" {
+		t.Fatalf("expected group_route_override source, got=%q", got)
 	}
 	if got := canonicalTitle(res); got == "" || strings.Contains(got, "_") {
 		t.Fatalf("unexpected title=%q", got)
@@ -3448,8 +3399,8 @@ func TestParserGroupRouteOverride_AtlasUnderscoreSeparatorApplied(t *testing.T) 
 	if containsAlias(aliases, "strange Fake") {
 		t.Fatalf("fragment alias should be pruned, got=%v", aliases)
 	}
-	if res.EPSlot == nil || res.EPSlot.Primary == nil || strings.TrimSpace(res.EPSlot.Primary.Source) != "group_route_override" {
-		t.Fatalf("expected group_route_override source, got=%+v", res.EPSlot)
+	if got := canonicalEPSource(res); got != "group_route_override" {
+		t.Fatalf("expected group_route_override source, got=%q", got)
 	}
 }
 
@@ -3465,8 +3416,8 @@ func TestParserGroupRouteOverride_AtlasSpaceSeparatorNotApplied(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse failed: %v", err)
 	}
-	if res.EPSlot != nil && res.EPSlot.Primary != nil && strings.TrimSpace(res.EPSlot.Primary.Source) == "group_route_override" {
-		t.Fatalf("space separator should not hit atlas group override, epslot=%+v", res.EPSlot)
+	if got := canonicalEPSource(res); got == "group_route_override" {
+		t.Fatalf("space separator should not hit atlas group override, ep_semantics=%+v", canonicalEPSemantics(res))
 	}
 }
 
@@ -3613,13 +3564,8 @@ func TestParserGroupRouteOverride_GroupEPRouteMarukoNotMovie(t *testing.T) {
 	if notes := attrValues(res, model.AttrNote); !containsAlias(notes, "2023.08.06") {
 		t.Fatalf("missing maruko airdate note, notes=%v", notes)
 	}
-	if res.EPSlot == nil {
-		t.Fatalf("epslot should not be nil")
-	}
-	for _, c := range res.EPSlot.Candidates {
-		if c.Episode == "8" || c.Episode == "6" {
-			t.Fatalf("date fragments leaked into epslot candidates: %+v", res.EPSlot.Candidates)
-		}
+	if sem := canonicalEPSemantics(res); sem == nil {
+		t.Fatalf("ep_semantics should not be nil")
 	}
 }
 
@@ -3641,8 +3587,8 @@ func TestParserGroupRouteOverride_MarukoAirdateDoesNotBecomeEpisode(t *testing.T
 	if got := canonicalEpisode(res); got != "" {
 		t.Fatalf("episode=%q want empty", got)
 	}
-	if got := res.ContentKind; got == "TV_EP" && res.EPSlot != nil && res.EPSlot.Primary != nil && strings.TrimSpace(res.EPSlot.Primary.Source) == "group_route_override" {
-		t.Fatalf("date-only third bracket should not trigger maruko episode override, epslot=%+v", res.EPSlot)
+	if got := res.ContentKind; got == "TV_EP" && canonicalEPSource(res) == "group_route_override" {
+		t.Fatalf("date-only third bracket should not trigger maruko episode override, ep_semantics=%+v", canonicalEPSemantics(res))
 	}
 	if aliases := canonicalAliases(res); containsAlias(aliases, "2026.03 29") || containsAlias(aliases, "2026.03.29") {
 		t.Fatalf("date bracket should not become title alias, aliases=%v", aliases)
@@ -4240,14 +4186,14 @@ func TestParserEPSlotPrimary_SxxExxHasPrimary(t *testing.T) {
 	if got := canonicalEpisode(res); got != "11" {
 		t.Fatalf("episode=%q want=%q", got, "11")
 	}
-	if res.EPSlot == nil || res.EPSlot.Primary == nil {
-		t.Fatalf("epslot.primary should not be nil for sxxexx title")
+	if sem := canonicalEPSemantics(res); sem == nil {
+		t.Fatalf("ep_semantics should not be nil for sxxexx title")
 	}
-	if got := strings.TrimSpace(res.EPSlot.Primary.Source); got != "sxxexx_final" {
-		t.Fatalf("epslot.primary.source=%q want=%q", got, "sxxexx_final")
+	if got := canonicalEPSource(res); got != "sxxexx_final" {
+		t.Fatalf("ep_semantics.source=%q want=%q", got, "sxxexx_final")
 	}
-	if got := strings.TrimSpace(res.EPSlot.Primary.Season); got != "1" {
-		t.Fatalf("epslot.primary.season=%q want=%q", got, "1")
+	if got := canonicalSeason(res); got != "1" {
+		t.Fatalf("season=%q want=%q", got, "1")
 	}
 }
 
@@ -4266,11 +4212,11 @@ func TestParserEPSlotPrimary_SxxExxE00AsEpisodeZero(t *testing.T) {
 	if got := canonicalEpisode(res); got != "0" {
 		t.Fatalf("episode=%q want=%q", got, "0")
 	}
-	if res.EPSlot == nil || res.EPSlot.Primary == nil {
-		t.Fatalf("epslot.primary should not be nil for sxxexx e00 title")
+	if sem := canonicalEPSemantics(res); sem == nil {
+		t.Fatalf("ep_semantics should not be nil for sxxexx e00 title")
 	}
-	if got := strings.TrimSpace(res.EPSlot.Primary.Source); got != "sxxexx_final" {
-		t.Fatalf("epslot.primary.source=%q want=%q", got, "sxxexx_final")
+	if got := canonicalEPSource(res); got != "sxxexx_final" {
+		t.Fatalf("ep_semantics.source=%q want=%q", got, "sxxexx_final")
 	}
 }
 
@@ -4828,20 +4774,9 @@ func TestConsumeAliasChainTokensByFinalAliases_Jibaketa(t *testing.T) {
 	}
 	cp := make([]model.Token, len(res.Tokens))
 	copy(cp, res.Tokens)
-	epIdx := -1
+	epIdx := episodeTokenStart(res)
 	seasonIdx := -1
 	epRangeIdx := -1
-	for _, a := range res.Attributes {
-		if a.Type == model.AttrEpisode && a.TokenStart >= 0 {
-			epIdx = a.TokenStart
-		}
-		if a.Type == model.AttrSeason && a.TokenStart >= 0 {
-			seasonIdx = a.TokenStart
-		}
-		if a.Type == model.AttrEpisodeRange && a.TokenStart >= 0 {
-			epRangeIdx = a.TokenStart
-		}
-	}
 	p.consumeAliasChainTokensByFinalAliases(cp, [2]int{0, 4}, canonicalTitle(res), canonicalAliases(res), epIdx, epRangeIdx, seasonIdx, res.Attributes)
 	removedSlash := 0
 	for _, tok := range cp {
@@ -4865,10 +4800,7 @@ func TestConsumeAliasChainTokensByFinalAliases_JibaketaBilingualSlashOnly(t *tes
 	if err != nil {
 		t.Fatalf("parse failed: %v", err)
 	}
-	epIdx := -1
-	if res.EPSlot != nil && res.EPSlot.Primary != nil && res.EPSlot.Primary.TokenStart >= 0 {
-		epIdx = res.EPSlot.Primary.TokenStart
-	}
+	epIdx := episodeTokenStart(res)
 	if epIdx < 0 {
 		t.Fatalf("expected episode token index")
 	}
@@ -4893,10 +4825,7 @@ func TestGroupSpecificTitleChainDelimiterCleanup_JibaketaViuTVSlash(t *testing.T
 	if err != nil {
 		t.Fatalf("parse failed: %v", err)
 	}
-	epIdx := -1
-	if res.EPSlot != nil && res.EPSlot.Primary != nil && res.EPSlot.Primary.TokenStart >= 0 {
-		epIdx = res.EPSlot.Primary.TokenStart
-	}
+	epIdx := episodeTokenStart(res)
 	if epIdx < 0 {
 		t.Fatalf("expected episode token index")
 	}

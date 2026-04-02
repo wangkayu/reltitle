@@ -137,6 +137,35 @@ func inferTitleAndAliasesFromTitleCore(title string, aliasValid func(string) boo
 					return main, aliases
 				}
 			}
+			firstHasSeasonBridge := extractExplicitSeasonNumber(first) != "" || stripExplicitSeasonSuffix(first) != ""
+			if firstHasSeasonBridge {
+				for _, p := range parts[1:] {
+					p = strings.TrimSpace(p)
+					if p == "" || !hasCJK(p) || hasLatin(p) {
+						continue
+					}
+					if extractExplicitSeasonNumber(p) == "" && stripExplicitSeasonSuffix(p) == "" {
+						continue
+					}
+					main := normalizeTitleMain(cleanTitleToken(first))
+					if stripped := stripExplicitSeasonSuffix(main); stripped != "" {
+						main = stripped
+					}
+					if main == "" {
+						main = normalizeTitleMain(first)
+					}
+					aliases := make([]string, 0, len(parts))
+					seen := map[string]bool{}
+					seen[strings.ToLower(strings.TrimSpace(main))] = true
+					for _, a := range parts[1:] {
+						addAlias(&aliases, seen, a)
+					}
+					if len(aliases) == 0 {
+						return main, nil
+					}
+					return main, aliases
+				}
+			}
 			for _, p := range parts[1:] {
 				p = strings.TrimSpace(p)
 				if p == "" {

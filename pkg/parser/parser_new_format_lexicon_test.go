@@ -136,6 +136,54 @@ func TestLexiconNewFormat_VOSTFRSeasonBatchKeepsFrenchSubLang(t *testing.T) {
 	}
 }
 
+func TestLexiconNewFormat_YTBPlatformAndZhHansSubtitle(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Gecko] Dog's Tea - S01 (犬之茗; Cat's Tea; Quan Zhi Ming; The Dog's Tea) [YTB.WEB-DL 1080P AVC, Opus, SUB, HARD SUB (ZH-HANS)][BATCH]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	if !hasAttrNormalized(res.Attributes, model.AttrPlatform, "YTB") {
+		t.Fatalf("expected platform=YTB for YTB marker, attrs=%v", res.Attributes)
+	}
+	if !hasAttrNormalized(res.Attributes, model.AttrSubLang, "SC") {
+		t.Fatalf("expected sub_lang=SC for ZH-HANS marker, attrs=%v", res.Attributes)
+	}
+	if hasAttrNormalized(res.Attributes, model.AttrSubLang, "ZH") {
+		t.Fatalf("ZH-HANS should keep SC precision and not collapse to ZH, attrs=%v", res.Attributes)
+	}
+	if !hasAttrNormalized(res.Attributes, model.AttrSubFlag, "hard") {
+		t.Fatalf("expected sub_flag=hard for HARD SUB marker, attrs=%v", res.Attributes)
+	}
+}
+
+func TestLexiconNewFormat_ZhHantSubtitleKeepsTC(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Gecko] Dog's Tea - S01 [WEB-DL 1080P AVC, SUB, HARD SUB (ZH-HANT)][BATCH]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	if !hasAttrNormalized(res.Attributes, model.AttrSubLang, "TC") {
+		t.Fatalf("expected sub_lang=TC for ZH-HANT marker, attrs=%v", res.Attributes)
+	}
+	if hasAttrNormalized(res.Attributes, model.AttrSubLang, "ZH") {
+		t.Fatalf("ZH-HANT should keep TC precision and not collapse to ZH, attrs=%v", res.Attributes)
+	}
+}
+
 func TestLexiconNewFormat_HiResConsumedAsNoteNotTailGroup(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

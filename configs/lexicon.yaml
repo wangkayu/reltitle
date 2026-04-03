@@ -8413,6 +8413,23 @@ entries:
         remove: true
         confidence: 0.8
 
+  - id: platform_youtube
+    any_of:
+      - tokens: ["youtube"]
+        emit:
+          - type: platform
+            normalized: "YTB"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["ytb"]
+        emit:
+          - type: platform
+            normalized: "YTB"
+            token_index: -1
+        remove: true
+        confidence: 0.78
+
   - id: region_hk_mo_tw
     any_of:
       - scope: paren

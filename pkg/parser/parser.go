@@ -5059,7 +5059,7 @@ func shouldUseGenericZHFromSpan(span string) bool {
 	}
 	// Explicit script markers should keep SC/TC precision.
 	up := strings.ToUpper(s)
-	if strings.Contains(s, "简") || strings.Contains(s, "簡") || strings.Contains(s, "繁") || strings.Contains(up, "CHS") || strings.Contains(up, "CHT") || strings.Contains(up, "SC") || strings.Contains(up, "TC") || strings.Contains(up, "BIG5") || strings.Contains(up, "GB") {
+	if strings.Contains(s, "简") || strings.Contains(s, "簡") || strings.Contains(s, "繁") || strings.Contains(up, "CHS") || strings.Contains(up, "CHT") || strings.Contains(up, "SC") || strings.Contains(up, "TC") || strings.Contains(up, "BIG5") || strings.Contains(up, "GB") || strings.Contains(up, "HANS") || strings.Contains(up, "HANT") {
 		return false
 	}
 	return true

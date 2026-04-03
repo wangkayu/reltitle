@@ -412,6 +412,10 @@ func passDetectEpisodeRangeAndEpisode(tokens []model.Token, attrs *[]model.Attri
 		ctx.EpisodeRange = taggedRange
 		ctx.EpisodeRangeIdx = taggedRangeIdx
 	}
+	if strings.TrimSpace(ctx.EpisodeRange) != "" && isSharedPrefixSeasonEpisodeRangeAt(tokens, ctx.EpisodeRangeIdx) {
+		ctx.EpisodeFromSxxExx = ""
+		ctx.SxxExxIdx = -1
+	}
 	if strings.TrimSpace(ctx.EpisodeRange) != "" && ctx.EpisodeRangeIdx >= 0 {
 		if pk := normalizeEpisodeRangeTVPackSuffix(tokens, attrs, ctx.EpisodeRangeIdx); pk != "" {
 			if strings.TrimSpace(ctx.PackKind) == "" || strings.EqualFold(pk, "TV_PACK") {
@@ -433,7 +437,7 @@ func passDetectEpisodeRangeAndEpisode(tokens []model.Token, attrs *[]model.Attri
 			ctx.EpisodeIdx = idx
 		}
 	}
-	if strings.TrimSpace(ctx.Episode) == "" || ctx.EpisodeIdx < 0 {
+	if strings.TrimSpace(ctx.EpisodeRange) == "" && (strings.TrimSpace(ctx.Episode) == "" || ctx.EpisodeIdx < 0) {
 		ctx.Episode, ctx.EpisodeIdx, ctx.EpisodeVersion, ctx.EpisodeVersionIdx = detectEpisodeWithVersion(tokens)
 	}
 	if attrs != nil && ctx.EpisodeIdx >= 0 && ctx.EpisodeIdx < len(tokens) {

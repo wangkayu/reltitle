@@ -10544,6 +10544,9 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 		if isRightSideOfPlainDigitRangeInTitle(tokens, i) {
 			continue
 		}
+		if isRightSideOfSharedPrefixSeasonEpisodeRange(tokens, i) {
+			continue
+		}
 		inBracket := isInBracket(tokens, i)
 		if inBracket {
 			if txt := bracketBlockInnerText(tokens, i); txt != "" {

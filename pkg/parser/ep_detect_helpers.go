@@ -177,6 +177,50 @@ func removeSeasonTokens(tokens []model.Token, seasonIdx int) {
 	}
 }
 
+func isSharedPrefixSeasonEpisodeRangeAt(tokens []model.Token, idx int) bool {
+	if idx < 0 || idx >= len(tokens) {
+		return false
+	}
+	left := strings.TrimSpace(tokens[idx].Text)
+	if left == "" {
+		return false
+	}
+	if sxxExxEpisodeRangePattern.MatchString(left) {
+		return true
+	}
+	if idx+2 >= len(tokens) {
+		return false
+	}
+	if strings.TrimSpace(tokens[idx+1].Text) != "-" && strings.TrimSpace(tokens[idx+1].Text) != "~" {
+		return false
+	}
+	if sxxExxLeftPattern.FindStringSubmatch(left) == nil {
+		return false
+	}
+	right := strings.TrimSpace(tokens[idx+2].Text)
+	if rm := epPrefixedDigitsPattern.FindStringSubmatch(strings.ToLower(right)); len(rm) == 2 {
+		right = strings.TrimSpace(rm[1])
+	}
+	return episodeOfTotalPattern.MatchString(right)
+}
+
+func isRightSideOfSharedPrefixSeasonEpisodeRange(tokens []model.Token, idx int) bool {
+	if idx < 2 || idx >= len(tokens) {
+		return false
+	}
+	right := strings.TrimSpace(tokens[idx].Text)
+	if right == "" {
+		return false
+	}
+	if rm := epPrefixedDigitsPattern.FindStringSubmatch(strings.ToLower(right)); len(rm) == 2 {
+		right = strings.TrimSpace(rm[1])
+	}
+	if !episodeOfTotalPattern.MatchString(right) {
+		return false
+	}
+	return isSharedPrefixSeasonEpisodeRangeAt(tokens, idx-2)
+}
+
 func removeMovieIndexTokens(tokens []model.Token, idx int) {
 	if idx < 0 || idx >= len(tokens) {
 		return

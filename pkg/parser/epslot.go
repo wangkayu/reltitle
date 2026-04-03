@@ -64,6 +64,9 @@ func buildEPSlotCandidates(tokens []model.Token, season string, seasonIdx int, e
 		if isTitlePrefixedDigitRangeInBracket(tokens, i) {
 			continue
 		}
+		if isRightSideOfSharedPrefixSeasonEpisodeRange(tokens, i) {
+			continue
+		}
 		// Tagged ranges like ABS:01-12 / TV01-12 / OVA:01
 		if m := taggedRangePattern.FindStringSubmatch(txt); len(m) == 3 {
 			axis := strings.ToUpper(strings.TrimSpace(m[1]))

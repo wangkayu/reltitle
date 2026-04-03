@@ -200,6 +200,9 @@ func shouldSuppressRangeCandidate(tokens []model.Token, c model.EPEntity, season
 	if c.TokenStart < 0 || c.TokenStart >= len(tokens) {
 		return "", false
 	}
+	if isSharedPrefixSeasonEpisodeRangeAt(tokens, c.TokenStart) {
+		return "", false
+	}
 	if hasPartIndexLeadBeforeToken(tokens, c.TokenStart) && hasEpisodeCandidateNear(cands, c.TokenStart+1) {
 		return "part_index_range_conflict", true
 	}

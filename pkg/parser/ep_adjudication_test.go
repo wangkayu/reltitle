@@ -102,6 +102,32 @@ func TestEPDecisionChoosePrimary_KeepsTrueDelimitedRange(t *testing.T) {
 	}
 }
 
+func TestEPDecisionChoosePrimary_KeepsSharedPrefixSeasonEpisodeRange(t *testing.T) {
+	tokens := decisionTokens("S02E07 - 09")
+	cands := []model.EPEntity{
+		{Kind: "RANGE", Axis: "SE", Season: "2", EpisodeRange: "7-9", TokenStart: 0, TokenEnd: 1, Source: "episode_range"},
+		{Kind: "EP", Axis: "SE", Season: "2", Episode: "9", TokenStart: 2, TokenEnd: 3, Source: "ep_digit_token"},
+	}
+	seasonHint := &epSeasonHint{Season: "2", TokenIdx: 0, Source: "sxxexx"}
+
+	primary, kept, suppressed := choosePrimaryCandidate(tokens, cands, seasonHint)
+	if primary == nil {
+		t.Fatalf("primary should not be nil")
+	}
+	if got := strings.ToUpper(strings.TrimSpace(primary.Kind)); got != "RANGE" {
+		t.Fatalf("primary.kind=%q want=%q", got, "RANGE")
+	}
+	if got := strings.TrimSpace(primary.EpisodeRange); got != "7-9" {
+		t.Fatalf("primary.episode_range=%q want=%q", got, "7-9")
+	}
+	if !hasCandidateKind(kept, "RANGE") {
+		t.Fatalf("shared-prefix range should be kept, kept=%+v", kept)
+	}
+	if len(suppressed) != 0 {
+		t.Fatalf("suppressed=%+v want empty", suppressed)
+	}
+}
+
 func TestSyncEPSlotWithCanonicalSignals_PreservesExtraCandidates(t *testing.T) {
 	epslot := &model.EPSlot{
 		Candidates: []model.EPEntity{

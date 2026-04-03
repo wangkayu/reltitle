@@ -53,3 +53,63 @@ func TestParserEpisodeRange_SpacedTildeBatchAfterEpisodePreconsume(t *testing.T)
 		t.Fatalf("content_kind=%q want=%q", got, "BATCH")
 	}
 }
+
+func TestParserEpisodeRange_SharedPrefixSxxExxRightDigits(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "A Couple of Cuckoos S02E07-09 MULTi 1080p WEB x264 AAC -Tsundere-Raws (CR) (VF, FRENCH, VOSTFR, Kakkou no Iinazuke Season 2)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	if got := canonicalSeason(res); got != "2" {
+		t.Fatalf("season=%q want=%q", got, "2")
+	}
+	if got := canonicalEpisodeRange(res); got != "7-9" {
+		t.Fatalf("episode_range=%q want=%q", got, "7-9")
+	}
+	if got := canonicalEpisode(res); got != "" {
+		t.Fatalf("episode=%q want empty when shared-prefix range detected", got)
+	}
+	if got := canonicalEPKind(res); got != "RANGE" {
+		t.Fatalf("ep_semantics.kind=%q want=%q", got, "RANGE")
+	}
+	if got := res.ContentKind; got != "BATCH" {
+		t.Fatalf("content_kind=%q want=%q", got, "BATCH")
+	}
+}
+
+func TestParserEpisodeRange_SharedPrefixSxxExxRightPrefixedEpisode(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[crane0922] Food Wars - S00E04-E05 (BD 1080p HEVC Opus)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	if got := canonicalSeason(res); got != "0" {
+		t.Fatalf("season=%q want=%q", got, "0")
+	}
+	if got := canonicalEpisodeRange(res); got != "4-5" {
+		t.Fatalf("episode_range=%q want=%q", got, "4-5")
+	}
+	if got := canonicalEpisode(res); got != "" {
+		t.Fatalf("episode=%q want empty when shared-prefix range detected", got)
+	}
+	if got := canonicalEPKind(res); got != "RANGE" {
+		t.Fatalf("ep_semantics.kind=%q want=%q", got, "RANGE")
+	}
+	if got := res.ContentKind; got != "BATCH" {
+		t.Fatalf("content_kind=%q want=%q", got, "BATCH")
+	}
+}

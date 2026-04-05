@@ -6212,7 +6212,7 @@ entries:
       - tokens: ["chi"]
         emit:
           - type: sub_lang
-            normalized: "CMN"
+            normalized: "ZH"
             token_index: -1
         remove: true
         confidence: 0.7

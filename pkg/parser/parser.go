@@ -7353,6 +7353,9 @@ func isLikelySubtitleBracketGroupText(s string) bool {
 	if low == "" {
 		return false
 	}
+	if regexp.MustCompile(`(?i)^sub(?:title|titles)?(?:[_ .-]+[\p{L}]{2,16})+$`).MatchString(strings.TrimSpace(s)) {
+		return true
+	}
 	return regexp.MustCompile(`(?i)^sub(?:title|titles)?[_ .-]?[a-z]{2,8}$`).MatchString(low)
 }
 

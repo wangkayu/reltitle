@@ -51,7 +51,7 @@ func TestLexiconNewFormat_MultiAudioSubDottedBlock(t *testing.T) {
 	if !hasAttrNormalized(res.Attributes, model.AttrSubFlag, "soft") {
 		t.Fatalf("expected sub_flag=soft, attrs=%v", res.Attributes)
 	}
-	for _, lang := range []string{"FRA", "ENG", "DEU", "ITA", "SPA", "POR"} {
+	for _, lang := range []string{"FRA", "ENG", "DEU", "ITA", "SPA", "POR", "ZH"} {
 		if !hasAttrNormalized(res.Attributes, model.AttrSubLang, lang) {
 			t.Fatalf("expected sub_lang=%s from bracket language bundle, attrs=%v", lang, res.Attributes)
 		}
@@ -70,6 +70,33 @@ func TestLexiconNewFormat_MultiAudioSubDottedBlock(t *testing.T) {
 	}
 	if strings.Contains(strings.ToLower(strings.TrimSpace(res.CanonicalTitle())), "audio sub") {
 		t.Fatalf("dotted MULTI.Audio.Sub marker should not pollute title, title=%q", res.CanonicalTitle())
+	}
+}
+
+func TestLexiconNewFormat_SubDotEspanolBracketDoesNotBecomeTailGroup(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Z-A] Fate strange Fake - S01E09 (WEB 1080p AAC) [Sub. Español]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	if !hasAttrNormalized(res.Attributes, model.AttrSubLang, "SPA") {
+		t.Fatalf("expected sub_lang=SPA for bracket sub. español, attrs=%v", res.Attributes)
+	}
+	if !hasAttrNormalized(res.Attributes, model.AttrSubFlag, "soft") {
+		t.Fatalf("expected sub_flag=soft for bracket sub. español, attrs=%v", res.Attributes)
+	}
+	if hasAttrNormalized(res.Attributes, model.AttrGroup, "Sub. Español") {
+		t.Fatalf("Sub. Español should not be parsed as group, attrs=%v", res.Attributes)
+	}
+	if hasAttrNormalized(res.Attributes, model.AttrTailGroup, "Sub. Español") {
+		t.Fatalf("Sub. Español should not be parsed as tail_group, attrs=%v", res.Attributes)
 	}
 }
 

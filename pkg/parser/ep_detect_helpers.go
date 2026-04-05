@@ -363,6 +363,52 @@ func looksLikeAliasSeasonEchoRange(tokens []model.Token, idx int, season string)
 	return hasExplicitSeasonSignalBeforeBoundary(tokens, slashIdx, seasonNorm)
 }
 
+func shouldAllowEpisodeDetectionWithRange(tokens []model.Token, idx int, season string, seasonIdx int) bool {
+	if strings.TrimSpace(season) == "" || idx < 0 {
+		return false
+	}
+	if looksLikeAliasSeasonEchoRange(tokens, idx, season) {
+		return true
+	}
+	if seasonIdx != idx || idx+2 >= len(tokens) {
+		return false
+	}
+	left := strings.TrimSpace(tokens[idx].Text)
+	sep := strings.TrimSpace(tokens[idx+1].Text)
+	right := strings.TrimSpace(tokens[idx+2].Text)
+	if left == "" || right == "" {
+		return false
+	}
+	if sep != "-" && sep != "~" {
+		return false
+	}
+	if !episodeOfTotalPattern.MatchString(left) || !episodeOfTotalPattern.MatchString(right) {
+		return false
+	}
+	leftNorm := strings.TrimLeft(left, "0")
+	if leftNorm == "" {
+		leftNorm = "0"
+	}
+	seasonNorm := strings.TrimLeft(strings.TrimSpace(season), "0")
+	if seasonNorm == "" {
+		seasonNorm = "0"
+	}
+	if leftNorm != seasonNorm {
+		return false
+	}
+	if idx-1 < 0 {
+		return false
+	}
+	prev := strings.TrimSpace(tokens[idx-1].Text)
+	if prev == "" || prev == "-" || prev == "/" || prev == "|" || prev == "\\" {
+		return false
+	}
+	if seasonWordLoosePattern.MatchString(prev) || partIndexLeadPattern.MatchString(prev) {
+		return false
+	}
+	return true
+}
+
 func removeMovieIndexTokens(tokens []model.Token, idx int) {
 	if idx < 0 || idx >= len(tokens) {
 		return

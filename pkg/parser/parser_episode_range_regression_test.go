@@ -149,3 +149,33 @@ func TestParserEpisodeRange_AliasSeasonEchoDoesNotBecomeBatchRange(t *testing.T)
 		t.Fatalf("aliases=%v want=[The Outcast]", got)
 	}
 }
+
+func TestParserEpisodeRange_DashSeasonAliasEchoDoesNotBecomeBatchRange(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[FSP] Douluo Dalu II - Soul Land 2 - 147 [1080p]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	if got := canonicalSeason(res); got != "2" {
+		t.Fatalf("season=%q want=%q", got, "2")
+	}
+	if got := canonicalEpisode(res); got != "147" {
+		t.Fatalf("episode=%q want=%q", got, "147")
+	}
+	if got := canonicalEpisodeRange(res); got != "" {
+		t.Fatalf("episode_range=%q want empty", got)
+	}
+	if got := canonicalEPKind(res); got != "EP" {
+		t.Fatalf("ep_semantics.kind=%q want=%q", got, "EP")
+	}
+	if got := res.ContentKind; got != "TV_EP" {
+		t.Fatalf("content_kind=%q want=%q", got, "TV_EP")
+	}
+}

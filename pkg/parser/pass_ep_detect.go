@@ -439,7 +439,7 @@ func passDetectEpisodeRangeAndEpisode(tokens []model.Token, attrs *[]model.Attri
 	}
 	allowEpisodeDetectionWithRange := strings.TrimSpace(ctx.EpisodeRange) != "" &&
 		ctx.EpisodeRangeIdx >= 0 &&
-		looksLikeAliasSeasonEchoRange(tokens, ctx.EpisodeRangeIdx, ctx.Season)
+		shouldAllowEpisodeDetectionWithRange(tokens, ctx.EpisodeRangeIdx, ctx.Season, ctx.SeasonIdx)
 	if (strings.TrimSpace(ctx.EpisodeRange) == "" || allowEpisodeDetectionWithRange) && (strings.TrimSpace(ctx.Episode) == "" || ctx.EpisodeIdx < 0) {
 		ctx.Episode, ctx.EpisodeIdx, ctx.EpisodeVersion, ctx.EpisodeVersionIdx = detectEpisodeWithVersion(tokens)
 	}

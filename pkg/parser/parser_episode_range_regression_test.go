@@ -113,3 +113,39 @@ func TestParserEpisodeRange_SharedPrefixSxxExxRightPrefixedEpisode(t *testing.T)
 		t.Fatalf("content_kind=%q want=%q", got, "BATCH")
 	}
 }
+
+func TestParserEpisodeRange_AliasSeasonEchoDoesNotBecomeBatchRange(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[黒ネズミたち] 一人之下 第6季 / The Outcast 6 - 14 (CR 2600x1080 AVC AAC MKV)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	if got := canonicalSeason(res); got != "6" {
+		t.Fatalf("season=%q want=%q", got, "6")
+	}
+	if got := canonicalEpisode(res); got != "14" {
+		t.Fatalf("episode=%q want=%q", got, "14")
+	}
+	if got := canonicalEpisodeRange(res); got != "" {
+		t.Fatalf("episode_range=%q want empty", got)
+	}
+	if got := canonicalEPKind(res); got != "EP" {
+		t.Fatalf("ep_semantics.kind=%q want=%q", got, "EP")
+	}
+	if got := res.ContentKind; got != "TV_EP" {
+		t.Fatalf("content_kind=%q want=%q", got, "TV_EP")
+	}
+	if got := canonicalTitle(res); got != "一人之下" {
+		t.Fatalf("title=%q want=%q", got, "一人之下")
+	}
+	if got := canonicalAliases(res); len(got) != 1 || got[0] != "The Outcast" {
+		t.Fatalf("aliases=%v want=[The Outcast]", got)
+	}
+}

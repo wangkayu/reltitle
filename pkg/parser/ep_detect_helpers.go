@@ -221,6 +221,113 @@ func isRightSideOfSharedPrefixSeasonEpisodeRange(tokens []model.Token, idx int) 
 	return isSharedPrefixSeasonEpisodeRangeAt(tokens, idx-2)
 }
 
+func hasExplicitSeasonSignalBeforeBoundary(tokens []model.Token, boundaryIdx int, season string) bool {
+	if boundaryIdx <= 0 || len(tokens) == 0 {
+		return false
+	}
+	season = strings.TrimLeft(strings.TrimSpace(season), "0")
+	if season == "" {
+		season = "0"
+	}
+	start := boundaryIdx - 12
+	if start < 0 {
+		start = 0
+	}
+	matchSeason := func(v string) bool {
+		v = strings.TrimLeft(strings.TrimSpace(v), "0")
+		if v == "" {
+			v = "0"
+		}
+		return v == season
+	}
+	for i := start; i < boundaryIdx; i++ {
+		txt := strings.TrimSpace(tokens[i].Text)
+		if txt == "" {
+			continue
+		}
+		if v := extractSeasonKeywordValue(txt); v != "" && matchSeason(v) {
+			return true
+		}
+		if v := seasonTokenValue(txt); v != "" && matchSeason(v) {
+			return true
+		}
+		if seasonWordLoosePattern.MatchString(txt) && i+1 < boundaryIdx {
+			if v := parseSmallSeasonNumberToken(strings.TrimSpace(tokens[i+1].Text)); v != "" && matchSeason(v) {
+				return true
+			}
+		}
+		if m := seasonOrdinalPattern.FindStringSubmatch(txt); len(m) == 2 && i+1 < boundaryIdx {
+			if seasonWordPattern.MatchString(strings.TrimSpace(tokens[i+1].Text)) && matchSeason(m[1]) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func looksLikeAliasSeasonEchoRange(tokens []model.Token, idx int, season string) bool {
+	if season == "" || idx < 0 || idx+2 >= len(tokens) {
+		return false
+	}
+	left := strings.TrimSpace(tokens[idx].Text)
+	sep := strings.TrimSpace(tokens[idx+1].Text)
+	right := strings.TrimSpace(tokens[idx+2].Text)
+	if left == "" || (sep != "-" && sep != "~") {
+		return false
+	}
+	if !episodeOfTotalPattern.MatchString(left) {
+		return false
+	}
+	if rm := epPrefixedDigitsPattern.FindStringSubmatch(strings.ToLower(right)); len(rm) == 2 {
+		right = strings.TrimSpace(rm[1])
+	}
+	if !episodeOfTotalPattern.MatchString(right) {
+		return false
+	}
+	leftNorm := strings.TrimLeft(left, "0")
+	if leftNorm == "" {
+		leftNorm = "0"
+	}
+	seasonNorm := strings.TrimLeft(strings.TrimSpace(season), "0")
+	if seasonNorm == "" {
+		seasonNorm = "0"
+	}
+	if leftNorm != seasonNorm {
+		return false
+	}
+	slashIdx := -1
+	start := idx - 8
+	if start < 0 {
+		start = 0
+	}
+	for i := idx - 1; i >= start; i-- {
+		txt := strings.TrimSpace(tokens[i].Text)
+		if txt == "/" || txt == "／" {
+			slashIdx = i
+			break
+		}
+	}
+	if slashIdx < 0 {
+		return false
+	}
+	hasAliasWords := false
+	for i := slashIdx + 1; i < idx; i++ {
+		txt := strings.TrimSpace(tokens[i].Text)
+		if txt == "" || txt == "-" || txt == "~" || txt == "/" || txt == "／" {
+			continue
+		}
+		if episodeOfTotalPattern.MatchString(txt) {
+			continue
+		}
+		hasAliasWords = true
+		break
+	}
+	if !hasAliasWords {
+		return false
+	}
+	return hasExplicitSeasonSignalBeforeBoundary(tokens, slashIdx, seasonNorm)
+}
+
 func removeMovieIndexTokens(tokens []model.Token, idx int) {
 	if idx < 0 || idx >= len(tokens) {
 		return

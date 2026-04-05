@@ -437,7 +437,10 @@ func passDetectEpisodeRangeAndEpisode(tokens []model.Token, attrs *[]model.Attri
 			ctx.EpisodeIdx = idx
 		}
 	}
-	if strings.TrimSpace(ctx.EpisodeRange) == "" && (strings.TrimSpace(ctx.Episode) == "" || ctx.EpisodeIdx < 0) {
+	allowEpisodeDetectionWithRange := strings.TrimSpace(ctx.EpisodeRange) != "" &&
+		ctx.EpisodeRangeIdx >= 0 &&
+		looksLikeAliasSeasonEchoRange(tokens, ctx.EpisodeRangeIdx, ctx.Season)
+	if (strings.TrimSpace(ctx.EpisodeRange) == "" || allowEpisodeDetectionWithRange) && (strings.TrimSpace(ctx.Episode) == "" || ctx.EpisodeIdx < 0) {
 		ctx.Episode, ctx.EpisodeIdx, ctx.EpisodeVersion, ctx.EpisodeVersionIdx = detectEpisodeWithVersion(tokens)
 	}
 	if attrs != nil && ctx.EpisodeIdx >= 0 && ctx.EpisodeIdx < len(tokens) {

@@ -193,6 +193,16 @@ func hasEpisodeCandidateNear(cands []model.EPEntity, idx int) bool {
 	return false
 }
 
+func isAliasSeasonEchoRange(tokens []model.Token, idx int, seasonHint *epSeasonHint, cands []model.EPEntity) bool {
+	if seasonHint == nil || idx < 0 || idx+2 >= len(tokens) {
+		return false
+	}
+	if !looksLikeAliasSeasonEchoRange(tokens, idx, seasonHint.Season) {
+		return false
+	}
+	return hasEpisodeCandidateNear(cands, idx+1)
+}
+
 func shouldSuppressRangeCandidate(tokens []model.Token, c model.EPEntity, seasonHint *epSeasonHint, cands []model.EPEntity) (string, bool) {
 	if !strings.EqualFold(strings.TrimSpace(c.Kind), "RANGE") {
 		return "", false
@@ -205,6 +215,9 @@ func shouldSuppressRangeCandidate(tokens []model.Token, c model.EPEntity, season
 	}
 	if hasPartIndexLeadBeforeToken(tokens, c.TokenStart) && hasEpisodeCandidateNear(cands, c.TokenStart+1) {
 		return "part_index_range_conflict", true
+	}
+	if isAliasSeasonEchoRange(tokens, c.TokenStart, seasonHint, cands) {
+		return "alias_season_echo_range_conflict", true
 	}
 	if hasSeasonLeadForRange(tokens, c.TokenStart, seasonHint) && hasEpisodeCandidateNear(cands, c.TokenStart+1) {
 		return "season_episode_range_conflict", true

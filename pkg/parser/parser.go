@@ -10067,6 +10067,7 @@ var chineseEpisodeLeadingPattern = regexp.MustCompile(`^(?:第)?(\d{1,4})(?:话|
 var embeddedChineseEpisodeSuffixPattern = regexp.MustCompile(`第(\d{1,4})(?:集|话|話)$`)
 var yearPattern = regexp.MustCompile(`^(?:19|20)\d{2}$`)
 var starEpisodeEmbeddedPattern = regexp.MustCompile(`(?:★|☆)(\d{1,4})(?:★|☆)`)
+var splitDecimalEpisodeRightPattern = regexp.MustCompile(`^\d{1,2}$`)
 var dateYMDPattern = regexp.MustCompile(`(?i)(?:\b(?:19|20)\d{2}[./-](?:0?[1-9]|1[0-2])[./-](?:0?[1-9]|[12]\d|3[01])\b)`)
 var spKindEpisodePattern = regexp.MustCompile(`(?i)^(?:sp|ova|oad|ona|ex|ncop|nced|pv)0*(\d{1,3})$`)
 var episodeWithVersionPattern = regexp.MustCompile(`(?i)^(?:(?:e|ep|第))?(\d{1,4})(?:\.(\d{1,2}))?[vV](\d{1,2})$`)
@@ -10492,6 +10493,7 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 	best := ""
 	bestScore := -1
 	bestVer := ""
+	bestConsumedEnd := -1
 	bestKeywordIdx := -1
 	bestKeywordDashIdx := -1
 
@@ -10532,6 +10534,7 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 			best = n
 			bestIdx = i + 1
 			bestScore = score
+			bestConsumedEnd = i + 1
 			bestKeywordIdx = i
 			bestKeywordDashIdx = dashIdx
 		}
@@ -10876,6 +10879,64 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 				}
 			}
 		}
+		if i+2 < len(tokens) {
+			left := strings.TrimSpace(tokens[i].Text)
+			dot := strings.TrimSpace(tokens[i+1].Text)
+			right := strings.TrimSpace(tokens[i+2].Text)
+			if dot == "." && splitDecimalEpisodeRightPattern.MatchString(right) {
+				if mm := episodePattern.FindStringSubmatch(left); len(mm) >= 3 {
+					if len(mm) >= 4 && strings.TrimSpace(mm[3]) != "" {
+						// Already a single-token decimal episode like 12.5.
+					} else {
+						prefix := strings.TrimSpace(mm[1])
+						maj := strings.TrimLeft(mm[2], "0")
+						if maj == "" {
+							maj = "0"
+						}
+						n := maj + "." + right
+						score := len(mm[2])
+						ok := false
+						if prefix != "" {
+							ok = true
+							score += 72
+						} else if inBracket {
+							if isBracketLeadingNumericTitlePrefix(tokens, i) {
+								continue
+							}
+							ok = true
+							score += 96
+						} else if i-1 >= 0 {
+							sep := strings.TrimSpace(tokens[i-1].Text)
+							if sep == "-" || sep == "★" || sep == "☆" {
+								rightBoundary := false
+								if i+3 < len(tokens) {
+									rightBoundary = isEpisodeBoundaryRightToken(tokens[i+3].Text)
+								}
+								if sep == "-" && !rightBoundary {
+									continue
+								}
+								ok = true
+								if sep == "-" {
+									score += 94
+								} else {
+									score += 92
+								}
+							}
+						}
+						if ok && score > bestScore {
+							bestScore = score
+							bestIdx = i
+							best = n
+							bestVer = ""
+							bestConsumedEnd = i + 2
+						}
+						if ok {
+							continue
+						}
+					}
+				}
+			}
+		}
 		m := episodePattern.FindStringSubmatch(tokens[i].Text)
 		if len(m) >= 3 {
 			prefix := strings.TrimSpace(m[1])
@@ -11031,15 +11092,22 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 				bestIdx = i
 				best = n
 				bestVer = ""
+				bestConsumedEnd = i
 			}
 		}
 	}
 	if bestIdx >= 0 {
+		if bestConsumedEnd < bestIdx {
+			bestConsumedEnd = bestIdx
+		}
 		if bestKeywordIdx >= 0 && bestKeywordIdx < len(tokens) {
 			tokens[bestKeywordIdx].Removed = true
 		}
 		if bestKeywordDashIdx >= 0 && bestKeywordDashIdx < len(tokens) {
 			tokens[bestKeywordDashIdx].Removed = true
+		}
+		for j := bestIdx + 1; j <= bestConsumedEnd && j < len(tokens); j++ {
+			tokens[j].Removed = true
 		}
 		text := strings.TrimSpace(tokens[bestIdx].Text)
 		// If the episode token is itself a special/extra marker token like "OVA02",

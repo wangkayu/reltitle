@@ -77,6 +77,32 @@ func TestEPDecisionChoosePrimary_SuppressesPartIndexFalseRange(t *testing.T) {
 	}
 }
 
+func TestEPDecisionChoosePrimary_SuppressesAliasSeasonEchoFalseRange(t *testing.T) {
+	tokens := decisionTokens("一人之下 第6季 / The Outcast 6 - 14")
+	cands := []model.EPEntity{
+		{Kind: "RANGE", Axis: "SE", Season: "6", EpisodeRange: "6-14", TokenStart: 5, TokenEnd: 6, Source: "episode_range"},
+		{Kind: "EP", Axis: "SE", Season: "6", Episode: "14", TokenStart: 7, TokenEnd: 8, Source: "ep_digit_token"},
+	}
+	seasonHint := &epSeasonHint{Season: "6", TokenIdx: 1, Source: "season_keyword"}
+
+	primary, kept, suppressed := choosePrimaryCandidate(tokens, cands, seasonHint)
+	if primary == nil {
+		t.Fatalf("primary should not be nil")
+	}
+	if got := strings.ToUpper(strings.TrimSpace(primary.Kind)); got != "EP" {
+		t.Fatalf("primary.kind=%q want=%q", got, "EP")
+	}
+	if got := strings.TrimSpace(primary.Episode); got != "14" {
+		t.Fatalf("primary.episode=%q want=%q", got, "14")
+	}
+	if hasCandidateKind(kept, "RANGE") {
+		t.Fatalf("false range should be suppressed, kept=%+v", kept)
+	}
+	if len(suppressed) != 1 || suppressed[0].Reason != "alias_season_echo_range_conflict" {
+		t.Fatalf("suppressed=%+v want alias season echo conflict", suppressed)
+	}
+}
+
 func TestEPDecisionChoosePrimary_KeepsTrueDelimitedRange(t *testing.T) {
 	tokens := decisionTokens("01 ~ 20")
 	cands := []model.EPEntity{

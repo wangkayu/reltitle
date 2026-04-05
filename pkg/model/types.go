@@ -28,7 +28,7 @@ type ParseResult struct {
 	Tokens             []Token      `json:"tokens,omitempty"`
 }
 
-type EPSemantics struct {
+type EPReference struct {
 	Kind        string   `json:"kind,omitempty"` // NONE | SEASON | EP | EP_LIST | RANGE | SEASON_RANGE | SP
 	Axis        string   `json:"axis,omitempty"` // SE | ABS | TV | OVA | SP | UNKNOWN
 	Season      string   `json:"season,omitempty"`
@@ -38,7 +38,29 @@ type EPSemantics struct {
 	RangeStart  string   `json:"range_start,omitempty"`
 	RangeEnd    string   `json:"range_end,omitempty"`
 	SPKind      string   `json:"sp_kind,omitempty"`
+	Relation    string   `json:"relation,omitempty"` // overall | catalog | alt_cut | etc
 	Source      string   `json:"source,omitempty"`
+
+	TokenStart int `json:"-"`
+	TokenEnd   int `json:"-"`
+}
+
+type EPSemantics struct {
+	Primary    *EPReference  `json:"primary,omitempty"`
+	Alternates []EPReference `json:"alternates,omitempty"`
+
+	// Legacy mirrors remain available to Go callers for now, but are no longer
+	// serialized. Canonical accessors should prefer Primary.
+	Kind        string   `json:"-"`
+	Axis        string   `json:"-"`
+	Season      string   `json:"-"`
+	SeasonRange string   `json:"-"`
+	Episode     string   `json:"-"`
+	EpisodeList []string `json:"-"`
+	RangeStart  string   `json:"-"`
+	RangeEnd    string   `json:"-"`
+	SPKind      string   `json:"-"`
+	Source      string   `json:"-"`
 }
 
 type EPSlot struct {

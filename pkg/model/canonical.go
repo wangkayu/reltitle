@@ -43,7 +43,7 @@ func (r *ParseResult) CanonicalSearchHints() []string {
 	return r.attrValues(AttrSearchHint)
 }
 
-func cloneEPSemantics(in *EPSemantics) *EPSemantics {
+func cloneEPReference(in *EPReference) *EPReference {
 	if in == nil {
 		return nil
 	}
@@ -51,6 +51,57 @@ func cloneEPSemantics(in *EPSemantics) *EPSemantics {
 	if len(in.EpisodeList) > 0 {
 		cp.EpisodeList = append([]string(nil), in.EpisodeList...)
 	}
+	return &cp
+}
+
+func (s *EPSemantics) SyncLegacyMirrorsFromPrimary() {
+	if s == nil {
+		return
+	}
+	if s.Primary == nil {
+		return
+	}
+	s.Kind = ""
+	s.Axis = ""
+	s.Season = ""
+	s.SeasonRange = ""
+	s.Episode = ""
+	s.EpisodeList = nil
+	s.RangeStart = ""
+	s.RangeEnd = ""
+	s.SPKind = ""
+	s.Source = ""
+	s.Kind = strings.TrimSpace(s.Primary.Kind)
+	s.Axis = strings.TrimSpace(s.Primary.Axis)
+	s.Season = strings.TrimSpace(s.Primary.Season)
+	s.SeasonRange = strings.TrimSpace(s.Primary.SeasonRange)
+	s.Episode = strings.TrimSpace(s.Primary.Episode)
+	if len(s.Primary.EpisodeList) > 0 {
+		s.EpisodeList = append([]string(nil), s.Primary.EpisodeList...)
+	}
+	s.RangeStart = strings.TrimSpace(s.Primary.RangeStart)
+	s.RangeEnd = strings.TrimSpace(s.Primary.RangeEnd)
+	s.SPKind = strings.TrimSpace(s.Primary.SPKind)
+	s.Source = strings.TrimSpace(s.Primary.Source)
+}
+
+func cloneEPSemantics(in *EPSemantics) *EPSemantics {
+	if in == nil {
+		return nil
+	}
+	cp := *in
+	cp.Primary = cloneEPReference(in.Primary)
+	if len(in.Alternates) > 0 {
+		cp.Alternates = make([]EPReference, 0, len(in.Alternates))
+		for _, alt := range in.Alternates {
+			altCopy := alt
+			if len(alt.EpisodeList) > 0 {
+				altCopy.EpisodeList = append([]string(nil), alt.EpisodeList...)
+			}
+			cp.Alternates = append(cp.Alternates, altCopy)
+		}
+	}
+	cp.SyncLegacyMirrorsFromPrimary()
 	return &cp
 }
 
@@ -63,6 +114,9 @@ func (r *ParseResult) CanonicalEPSemantics() *EPSemantics {
 
 func (r *ParseResult) CanonicalEpisode() string {
 	if sem := r.CanonicalEPSemantics(); sem != nil {
+		if sem.Primary != nil {
+			return strings.TrimSpace(sem.Primary.Episode)
+		}
 		return strings.TrimSpace(sem.Episode)
 	}
 	return ""
@@ -72,6 +126,10 @@ func (r *ParseResult) CanonicalEpisodeRange() string {
 	if sem := r.CanonicalEPSemantics(); sem != nil {
 		start := strings.TrimSpace(sem.RangeStart)
 		end := strings.TrimSpace(sem.RangeEnd)
+		if sem.Primary != nil {
+			start = strings.TrimSpace(sem.Primary.RangeStart)
+			end = strings.TrimSpace(sem.Primary.RangeEnd)
+		}
 		if start != "" && end != "" {
 			return start + "-" + end
 		}
@@ -81,6 +139,9 @@ func (r *ParseResult) CanonicalEpisodeRange() string {
 
 func (r *ParseResult) CanonicalSeason() string {
 	if sem := r.CanonicalEPSemantics(); sem != nil {
+		if sem.Primary != nil {
+			return strings.TrimSpace(sem.Primary.Season)
+		}
 		return strings.TrimSpace(sem.Season)
 	}
 	return ""
@@ -88,6 +149,9 @@ func (r *ParseResult) CanonicalSeason() string {
 
 func (r *ParseResult) CanonicalSeasonRange() string {
 	if sem := r.CanonicalEPSemantics(); sem != nil {
+		if sem.Primary != nil {
+			return strings.TrimSpace(sem.Primary.SeasonRange)
+		}
 		return strings.TrimSpace(sem.SeasonRange)
 	}
 	return ""
@@ -107,6 +171,9 @@ func (r *ParseResult) CanonicalPackProfile() string {
 
 func (r *ParseResult) CanonicalSPKind() string {
 	if sem := r.CanonicalEPSemantics(); sem != nil {
+		if sem.Primary != nil {
+			return strings.TrimSpace(sem.Primary.SPKind)
+		}
 		return strings.TrimSpace(sem.SPKind)
 	}
 	return ""
@@ -130,6 +197,12 @@ func (r *ParseResult) CanonicalEpRoute() string {
 	}
 	k := strings.ToUpper(strings.TrimSpace(sem.Kind))
 	source := strings.TrimSpace(sem.Source)
+	season := strings.TrimSpace(sem.Season)
+	if sem.Primary != nil {
+		k = strings.ToUpper(strings.TrimSpace(sem.Primary.Kind))
+		source = strings.TrimSpace(sem.Primary.Source)
+		season = strings.TrimSpace(sem.Primary.Season)
+	}
 	switch k {
 	case "RANGE":
 		return "RANGE"
@@ -141,7 +214,7 @@ func (r *ParseResult) CanonicalEpRoute() string {
 		if strings.EqualFold(source, "tagged_ep_final") {
 			return "ABS_EP"
 		}
-		if strings.TrimSpace(sem.Season) != "" {
+		if season != "" {
 			return "SXXEXX"
 		}
 		return "PLAIN_EP"

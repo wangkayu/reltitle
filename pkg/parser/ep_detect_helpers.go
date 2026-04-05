@@ -204,6 +204,41 @@ func isSharedPrefixSeasonEpisodeRangeAt(tokens []model.Token, idx int) bool {
 	return episodeOfTotalPattern.MatchString(right)
 }
 
+func shouldTreatParenSxxExxAsAlternate(tokens []model.Token, season string, seasonIdx int, episode string, episodeIdx int, sxxExxEpisode string, sxxExxIdx int) bool {
+	if strings.TrimSpace(episode) == "" || episodeIdx < 0 || strings.TrimSpace(sxxExxEpisode) == "" || sxxExxIdx < 0 {
+		return false
+	}
+	if !isInParen(tokens, sxxExxIdx) {
+		return false
+	}
+	txt := strings.TrimSpace(tokens[sxxExxIdx].Text)
+	if !sxxExxPattern.MatchString(txt) {
+		return false
+	}
+	if !strings.HasPrefix(strings.ToUpper(txt), "S00E") {
+		return false
+	}
+	if seasonIdx == sxxExxIdx && strings.TrimSpace(season) != "" && strings.TrimSpace(season) != "0" {
+		return false
+	}
+	if episodeIdx >= sxxExxIdx {
+		return false
+	}
+	var b strings.Builder
+	for i := episodeIdx + 1; i < sxxExxIdx && i < len(tokens); i++ {
+		b.WriteString(strings.TrimSpace(tokens[i].Text))
+		b.WriteString(" ")
+	}
+	between := strings.ToLower(strings.TrimSpace(b.String()))
+	if between == "" {
+		return false
+	}
+	if strings.Contains(between, "总集篇") || strings.Contains(between, "總集篇") || strings.Contains(between, "总集") || strings.Contains(between, "總集") || strings.Contains(between, "recap") || strings.Contains(between, "special") {
+		return true
+	}
+	return false
+}
+
 func isRightSideOfSharedPrefixSeasonEpisodeRange(tokens []model.Token, idx int) bool {
 	if idx < 2 || idx >= len(tokens) {
 		return false

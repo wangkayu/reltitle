@@ -474,6 +474,14 @@ func passDetectEpisodeRangeAndEpisode(tokens []model.Token, attrs *[]model.Attri
 			ctx.EpisodeVersionIdx = -1
 		}
 	}
+	if shouldTreatParenSxxExxAsAlternate(tokens, ctx.Season, ctx.SeasonIdx, ctx.Episode, ctx.EpisodeIdx, ctx.EpisodeFromSxxExx, ctx.SxxExxIdx) {
+		if ctx.SeasonIdx == ctx.SxxExxIdx && strings.TrimSpace(ctx.Season) == "0" {
+			ctx.Season = ""
+			ctx.SeasonIdx = -1
+		}
+		ctx.EpisodeFromSxxExx = ""
+		ctx.SxxExxIdx = -1
+	}
 	// Detect additional special index like ES07 in patterns such as "07+ES07".
 	// This should not override the main episode; it is extra content metadata.
 	if attrs != nil {

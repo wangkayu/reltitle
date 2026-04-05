@@ -2666,7 +2666,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	consumeTailGroupTokensByCanonicalGroup(tokens, group)
 	attrs = stripLegacyEPAttributes(attrs)
 
-	epSemantics := buildCanonicalEPSemantics(epslot, season, seasonRange, episode, episodeList, episodeRange, spKind)
+	epSemantics := buildCanonicalEPSemantics(originalRawTitle, tokens, epslot, season, seasonRange, episode, episodeList, episodeRange, spKind)
 	if isUnknownOutput(contentKind, templateID) {
 		epSemantics = nil
 	}
@@ -6306,6 +6306,22 @@ func normalizeAliasTrailingAbsoluteEpisode(alias string, primaryEpisode string, 
 	return strings.TrimSpace(strings.Trim(prefix, "-_/;:,+ "))
 }
 
+var reAliasTrimSummaryCatalogTail = regexp.MustCompile(`(?i)\s*(?:[-_/|:()\[\]{}【】（）]|\s)+0?\d{1,4}(?:[.\s]+\d{1,2})?\s*(?:总集篇|總集篇|总集|總集|recap|special)\s*$`)
+
+func normalizeAliasTrailingSummaryCatalogMarker(alias string) string {
+	alias = strings.TrimSpace(alias)
+	if alias == "" {
+		return ""
+	}
+	prev := ""
+	for alias != prev {
+		prev = alias
+		alias = strings.TrimSpace(reAliasTrimSummaryCatalogTail.ReplaceAllString(alias, ""))
+		alias = strings.TrimSpace(strings.Trim(alias, "-_/|:,+ "))
+	}
+	return alias
+}
+
 func (p *Parser) sanitizeAliasesForOutput(aliases []string, title string, episode string, season string, spKind string) []string {
 	if len(aliases) == 0 {
 		return nil
@@ -6315,11 +6331,13 @@ func (p *Parser) sanitizeAliasesForOutput(aliases []string, title string, episod
 	seen := map[string]bool{}
 	for _, a := range aliases {
 		a = normalizeAliasTrailingAbsoluteEpisode(a, episode, season)
+		a = normalizeAliasTrailingSummaryCatalogMarker(a)
 		a = p.normalizeAliasCandidateForOutput(a)
 		if stripped := stripExplicitSeasonSuffix(a); stripped != "" {
 			a = p.normalizeAliasCandidateForOutput(stripped)
 		}
 		a = normalizeAliasTrailingAbsoluteEpisode(a, episode, season)
+		a = normalizeAliasTrailingSummaryCatalogMarker(a)
 		a = trimAliasTailBySPKind(a, spKind)
 		if a == "" || !p.isValidAliasToken(a) {
 			continue
@@ -6964,6 +6982,9 @@ func (p *Parser) isValidAliasToken(s string) bool {
 	}
 	// Pure version tags like "v2" / "ver2" should not be aliases.
 	if regexp.MustCompile(`(?i)^v(?:er)?\.?\s*\d{1,3}$`).MatchString(s) {
+		return false
+	}
+	if regexp.MustCompile(`^\d{1,4}(?:\s+\d{1,4})+$`).MatchString(s) {
 		return false
 	}
 	if len([]rune(s)) < 2 {

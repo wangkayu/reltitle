@@ -210,6 +210,11 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 		if regexp.MustCompile(`总集篇\s*0*\d{1,3}\s*[_\s-]+\s*\d{1,4}(?:\s*\.\s*\d{1,2})?`).FindStringIndex(s) != nil {
 			return true
 		}
+		// Dual episode markers like "01(73)" / "S01E01(13)" / "01-10(17-26)" should stay
+		// in the token stream for later EP adjudication.
+		if regexp.MustCompile(`(?i)^(?:S\d{1,2}E)?\d{1,4}(?:\s*[-~]\s*\d{1,4})?\s*[\(（]\s*(?:S\d{1,2}E)?\d{1,4}(?:\s*[-~]\s*\d{1,4})?\s*[\)）]$`).MatchString(s) {
+			return true
+		}
 		// Tagged TV ranges like "TV01-25Fin" should be treated as episode/range markers.
 		if regexp.MustCompile(`(?i)\bTV\s*0*\d{1,4}\s*[-~]\s*\d{1,4}\s*(?:FIN|FINAL)?\b`).FindStringIndex(s) != nil {
 			return true
@@ -272,6 +277,9 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 			return true
 		}
 		if regexp.MustCompile(`(?i)^0?\d{1,4}[vV]\d{1,2}$`).MatchString(s) {
+			return true
+		}
+		if regexp.MustCompile(`(?i)^(?:S\d{1,2}E)?\d{1,4}(?:\s*[-~]\s*\d{1,4})?\s*[\(（]\s*(?:S\d{1,2}E)?\d{1,4}(?:\s*[-~]\s*\d{1,4})?\s*[\)）]$`).MatchString(s) {
 			return true
 		}
 		if regexp.MustCompile(`(?i)^第?\d{1,4}(?:\s*-\s*\d{1,4})?(?:集|话|話|回|章)(?:\s|$)`).MatchString(s) {

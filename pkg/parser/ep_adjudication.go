@@ -549,111 +549,23 @@ func finalizeEPCandidateSource(c model.EPEntity) string {
 	}
 }
 
-func buildCanonicalEPSemantics(epslot *model.EPSlot, season string, seasonRange string, episode string, episodeList string, episodeRange string, spKind string) *model.EPSemantics {
-	season = strings.TrimSpace(season)
-	seasonRange = strings.TrimSpace(seasonRange)
-	episode = strings.TrimSpace(episode)
-	episodeList = strings.TrimSpace(episodeList)
-	episodeRange = strings.TrimSpace(episodeRange)
-	spKind = strings.TrimSpace(spKind)
-
-	if epslot != nil && epslot.Primary != nil {
-		p := epslot.Primary
-		kind := strings.ToUpper(strings.TrimSpace(p.Kind))
-		if kind == "" || kind == "NONE" {
-			goto fallback
-		}
-		out := &model.EPSemantics{
-			Kind:   kind,
-			Axis:   strings.ToUpper(strings.TrimSpace(p.Axis)),
-			Season: firstNonEmpty(strings.TrimSpace(p.Season), season),
-			SPKind: firstNonEmpty(strings.TrimSpace(p.SPKind), spKind),
-			Source: strings.TrimSpace(p.Source),
-		}
-		switch out.Kind {
-		case "EP":
-			out.Episode = strings.TrimSpace(p.Episode)
-		case "EP_LIST":
-			out.Episode = strings.TrimSpace(p.Episode)
-			out.EpisodeList = splitEpisodeListCSV(strings.TrimSpace(p.EpisodeList))
-		case "RANGE":
-			start, end := splitNormalizedRangeBounds(firstNonEmpty(strings.TrimSpace(p.EpisodeRange), episodeRange))
-			out.RangeStart = start
-			out.RangeEnd = end
-		case "SP":
-			// no-op
-		}
-		return out
+func buildCanonicalEPSemantics(rawTitle string, tokens []model.Token, epslot *model.EPSlot, season string, seasonRange string, episode string, episodeList string, episodeRange string, spKind string) *model.EPSemantics {
+	var primary *model.EPReference
+	if epslot != nil {
+		primary = buildEPReferenceFromPrimaryCandidate(epslot.Primary, season, seasonRange, episode, episodeList, episodeRange, spKind)
+	} else {
+		primary = buildEPReferenceFromPrimaryCandidate(nil, season, seasonRange, episode, episodeList, episodeRange, spKind)
 	}
-fallback:
-	if seasonRange != "" {
-		return &model.EPSemantics{
-			Kind:        "SEASON_RANGE",
-			Axis:        "SE",
-			Season:      season,
-			SeasonRange: seasonRange,
-			Source:      "canonical",
-		}
-	}
-	if season != "" && episode == "" && episodeList == "" && episodeRange == "" && spKind == "" {
-		return &model.EPSemantics{
-			Kind:   "SEASON",
-			Axis:   "SE",
-			Season: season,
-			Source: "canonical",
-		}
-	}
-	switch {
-	case episodeRange != "":
-		start, end := splitNormalizedRangeBounds(episodeRange)
-		axis := "ABS"
-		if season != "" {
-			axis = "SE"
-		}
-		return &model.EPSemantics{
-			Kind:       "RANGE",
-			Axis:       axis,
-			Season:     season,
-			RangeStart: start,
-			RangeEnd:   end,
-			Source:     "canonical",
-		}
-	case episodeList != "":
-		axis := "ABS"
-		if season != "" {
-			axis = "SE"
-		}
-		return &model.EPSemantics{
-			Kind:        "EP_LIST",
-			Axis:        axis,
-			Season:      season,
-			Episode:     episode,
-			EpisodeList: splitEpisodeListCSV(episodeList),
-			Source:      "canonical",
-		}
-	case episode != "":
-		axis := "ABS"
-		if season != "" {
-			axis = "SE"
-		}
-		return &model.EPSemantics{
-			Kind:    "EP",
-			Axis:    axis,
-			Season:  season,
-			Episode: episode,
-			Source:  "canonical",
-		}
-	case spKind != "":
-		return &model.EPSemantics{
-			Kind:   "SP",
-			Axis:   strings.ToUpper(spKind),
-			Season: season,
-			SPKind: strings.ToUpper(spKind),
-			Source: "canonical",
-		}
-	default:
+	if primary == nil {
 		return nil
 	}
+	primary = overridePrimaryWithSummaryCatalogEpisode(rawTitle, primary)
+	out := &model.EPSemantics{
+		Primary:    primary,
+		Alternates: collectAlternateEPReferences(rawTitle, tokens, primary),
+	}
+	out.SyncLegacyMirrorsFromPrimary()
+	return out
 }
 
 func splitEpisodeListCSV(s string) []string {

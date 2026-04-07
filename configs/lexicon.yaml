@@ -7540,6 +7540,13 @@ entries:
 
   - id: platform_unext
     any_of:
+      - tokens: ["UNXT"]
+        emit:
+          - type: platform
+            normalized: "UNEXT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
       - tokens: ["UNEXT"]
         emit:
           - type: platform

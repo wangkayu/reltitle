@@ -142,6 +142,54 @@ func TestLexiconNewFormat_PlatformUNEXTVariants(t *testing.T) {
 	}
 }
 
+func TestLexiconNewFormat_PlatformUNXTVariant(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "Crayon Shin-chan the Movie Super Hot The Spicy Kasukabe Dancers 2025 1080p UNXT WEB-DL AAC2.0 H 264-VARYG (Crayon Shin-chan: Chou Karei! Shakunetsu no Kasukabe Dancers)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	if !hasAttrNormalized(res.Attributes, model.AttrPlatform, "UNEXT") {
+		t.Fatalf("expected platform=UNEXT for UNXT variant, attrs=%v", res.Attributes)
+	}
+	if strings.Contains(strings.ToUpper(strings.TrimSpace(res.CanonicalTitle())), "UNXT") {
+		t.Fatalf("UNXT platform marker should not remain in title, title=%q", res.CanonicalTitle())
+	}
+}
+
+func TestLexiconNewFormat_CJKSubtitleBlockDoesNotBecomeTailGroup(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[豌豆字幕组&LoliHouse] 关于我转生变成史莱姆这档事 第四季 / Tensei Shitara Slime Datta Ken 4th Season - 01(73) [WebRip 1080p HEVC-10bit AAC][简繁外挂字幕]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	if !hasAttrNormalized(res.Attributes, model.AttrSubLang, "SC") || !hasAttrNormalized(res.Attributes, model.AttrSubLang, "TC") {
+		t.Fatalf("expected SC/TC subtitle langs from 简繁外挂字幕, attrs=%v", res.Attributes)
+	}
+	if !hasAttrNormalized(res.Attributes, model.AttrSubFlag, "ex") {
+		t.Fatalf("expected sub_flag=ex from 简繁外挂字幕, attrs=%v", res.Attributes)
+	}
+	if hasAttrNormalized(res.Attributes, model.AttrGroup, "简繁外挂字幕") {
+		t.Fatalf("subtitle meta block should not become group, attrs=%v", res.Attributes)
+	}
+	if hasAttrNormalized(res.Attributes, model.AttrTailGroup, "简繁外挂字幕") {
+		t.Fatalf("subtitle meta block should not become tail_group, attrs=%v", res.Attributes)
+	}
+}
+
 func TestLexiconNewFormat_VOSTFRSeasonBatchKeepsFrenchSubLang(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

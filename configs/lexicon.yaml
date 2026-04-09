@@ -2083,6 +2083,75 @@ entries:
         remove: true
         confidence: 0.65
 
+  - id: lang_tag_valencia_context
+    any_of:
+      - scope: plain
+        tokens: ["sub", "valencià"]
+        emit:
+          - type: sub_flag
+            normalized: "soft"
+            token_index: -1
+          - type: sub_lang
+            normalized: "CAT"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - scope: plain
+        tokens: ["sub", ".", "valencià"]
+        emit:
+          - type: sub_flag
+            normalized: "soft"
+            token_index: -1
+          - type: sub_lang
+            normalized: "CAT"
+            token_index: -1
+        remove: true
+        confidence: 0.78
+      - scope: bracket
+        tokens: ["sub", "valencià"]
+        emit:
+          - type: sub_flag
+            normalized: "soft"
+            token_index: -1
+          - type: sub_lang
+            normalized: "CAT"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - scope: bracket
+        tokens: ["sub", ".", "valencià"]
+        emit:
+          - type: sub_flag
+            normalized: "soft"
+            token_index: -1
+          - type: sub_lang
+            normalized: "CAT"
+            token_index: -1
+        remove: true
+        confidence: 0.78
+      - scope: paren
+        tokens: ["sub", "valencià"]
+        emit:
+          - type: sub_flag
+            normalized: "soft"
+            token_index: -1
+          - type: sub_lang
+            normalized: "CAT"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - scope: paren
+        tokens: ["sub", ".", "valencià"]
+        emit:
+          - type: sub_flag
+            normalized: "soft"
+            token_index: -1
+          - type: sub_lang
+            normalized: "CAT"
+            token_index: -1
+        remove: true
+        confidence: 0.78
+
   - id: note_br
     any_of:
       - scope: bracket
@@ -5213,6 +5282,141 @@ entries:
             token_index: 0
           - type: sub_lang
             normalized: "JPN"
+            token_index: 0
+        remove: true
+        confidence: 0.8
+
+  - id: sub_cn_jp_trilingual_group_flags
+    any_of:
+      - scope: plain
+        tokens: ["简繁日三语"]
+        emit:
+          - type: sub_lang_group
+            normalized: "JPSC"
+            token_index: 0
+          - type: sub_lang_group
+            normalized: "JPTC"
+            token_index: 0
+        remove: true
+        confidence: 0.8
+      - scope: plain
+        tokens: ["繁简日三语"]
+        emit:
+          - type: sub_lang_group
+            normalized: "JPSC"
+            token_index: 0
+          - type: sub_lang_group
+            normalized: "JPTC"
+            token_index: 0
+        remove: true
+        confidence: 0.8
+      - scope: plain
+        tokens: ["簡繁日三語"]
+        emit:
+          - type: sub_lang_group
+            normalized: "JPSC"
+            token_index: 0
+          - type: sub_lang_group
+            normalized: "JPTC"
+            token_index: 0
+        remove: true
+        confidence: 0.8
+      - scope: plain
+        tokens: ["繁簡日三語"]
+        emit:
+          - type: sub_lang_group
+            normalized: "JPSC"
+            token_index: 0
+          - type: sub_lang_group
+            normalized: "JPTC"
+            token_index: 0
+        remove: true
+        confidence: 0.8
+      - scope: bracket
+        tokens: ["简繁日三语"]
+        emit:
+          - type: sub_lang_group
+            normalized: "JPSC"
+            token_index: 0
+          - type: sub_lang_group
+            normalized: "JPTC"
+            token_index: 0
+        remove: true
+        confidence: 0.8
+      - scope: bracket
+        tokens: ["繁简日三语"]
+        emit:
+          - type: sub_lang_group
+            normalized: "JPSC"
+            token_index: 0
+          - type: sub_lang_group
+            normalized: "JPTC"
+            token_index: 0
+        remove: true
+        confidence: 0.8
+      - scope: bracket
+        tokens: ["簡繁日三語"]
+        emit:
+          - type: sub_lang_group
+            normalized: "JPSC"
+            token_index: 0
+          - type: sub_lang_group
+            normalized: "JPTC"
+            token_index: 0
+        remove: true
+        confidence: 0.8
+      - scope: bracket
+        tokens: ["繁簡日三語"]
+        emit:
+          - type: sub_lang_group
+            normalized: "JPSC"
+            token_index: 0
+          - type: sub_lang_group
+            normalized: "JPTC"
+            token_index: 0
+        remove: true
+        confidence: 0.8
+      - scope: paren
+        tokens: ["简繁日三语"]
+        emit:
+          - type: sub_lang_group
+            normalized: "JPSC"
+            token_index: 0
+          - type: sub_lang_group
+            normalized: "JPTC"
+            token_index: 0
+        remove: true
+        confidence: 0.8
+      - scope: paren
+        tokens: ["繁简日三语"]
+        emit:
+          - type: sub_lang_group
+            normalized: "JPSC"
+            token_index: 0
+          - type: sub_lang_group
+            normalized: "JPTC"
+            token_index: 0
+        remove: true
+        confidence: 0.8
+      - scope: paren
+        tokens: ["簡繁日三語"]
+        emit:
+          - type: sub_lang_group
+            normalized: "JPSC"
+            token_index: 0
+          - type: sub_lang_group
+            normalized: "JPTC"
+            token_index: 0
+        remove: true
+        confidence: 0.8
+      - scope: paren
+        tokens: ["繁簡日三語"]
+        emit:
+          - type: sub_lang_group
+            normalized: "JPSC"
+            token_index: 0
+          - type: sub_lang_group
+            normalized: "JPTC"
             token_index: 0
         remove: true
         confidence: 0.8

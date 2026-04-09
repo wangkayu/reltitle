@@ -121,6 +121,61 @@ func TestLexiconNewFormat_SubDotEspanolParen(t *testing.T) {
 	}
 }
 
+func TestLexiconNewFormat_SubValenciaTail(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[AMF]Shibou Yuugi de Meshi o Kuu - 08v2 ----it all - Sub valencià.mkv"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	if !hasAttrNormalized(res.Attributes, model.AttrSubLang, "CAT") {
+		t.Fatalf("expected sub_lang=CAT for sub valencià, attrs=%v", res.Attributes)
+	}
+	if !hasAttrNormalized(res.Attributes, model.AttrSubFlag, "soft") {
+		t.Fatalf("expected sub_flag=soft for sub valencià, attrs=%v", res.Attributes)
+	}
+	if strings.Contains(strings.ToLower(strings.TrimSpace(res.CanonicalTitle())), "valenci") {
+		t.Fatalf("sub valencià tail should not pollute title, title=%q", res.CanonicalTitle())
+	}
+}
+
+func TestLexiconNewFormat_SubCnJpTrilingualPlainBundle(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[弗里吉亚宫内厅字幕组] 悲剧元凶的最强外道最终BOSS女王为民竭力 / Lastame S2 - 01 HEVC 1080P 简繁日三语 MKV"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	for _, lang := range []string{"JPSC", "JPTC"} {
+		if !hasAttrNormalized(res.Attributes, model.AttrSubLang, lang) {
+			t.Fatalf("expected sub_lang=%s from 简繁日三语, attrs=%v", lang, res.Attributes)
+		}
+		if !hasAttrNormalized(res.Attributes, model.AttrSubLangGroup, lang) {
+			t.Fatalf("expected sub_lang_group=%s from 简繁日三语, attrs=%v", lang, res.Attributes)
+		}
+	}
+	for _, rawLang := range []string{"SC", "TC", "JPN"} {
+		if hasAttrNormalized(res.Attributes, model.AttrSubLang, rawLang) {
+			t.Fatalf("did not expect raw sub_lang=%s after normalization, attrs=%v", rawLang, res.Attributes)
+		}
+	}
+	if strings.Contains(strings.TrimSpace(res.CanonicalTitle()), "简繁日三语") {
+		t.Fatalf("trilingual subtitle token should not remain in title, title=%q", res.CanonicalTitle())
+	}
+}
+
 func TestLexiconNewFormat_PlatformUNEXTVariants(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

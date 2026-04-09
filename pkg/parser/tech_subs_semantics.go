@@ -6,6 +6,24 @@ import (
 	"title-parser/pkg/model"
 )
 
+func hasSplitSCTCMarker(s string) bool {
+	noSpace := strings.ReplaceAll(strings.TrimSpace(s), " ", "")
+	if noSpace == "" {
+		return false
+	}
+	for _, pat := range []string{
+		"简/繁", "简／繁", "簡/繁", "簡／繁",
+		"繁/简", "繁／简", "繁/簡", "繁／簡",
+		"简體/繁體", "简体/繁体", "簡體/繁體", "繁體/簡體",
+		"简中/繁中", "簡中/繁中", "繁中/简中", "繁中/簡中",
+	} {
+		if strings.Contains(noSpace, pat) {
+			return true
+		}
+	}
+	return false
+}
+
 func containsASCIIWordLike(s string, markers ...string) bool {
 	if strings.TrimSpace(s) == "" || len(markers) == 0 {
 		return false
@@ -186,6 +204,9 @@ func extractTechSubsSemanticsAndRemoveFromTokens(tokens []model.Token, attrs *[]
 				isSubsLike = true
 			}
 		}
+		if hasSplitSCTCMarker(noSpace) {
+			isSubsLike = true
+		}
 		if strings.Contains(noSpaceLower, "chs") || strings.Contains(noSpaceLower, "cht") || strings.Contains(noSpaceLower, "jpn") {
 			isSubsLike = true
 		}
@@ -231,6 +252,10 @@ func extractTechSubsSemanticsAndRemoveFromTokens(tokens []model.Token, attrs *[]
 
 		langs := map[string]bool{}
 		if strings.Contains(noSpace, "简繁") || strings.Contains(noSpace, "簡繁") || strings.Contains(noSpace, "繁简") || strings.Contains(noSpace, "繁簡") {
+			addLang(langs, "SC")
+			addLang(langs, "TC")
+		}
+		if hasSplitSCTCMarker(noSpace) {
 			addLang(langs, "SC")
 			addLang(langs, "TC")
 		}

@@ -9083,6 +9083,9 @@ func isLikelyMetaBracketText(s string) bool {
 	low := strings.ToLower(strings.TrimSpace(s))
 	up := strings.ToUpper(strings.TrimSpace(s))
 	trim := strings.TrimSpace(s)
+	if editionVersionNoteForSegment(trim) != "" || len(extractCompositeEditionNotes(trim)) > 0 {
+		return true
+	}
 	if trim == "无字幕" || trim == "無字幕" {
 		return true
 	}
@@ -11324,6 +11327,7 @@ func extractEditionAttrsAndRemoveFromTokens(tokens []model.Token, out *[]model.A
 		return
 	}
 	extractRestoreEditionAttrsAndRemoveFromTokens(tokens, out)
+	extractCompositeVersionEditionAttrsAndRemoveFromTokens(tokens, out)
 	extractWebVersionEditionAttrsAndRemoveFromTokens(tokens, out)
 	extractAudioCommentaryEditionAttrsAndRemoveFromTokens(tokens, out, allowUnderscoreRoute)
 	extractUncutEditionAttrsAndRemoveFromTokens(tokens, out)
@@ -11332,6 +11336,133 @@ func extractEditionAttrsAndRemoveFromTokens(tokens []model.Token, out *[]model.A
 	extractDirectorsCutEditionAttrsAndRemoveFromTokens(tokens, out)
 	extractRemasteredEditionAttrsAndRemoveFromTokens(tokens, out)
 	extractEncodeVerEditionAttrsAndRemoveFromTokens(tokens, out)
+}
+
+func editionVersionNoteForSegment(seg string) string {
+	norm := strings.ToLower(strings.TrimSpace(seg))
+	norm = strings.ReplaceAll(norm, " ", "")
+	switch norm {
+	case "tv版", "tv版本", "tvver", "tvversion":
+		return "TV_VERSION"
+	case "web版", "web版本", "webver", "webversion":
+		return "WEB_VERSION"
+	case "无修版", "無修版", "完全无修版", "完全無修版":
+		return "UNCENSORED_VERSION"
+	default:
+		return ""
+	}
+}
+
+func extractCompositeEditionNotes(text string) []string {
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return nil
+	}
+	parts := regexp.MustCompile(`[&＆+/／|｜,，]+`).Split(text, -1)
+	if len(parts) <= 1 {
+		return nil
+	}
+	out := make([]string, 0, len(parts))
+	seen := map[string]bool{}
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		note := editionVersionNoteForSegment(part)
+		if note == "" {
+			return nil
+		}
+		if !seen[note] {
+			out = append(out, note)
+			seen[note] = true
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+func extractCompositeVersionEditionAttrsAndRemoveFromTokens(tokens []model.Token, out *[]model.Attribute) {
+	if out == nil || len(tokens) == 0 {
+		return
+	}
+	findBlockEnd := func(start int, open, close string) int {
+		depth := 0
+		for j := start; j < len(tokens); j++ {
+			if tokens[j].Removed {
+				continue
+			}
+			cur := strings.TrimSpace(tokens[j].Text)
+			if cur == open {
+				depth++
+				continue
+			}
+			if cur == close {
+				depth--
+				if depth == 0 {
+					return j
+				}
+			}
+		}
+		return -1
+	}
+	for i := 0; i < len(tokens); i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		open := strings.TrimSpace(tokens[i].Text)
+		close := ""
+		switch open {
+		case "[":
+			close = "]"
+		case "【":
+			close = "】"
+		case "(":
+			close = ")"
+		case "（":
+			close = "）"
+		default:
+			continue
+		}
+		end := findBlockEnd(i, open, close)
+		if end <= i+1 {
+			continue
+		}
+
+		var inner strings.Builder
+		for k := i + 1; k < end; k++ {
+			if tokens[k].Removed {
+				continue
+			}
+			inner.WriteString(strings.TrimSpace(tokens[k].Text))
+		}
+		joined := strings.TrimSpace(inner.String())
+		if joined == "" {
+			continue
+		}
+
+		notes := extractCompositeEditionNotes(joined)
+		if len(notes) == 0 {
+			continue
+		}
+
+		for _, note := range notes {
+			*out = append(*out, model.Attribute{
+				Type:       model.AttrNote,
+				Normalized: note,
+				TokenStart: i,
+				TokenEnd:   end + 1,
+				Confidence: 0.74,
+				Source:     "edition_token",
+			})
+		}
+		for k := i; k <= end; k++ {
+			tokens[k].Removed = true
+		}
+		i = end
+	}
 }
 
 func extractRestoreEditionAttrsAndRemoveFromTokens(tokens []model.Token, out *[]model.Attribute) {

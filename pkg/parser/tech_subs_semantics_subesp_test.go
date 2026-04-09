@@ -118,6 +118,27 @@ func TestTechSubs_ConcreteLangShouldOverrideMultiMarker(t *testing.T) {
 	}
 }
 
+func TestTechSubs_SlashSeparatedSCTCMarker(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[Group] Sample Show - 01 [简／繁] (1080p H.264 AAC SRTx2)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	if !hasAttrValueLocal(attrValuesLocal(res, model.AttrSubLang), "SC") || !hasAttrValueLocal(attrValuesLocal(res, model.AttrSubLang), "TC") {
+		t.Fatalf("expected sub_lang SC/TC, got=%v", attrValuesLocal(res, model.AttrSubLang))
+	}
+	if !hasAttrValueLocal(attrValuesLocal(res, model.AttrSubFormat), "SRT") {
+		t.Fatalf("expected sub_format SRT, got=%v", attrValuesLocal(res, model.AttrSubFormat))
+	}
+}
+
 func TestTechSubs_FinalSchema_ShouldNotLeakLegacySubtitleValues(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

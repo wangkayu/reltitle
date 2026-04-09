@@ -274,6 +274,72 @@ func TestEditionToken_WebWordInTitleNotAsEdition(t *testing.T) {
 	}
 }
 
+func TestEditionToken_CompositeTVAndUncensoredHeadBlock(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[TV版&无修版] 茉莉花酱的好感度正在崩坏 - EP01 [简／繁] (1080p H.264 AAC SRTx2) {茉莉花同學的好感度壞得很徹底 | 茉莉花ちゃんの好感度はぶっ壊れている}"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	if canonicalEpisode(res) != "1" {
+		t.Fatalf("episode=%q want=1", canonicalEpisode(res))
+	}
+	if canonicalTitle(res) != "茉莉花酱的好感度正在崩坏" {
+		t.Fatalf("title=%q want=茉莉花酱的好感度正在崩坏", canonicalTitle(res))
+	}
+	if len(attrValues(res, model.AttrGroup)) != 0 {
+		t.Fatalf("composite version head block should not become group, groups=%v", attrValues(res, model.AttrGroup))
+	}
+	if !hasParseAttrValue(res, model.AttrNote, "TV_VERSION") {
+		t.Fatalf("expected note TV_VERSION")
+	}
+	if !hasParseAttrValue(res, model.AttrNote, "UNCENSORED_VERSION") {
+		t.Fatalf("expected note UNCENSORED_VERSION")
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSubLang), "SC") || !hasAttrValue(attrValues(res, model.AttrSubLang), "TC") {
+		t.Fatalf("expected sub_lang SC/TC, got=%v", attrValues(res, model.AttrSubLang))
+	}
+}
+
+func TestEditionToken_CompositeTVAndFullUncensoredHeadBlock(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[TV版&完全无修版] 淫狱团地 - EP01 [简／繁] (1080p H.264 AAC SRTx2) {インゴクダンチ | Ingoku Danchi：Deviant's Apartment Complex}"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	if canonicalEpisode(res) != "1" {
+		t.Fatalf("episode=%q want=1", canonicalEpisode(res))
+	}
+	if canonicalTitle(res) != "淫狱团地" {
+		t.Fatalf("title=%q want=淫狱团地", canonicalTitle(res))
+	}
+	if len(attrValues(res, model.AttrGroup)) != 0 {
+		t.Fatalf("composite version head block should not become group, groups=%v", attrValues(res, model.AttrGroup))
+	}
+	if !hasParseAttrValue(res, model.AttrNote, "TV_VERSION") {
+		t.Fatalf("expected note TV_VERSION")
+	}
+	if !hasParseAttrValue(res, model.AttrNote, "UNCENSORED_VERSION") {
+		t.Fatalf("expected note UNCENSORED_VERSION")
+	}
+	if !hasAttrValue(attrValues(res, model.AttrSubLang), "SC") || !hasAttrValue(attrValues(res, model.AttrSubLang), "TC") {
+		t.Fatalf("expected sub_lang SC/TC, got=%v", attrValues(res, model.AttrSubLang))
+	}
+}
+
 func TestEditionToken_Restore4K2KHeadBlockConsumed(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

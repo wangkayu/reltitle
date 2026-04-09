@@ -779,6 +779,20 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.75
+      - tokens: ["完全无修版"]
+        emit:
+          - type: note
+            normalized: "UNCENSORED_VERSION"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["完全無修版"]
+        emit:
+          - type: note
+            normalized: "UNCENSORED_VERSION"
+            token_index: -1
+        remove: true
+        confidence: 0.75
       - tokens: ["无水印"]
         emit:
           - type: note

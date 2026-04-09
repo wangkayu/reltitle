@@ -4698,6 +4698,9 @@ func computeEpRoute(tokens []model.Token, episode string, episodeList string, ep
 	if strings.TrimSpace(episode) != "" {
 		return "PLAIN_EP"
 	}
+	if strings.TrimSpace(spKind) != "" {
+		return "SP_ONLY"
+	}
 	// For season packs, do not route as SP_ONLY even if sp_kind exists.
 	// These are still packs (BATCH) and should match BATCH templates.
 	if strings.TrimSpace(seasonRange) != "" {
@@ -4708,9 +4711,6 @@ func computeEpRoute(tokens []model.Token, episode string, episodeList string, ep
 	}
 	if !movieRouteHardExcluded && (strings.TrimSpace(movieIndex) != "" || hasMovieKeyword) {
 		return "MOVIE_ONLY"
-	}
-	if strings.TrimSpace(spKind) != "" {
-		return "SP_ONLY"
 	}
 	return "NONE"
 }
@@ -6380,7 +6380,7 @@ func (p *Parser) sanitizeAliasesForOutput(aliases []string, title string, episod
 var reAliasTrimOVATail = regexp.MustCompile(`(?i)\s*(?:[-_/|:()\[\]{}【】（）]|\s)+OVA\s*$`)
 var reAliasTrimOADTail = regexp.MustCompile(`(?i)\s*(?:[-_/|:()\[\]{}【】（）]|\s)+OAD\s*$`)
 var reAliasTrimONATail = regexp.MustCompile(`(?i)\s*(?:[-_/|:()\[\]{}【】（）]|\s)+ONA\s*$`)
-var reAliasTrimSPTail = regexp.MustCompile(`(?i)\s*(?:[-_/|:()\[\]{}【】（）]\s*)+(?:SP|SPECIAL)\s*$`)
+var reAliasTrimSPTail = regexp.MustCompile(`(?i)(?:\s+(?:SP)|(?:[-_/|:()\[\]{}【】（）]|\s)+(?:SP)|(?:[-_/|:()\[\]{}【】（）]\s*)+(?:SPECIAL))\s*$`)
 var reAliasTrimSPTailCJK = regexp.MustCompile(`\s*(?:[-_/|:()\[\]{}【】（）]|\s)+(?:特别篇|特別篇)\s*$`)
 
 func trimAliasTailBySPKind(alias string, spKind string) string {

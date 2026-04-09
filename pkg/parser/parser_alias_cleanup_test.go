@@ -1581,6 +1581,44 @@ func TestParserSpecial_EnglishSpecialTailMarkerPromotesSpecial(t *testing.T) {
 	}
 }
 
+func TestParserSpecial_SeasonDashSPDoesNotBecomeSeasonEpisodeEcho(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "[黒ネズミたち] 杖与剑的魔剑谭 第二季 / Tsue to Tsurugi no Wistoria Season 2 - SP (B-Global 1920x1080 HEVC AAC MKV)"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := canonicalTitle(res); got != "杖与剑的魔剑谭" {
+		t.Fatalf("title=%q want=%q", got, "杖与剑的魔剑谭")
+	}
+	if got := res.ContentKind; got != "SPECIAL" {
+		t.Fatalf("content_kind=%q want=%q", got, "SPECIAL")
+	}
+	if got := canonicalSPKind(res); got != "SP" {
+		t.Fatalf("sp_kind=%q want=%q", got, "SP")
+	}
+	if sem := canonicalEPSemantics(res); sem == nil {
+		t.Fatalf("expected ep_semantics")
+	} else {
+		if got := canonicalEPKind(res); got != "SP" {
+			t.Fatalf("ep_semantics.kind=%q want=%q", got, "SP")
+		}
+		if sem.Primary != nil && strings.TrimSpace(sem.Primary.Episode) != "" {
+			t.Fatalf("special-only sample should not emit episode=%q", sem.Primary.Episode)
+		}
+	}
+	for _, a := range canonicalAliases(res) {
+		if strings.Contains(strings.ToUpper(strings.TrimSpace(a)), " SP") || strings.EqualFold(strings.TrimSpace(a), "SP") {
+			t.Fatalf("special tail should be trimmed from alias, aliases=%v", canonicalAliases(res))
+		}
+	}
+}
+
 func TestParserEPSlotAxis_BracketEpisodeUsesABS(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

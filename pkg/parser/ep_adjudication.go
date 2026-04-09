@@ -193,6 +193,30 @@ func hasEpisodeCandidateNear(cands []model.EPEntity, idx int) bool {
 	return false
 }
 
+func hasSPCandidate(cands []model.EPEntity) bool {
+	for _, c := range cands {
+		if strings.EqualFold(strings.TrimSpace(c.Kind), "SP") {
+			return true
+		}
+	}
+	return false
+}
+
+func hasSPCandidateNear(cands []model.EPEntity, idx int) bool {
+	for _, c := range cands {
+		if !strings.EqualFold(strings.TrimSpace(c.Kind), "SP") {
+			continue
+		}
+		if c.TokenStart < 0 {
+			continue
+		}
+		if c.TokenStart >= idx+1 && c.TokenStart <= idx+2 {
+			return true
+		}
+	}
+	return false
+}
+
 func isAliasSeasonEchoRange(tokens []model.Token, idx int, seasonHint *epSeasonHint, cands []model.EPEntity) bool {
 	if seasonHint == nil || idx < 0 || idx+2 >= len(tokens) {
 		return false
@@ -221,6 +245,34 @@ func shouldSuppressRangeCandidate(tokens []model.Token, c model.EPEntity, season
 	}
 	if hasSeasonLeadForRange(tokens, c.TokenStart, seasonHint) && hasEpisodeCandidateNear(cands, c.TokenStart+1) {
 		return "season_episode_range_conflict", true
+	}
+	return "", false
+}
+
+func shouldSuppressEpisodeCandidate(tokens []model.Token, c model.EPEntity, seasonHint *epSeasonHint, cands []model.EPEntity) (string, bool) {
+	if !strings.EqualFold(strings.TrimSpace(c.Kind), "EP") {
+		return "", false
+	}
+	if !strings.EqualFold(strings.TrimSpace(c.Source), "ep_digit_token") {
+		return "", false
+	}
+	if !hasSPCandidate(cands) {
+		return "", false
+	}
+	if seasonHint == nil {
+		return "", false
+	}
+	if strings.TrimSpace(c.Episode) == "" || strings.TrimSpace(c.Episode) != strings.TrimSpace(seasonHint.Season) {
+		return "", false
+	}
+	if c.TokenStart < 0 || c.TokenStart >= len(tokens) {
+		return "", false
+	}
+	if hasMatchingSeasonNumberAroundToken(tokens, c.TokenStart, 12) && hasSPCandidateNear(cands, c.TokenStart) {
+		return "season_special_episode_conflict", true
+	}
+	if hasMatchingSeasonNumberAroundToken(tokens, c.TokenStart, 12) && !hasDashSeparatorAroundToken(tokens, c.TokenStart) {
+		return "season_special_episode_conflict", true
 	}
 	return "", false
 }
@@ -281,6 +333,13 @@ func choosePrimaryCandidate(tokens []model.Token, cands []model.EPEntity, season
 			c.Season = strings.TrimSpace(seasonHint.Season)
 		}
 		if reason, drop := shouldSuppressRangeCandidate(tokens, c, seasonHint, cands); drop {
+			suppressed = append(suppressed, epSuppressedCandidate{
+				Candidate: c,
+				Reason:    reason,
+			})
+			continue
+		}
+		if reason, drop := shouldSuppressEpisodeCandidate(tokens, c, seasonHint, cands); drop {
 			suppressed = append(suppressed, epSuppressedCandidate{
 				Candidate: c,
 				Reason:    reason,

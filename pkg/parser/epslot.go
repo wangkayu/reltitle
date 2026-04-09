@@ -118,6 +118,9 @@ func buildEPSlotCandidates(tokens []model.Token, season string, seasonIdx int, e
 			if yearPattern.MatchString(txt) {
 				continue
 			}
+			if hasMatchingSeasonNumberAroundToken(tokens, i, 12) && !hasDashSeparatorAroundToken(tokens, i) {
+				continue
+			}
 			if !isInBracket(tokens, i) && !isInParen(tokens, i) {
 				if len(txt) >= 3 && !strings.HasPrefix(txt, "0") {
 					continue
@@ -135,9 +138,6 @@ func buildEPSlotCandidates(tokens []model.Token, season string, seasonIdx int, e
 			}
 			// Avoid obvious meta bracket content.
 			if isInBracket(tokens, i) {
-				if hasMatchingSeasonNumberAroundToken(tokens, i, 12) && !hasDashSeparatorAroundToken(tokens, i) {
-					continue
-				}
 				// Guard: skip catalog/product IDs like "[KAXA-9023]".
 				if i-2 >= 0 {
 					prevSep := strings.TrimSpace(tokens[i-1].Text)

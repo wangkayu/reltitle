@@ -26,6 +26,11 @@ func inferContentKind(cfg *config.Config, episode string, episodeRange string, s
 		return "BATCH", 0.95
 	}
 
+	// Season-scoped specials like "Season 2 - SP" are still SPECIAL, not season packs.
+	if hasSPKind && !hasEpisode && !hasEpisodeRange && !hasSeasonRange {
+		return "SPECIAL", 0.85
+	}
+
 	rules := append([]config.ContentTypeInferenceRule(nil), cfg.Inference.ContentTypeInference...)
 	sort.SliceStable(rules, func(i, j int) bool { return rules[i].Priority > rules[j].Priority })
 

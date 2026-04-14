@@ -8134,6 +8134,23 @@ entries:
         remove: true
         confidence: 0.75
 
+  - id: platform_bs_tbs_priority
+    any_of:
+      - tokens: ["bs-tbs"]
+        emit:
+          - type: platform
+            normalized: "BS-TBS"
+            token_index: -1
+        remove: true
+        confidence: 0.82
+      - tokens: ["bs", "-", "tbs"]
+        emit:
+          - type: platform
+            normalized: "BS-TBS"
+            token_index: 0
+        remove: true
+        confidence: 0.82
+
   - id: platform_tbs
     any_of:
       - scope: paren

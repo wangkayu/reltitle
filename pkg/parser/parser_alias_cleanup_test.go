@@ -1300,6 +1300,9 @@ func TestParserTitle_TailGroupSuffixTrimmedFromTitle(t *testing.T) {
 	if got := firstAttrValue(res, model.AttrTailGroup); got != "VARYG" {
 		t.Fatalf("tail_group=%q want=%q", got, "VARYG")
 	}
+	if got := firstAttrValue(res, model.AttrSourceType); got != "WEB-DL" {
+		t.Fatalf("source_type=%q want=%q", got, "WEB-DL")
+	}
 	title := canonicalTitle(res)
 	if strings.Contains(strings.ToUpper(title), "VARYG") {
 		t.Fatalf("title should not contain tail group, got=%q", title)

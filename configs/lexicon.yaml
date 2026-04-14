@@ -3302,6 +3302,9 @@ entries:
     any_of:
       - tokens: ["web-dl", "dual"]
         emit:
+          - type: source_type
+            normalized: "WEB-DL"
+            token_index: 0
           - type: audio_flag
             normalized: "DUAL"
             token_index: 1
@@ -3309,6 +3312,9 @@ entries:
         confidence: 0.7
       - tokens: ["web", "-", "dl", "dual"]
         emit:
+          - type: source_type
+            normalized: "WEB-DL"
+            token_index: 2
           - type: audio_flag
             normalized: "DUAL"
             token_index: 3
@@ -3316,6 +3322,9 @@ entries:
         confidence: 0.7
       - tokens: ["web", "dl", "dual"]
         emit:
+          - type: source_type
+            normalized: "WEB-DL"
+            token_index: 1
           - type: audio_flag
             normalized: "DUAL"
             token_index: 2

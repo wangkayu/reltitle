@@ -550,8 +550,17 @@ func TestParserAliasCleanup_BatchTVMarkerConsumedInTitleGap(t *testing.T) {
 	if got := res.ContentKind; got != "BATCH" {
 		t.Fatalf("content_kind=%q want=BATCH", got)
 	}
+	if got := canonicalSeason(res); got != "2" {
+		t.Fatalf("season=%q want=%q", got, "2")
+	}
+	if got := canonicalTitle(res); got != "Kekkon Yubiwa Monogatari II" {
+		t.Fatalf("title=%q want=%q", got, "Kekkon Yubiwa Monogatari II")
+	}
+	if got := canonicalAliases(res); !containsAlias(got, "Tales of Wedding Rings") {
+		t.Fatalf("expected cleaned english alias, got=%v", got)
+	}
 	for _, tok := range res.Tokens {
-		if strings.EqualFold(strings.TrimSpace(tok.Text), "TV") && !tok.Removed {
+		if (strings.EqualFold(strings.TrimSpace(tok.Text), "TV") || strings.EqualFold(strings.TrimSpace(tok.Text), "ТВ")) && !tok.Removed {
 			t.Fatalf("batch title-gap TV marker should be consumed, tokens=%v", res.Tokens)
 		}
 	}

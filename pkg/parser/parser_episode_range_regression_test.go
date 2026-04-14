@@ -179,3 +179,33 @@ func TestParserEpisodeRange_DashSeasonAliasEchoDoesNotBecomeBatchRange(t *testin
 		t.Fatalf("content_kind=%q want=%q", got, "TV_EP")
 	}
 }
+
+func TestParserEpisodeRange_OfTotalProgressBatchUsesOneToCurrent(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	raw := "Sousou no Frieren TV-2 | Фрирен, провожающая в последний путь [ТВ-2] | Frieren: Beyond Journey's End 2 [2026] [07 of 10] [WEBRip] [1080p] [RUS + JAP]"
+	res, err := p.Parse(raw)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	if got := canonicalEpisodeRange(res); got != "1-7" {
+		t.Fatalf("episode_range=%q want=%q", got, "1-7")
+	}
+	if got := canonicalSeason(res); got != "2" {
+		t.Fatalf("season=%q want=%q", got, "2")
+	}
+	if got := canonicalEpisode(res); got != "" {
+		t.Fatalf("episode=%q want empty for of-total batch progress", got)
+	}
+	if got := canonicalEPKind(res); got != "RANGE" {
+		t.Fatalf("ep_semantics.kind=%q want=%q", got, "RANGE")
+	}
+	if got := res.ContentKind; got != "BATCH" {
+		t.Fatalf("content_kind=%q want=%q", got, "BATCH")
+	}
+}

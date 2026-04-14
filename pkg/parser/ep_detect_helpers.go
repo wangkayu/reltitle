@@ -86,6 +86,83 @@ func detectSeasonOnlyLoose(tokens []model.Token) (season string, tokenIdx int) {
 	return "", -1
 }
 
+func isTVVariantSeasonToken(text string) bool {
+	t := strings.TrimSpace(text)
+	return strings.EqualFold(t, "TV") || t == "ТВ" || t == "тв"
+}
+
+func hasTVVariantSeasonRightBoundary(tokens []model.Token, idx int) bool {
+	if idx < 0 {
+		return true
+	}
+	for j := idx; j < len(tokens); j++ {
+		if strings.TrimSpace(tokens[j].Text) == "" {
+			continue
+		}
+		switch strings.TrimSpace(tokens[j].Text) {
+		case "|", "/", "\\", "]", "】", ")", "）", "[", "【", "(", "（":
+			return true
+		}
+		if yearPattern.MatchString(strings.TrimSpace(tokens[j].Text)) {
+			return true
+		}
+		return false
+	}
+	return true
+}
+
+func detectTVVariantSeason(tokens []model.Token) (season string, tokenIdx int) {
+	for i := 0; i+2 < len(tokens); i++ {
+		if !isTVVariantSeasonToken(tokens[i].Text) {
+			continue
+		}
+		if strings.TrimSpace(tokens[i+1].Text) != "-" {
+			continue
+		}
+		s := parseSmallSeasonNumberToken(strings.TrimSpace(tokens[i+2].Text))
+		if s == "" {
+			continue
+		}
+		if !hasTVVariantSeasonRightBoundary(tokens, i+3) {
+			continue
+		}
+		return s, i
+	}
+	return "", -1
+}
+
+func removeTVVariantSeasonTokens(tokens []model.Token) {
+	for i := 0; i+2 < len(tokens); i++ {
+		if !isTVVariantSeasonToken(tokens[i].Text) {
+			continue
+		}
+		if strings.TrimSpace(tokens[i+1].Text) != "-" {
+			continue
+		}
+		if parseSmallSeasonNumberToken(strings.TrimSpace(tokens[i+2].Text)) == "" {
+			continue
+		}
+		if !hasTVVariantSeasonRightBoundary(tokens, i+3) {
+			continue
+		}
+		tokens[i].Removed = true
+		tokens[i+1].Removed = true
+		tokens[i+2].Removed = true
+		if i-1 >= 0 {
+			prev := strings.TrimSpace(tokens[i-1].Text)
+			if prev == "[" || prev == "【" || prev == "(" || prev == "（" {
+				tokens[i-1].Removed = true
+			}
+		}
+		if i+3 < len(tokens) {
+			next := strings.TrimSpace(tokens[i+3].Text)
+			if next == "]" || next == "】" || next == ")" || next == "）" {
+				tokens[i+3].Removed = true
+			}
+		}
+	}
+}
+
 func detectSeasonBeforeDashEpisode(tokens []model.Token) (season string, tokenIdx int) {
 	for i := 0; i+2 < len(tokens); i++ {
 		if tokens[i].Removed || tokens[i+1].Removed || tokens[i+2].Removed {
@@ -508,7 +585,8 @@ func detectSeasonInParen(tokens []model.Token) (season string, tokenIdx int) {
 }
 
 func detectEpisodeOfTotalInBracket(tokens []model.Token) (string, int) {
-	// Pattern: [ 01 of 12 ] -> episode_range=1-1
+	// Pattern: [ 07 of 10 ] -> episode_range=1-7
+	// The right-hand number is the total planned count, not the range end.
 	for i := 0; i+2 < len(tokens); i++ {
 		if tokens[i].Removed {
 			continue
@@ -532,10 +610,19 @@ func detectEpisodeOfTotalInBracket(tokens []model.Token) (string, int) {
 				m := strings.TrimSpace(tokens[j+2].Text)
 				if episodeOfTotalPattern.MatchString(m) {
 					nn := strings.TrimLeft(n, "0")
+					mm := strings.TrimLeft(m, "0")
 					if nn == "" {
 						nn = "0"
 					}
-					return nn + "-" + nn, j
+					if mm == "" {
+						mm = "0"
+					}
+					cur, errCur := strconv.Atoi(nn)
+					total, errTotal := strconv.Atoi(mm)
+					if errCur != nil || errTotal != nil || cur <= 0 || total <= 0 || cur > total {
+						continue
+					}
+					return "1-" + strconv.Itoa(cur), j
 				}
 			}
 		}

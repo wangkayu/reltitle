@@ -81,6 +81,10 @@ func passDetectSeasonSPMovie(tokens []model.Token, attrs *[]model.Attribute, ctx
 			addSeasonHint(s, idx, "attr")
 		}
 	}
+	if s, idx := detectTVVariantSeason(tokens); s != "" {
+		addSeasonHint(s, idx, "tv_variant")
+		removeTVVariantSeasonTokens(tokens)
+	}
 	if s, idx := detectSeasonBeforeDashEpisode(tokens); s != "" {
 		addSeasonHint(s, idx, "season_before_dash")
 	}

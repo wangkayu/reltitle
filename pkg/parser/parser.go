@@ -8504,7 +8504,7 @@ func isLeadingHeadNoiseText(s string) bool {
 	}
 	s = strings.TrimSpace(strings.Trim(s, "★☆"))
 	switch s {
-	case "搬运", "搬運", "整理搬运", "整理搬運":
+	case "搬运", "搬運", "整理搬运", "整理搬運", "代发", "代發":
 		return true
 	}
 	return false

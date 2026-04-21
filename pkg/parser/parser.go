@@ -7377,6 +7377,10 @@ func isLikelySubtitleBracketGroupText(s string) bool {
 	if reAliasSubtitleCJKMetaPhrase.MatchString(strings.TrimSpace(s)) {
 		return true
 	}
+	// Multi-language subtitle markers like "Multi language subs", "Multi subs", etc.
+	if regexp.MustCompile(`(?i)^multi\s+language\s+subs?$`).MatchString(strings.TrimSpace(s)) {
+		return true
+	}
 	if regexp.MustCompile(`(?i)^sub(?:title|titles)?(?:[_ .-]+[\p{L}]{2,16})+$`).MatchString(strings.TrimSpace(s)) {
 		return true
 	}

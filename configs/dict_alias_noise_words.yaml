@@ -200,7 +200,7 @@ alias_noise:
     - '(?i)^laser\s*disc(?:\s*box)?$'
     - '(?i)^(retail|bootleg|vhs)$'
     - '(?i)^\d{3,4}p$'
-    - '(?i)^(?:multi[-_ ]?sub|multisub|dual[-_ ]?audio|multi[-_ ]?audio)$'
+    - '(?i)^(?:multi[-_ ]?sub|multisub|multi[-_ ]?language[-_ ]?subs?|dual[-_ ]?audio|multi[-_ ]?audio)$'
     # movie/batch content markers that should not stay as title_alias
     - '(?i)^movies?$'
     - '(?i)^movies?\s*\+\s*(?:specials?|sp|ova|oad|ona)$'

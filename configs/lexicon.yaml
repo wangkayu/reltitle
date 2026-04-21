@@ -6325,6 +6325,13 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.7
+      - tokens: ["multi", "language", "subs"]
+        emit:
+          - type: note
+            normalized: "Multi-Language-Subs"
+            token_index: -1
+        remove: true
+        confidence: 0.75
 
   - id: sub_meta_subs_word
     any_of:

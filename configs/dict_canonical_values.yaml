@@ -51,6 +51,7 @@ canonical:
     - RTHK
     - HULU
     - DISNEY_NOW
+    - CATCHPLAY_PLUS
 
   sub_flag:
     - hard

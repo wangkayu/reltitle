@@ -198,6 +198,13 @@ rules:
       normalized: VIUTV
     priority: 100
 
+  - id: platform_catchplay
+    raw_tokens: ["catchplay+", "catchplay", "cthp"]
+    emit:
+      type: platform
+      normalized: CATCHPLAY_PLUS
+    priority: 100
+
   - id: platform_ytb
     raw_tokens: ["ytb", "youtube"]
     emit:

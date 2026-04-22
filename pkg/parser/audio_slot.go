@@ -7,7 +7,7 @@ import (
 	"title-parser/pkg/model"
 )
 
-func extractTechAudioSlotAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Attribute) *model.AudioSlot {
+func extractTechAudioSlotAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Attribute, audioCodecCanonical map[string]string) *model.AudioSlot {
 	if len(tokens) == 0 || attrs == nil {
 		return nil
 	}
@@ -19,28 +19,12 @@ func extractTechAudioSlotAndRemoveFromTokens(tokens []model.Token, attrs *[]mode
 	canonCodec := func(s string) string {
 		low := strings.ToLower(strings.TrimSpace(s))
 		low = strings.ReplaceAll(low, "_", "-")
-		switch low {
-		case "dtshdma", "dts-hdma", "dts-hd", "dts-hd-ma", "dts-hdmalossless":
-			return "DTS-HDMA"
-		case "truehd":
-			return "TRUEHD"
-		case "eac3", "e-ac3", "ddp":
-			return "DDP"
-		case "ac3", "dd":
-			return "AC3"
-		case "aac":
-			return "AAC"
-		case "flac":
-			return "FLAC"
-		case "opus":
-			return "OPUS"
-		case "pcm":
-			return "PCM"
-		case "dts":
-			return "DTS"
-		default:
-			return strings.ToUpper(strings.TrimSpace(s))
+		if audioCodecCanonical != nil {
+			if canonical, ok := audioCodecCanonical[low]; ok {
+				return canonical
+			}
 		}
+		return strings.ToUpper(strings.TrimSpace(s))
 	}
 
 	canonLang := func(s string) string {
@@ -176,6 +160,51 @@ func extractTechAudioSlotAndRemoveFromTokens(tokens []model.Token, attrs *[]mode
 		return strings.Contains(low, "sub")
 	}
 
+	isRelatedCodec := func(existingCodec, newCodec string) bool {
+		existing := strings.ToLower(existingCodec)
+		newLow := strings.ToLower(newCodec)
+		if existing == newLow {
+			return true
+		}
+		relatedGroups := [][]string{
+			{"eac3", "ddp", "ac3", "dd"},
+			{"dtshdma", "dts-hdma", "dtshd", "dts-hd", "dts"},
+			{"truehd", "true-hd"},
+		}
+		for _, group := range relatedGroups {
+			hasExisting := false
+			hasNew := false
+			for _, c := range group {
+				if strings.Contains(existing, c) {
+					hasExisting = true
+				}
+				if strings.Contains(newLow, c) {
+					hasNew = true
+				}
+			}
+			if hasExisting && hasNew {
+				return true
+			}
+		}
+		return false
+	}
+
+	hasLexiconExtractedRelatedCodec := func(tokenIdx int, codec string) bool {
+		for _, attr := range *attrs {
+			if attr.Type == model.AttrAudioCodec && attr.Source == "lexicon" {
+				// Check if the lexicon attribute's token range overlaps with nearby removed tokens.
+				// Lexicon may mark multiple tokens as removed but emit with a narrower token range.
+				// We check if the current token is within a reasonable distance (±2 tokens) of the lexicon emit.
+				if attr.TokenStart-2 <= tokenIdx && tokenIdx < attr.TokenEnd+2 {
+					if isRelatedCodec(attr.Normalized, codec) {
+						return true
+					}
+				}
+			}
+		}
+		return false
+	}
+
 	addAttr := func(t model.AttrType, val string, start int, end int, conf float64) {
 		val = strings.TrimSpace(val)
 		if val == "" {
@@ -280,6 +309,12 @@ func extractTechAudioSlotAndRemoveFromTokens(tokens []model.Token, attrs *[]mode
 				// clearly look like audio markers.
 				if !isAudioMarkerToken(t) {
 					if c, cnt := parseCodecWithCount(t); c == "" || cnt <= 0 {
+						continue
+					}
+				}
+				// Skip if lexicon already extracted a related audio_codec from this token.
+				if c, _ := isAudioCodecToken(t); c != "" {
+					if hasLexiconExtractedRelatedCodec(i, c) {
 						continue
 					}
 				}

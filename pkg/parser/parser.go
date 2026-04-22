@@ -2096,6 +2096,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	ctx := newParseContext(rawTitle, packKind, tailParenBlock)
 	ctx.AliasValidFunc = p.isValidAliasToken
 	ctx.GroupSlot2Rules = p.groupSlot2Rules
+	ctx.AudioCodecCanonical = p.audioCodecCanonical
 	ctx.SeasonRange = seasonRange
 	ctx.Group = group
 	for _, pass := range defaultParsePasses() {

@@ -7,5 +7,5 @@ func passExtractTechSubs(tokens []model.Token, attrs *[]model.Attribute, ctx *pa
 }
 
 func passExtractTechAudio(tokens []model.Token, attrs *[]model.Attribute, ctx *parseContext) {
-	ctx.AudioSlot = extractTechAudioSlotAndRemoveFromTokens(tokens, attrs)
+	ctx.AudioSlot = extractTechAudioSlotAndRemoveFromTokens(tokens, attrs, ctx.AudioCodecCanonical)
 }

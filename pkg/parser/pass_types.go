@@ -13,6 +13,9 @@ type parseContext struct {
 
 	AudioSlot *model.AudioSlot
 
+	// Canonical maps for audio/video codec normalization (from config)
+	AudioCodecCanonical map[string]string
+
 	Season      string
 	SeasonIdx   int
 	SeasonRange string

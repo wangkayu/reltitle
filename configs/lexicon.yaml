@@ -5989,6 +5989,52 @@ entries:
     remove: true
     confidence: 0.95
 
+  - id: audio_eac3_split_51
+    any_of:
+      - tokens: ["e", "-", "ac3", "5.1"]
+        emit:
+          - type: audio_codec
+            normalized: "EAC3"
+            token_index: 0
+          - type: audio_channels
+            normalized: "5.1"
+            token_index: 3
+        remove: true
+        confidence: 0.9
+      - tokens: ["e", "-", "ac3", "5", ".", "1"]
+        emit:
+          - type: audio_codec
+            normalized: "EAC3"
+            token_index: 0
+          - type: audio_channels
+            normalized: "5.1"
+            token_index: 5
+        remove: true
+        confidence: 0.9
+
+  - id: audio_eac3_split_20
+    any_of:
+      - tokens: ["e", "-", "ac3", "2.0"]
+        emit:
+          - type: audio_codec
+            normalized: "EAC3"
+            token_index: 0
+          - type: audio_channels
+            normalized: "2.0"
+            token_index: 3
+        remove: true
+        confidence: 0.9
+      - tokens: ["e", "-", "ac3", "2", ".", "0"]
+        emit:
+          - type: audio_codec
+            normalized: "EAC3"
+            token_index: 0
+          - type: audio_channels
+            normalized: "2.0"
+            token_index: 5
+        remove: true
+        confidence: 0.9
+
   - id: audio_eac3_split
     tokens: ["e", "-", "ac3"]
     emit:
@@ -5997,6 +6043,18 @@ entries:
         token_index: 0
     remove: true
     confidence: 0.9
+
+  - id: audio_eac3_20
+    tokens: ["eac3", "2.0"]
+    emit:
+      - type: audio_codec
+        normalized: "EAC3"
+        token_index: 0
+      - type: audio_channels
+        normalized: "2.0"
+        token_index: 1
+    remove: true
+    confidence: 0.95
 
   - id: audio_aac_20
     tokens: ["aac", "2.0"]

@@ -174,7 +174,13 @@ canonical:
       disney now: DISNEY_NOW
     audio_codec_aliases:
       ddp: EAC3
+      e-ac3: EAC3
+      dd: AC3
       dts-hdma: DTSHDMA
+      dtshdma: DTSHDMA
+      dts-hd: DTSHD
+      dts-hd-ma: DTSHDMA
+      dts-hdmalossless: DTSHDMA
     audio_flag_aliases:
       dual: DUAL_AUDIO
       dual audio: DUAL_AUDIO

@@ -276,7 +276,7 @@ rules:
     priority: 100
 
   - id: audio_codec_eac3
-    raw_tokens: ["eac3", "e-ac-3", "ddp"]
+    raw_tokens: ["eac3", "e-ac-3", "e-ac3", "ddp"]
     emit:
       type: audio_codec
       normalized: EAC3

@@ -5989,6 +5989,15 @@ entries:
     remove: true
     confidence: 0.95
 
+  - id: audio_eac3_split
+    tokens: ["e", "-", "ac3"]
+    emit:
+      - type: audio_codec
+        normalized: "EAC3"
+        token_index: 0
+    remove: true
+    confidence: 0.9
+
   - id: audio_aac_20
     tokens: ["aac", "2.0"]
     emit:

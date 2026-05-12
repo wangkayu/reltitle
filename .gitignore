@@ -18,3 +18,20 @@
 
 # Generated report payloads
 /docs/teacher_unknown_pipeline/qwen_capability_report*.json
+
+# Training artifacts (large files, archived in git tags)
+/training/artifacts/
+/artifacts/
+
+# Legacy binaries
+/test_crf
+
+# Audit outputs
+/title_parser_llm_audit_*
+
+# Sisyphus run state
+/.sisyphus/run-continuation/
+
+# Old datasets (archived in git tag: archive/ml-last-version-20260305)
+**/_old_*/
+**/*.backup_*

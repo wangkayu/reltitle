@@ -14,24 +14,17 @@
 
 # Local test outputs
 /test_results/
-/clearml_train21_log.png
-
-# Generated report payloads
-/docs/teacher_unknown_pipeline/qwen_capability_report*.json
-
-# Training artifacts (large files, archived in git tags)
-/training/artifacts/
-/artifacts/
 
 # Legacy binaries
 /test_crf
 
-# Audit outputs
-/title_parser_llm_audit_*
-
 # Sisyphus run state
 /.sisyphus/run-continuation/
 
-# Old datasets (archived in git tag: archive/ml-last-version-20260305)
-**/_old_*/
-**/*.backup_*
+# ML-related directories (archived in git tag: archive/ml-last-version-20260305)
+# These are no longer in the project but listed for reference:
+# /training/         - ML training workspace (archived)
+# /xlmr-service/     - XLM-R Flask service (archived)
+# /orchestration/    - Temporal workflow for ML (archived)
+# /infra/            - Docker configs for ML (archived)
+# /artifacts/        - ML models/datasets (archived)

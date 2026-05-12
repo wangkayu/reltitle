@@ -16,24 +16,34 @@ git checkout main
 
 ### Git Tag: `archive/ml-last-version-20260305`
 
+All ML-related code and training infrastructure has been archived:
+
 | Component | Path | Description |
 |-----------|------|-------------|
-| ONNX Engine | `pkg/onnx/` | ONNX inference for token boundary |
-| XLM-RoBERTa | `pkg/xlmr/` | XLM-R tokenizer + ONNX inference |
-| CRF Model | `pkg/crf/` | Conditional Random Field with Viterbi |
-| Token Boundary | `pkg/token_boundary/` | LLM-based boundary detection |
-| Quality Gate | `pkg/quality/gate.go` | ML-triggered quality evaluation |
-| Training Workspace | `training/` | Complete ML training pipeline |
+| **Training Workspace** | `training/` | Complete ML training pipeline (~2.4GB) |
+| Training Scripts | `training/scripts/` | 210+ Python scripts for ML training |
+| v1 Parser | `training/go/titleparser/` | Independent Go module (ML-first) |
+| Training Docs | `training/docs/` | ML design documents |
+| Training Resources | `training/resources/` | YAML configs for training |
+| **ONNX Engine** | `pkg/onnx/` | ONNX inference for token boundary |
+| **XLM-RoBERTa** | `pkg/xlmr/` | XLM-R tokenizer + ONNX inference |
+| **CRF Model** | `pkg/crf/` | Conditional Random Field with Viterbi |
+| **Token Boundary** | `pkg/token_boundary/` | LLM-based boundary detection |
+| **Quality Gate** | `pkg/quality/gate.go` | ML-triggered quality evaluation |
+| **v2.6 Experimental** | `pkg/parserv26/` | Candidate graph inference prototype |
+| **XLM-R Service** | `xlmr-service/` | Flask HTTP service for XLM-R |
+| **Temporal Workflow** | `orchestration/` | Workflow orchestration for ML |
+| **Docker Configs** | `infra/` | Docker compose for ML services |
 
-### Key Design Documents (Still in main branch)
+### Key Design Documents (In Tag)
 
-| Document | Path | Purpose |
-|----------|------|---------|
-| ML Integration Plan | `training/docs/GO_CRF_INTEGRATION_PLAN.md` | CRF integration design |
-| Phase 3 Complete | `training/docs/GO_CRF_PHASE3_COMPLETE.md` | Implementation summary |
-| Feature Fix Guide | `training/docs/GO_CRF_FEATURE_FIX_GUIDE.md` | Feature engineering details |
-| XLM-R Integration | `docs/XLMR_TOKEN_TAGGING_INTEGRATION.md` | (archived in tag) |
-| Pipeline V3 | `docs/PIPELINE_V3_QUALITY_GATED_RERANK.md` | (archived in tag) |
+| Document | Purpose |
+|----------|---------|
+| `training/docs/GO_CRF_INTEGRATION_PLAN.md` | CRF integration design |
+| `training/docs/GO_CRF_PHASE3_COMPLETE.md` | Implementation summary |
+| `training/docs/GO_CRF_FEATURE_FIX_GUIDE.md` | Feature engineering details |
+| `docs/XLMR_TOKEN_TAGGING_INTEGRATION.md` | XLM-R integration |
+| `docs/PIPELINE_V3_QUALITY_GATED_RERANK.md` | Quality gate pipeline |
 
 ## Migration Timeline
 
@@ -48,64 +58,47 @@ git checkout main
     ↓
 2026-03-10  v2.5 pure-rule parser released
     ↓
-Current     v2.5+ config-driven, no ML dependency
+Current     v2.5+ config-driven, zero ML dependency
 ```
 
 ## Why These Were Archived
 
-1. **Runtime Complexity**: ML models added deployment overhead (ONNX runtime, model files)
-2. **Maintenance Cost**: Dual parser paths (rules + ML) increased debugging difficulty
-3. **Performance**: Pure-rule parser achieved sufficient accuracy without ML overhead
-4. **Config-driven Success**: YAML configs proved flexible enough for edge cases
+1. **Runtime Complexity**: ML models added deployment overhead
+2. **Maintenance Cost**: Dual parser paths increased debugging difficulty
+3. **Performance**: Pure-rule parser achieved sufficient accuracy
+4. **Config-driven Success**: YAML configs proved flexible enough
 
-## Design Patterns Worth Revisiting
+## Current Project Structure
 
-### 1. CRF Feature Engineering
-```bash
-git show archive/ml-last-version-20260305:pkg/crf/features.go
 ```
-- BIO tagging scheme for token classification
-- Context window features (-1, +1 tokens)
-- Character type detection (CJK, Latin, digit)
+title-parser/
+├── pkg/parser/        # v2.5 pure-rule parser (main)
+├── pkg/config/        # YAML config loader
+├── pkg/model/         # Data types
+├── pkg/api/           # HTTP handlers
+├── pkg/serve/         # stdio batch service
+├── pkg/tokenize/      # CJK+Latin tokenizer
+├── configs/           # 18 YAML config files
+├── cmd/               # CLI tools (server, parse, serve)
+├── docs/              # Design docs (rule-based)
+└── tests/             # Regression tests
+```
 
-### 2. Viterbi Decoding
+**No ML dependency. No training infrastructure. Pure rule-based configuration.**
+
+## Viewing Archived Code
+
 ```bash
+# Example: View CRF Viterbi implementation
 git show archive/ml-last-version-20260305:pkg/crf/model.go
-```
-- Dynamic programming for optimal label sequence
-- Transition and emission score combination
 
-### 3. Quality Gate Mechanism
-```bash
-git show archive/ml-last-version-20260305:pkg/quality/gate.go
-```
-- Sample-level quality thresholds
-- ML trigger conditions
-- Batch evaluation pipeline
+# Example: View XLM-R service
+git show archive/ml-last-version-20260305:xlmr-service/main.py
 
-### 4. Training Data Generation
-```bash
+# Example: View training pipeline
+git show archive/ml-last-version-20260305:training/scripts/run_student_structured_ml_pipeline_v0.py
+
+# Browse full archived structure
 git checkout archive/ml-last-version-20260305
-ls training/scripts/run_*.py
+ls -la
 ```
-- Teacher-student pipeline
-- Contrastive learning data generation
-- LLM-assisted annotation
-
-## Restoring Specific Files
-
-If you need to restore a specific archived file:
-
-```bash
-# Example: Restore CRF model implementation
-git show archive/ml-last-version-20260305:pkg/crf/model.go > /tmp/crf_model.go
-
-# View in browser (if GitHub)
-# https://github.com/YOUR_REPO/tree/archive/ml-last-version-20260305
-```
-
-## Related Tags
-
-- `v2.5-gate-green` - v2.5 gate passing
-- `v2.5-pure-canonical-20260306` - Pure canonical output migration
-- `archive/ml-last-version-20260305` - Last ML version (this archive)

@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"title-parser/pkg/config"
-	"title-parser/pkg/model"
 	"title-parser/pkg/parser"
 )
 
@@ -55,5 +54,5 @@ func main() {
 
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
-	_ = enc.Encode(model.ProjectContent(res))
+	_ = enc.Encode(res)
 }

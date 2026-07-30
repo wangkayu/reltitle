@@ -1,6 +1,7 @@
 # Title Parser
 
 Anime and film release-title parser command-line tool written in Go.
+The CLI prints the complete parse result as JSON.
 
 ## Usage
 

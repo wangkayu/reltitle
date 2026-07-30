@@ -1,8 +1,9 @@
 # Build outputs
 /bin/
 /dist/
-/server
-/parser.test
+/parse
+/title-parser
+*.test
 *.tar.gz
 *.zip
 *.log
@@ -17,19 +18,5 @@ coverage.out
 *.bak
 *~
 
-# Tooling state
-/.kilocode/
-/.qoder/
-
-# Python caches
-**/__pycache__/
-*.py[cod]
-
 # Local test outputs
 /test_results/
-
-# Legacy binaries
-/test_crf
-
-# Sisyphus run state
-/.sisyphus/run-continuation/

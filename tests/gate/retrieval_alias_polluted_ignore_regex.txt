@@ -1,5 +1,0 @@
-# Alias/title polluted rows to ignore in gate metrics (non-target/noisy samples).
-^\(WHIM\) Deltora Quest \(2007\) \[480p JDVD\] \[H265\] \[Opus 2\.0\]$
-^2018通灵妃\[第一季，全16集\]\[4K\]\.Psychic\.Princess\.S01$
-^\[015厄介事の匂い\]\[B站沸羊羊都得叫我师傅\]\[葬送的芙莉莲/Sousou no Frieren/葬送のフリーレン\]\[2160P\]\[Crunchyroll\]\[4K收藏级画质\] \[7\.5 GB\]$
-^\[AI-Raws\] 羅小黒戦記 ぼくが選ぶ未来 / 罗小黑战记 / The Legend of Hei \[4K Reproduction\] \[MKV\]$

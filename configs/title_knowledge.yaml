@@ -1,7 +1,8 @@
-enabled: false
-alias_lookup: ../training/artifacts/knowledge/anidb/anidb_title_lookup.json
-aid_index: ../training/artifacts/knowledge/anidb/anidb_aid_index.json
-lock_min_score: 0.90
-lock_min_gap: 0.08
-min_title_runes: 3
-max_alias_export: 8
+updated_at: "2026-07-30"
+entries:
+  - id: no6_future_city
+    enabled: true
+    canonical_title: "No.6 未来都市"
+    raw_must_contain_all:
+      - "[No.6]"
+      - "[未来都市]"

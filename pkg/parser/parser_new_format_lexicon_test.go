@@ -73,6 +73,88 @@ func TestLexiconNewFormat_MultiAudioSubDottedBlock(t *testing.T) {
 	}
 }
 
+func TestLexiconNewFormat_MSubIsStructuredAndConsumed(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+
+	res, err := New(cfg).Parse("[Gecko] Sample Title - 01 [BILI.WEB-DL 1080P AVC, AAC, M-SUB][4130B845]")
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	if !hasAttrNormalized(res.Attributes, model.AttrSubFlag, "soft") {
+		t.Fatalf("expected M-SUB to emit sub_flag=soft, attrs=%v", res.Attributes)
+	}
+	if !hasAttrNormalized(res.Attributes, model.AttrSubLang, "MULTI") {
+		t.Fatalf("expected M-SUB to emit sub_lang=MULTI, attrs=%v", res.Attributes)
+	}
+	for _, tk := range res.Tokens {
+		if (strings.EqualFold(tk.Text, "M") || strings.EqualFold(tk.Text, "SUB")) && !tk.Removed {
+			t.Fatalf("expected M-SUB token %q to be consumed, tokens=%v", tk.Text, res.Tokens)
+		}
+	}
+}
+
+func TestLexiconNewFormat_StandaloneVFIsFrenchDubAndConsumed(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+
+	res, err := New(cfg).Parse("Cybersix.S01.VF.480p.DVDRIP.X264-NOTAG")
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	if !hasAttrNormalized(res.Attributes, model.AttrAudioLang, "FRA") {
+		t.Fatalf("expected VF to emit audio_lang=FRA, attrs=%v", res.Attributes)
+	}
+	if !hasAttrNormalized(res.Attributes, model.AttrAudioFlag, "DUB") {
+		t.Fatalf("expected VF to emit audio_flag=DUB, attrs=%v", res.Attributes)
+	}
+	if hasAttrNormalized(res.Attributes, model.AttrSubFlag, "soft") {
+		t.Fatalf("VF must not be classified as a subtitle marker, attrs=%v", res.Attributes)
+	}
+	for _, tk := range res.Tokens {
+		if strings.EqualFold(tk.Text, "VF") && !tk.Removed {
+			t.Fatalf("expected standalone VF to be consumed, tokens=%v", res.Tokens)
+		}
+	}
+}
+
+func TestLexiconNewFormat_VOSTFRVFComboIsConsumedAsFrenchAudioAndSubs(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+
+	res, err := New(cfg).Parse("[ERR] Mermaid Melody Pichi Pichi Pitch MULTI VOSTFR_VF [BDRip 720p]")
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+
+	for typ, normalized := range map[model.AttrType]string{
+		model.AttrAudioLang: "FRA",
+		model.AttrAudioFlag: "DUB",
+		model.AttrSubLang:   "FRA",
+		model.AttrSubFlag:   "soft",
+	} {
+		if !hasAttrNormalized(res.Attributes, typ, normalized) {
+			t.Fatalf("expected %s=%s, attrs=%v", typ, normalized, res.Attributes)
+		}
+	}
+	for _, tk := range res.Tokens {
+		if (strings.EqualFold(tk.Text, "VOSTFR") || strings.EqualFold(tk.Text, "VF") || tk.Text == "_") && !tk.Removed {
+			t.Fatalf("expected VOSTFR_VF token %q to be consumed, tokens=%v", tk.Text, res.Tokens)
+		}
+	}
+	if got := res.CanonicalTitle(); strings.Contains(strings.ToUpper(got), "VF") {
+		t.Fatalf("VOSTFR_VF must not pollute title, title=%q", got)
+	}
+}
+
 func TestLexiconNewFormat_SubDotEspanolBracketDoesNotBecomeTailGroup(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

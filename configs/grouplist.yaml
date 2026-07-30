@@ -16,6 +16,9 @@ groups:
   - name: SomeGroup
     patterns:
       - SomeGroup
+  - name: 三明治摆烂组
+    patterns:
+      - 三明治摆烂组
 usage_notes: |-
   1. 这是 Parser 的知识库,不是匹配系统
   2. patterns 用于识别 token 是否为字幕组

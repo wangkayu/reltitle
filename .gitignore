@@ -3,6 +3,19 @@
 /dist/
 /server
 /parser.test
+*.tar.gz
+*.zip
+*.log
+coverage.out
+
+# Local environment and editor state
+.DS_Store
+.env
+.env.*
+!.env.example
+*.tmp
+*.bak
+*~
 
 # Tooling state
 /.kilocode/
@@ -20,11 +33,3 @@
 
 # Sisyphus run state
 /.sisyphus/run-continuation/
-
-# ML-related directories (archived in git tag: archive/ml-last-version-20260305)
-# These are no longer in the project but listed for reference:
-# /training/         - ML training workspace (archived)
-# /xlmr-service/     - XLM-R Flask service (archived)
-# /orchestration/    - Temporal workflow for ML (archived)
-# /infra/            - Docker configs for ML (archived)
-# /artifacts/        - ML models/datasets (archived)

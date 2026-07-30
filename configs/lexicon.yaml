@@ -1,6 +1,23 @@
 updated_at: "2026-01-16"
 
 entries:
+  - id: note_subtitle_schedule_adjustment_cn
+    any_of:
+      - tokens: ["關於本番字幕更新時間調整說明"]
+        emit:
+          - type: note
+            normalized: "SUBTITLE_SCHEDULE_ADJUSTMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["关于本番字幕更新时间调整说明"]
+        emit:
+          - type: note
+            normalized: "SUBTITLE_SCHEDULE_ADJUSTMENT"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+
   - id: noise_holiday_labor_day_cn
     scope: paren
     tokens: ["五一劳动节快乐"]
@@ -3384,31 +3401,6 @@ entries:
         remove: true
         confidence: 0.7
 
-  - id: audio_vf
-    any_of:
-      - scope: bracket
-        tokens: ["vf"]
-        emit:
-          - type: audio_lang
-            normalized: "FRA"
-            token_index: -1
-          - type: audio_flag
-            normalized: "DUB"
-            token_index: -1
-        remove: true
-        confidence: 0.6
-      - scope: paren
-        tokens: ["vf"]
-        emit:
-          - type: audio_lang
-            normalized: "FRA"
-            token_index: -1
-          - type: audio_flag
-            normalized: "DUB"
-            token_index: -1
-        remove: true
-        confidence: 0.6
-
   - id: audio_sub_vf_vostfr_combo
     any_of:
       - scope: plain
@@ -3471,6 +3463,82 @@ entries:
             token_index: 2
         remove: true
         confidence: 0.76
+      - scope: plain
+        tokens: ["vf", "_", "vostfr"]
+        emit:
+          - type: audio_lang
+            normalized: "FRA"
+            token_index: 0
+          - type: audio_flag
+            normalized: "DUB"
+            token_index: 0
+          - type: audio_flag
+            normalized: "DUAL_AUDIO"
+            token_index: 0
+          - type: sub_flag
+            normalized: "soft"
+            token_index: 2
+          - type: sub_lang
+            normalized: "FRA"
+            token_index: 2
+        remove: true
+        confidence: 0.76
+      - scope: plain
+        tokens: ["vostfr", "_", "vf"]
+        emit:
+          - type: sub_flag
+            normalized: "soft"
+            token_index: 0
+          - type: sub_lang
+            normalized: "FRA"
+            token_index: 0
+          - type: audio_lang
+            normalized: "FRA"
+            token_index: 2
+          - type: audio_flag
+            normalized: "DUB"
+            token_index: 2
+          - type: audio_flag
+            normalized: "DUAL_AUDIO"
+            token_index: 2
+        remove: true
+        confidence: 0.76
+
+  - id: audio_vf
+    any_of:
+      - scope: bracket
+        tokens: ["vf"]
+        emit:
+          - type: audio_lang
+            normalized: "FRA"
+            token_index: -1
+          - type: audio_flag
+            normalized: "DUB"
+            token_index: -1
+        remove: true
+        confidence: 0.6
+      - scope: paren
+        tokens: ["vf"]
+        emit:
+          - type: audio_lang
+            normalized: "FRA"
+            token_index: -1
+          - type: audio_flag
+            normalized: "DUB"
+            token_index: -1
+        remove: true
+        confidence: 0.6
+      - scope: plain
+        tokens: ["vf"]
+        emit:
+          - type: audio_lang
+            normalized: "FRA"
+            token_index: -1
+          - type: audio_flag
+            normalized: "DUB"
+            token_index: -1
+        remove: true
+        confidence: 0.65
 
   - id: note_vo
     any_of:
@@ -6415,6 +6483,30 @@ entries:
         emit:
           - type: note
             normalized: "Multi-Language-Subs"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+
+  - id: sub_m_sub
+    any_of:
+      - tokens: ["m", "-", "sub"]
+        emit:
+          - type: sub_flag
+            normalized: "MULTI_SUBS"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["m-sub"]
+        emit:
+          - type: sub_flag
+            normalized: "MULTI_SUBS"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["m_sub"]
+        emit:
+          - type: sub_flag
+            normalized: "MULTI_SUBS"
             token_index: -1
         remove: true
         confidence: 0.75

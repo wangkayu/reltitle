@@ -38,6 +38,9 @@ func main() {
 
 	// 创建 HTTP 服务器
 	r := gin.Default()
+	if err := r.SetTrustedProxies(nil); err != nil {
+		log.Fatalf("Failed to configure trusted proxies: %v", err)
+	}
 
 	// 注册路由
 	api.RegisterRoutes(r, p)

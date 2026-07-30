@@ -19,10 +19,6 @@ func main() {
 
 	configDir := flag.String("config", "configs", "config directory")
 	titleArg := flag.String("title", "", "title to parse")
-	overrideTitleStart := flag.Int("override_title_start", -1, "override title span start (token index)")
-	overrideTitleEnd := flag.Int("override_title_end", -1, "override title span end (token index, exclusive)")
-	overrideEpisode := flag.String("override_episode", "", "override episode")
-	overrideEpisodeIdx := flag.Int("override_episode_idx", -1, "override episode index")
 	flag.Parse()
 
 	cfg, err := config.LoadAll(*configDir)
@@ -50,22 +46,7 @@ func main() {
 		os.Exit(2)
 	}
 
-	var hints *parser.ParseHints
-	if *overrideTitleStart >= 0 && *overrideTitleEnd > *overrideTitleStart {
-		ph := &parser.ParseHints{}
-		ph.OverrideTitleStart = *overrideTitleStart
-		ph.OverrideTitleEnd = *overrideTitleEnd
-		hints = ph
-	}
-	if strings.TrimSpace(*overrideEpisode) != "" && *overrideEpisodeIdx >= 0 {
-		if hints == nil {
-			hints = &parser.ParseHints{}
-		}
-		hints.OverrideEpisode = strings.TrimSpace(*overrideEpisode)
-		hints.OverrideEpisodeIdx = *overrideEpisodeIdx
-	}
-
-	res, err := p.ParseWithHints(raw, hints)
+	res, err := p.Parse(raw)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "parse: %v\n", err)
 		os.Exit(1)

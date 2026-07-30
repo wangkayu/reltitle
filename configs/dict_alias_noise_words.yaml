@@ -16,6 +16,8 @@ alias_noise:
     - CHS
     - CHT
     - CHI
+    - 繁體
+    - 繁体
     - ZHO
     - ENG
     - FRE
@@ -34,6 +36,9 @@ alias_noise:
     - SUB
     - SUBS
     - AUDIO
+    - UNCENSORED
+    - CENSORED
+    - UNCUT
     # stream/platform tags
     - NF
     - NETFLIX

@@ -1948,10 +1948,6 @@ func (p *Parser) isKnownGroup(token string) (*config.GroupDef, bool) {
 	return group, ok
 }
 
-func (p *Parser) Parse(rawTitle string) (*model.ParseResult, error) {
-	return p.ParseWithHints(rawTitle, nil)
-}
-
 func normalizeRawTitleForParsing(raw string) string {
 	s := strings.Map(func(r rune) rune {
 		switch r {
@@ -1987,7 +1983,7 @@ func normalizeRawTitleForParsing(raw string) string {
 	return s
 }
 
-func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.ParseResult, error) {
+func (p *Parser) Parse(rawTitle string) (*model.ParseResult, error) {
 	if strings.TrimSpace(rawTitle) == "" {
 		return nil, errors.New("empty title")
 	}
@@ -2055,11 +2051,16 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	if group != "" {
 		// If we can detect a reliable tail group from raw title (e.g. "-ANi"), the head bracket
 		// is more likely a bracketed title, not a release group. Do not remove it as group.
-		if tg := detectTailGroupFromRawTitle(rawTitle); tg != "" {
-			ng := normalizeGroupText(group)
-			nt := normalizeGroupText(tg)
-			if !strings.EqualFold(ng, nt) {
-				group = ""
+		// A head value present in grouplist.yaml has stronger evidence and must not be
+		// displaced by a free-form trailing bracket.
+		_, knownHeadGroup := p.isKnownGroup(group)
+		if !knownHeadGroup && !hasExplicitGroupIdentityMarker(group) {
+			if tg := p.detectTailGroupFromRawTitle(rawTitle); tg != "" {
+				ng := normalizeGroupText(group)
+				nt := normalizeGroupText(tg)
+				if !strings.EqualFold(ng, nt) {
+					group = ""
+				}
 			}
 		}
 	}
@@ -2121,32 +2122,6 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	episode := ctx.Episode
 	episodeIdx := ctx.EpisodeIdx
 	epslot := ctx.EPSlot
-
-	// Optional overrides (evaluation / reranking). Apply after parse passes finalize episode fields
-	// so title span inference uses the overridden episode anchor.
-	if hints != nil {
-		if strings.TrimSpace(hints.OverrideEpisode) != "" && hints.OverrideEpisodeIdx >= 0 {
-			episode = strings.TrimSpace(hints.OverrideEpisode)
-			episodeIdx = hints.OverrideEpisodeIdx
-			// Keep range empty when overriding a single episode.
-			episodeRange = ""
-			episodeRangeIdx = -1
-			episodeList = ""
-			ctx.Episode = episode
-			ctx.EpisodeIdx = episodeIdx
-			ctx.EpisodeRange = ""
-			ctx.EpisodeRangeIdx = -1
-			ctx.EpisodeList = ""
-			ctx.EpisodeListIdx = -1
-			ctx.EPSlot = syncEPSlotWithCanonicalSignals(ctx.EPSlot, ctx.Season, ctx.Episode, ctx.EpisodeRange, ctx.EpisodeList, ctx.SPKind, ctx.EpisodeIdx, ctx.EpisodeRangeIdx, ctx.EpisodeListIdx)
-			epslot = ctx.EPSlot
-		}
-		if hints.OverrideTitleStart >= 0 && hints.OverrideTitleEnd > hints.OverrideTitleStart {
-			ctx.ForcedTitleStart = hints.OverrideTitleStart
-			ctx.ForcedTitleEnd = hints.OverrideTitleEnd
-			ctx.ForcedTitle = extractTitleFromSpanAllowRemoved(tokens, ctx.ForcedTitleStart, ctx.ForcedTitleEnd, true)
-		}
-	}
 
 	seasonCutIdx := -1
 	// Only cut title at plain Sxx season tokens that are part of the main title stream.
@@ -2319,7 +2294,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 		}
 	}
 	if group == "" {
-		if tg := detectTailGroupFromRawTitle(rawTitle); tg != "" {
+		if tg := p.detectTailGroupFromRawTitle(rawTitle); tg != "" {
 			group = normalizeGroupText(tg)
 			attrs = append(attrs, model.Attribute{Type: model.AttrGroup, Normalized: group, TokenStart: -1, TokenEnd: -1, Confidence: 0.65, Source: "heuristic_raw"})
 			attrs = append(attrs, model.Attribute{Type: model.AttrTailGroup, Normalized: group, TokenStart: -1, TokenEnd: -1, Confidence: 0.65, Source: "heuristic_raw"})
@@ -2615,6 +2590,7 @@ func (p *Parser) ParseWithHints(rawTitle string, hints *ParseHints) (*model.Pars
 	aliases = p.sanitizeAliasesForOutput(aliases, title, episode, season, spKind)
 	title, aliases = rebalanceSingleSlashSeasonBridgePrimaryFromRaw(rawTitle, title, aliases)
 	title, aliases = p.rebalanceGenericPrimaryTitleFromAliases(title, aliases)
+	title, aliases = p.applyTitleKnowledge(rawTitle, title, aliases)
 	packProfile := p.inferPackProfile(contentKind, packKind, season, seasonRange, attrs)
 	attrs = upsertTitleAttribute(attrs, title, "canonical")
 	attrs = upsertGroupAttribute(attrs, group, "canonical")
@@ -6937,6 +6913,39 @@ func appendTitleAliasAttributes(attrs []model.Attribute, aliases []string, title
 	return out
 }
 
+func (p *Parser) applyTitleKnowledge(rawTitle string, title string, aliases []string) (string, []string) {
+	if p == nil || p.cfg == nil {
+		return title, aliases
+	}
+	for _, entry := range p.cfg.TitleKnowledge.Entries {
+		if !entry.Enabled || strings.TrimSpace(entry.CanonicalTitle) == "" || len(entry.RawMustContainAll) == 0 {
+			continue
+		}
+		matched := true
+		for _, required := range entry.RawMustContainAll {
+			if !strings.Contains(strings.ToLower(rawTitle), strings.ToLower(strings.TrimSpace(required))) {
+				matched = false
+				break
+			}
+		}
+		if matched {
+			canonicalTitle := strings.TrimSpace(entry.CanonicalTitle)
+			mergedAliases := mergeAliases(entry.Aliases, aliases)
+			filteredAliases := mergedAliases[:0]
+			canonicalKey := aliasSemanticKey(canonicalTitle)
+			for _, alias := range mergedAliases {
+				aliasKey := aliasSemanticKey(alias)
+				if aliasKey != "" && strings.Contains(canonicalKey, aliasKey) {
+					continue
+				}
+				filteredAliases = append(filteredAliases, alias)
+			}
+			return canonicalTitle, filteredAliases
+		}
+	}
+	return title, aliases
+}
+
 func cleanTitleToken(s string) string {
 	s = strings.TrimSpace(s)
 	if s == "" {
@@ -7314,7 +7323,7 @@ var tailGroupFromRawTitlePattern = regexp.MustCompile(`(?i)(?:^|\s)-(?:\s*)?([A-
 var tailGroupFromRawTitleAnyPattern = regexp.MustCompile(`(?i)-(\s*)?([A-Za-z][A-Za-z0-9]{2,20})\s*$`)
 var tailGroupFromRawTitleBracketPattern = regexp.MustCompile(`(?:\[([^\[\]]{1,80})\]|【([^【】]{1,80})】)\s*$`)
 
-func detectTailGroupFromRawTitle(rawTitle string) string {
+func (p *Parser) detectTailGroupFromRawTitle(rawTitle string) string {
 	s := strings.TrimSpace(rawTitle)
 	if s == "" {
 		return ""
@@ -7345,14 +7354,14 @@ func detectTailGroupFromRawTitle(rawTitle string) string {
 			cand = strings.TrimSpace(m[2])
 		}
 		cand = normalizeGroupText(cand)
-		if isTailBracketGroupCandidate(cand) {
+		if p.isTailBracketGroupCandidate(cand) {
 			return cand
 		}
 	}
 	return ""
 }
 
-func isTailBracketGroupCandidate(s string) bool {
+func (p *Parser) isTailBracketGroupCandidate(s string) bool {
 	s = normalizeGroupText(s)
 	if s == "" {
 		return false
@@ -7366,7 +7375,25 @@ func isTailBracketGroupCandidate(s string) bool {
 	if isLikelyMetaBracketText(s) || isEpisodeLikeBracketText(s) {
 		return false
 	}
-	return hasStrongGroupKeyword(s)
+	if _, known := p.isKnownGroup(s); known {
+		return true
+	}
+	return hasExplicitGroupIdentityMarker(s)
+}
+
+var explicitGroupIdentitySuffixPattern = regexp.MustCompile(`(?i)(?:fansub|subs?|raws?|team|studio|group)$`)
+
+func hasExplicitGroupIdentityMarker(s string) bool {
+	trimmed := strings.TrimSpace(s)
+	if trimmed == "" {
+		return false
+	}
+	for _, suffix := range []string{"字幕组", "字幕組", "字幕社", "汉化组", "漢化組", "压制组", "壓制組", "制作组", "製作組", "搬运组", "搬運組", "组", "組"} {
+		if strings.HasSuffix(trimmed, suffix) {
+			return true
+		}
+	}
+	return explicitGroupIdentitySuffixPattern.MatchString(trimmed)
 }
 
 func isLikelySubtitleBracketGroupText(s string) bool {

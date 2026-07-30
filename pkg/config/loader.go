@@ -26,12 +26,6 @@ func LoadAll(baseDir string) (*Config, error) {
 		return nil, fmt.Errorf("load inference_rules: %w", err)
 	}
 
-	attributeConfigPath := filepath.Join(baseDir, "attribute_config.yaml")
-	_ = loadYAMLFile(attributeConfigPath, &cfg.AttributeConfig)
-
-	boundaryRulesPath := filepath.Join(baseDir, "boundary_rules.yaml")
-	_ = loadYAMLFile(boundaryRulesPath, &cfg.BoundaryRules)
-
 	// Load group list (optional, for token identification assistance)
 	groupListPath := filepath.Join(baseDir, "grouplist.yaml")
 	if err := loadYAMLFile(groupListPath, &cfg.GroupList); err != nil {
@@ -48,8 +42,7 @@ func LoadAll(baseDir string) (*Config, error) {
 	_ = loadYAMLFile(filepath.Join(baseDir, "route_families.yaml"), &cfg.RouteFamilies)
 	_ = loadYAMLFile(filepath.Join(baseDir, "group_slot2_platform_rules.yaml"), &cfg.GroupSlot2Platform)
 	_ = loadYAMLFile(filepath.Join(baseDir, "pack_profile_rules.yaml"), &cfg.PackProfileRules)
-	_ = loadYAMLFile(filepath.Join(baseDir, "batch_service.yaml"), &cfg.BatchService)
-	cfg.BatchService.ApplyDefaults()
+	_ = loadYAMLFile(filepath.Join(baseDir, "title_knowledge.yaml"), &cfg.TitleKnowledge)
 
 	return cfg, nil
 }

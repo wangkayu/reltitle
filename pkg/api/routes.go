@@ -8,12 +8,12 @@ import (
 // RegisterRoutes 注册所有 API 路由
 func RegisterRoutes(r *gin.Engine, p *parser.Parser) {
 	handler := NewHandler(p)
+	r.GET("/", handler.Page)
 
-	// API v1
+	// Public API v1: only the compact business response is exposed.
 	v1 := r.Group("/api/v1")
 	{
-		v1.POST("/parse", handler.Parse)
-		v1.POST("/parse/batch", handler.ParseBatch)
+		v1.POST("/content", handler.Content)
 	}
 
 	// Health check

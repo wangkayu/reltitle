@@ -394,11 +394,11 @@ rules:
       normalized: soft
     priority: 90
 
-  - id: sub_flag_vf
+  - id: audio_lang_vf
     raw_tokens: ["vf"]
     emit:
-      type: sub_flag
-      normalized: soft
+      type: audio_lang
+      normalized: FRA
     priority: 90
 
   - id: sub_lang_fra

@@ -9,39 +9,26 @@ type Config struct {
 	RouteFamilies      RouteFamiliesConfig      `json:"route_families,omitempty"`
 	GroupSlot2Platform GroupSlot2PlatformConfig `json:"group_slot2_platform,omitempty"`
 	PackProfileRules   PackProfileRulesConfig   `json:"pack_profile_rules,omitempty"`
-	BatchService       BatchServiceConfig       `json:"batch_service,omitempty"`
+	TitleKnowledge     TitleKnowledgeConfig     `json:"title_knowledge,omitempty"`
 
 	DictCanonicalValues     DictCanonicalValuesConfig     `json:"dict_canonical_values,omitempty"`
 	DictTokenSynonyms       DictTokenSynonymsConfig       `json:"dict_token_synonyms,omitempty"`
 	DictTokenSlotCandidates DictTokenSlotCandidatesConfig `json:"dict_token_slot_candidates,omitempty"`
 	DictAliasNoiseWords     DictAliasNoiseWordsConfig     `json:"dict_alias_noise_words,omitempty"`
 	DictNotePromotion       DictNotePromotionConfig       `json:"dict_note_promotion,omitempty"`
-
-	AttributeConfig map[string]any `json:"attribute_config,omitempty"`
-	BoundaryRules   map[string]any `json:"boundary_rules,omitempty"`
-	// TailgroupWhitelist removed - now using GroupList only
 }
 
-type BatchServiceConfig struct {
-	BatchMaxSize     int `yaml:"batch_max_size" json:"batch_max_size"`
-	WorkerCount      int `yaml:"worker_count" json:"worker_count"`
-	RequestTimeoutMs int `yaml:"request_timeout_ms" json:"request_timeout_ms"`
-	MaxInflight      int `yaml:"max_inflight" json:"max_inflight"`
+type TitleKnowledgeConfig struct {
+	UpdatedAt string                `yaml:"updated_at" json:"updated_at"`
+	Entries   []TitleKnowledgeEntry `yaml:"entries" json:"entries"`
 }
 
-func (c *BatchServiceConfig) ApplyDefaults() {
-	if c.BatchMaxSize <= 0 {
-		c.BatchMaxSize = 256
-	}
-	if c.WorkerCount <= 0 {
-		c.WorkerCount = 8
-	}
-	if c.RequestTimeoutMs <= 0 {
-		c.RequestTimeoutMs = 15000
-	}
-	if c.MaxInflight <= 0 {
-		c.MaxInflight = 32
-	}
+type TitleKnowledgeEntry struct {
+	ID                string   `yaml:"id" json:"id"`
+	Enabled           bool     `yaml:"enabled" json:"enabled"`
+	CanonicalTitle    string   `yaml:"canonical_title" json:"canonical_title"`
+	Aliases           []string `yaml:"aliases" json:"aliases"`
+	RawMustContainAll []string `yaml:"raw_must_contain_all" json:"raw_must_contain_all"`
 }
 
 type LexiconConfig struct {

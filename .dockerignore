@@ -1,0 +1,12 @@
+.git
+.github
+tests
+bin
+dist
+*.tar.gz
+*.zip
+*.log
+.DS_Store
+.env*
+parser.test
+test_crf

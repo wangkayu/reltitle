@@ -27,7 +27,7 @@ func inferContentKind(cfg *config.Config, episode string, episodeRange string, s
 	}
 
 	// Season-scoped specials like "Season 2 - SP" are still SPECIAL, not season packs.
-	if hasSPKind && !hasEpisode && !hasEpisodeRange && !hasSeasonRange {
+	if hasSPKind && !hasPackKind && !hasEpisode && !hasEpisodeRange && !hasSeasonRange {
 		return "SPECIAL", 0.85
 	}
 

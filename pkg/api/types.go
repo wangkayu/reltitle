@@ -1,72 +1,73 @@
 package api
 
-import "title-parser/pkg/model"
-
-// ParseOptions 解析选项
-type ParseOptions struct {
-	ExtractTitle     bool `json:"extract_title"`
-	ExtractEpisode   bool `json:"extract_episode"`
-	ExtractTechnical bool `json:"extract_technical"`
-	ExtractGroup     bool `json:"extract_group"`
-}
-
-// ParseRequest 解析请求
 type ParseRequest struct {
-	Title       string        `json:"title" binding:"required"`
-	Options     *ParseOptions `json:"options"`
-	KnownGroups []KnownGroup  `json:"known_groups,omitempty"`
+	Title string `json:"title" binding:"required"`
 }
 
-// KnownGroup represents a known subtitle group with its aliases
-type KnownGroup struct {
-	Name    string   `json:"name"`
-	Aliases []string `json:"aliases,omitempty"`
+// ContentResponse is the stable, user-facing projection of a parse result.
+// Internal parser strategy, confidence, source and token data are intentionally omitted.
+type ContentResponse struct {
+	Content  string          `json:"content,omitempty"`
+	Aliases  []string        `json:"aliases,omitempty"`
+	Groups   []string        `json:"groups,omitempty"`
+	Versions []string        `json:"versions,omitempty"`
+	Episode  *ContentEpisode `json:"episode,omitempty"`
+	Movie    *ContentMovie   `json:"movie,omitempty"`
+	Media    *ContentMedia   `json:"media,omitempty"`
 }
 
-// ParseResult 解析结果（canonical 输出）
-type ParseResult = model.ParseResult
-
-// ParseMetadata 解析元数据
-type ParseMetadata struct {
-	ParseTimeMs     int64  `json:"parse_time_ms"`
-	TemplateMatched string `json:"template_matched,omitempty"`
-	ContentType     string `json:"content_type,omitempty"`
+type ContentMovie struct {
+	Index string        `json:"index,omitempty"`
+	Range *ContentRange `json:"range,omitempty"`
 }
 
-// ParseResponse 解析响应
-type ParseResponse struct {
-	Success  bool           `json:"success"`
-	Result   *ParseResult   `json:"result,omitempty"`
-	Error    string         `json:"error,omitempty"`
-	Metadata *ParseMetadata `json:"metadata,omitempty"`
+type ContentEpisode struct {
+	Season      string                    `json:"season,omitempty"`
+	SeasonRange string                    `json:"season_range,omitempty"`
+	Number      string                    `json:"number,omitempty"`
+	Numbers     []string                  `json:"numbers,omitempty"`
+	Range       *ContentRange             `json:"range,omitempty"`
+	Special     string                    `json:"special,omitempty"`
+	Alternates  []ContentEpisodeAlternate `json:"alternates,omitempty"`
 }
 
-// BatchParseRequest 批量解析请求
-type BatchParseRequest struct {
-	Titles  []string      `json:"titles" binding:"required"`
-	Options *ParseOptions `json:"options"`
+type ContentRange struct {
+	Start string `json:"start,omitempty"`
+	End   string `json:"end,omitempty"`
 }
 
-// BatchParseResult 批量解析单个结果
-type BatchParseResult struct {
-	Index   int          `json:"index"`
-	Success bool         `json:"success"`
-	Result  *ParseResult `json:"result,omitempty"`
-	Error   string       `json:"error,omitempty"`
+type ContentEpisodeAlternate struct {
+	Season      string        `json:"season,omitempty"`
+	SeasonRange string        `json:"season_range,omitempty"`
+	Number      string        `json:"number,omitempty"`
+	Numbers     []string      `json:"numbers,omitempty"`
+	Range       *ContentRange `json:"range,omitempty"`
+	Special     string        `json:"special,omitempty"`
 }
 
-// BatchSummary 批量解析摘要
-type BatchSummary struct {
-	Total       int   `json:"total"`
-	Success     int   `json:"success"`
-	Failed      int   `json:"failed"`
-	TotalTimeMs int64 `json:"total_time_ms"`
-	AvgTimeMs   int64 `json:"avg_time_ms"`
+type ContentMedia struct {
+	Platforms   []string            `json:"platforms,omitempty"`
+	SourceTypes []string            `json:"source_types,omitempty"`
+	Resolutions []string            `json:"resolutions,omitempty"`
+	VideoCodecs []string            `json:"video_codecs,omitempty"`
+	BitDepths   []string            `json:"bit_depths,omitempty"`
+	Containers  []string            `json:"containers,omitempty"`
+	HDR         []string            `json:"hdr,omitempty"`
+	CRCs        []string            `json:"crcs,omitempty"`
+	AudioFlags  []string            `json:"audio_flags,omitempty"`
+	AudioTracks []ContentAudioTrack `json:"audio_tracks,omitempty"`
+	Subtitles   *ContentSubtitles   `json:"subtitles,omitempty"`
 }
 
-// BatchParseResponse 批量解析响应
-type BatchParseResponse struct {
-	Success bool               `json:"success"`
-	Results []BatchParseResult `json:"results"`
-	Summary *BatchSummary      `json:"summary,omitempty"`
+type ContentAudioTrack struct {
+	Language string `json:"language,omitempty"`
+	Codec    string `json:"codec,omitempty"`
+	Channels string `json:"channels,omitempty"`
+	Object   string `json:"object,omitempty"`
+}
+
+type ContentSubtitles struct {
+	Languages []string `json:"languages,omitempty"`
+	Types     []string `json:"types,omitempty"`
+	Formats   []string `json:"formats,omitempty"`
 }

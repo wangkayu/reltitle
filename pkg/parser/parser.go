@@ -762,9 +762,11 @@ func (p *Parser) Parse(rawTitle string) (*model.ParseResult, error) {
 	attrs = pruneGroupSpanTechArtifacts(attrs, groupSpan)
 
 	// Structural title protection (dictionary-free): "N/N" fraction-like digit
-	// segments in the title zone (e.g. "22/7") must not be mistaken for
+	// segments in the title zone (e.g. "22/7") and leading digit titles in a
+	// strict template slot (e.g. "86 - 03") must not be mistaken for
 	// season/episode markers by later detection passes.
 	protectTitleFractionSpans(tokens, groupSpan[1])
+	protectTitleLeadingDigits(tokens, groupSpan[1])
 
 	packKind := detectPackKind(p.cfg, rawTitle)
 	ctx := newParseContext(rawTitle, packKind, tailParenBlock)

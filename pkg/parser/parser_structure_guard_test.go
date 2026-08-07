@@ -83,6 +83,45 @@ func TestStructureGuardRecognizes22_7WithoutTitleKnowledge(t *testing.T) {
 	}
 }
 
+// Bare leading-digit titles in strict template slots: the digit is the title,
+// and an episode is only present when a real episode slot exists.
+func TestStructureGuardLeadingDigitTitlesWithoutTitleKnowledge(t *testing.T) {
+	cases := []struct {
+		raw         string
+		wantTitle   string
+		wantEPKind  string
+		wantEpisode string
+	}{
+		// [group] N - EP [tech]: N is the title, EP is the episode.
+		{"[Group] 86 - 03 [1080p]", "86", "EP", "3"},
+		// [group] N [tech]: no episode slot, N is still the title.
+		{"[Group] 86 [1080p]", "86", "", ""},
+		{"[Group] 86 (Eighty Six) [1080p]", "86", "", ""},
+		{"[Group] 86", "86", "", ""},
+		// N after title words is an episode number, not the title.
+		{"[Group] 标题 86 [1080p]", "标题", "EP", "86"},
+	}
+	for _, c := range cases {
+		res, err := parserWithoutTitleKnowledge(t).Parse(c.raw)
+		if err != nil {
+			t.Fatalf("parse %q: %v", c.raw, err)
+		}
+		if got := canonicalTitle(res); got != c.wantTitle {
+			t.Fatalf("title=%q want %q for %q", got, c.wantTitle, c.raw)
+		}
+		if got := canonicalEPKind(res); got != c.wantEPKind {
+			t.Fatalf("ep kind=%q want %q for %q", got, c.wantEPKind, c.raw)
+		}
+		if got := canonicalEpisode(res); got != c.wantEpisode {
+			t.Fatalf("episode=%q want %q for %q", got, c.wantEpisode, c.raw)
+		}
+		// Invariant: an episode without a title is always a parse error.
+		if canonicalEpisode(res) != "" && canonicalTitle(res) == "" {
+			t.Fatalf("episode without title for %q", c.raw)
+		}
+	}
+}
+
 // Ambiguous shapes must be left untouched by the structure guard (no false
 // positives), with or without the title dictionary.
 func TestStructureGuardDoesNotOverreach(t *testing.T) {
@@ -121,8 +160,11 @@ func TestStructureGuardDoesNotOverreach(t *testing.T) {
 
 // Token-level contract of the structure guard:
 //   - "22/7"-style fraction segments get Protected
+//   - "86 - 03" and bare leading digits in a strict template slot get Protected
 //   - "藤本树 17-26 / Fujimoto Tatsuki 17-26" (digits after words) does NOT
 //     (that shape needs the title dictionary)
+//   - a digit that is NOT the first token after the group (e.g. an episode
+//     number like "标题 86") does NOT
 func TestStructureGuardProtectedTokenContract(t *testing.T) {
 	cases := []struct {
 		raw           string
@@ -130,6 +172,16 @@ func TestStructureGuardProtectedTokenContract(t *testing.T) {
 	}{
 		{"[LoliHouse] 22/7 / Nanabun no Nijuuni - 03 [WebRip]", true},
 		{"[Lilith-Raws] 22／7 - 04 [Baha][WEB-DL]", true},
+		{"[Group] 86 - 03 [1080p]", true},
+		{"[Group] 86 - 03v2 [1080p]", true},
+		{"[Group] 86 [03][1080p]", true},
+		// A bare digit after the group with a tech block / paren / EOL is the
+		// only content: it is the title (an episode without a title is invalid).
+		{"[Group] 86 [1080p]", true},
+		{"[Group] 86 (Eighty Six) [1080p]", true},
+		{"[Group] 86", true},
+		// Deliberately NOT protected:
+		{"[Group] 标题 86 [1080p]", false},
 		{"[SweetSub&LoliHouse] 藤本树 17-26 / Fujimoto Tatsuki 17-26 [01-08 精校合集]", false},
 		{"[Group] Made in Abyss 01-13 / メイドインアビス 01-13 [BDRip]", false},
 	}
@@ -146,6 +198,7 @@ func TestStructureGuardProtectedTokenContract(t *testing.T) {
 			tokens[i].Removed = true
 		}
 		protectTitleFractionSpans(tokens, groupEnd)
+		protectTitleLeadingDigits(tokens, groupEnd)
 		anyProtected := false
 		for _, tok := range tokens {
 			if tok.Protected {

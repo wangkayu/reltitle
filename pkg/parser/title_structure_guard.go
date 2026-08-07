@@ -7,6 +7,93 @@ import (
 	"title-parser/pkg/model"
 )
 
+// protectTitleLeadingDigits marks a lone digit token at the START of the title
+// zone as Protected — but ONLY when it sits in a strict template slot:
+//   [group] N - EP [tech]   /   [group] N [EP] [tech]   /   [group] N [tech]
+//
+// This is the "86" case. "[Group] 86 - 03 [1080p]" has 86 in the title slot
+// (first token after the group) followed by a clear episode slot, so 86 is the
+// title, not a batch range bound. "[Group] 86 [1080p]" (no episode slot) must
+// also treat 86 as the title: a parse result with an episode but an EMPTY title
+// is always wrong, and a bare digit after the group cannot be an episode
+// without a title.
+//
+// The rule never fires when the digit is NOT the first token after the group,
+// so "[Group] Show 86 [1080p]" (86 = episode number) is untouched.
+func protectTitleLeadingDigits(tokens []model.Token, groupEnd int) {
+	if len(tokens) == 0 {
+		return
+	}
+	start := groupEnd
+	if start < 0 || start >= len(tokens) {
+		start = 0
+	}
+	first := -1
+	for j := start; j < len(tokens); j++ {
+		if tokens[j].Protected || tokens[j].Removed {
+			continue
+		}
+		t := strings.TrimSpace(tokens[j].Text)
+		if t == "" {
+			continue
+		}
+		first = j
+		break
+	}
+	if first < 0 || !episodeOfTotalPattern.MatchString(strings.TrimSpace(tokens[first].Text)) {
+		return
+	}
+	if followsTitleBoundary(tokens, first) {
+		tokens[first].Protected = true
+	}
+}
+
+// followsTitleBoundary reports whether the token right after idx is a strict
+// title-zone boundary: an episode slot ("- N" / "- Nv2" / "- NEND" / "[N]" /
+// "[N-M...]"), a consumed or meta bracket block ("[1080p]"), a paren block
+// ("(Eighty Six)", "(2026)"), or the end of the title line.
+func followsTitleBoundary(tokens []model.Token, idx int) bool {
+	if idx+1 >= len(tokens) {
+		return true
+	}
+	s := strings.TrimSpace(tokens[idx+1].Text)
+	if s == "-" || s == "~" {
+		if idx+2 >= len(tokens) {
+			return false
+		}
+		n := strings.TrimSpace(tokens[idx+2].Text)
+		if episodeOfTotalPattern.MatchString(n) {
+			return true
+		}
+		if episodeWithVersionPattern.MatchString(n) {
+			return true
+		}
+		if episodeEndSuffixPattern.MatchString(n) {
+			return true
+		}
+		return false
+	}
+	if s == "[" || s == "【" {
+		inner := strings.TrimSpace(bracketBlockInnerText(tokens, idx+1))
+		if inner == "" {
+			// Block content was already consumed (e.g. "[1080p]" -> tech block):
+			// still a valid boundary.
+			return true
+		}
+		if epSlotBlockPattern.MatchString(inner) {
+			return true
+		}
+		if isLikelyMetaBracketText(inner) {
+			return true
+		}
+		return false
+	}
+	if s == "(" || s == "（" {
+		return true
+	}
+	return false
+}
+
 // protectTitleFractionSpans marks "N/N" fraction-like digit segments in the
 // title zone as Protected, so season/episode/range detection never mistakes
 // title digits for episode markers.

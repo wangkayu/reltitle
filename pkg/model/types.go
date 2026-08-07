@@ -14,6 +14,10 @@ type Attribute struct {
 type Token struct {
 	Text    string `json:"text"`
 	Removed bool   `json:"removed,omitempty"`
+
+	// Protected marks tokens that belong to a known title span (from title_knowledge.yaml).
+	// Episode/season/range detection must never reinterpret them.
+	Protected bool `json:"-"`
 }
 
 type ParseResult struct {

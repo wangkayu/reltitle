@@ -129,4 +129,3 @@ func extractBracketSlot(raw string, slotIndex int) string {
 	}
 	return strings.TrimSpace(ms[slotIndex-1][1])
 }
-

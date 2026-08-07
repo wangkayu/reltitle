@@ -618,6 +618,15 @@ func normalizeEpisodeRangeTVPackSuffix(tokens []model.Token, attrs *[]model.Attr
 	}
 	m := episodeRangePackRightPattern.FindStringSubmatch(right)
 	if len(m) != 3 {
+		// Split-form suffix: "01 - 08 精校合集" / "01 - 08 修正合集" / "01 - 08 合集".
+		// The suffix keyword is a separate token right after the range right bound.
+		if episodeOfTotalPattern.MatchString(right) && rangeIdx+3 < len(tokens) {
+			if pk, note := packKindFromSuffix(strings.TrimSpace(tokens[rangeIdx+3].Text)); pk != "" {
+				tokens[rangeIdx+3].Removed = true
+				appendPackAttrs(pk, note, rangeIdx+3, rangeIdx+4, "episode_range_pack_suffix_split")
+				return pk
+			}
+		}
 		return ""
 	}
 	pk, note := packKindFromSuffix(m[2])
@@ -664,7 +673,7 @@ func detectEpisodeList(tokens []model.Token) (episodeList string, firstEpisode s
 	}
 
 	for i := 0; i < len(tokens); i++ {
-		if tokens[i].Removed {
+		if epScanSkipped(tokens, i) {
 			continue
 		}
 		if isInParen(tokens, i) {

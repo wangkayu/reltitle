@@ -9,9 +9,9 @@ import (
 )
 
 var (
-	templateSignalSxxExx = regexp.MustCompile(`(?i)^s(\d{1,2})e(\d{1,4})$`)
-	templateSignalJPEP   = regexp.MustCompile(`^第?(\d{1,4})(?:話|话|集)$`)
-	templateSignalDigits = regexp.MustCompile(`^\d{1,3}$`)
+	templateSignalSxxExx          = regexp.MustCompile(`(?i)^s(\d{1,2})e(\d{1,4})$`)
+	templateSignalJPEP            = regexp.MustCompile(`^第?(\d{1,4})(?:話|话|集)$`)
+	templateSignalDigits          = regexp.MustCompile(`^\d{1,3}$`)
 	templateSignalResolutionToken = regexp.MustCompile(`(?i)^(\d{3,4})p$`)
 )
 

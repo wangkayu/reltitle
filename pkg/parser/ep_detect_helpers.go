@@ -165,7 +165,7 @@ func removeTVVariantSeasonTokens(tokens []model.Token) {
 
 func detectSeasonBeforeDashEpisode(tokens []model.Token) (season string, tokenIdx int) {
 	for i := 0; i+2 < len(tokens); i++ {
-		if tokens[i].Removed || tokens[i+1].Removed || tokens[i+2].Removed {
+		if epScanSkipped(tokens, i) || epScanSkipped(tokens, i+1) || epScanSkipped(tokens, i+2) {
 			continue
 		}
 		if isInBracket(tokens, i) || isInParen(tokens, i) {
@@ -599,7 +599,7 @@ func detectEpisodeOfTotalInBracket(tokens []model.Token) (string, int) {
 			if tokens[j].Text == "]" {
 				break
 			}
-			if tokens[j].Removed {
+			if epScanSkipped(tokens, j) {
 				continue
 			}
 			n := strings.TrimSpace(tokens[j].Text)

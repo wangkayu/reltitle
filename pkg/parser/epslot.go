@@ -54,7 +54,7 @@ func buildEPSlotCandidates(tokens []model.Token, season string, seasonIdx int, e
 
 	// Scan tokens for additional episode-like candidates.
 	for i := 0; i < len(tokens); i++ {
-		if tokens[i].Removed {
+		if epScanSkipped(tokens, i) {
 			continue
 		}
 		txt := strings.TrimSpace(tokens[i].Text)

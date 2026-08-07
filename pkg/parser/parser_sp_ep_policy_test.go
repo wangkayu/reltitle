@@ -130,4 +130,3 @@ func TestParserSPEPPolicy_Matrix(t *testing.T) {
 		})
 	}
 }
-

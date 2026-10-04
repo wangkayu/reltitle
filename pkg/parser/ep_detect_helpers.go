@@ -274,11 +274,22 @@ func isSharedPrefixSeasonEpisodeRangeAt(tokens []model.Token, idx int) bool {
 	if sxxExxLeftPattern.FindStringSubmatch(left) == nil {
 		return false
 	}
-	right := strings.TrimSpace(tokens[idx+2].Text)
+	right := stripEpisodeVersionSuffix(strings.TrimSpace(tokens[idx+2].Text))
 	if rm := epPrefixedDigitsPattern.FindStringSubmatch(strings.ToLower(right)); len(rm) == 2 {
 		right = strings.TrimSpace(rm[1])
 	}
 	return episodeOfTotalPattern.MatchString(right)
+}
+
+var episodeVersionSplitPattern = regexp.MustCompile(`(?i)^(\d{1,4})v\d+$`)
+
+// stripEpisodeVersionSuffix turns "05v2" into "05". A release version must not stop
+// "Season 3 - 05v2" from being recognized as a season echo followed by an episode.
+func stripEpisodeVersionSuffix(s string) string {
+	if m := episodeVersionSplitPattern.FindStringSubmatch(s); len(m) == 2 {
+		return m[1]
+	}
+	return s
 }
 
 func shouldTreatParenSxxExxAsAlternate(tokens []model.Token, season string, seasonIdx int, episode string, episodeIdx int, sxxExxEpisode string, sxxExxIdx int) bool {
@@ -324,6 +335,7 @@ func isRightSideOfSharedPrefixSeasonEpisodeRange(tokens []model.Token, idx int) 
 	if right == "" {
 		return false
 	}
+	right = stripEpisodeVersionSuffix(right)
 	if rm := epPrefixedDigitsPattern.FindStringSubmatch(strings.ToLower(right)); len(rm) == 2 {
 		right = strings.TrimSpace(rm[1])
 	}
@@ -383,7 +395,7 @@ func looksLikeAliasSeasonEchoRange(tokens []model.Token, idx int, season string)
 	}
 	left := strings.TrimSpace(tokens[idx].Text)
 	sep := strings.TrimSpace(tokens[idx+1].Text)
-	right := strings.TrimSpace(tokens[idx+2].Text)
+	right := stripEpisodeVersionSuffix(strings.TrimSpace(tokens[idx+2].Text))
 	if left == "" || (sep != "-" && sep != "~") {
 		return false
 	}
@@ -452,7 +464,7 @@ func shouldAllowEpisodeDetectionWithRange(tokens []model.Token, idx int, season 
 	}
 	left := strings.TrimSpace(tokens[idx].Text)
 	sep := strings.TrimSpace(tokens[idx+1].Text)
-	right := strings.TrimSpace(tokens[idx+2].Text)
+	right := stripEpisodeVersionSuffix(strings.TrimSpace(tokens[idx+2].Text))
 	if left == "" || right == "" {
 		return false
 	}

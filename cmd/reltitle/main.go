@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -13,46 +14,58 @@ import (
 )
 
 func main() {
-	if len(os.Args) > 1 && os.Args[1] == "--" {
-		os.Args = append([]string{os.Args[0]}, os.Args[2:]...)
+	os.Exit(run(os.Args[1:], os.Stdin, os.Stdout, os.Stderr))
+}
+
+// run parses one title and writes the result as JSON to stdout. The title comes from
+// -title, then the first positional argument, then the first line of stdin.
+// Exit codes: 0 success, 1 config or parse failure, 2 usage error or no title.
+func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
+	if len(args) > 0 && args[0] == "--" {
+		args = args[1:]
 	}
 
-	configDir := flag.String("config", "configs", "config directory")
-	titleArg := flag.String("title", "", "title to parse")
-	flag.Parse()
+	fs := flag.NewFlagSet("reltitle", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	configDir := fs.String("config", "configs", "config directory")
+	titleArg := fs.String("title", "", "title to parse")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
 
 	cfg, err := config.LoadAll(*configDir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "load config: %v\n", err)
-		os.Exit(1)
+		fmt.Fprintf(stderr, "load config: %v\n", err)
+		return 1
 	}
 
 	p := parser.New(cfg)
 
 	raw := strings.TrimSpace(*titleArg)
 	if raw == "" {
-		if flag.NArg() > 0 {
-			raw = strings.TrimSpace(flag.Arg(0))
+		if fs.NArg() > 0 {
+			raw = strings.TrimSpace(fs.Arg(0))
 		}
 	}
 	if raw == "" {
-		scanner := bufio.NewScanner(os.Stdin)
+		scanner := bufio.NewScanner(stdin)
 		if scanner.Scan() {
 			raw = strings.TrimSpace(scanner.Text())
 		}
 	}
 	if raw == "" {
-		fmt.Fprintln(os.Stderr, "no title provided")
-		os.Exit(2)
+		fmt.Fprintln(stderr, "no title provided")
+		return 2
 	}
 
 	res, err := p.Parse(raw)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "parse: %v\n", err)
-		os.Exit(1)
+		fmt.Fprintf(stderr, "parse: %v\n", err)
+		return 1
 	}
 
-	enc := json.NewEncoder(os.Stdout)
+	enc := json.NewEncoder(stdout)
 	enc.SetIndent("", "  ")
 	_ = enc.Encode(res)
+	return 0
 }

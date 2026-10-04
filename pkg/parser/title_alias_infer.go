@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	"reltitle/pkg/model"
+	"github.com/wangkayu/reltitle/pkg/model"
 )
 
 func inferTitleAndAliasesFromTitleCore(title string, aliasValid func(string) bool) (string, []string) {

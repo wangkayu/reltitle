@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"reltitle/pkg/config"
+	"github.com/wangkayu/reltitle/pkg/config"
 )
 
 func TestParserNoiseWrapper_SkipsLeadingRelayNoiseBracket(t *testing.T) {

@@ -3,7 +3,7 @@ package parser
 import (
 	"testing"
 
-	"reltitle/pkg/config"
+	"github.com/wangkayu/reltitle/pkg/config"
 )
 
 func TestParserBracketEpisode_WhenEpisodeEqualsSeasonStillPreferStandaloneEpisodeBracket(t *testing.T) {

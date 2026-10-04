@@ -1,8 +1,8 @@
 package parser
 
 import (
-	"reltitle/configs"
-	"reltitle/pkg/config"
+	"github.com/wangkayu/reltitle/configs"
+	"github.com/wangkayu/reltitle/pkg/config"
 )
 
 // NewDefault returns a Parser built from the configuration embedded in the

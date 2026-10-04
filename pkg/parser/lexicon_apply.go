@@ -3,8 +3,8 @@ package parser
 import (
 	"strings"
 
-	"reltitle/pkg/config"
-	"reltitle/pkg/model"
+	"github.com/wangkayu/reltitle/pkg/config"
+	"github.com/wangkayu/reltitle/pkg/model"
 )
 
 func (p *Parser) applyLexicon(tokens []model.Token, out *[]model.Attribute) {

@@ -3,8 +3,8 @@ package parser
 import (
 	"testing"
 
-	"reltitle/pkg/config"
-	"reltitle/pkg/model"
+	"github.com/wangkayu/reltitle/pkg/config"
+	"github.com/wangkayu/reltitle/pkg/model"
 )
 
 func TestParserGroupRouteOverride_APTX4869ConanBracketEpisodeTitle(t *testing.T) {

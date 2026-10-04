@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"reltitle/pkg/model"
+	"github.com/wangkayu/reltitle/pkg/model"
 )
 
 var taggedRangePattern = regexp.MustCompile(`(?i)^(abs|se|tv|ova|sp)[:_ -]?(\d{1,4}(?:\.\d{1,2})?(?:[-~]\d{1,4}(?:\.\d{1,2})?)?)$`)

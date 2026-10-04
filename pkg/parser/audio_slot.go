@@ -3,7 +3,7 @@ package parser
 import (
 	"strings"
 
-	"reltitle/pkg/model"
+	"github.com/wangkayu/reltitle/pkg/model"
 )
 
 // extractTechAudioSlotAndRemoveFromTokens scans bracket/paren blocks and plain

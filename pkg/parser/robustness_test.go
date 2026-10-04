@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"reltitle/pkg/config"
+	"github.com/wangkayu/reltitle/pkg/config"
 )
 
 // Malformed titles must never hang or panic the parser: it is fed arbitrary RSS titles.

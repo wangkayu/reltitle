@@ -1,7 +1,7 @@
 package parser
 
 import (
-	"reltitle/pkg/model"
+	"github.com/wangkayu/reltitle/pkg/model"
 	"strings"
 )
 

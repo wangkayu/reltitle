@@ -1,7 +1,7 @@
 package parser
 
 import (
-	"reltitle/pkg/config"
+	"github.com/wangkayu/reltitle/pkg/config"
 	"testing"
 )
 

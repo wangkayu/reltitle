@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"reltitle/pkg/config"
+	"github.com/wangkayu/reltitle/pkg/config"
 )
 
 // Aliases that differ only by case collide once lower-cased. The result must not

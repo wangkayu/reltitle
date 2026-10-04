@@ -1,4 +1,4 @@
-module reltitle
+module github.com/wangkayu/reltitle
 
 go 1.22
 

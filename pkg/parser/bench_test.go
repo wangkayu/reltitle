@@ -3,7 +3,7 @@ package parser
 import (
 	"testing"
 
-	"reltitle/pkg/config"
+	"github.com/wangkayu/reltitle/pkg/config"
 )
 
 // BenchmarkParseCorpus parses the whole golden corpus on each iteration.

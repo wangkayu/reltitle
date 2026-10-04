@@ -3,8 +3,8 @@ package parser
 import (
 	"testing"
 
-	"reltitle/pkg/config"
-	"reltitle/pkg/model"
+	"github.com/wangkayu/reltitle/pkg/config"
+	"github.com/wangkayu/reltitle/pkg/model"
 )
 
 // "总集篇01_12.5" is a summary special: special_index 01, absolute episode 12.5.

@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"reltitle/pkg/model"
+	"github.com/wangkayu/reltitle/pkg/model"
 )
 
 // epScanSkipped reports whether token i must be skipped by episode/season/range

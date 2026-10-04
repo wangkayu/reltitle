@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	"reltitle/pkg/model"
+	"github.com/wangkayu/reltitle/pkg/model"
 )
 
 func (p *Parser) inferTitleTokenSpan(tokens []model.Token, episodeIdx int, episodeRangeIdx int, seasonCutIdx int) (int, int) {

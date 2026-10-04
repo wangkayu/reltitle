@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"reltitle/pkg/model"
-	"reltitle/pkg/tokenize"
+	"github.com/wangkayu/reltitle/pkg/model"
+	"github.com/wangkayu/reltitle/pkg/tokenize"
 )
 
 func decisionTokens(raw string) []model.Token {

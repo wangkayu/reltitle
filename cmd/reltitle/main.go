@@ -9,8 +9,8 @@ import (
 	"os"
 	"strings"
 
-	"reltitle/pkg/config"
-	"reltitle/pkg/parser"
+	"github.com/wangkayu/reltitle/pkg/config"
+	"github.com/wangkayu/reltitle/pkg/parser"
 )
 
 func main() {

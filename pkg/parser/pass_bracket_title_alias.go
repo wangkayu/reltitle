@@ -1,6 +1,6 @@
 package parser
 
-import "reltitle/pkg/model"
+import "github.com/wangkayu/reltitle/pkg/model"
 
 func passExtractBracketTitleAliases(tokens []model.Token, attrs *[]model.Attribute, ctx *parseContext) {
 	if ctx == nil || ctx.AliasValidFunc == nil {

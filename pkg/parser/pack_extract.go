@@ -4,7 +4,7 @@ import (
 	"sort"
 	"strings"
 
-	"reltitle/pkg/model"
+	"github.com/wangkayu/reltitle/pkg/model"
 )
 
 func normalizePackPlusMarker(s string) (string, bool) {

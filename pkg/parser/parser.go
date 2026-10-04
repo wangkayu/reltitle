@@ -7,9 +7,9 @@ import (
 	"sort"
 	"strings"
 
-	"reltitle/pkg/config"
-	"reltitle/pkg/model"
-	"reltitle/pkg/tokenize"
+	"github.com/wangkayu/reltitle/pkg/config"
+	"github.com/wangkayu/reltitle/pkg/model"
+	"github.com/wangkayu/reltitle/pkg/tokenize"
 )
 
 // Parser parses anime/film release titles into structured results. Build one

@@ -3,7 +3,7 @@ package parser
 import (
 	"testing"
 
-	"reltitle/pkg/model"
+	"github.com/wangkayu/reltitle/pkg/model"
 )
 
 func TestNormalizeSPKindFromContents_Whitelist(t *testing.T) {

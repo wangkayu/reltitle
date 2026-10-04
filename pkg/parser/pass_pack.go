@@ -3,7 +3,7 @@ package parser
 import (
 	"strings"
 
-	"reltitle/pkg/model"
+	"github.com/wangkayu/reltitle/pkg/model"
 )
 
 func passExtractPack(tokens []model.Token, attrs *[]model.Attribute, ctx *parseContext) {

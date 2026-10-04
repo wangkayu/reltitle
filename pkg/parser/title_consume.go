@@ -4,7 +4,7 @@ import (
 	"strings"
 	"unicode"
 
-	"reltitle/pkg/model"
+	"github.com/wangkayu/reltitle/pkg/model"
 )
 
 func hasTechAttr(attrs []model.Attribute) bool {

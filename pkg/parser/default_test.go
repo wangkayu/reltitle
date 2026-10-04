@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"reltitle/pkg/config"
+	"github.com/wangkayu/reltitle/pkg/config"
 )
 
 // NewDefault must behave exactly like a Parser built from the configs/

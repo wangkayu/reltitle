@@ -3,7 +3,7 @@ package parser
 import (
 	"testing"
 
-	"reltitle/pkg/config"
+	"github.com/wangkayu/reltitle/pkg/config"
 )
 
 func TestParserEpisodeDecimal_BahaSeasonDashDecimalEpisode(t *testing.T) {

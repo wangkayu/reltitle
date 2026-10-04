@@ -1,8 +1,8 @@
 package parser
 
 import (
+	"github.com/wangkayu/reltitle/pkg/model"
 	"regexp"
-	"reltitle/pkg/model"
 	"strings"
 )
 

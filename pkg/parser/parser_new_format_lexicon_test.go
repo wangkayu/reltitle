@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"reltitle/pkg/config"
-	"reltitle/pkg/model"
+	"github.com/wangkayu/reltitle/pkg/config"
+	"github.com/wangkayu/reltitle/pkg/model"
 )
 
 func TestLexiconNewFormat_SeasonVersionCompactS01V2(t *testing.T) {

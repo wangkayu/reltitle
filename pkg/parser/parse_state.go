@@ -3,7 +3,7 @@ package parser
 import (
 	"strings"
 
-	"reltitle/pkg/model"
+	"github.com/wangkayu/reltitle/pkg/model"
 )
 
 // parseState holds the values that Parser.Parse hands from one stage to the next.

@@ -4,8 +4,8 @@ import (
 	"sort"
 	"strings"
 
-	"reltitle/pkg/config"
-	"reltitle/pkg/model"
+	"github.com/wangkayu/reltitle/pkg/config"
+	"github.com/wangkayu/reltitle/pkg/model"
 )
 
 func inferContentKind(cfg *config.Config, episode string, episodeRange string, season string, seasonRange string, packKind string, spKind string, movieIndex string, movieIndexRange string, hasTech bool, hasMovieKeyword bool, hasYear bool, movieRouteHardExcluded bool, hasMovieContentSignal bool) (model.ContentKind, float64) {

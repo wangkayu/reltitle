@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"reltitle/pkg/config"
+	"github.com/wangkayu/reltitle/pkg/config"
 )
 
 // The golden corpus pins the complete parse output for a few hundred real titles,

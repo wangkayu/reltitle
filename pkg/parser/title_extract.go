@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	"reltitle/pkg/model"
+	"github.com/wangkayu/reltitle/pkg/model"
 )
 
 // removeBracketsAroundFullyConsumedBlocks removes bracket tokens ( [ ] 【 】 ) whose

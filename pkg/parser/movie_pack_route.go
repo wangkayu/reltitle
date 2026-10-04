@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"reltitle/pkg/model"
+	"github.com/wangkayu/reltitle/pkg/model"
 )
 
 func shouldDropEpisodeRangeForMovieRange(rawTitle string, movieIndexRange string, episode string, episodeRange string) bool {

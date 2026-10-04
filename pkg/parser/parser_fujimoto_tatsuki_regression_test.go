@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"reltitle/pkg/config"
+	"github.com/wangkayu/reltitle/pkg/config"
 )
 
 // 藤本树 17-26 / Fujimoto Tatsuki 17-26 is the actual title of an ONA anthology

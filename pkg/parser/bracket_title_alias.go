@@ -80,8 +80,8 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 		if s == "" {
 			return ""
 		}
-		s = regexp.MustCompile(`\b(\d{1,4})\s*-\s*(\d{1,4})\b`).ReplaceAllString(s, "$1-$2")
-		s = regexp.MustCompile(`\s+`).ReplaceAllString(s, " ")
+		s = reExtractBracketTitleAliasesAndRemoveFromTokens1.ReplaceAllString(s, "$1-$2")
+		s = reExtractBracketTitleAliasesAndRemoveFromTokens2.ReplaceAllString(s, " ")
 		return strings.TrimSpace(s)
 	}
 
@@ -188,41 +188,41 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 		if s == "" {
 			return false
 		}
-		if regexp.MustCompile(`(?i)^0?\d{1,4}(?:\s|[_-])*(?:end|fin|final)$`).MatchString(s) {
+		if reExtractBracketTitleAliasesAndRemoveFromTokens3.MatchString(s) {
 			return true
 		}
 		// Batch range forms should stay in token stream for episode_range detection.
 		// Examples: "01-24TV全集", "01-12 全集", "01-12FIN", "01-12TV全集+SP+特典映像".
-		if regexp.MustCompile(`(?i)^0?\d{1,4}\s*[-~]\s*0?\d{1,4}(?:\.\d{1,2})?.*$`).MatchString(s) {
+		if reExtractBracketTitleAliasesAndRemoveFromTokens4.MatchString(s) {
 			return true
 		}
 		// Multi-episode list forms: "804&805", "07+08".
-		if regexp.MustCompile(`(?i)^\d{1,4}(?:\s*(?:&|＆|\+|＋|/|／|,|，|、)\s*\d{1,4})+$`).MatchString(s) {
+		if reExtractBracketTitleAliasesAndRemoveFromTokens5.MatchString(s) {
 			return true
 		}
 		// Any embedded episode marker like "第687集" (even with extra words) should be kept
 		// for episode detection and should not be used as main title/alias.
-		if regexp.MustCompile(`第\d{1,4}(?:集|话|話)`).FindStringIndex(s) != nil {
+		if reExtractBracketTitleAliasesAndRemoveFromTokens6.FindStringIndex(s) != nil {
 			return true
 		}
 		// Summary/special blocks like "总集篇01_12.5" should be treated as episode markers.
 		// Tokenizer may split it into "总集篇01_12 . 5".
-		if regexp.MustCompile(`总集篇\s*0*\d{1,3}\s*[_\s-]+\s*\d{1,4}(?:\s*\.\s*\d{1,2})?`).FindStringIndex(s) != nil {
+		if reExtractBracketTitleAliasesAndRemoveFromTokens7.FindStringIndex(s) != nil {
 			return true
 		}
 		// Dual episode markers like "01(73)" / "S01E01(13)" / "01-10(17-26)" should stay
 		// in the token stream for later EP adjudication.
-		if regexp.MustCompile(`(?i)^(?:S\d{1,2}E)?\d{1,4}(?:\s*[-~]\s*\d{1,4})?\s*[\(（]\s*(?:S\d{1,2}E)?\d{1,4}(?:\s*[-~]\s*\d{1,4})?\s*[\)）]$`).MatchString(s) {
+		if reExtractBracketTitleAliasesAndRemoveFromTokens8.MatchString(s) {
 			return true
 		}
 		// Tagged TV ranges like "TV01-25Fin" should be treated as episode/range markers.
-		if regexp.MustCompile(`(?i)\bTV\s*0*\d{1,4}\s*[-~]\s*\d{1,4}\s*(?:FIN|FINAL)?\b`).FindStringIndex(s) != nil {
+		if reExtractBracketTitleAliasesAndRemoveFromTokens9.FindStringIndex(s) != nil {
 			return true
 		}
-		if regexp.MustCompile(`(?i)\bS\d{1,2}E\d{1,4}\b`).FindStringIndex(s) != nil {
+		if reExtractBracketTitleAliasesAndRemoveFromTokens10.FindStringIndex(s) != nil {
 			return true
 		}
-		if regexp.MustCompile(`(?i)\b(?:ep|e)\s*\d{1,4}(?:\.\d{1,2})?\b`).FindStringIndex(s) != nil {
+		if reExtractBracketTitleAliasesAndRemoveFromTokens11.FindStringIndex(s) != nil {
 			return true
 		}
 		return false
@@ -248,10 +248,10 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 		if strings.Contains(low, "8bit") || strings.Contains(low, "10bit") || strings.Contains(low, "bit") {
 			return true
 		}
-		if regexp.MustCompile(`(?i)\b(?:v\d{1,2}|ver\.?\d{1,2}|rev\d{1,2}|repack|proper|rerip|remaster)\b`).MatchString(s) {
+		if reExtractBracketTitleAliasesAndRemoveFromTokens12.MatchString(s) {
 			return true
 		}
-		if regexp.MustCompile(`(?i)\b\d{3,4}p\b`).MatchString(s) {
+		if reExtractBracketTitleAliasesAndRemoveFromTokens13.MatchString(s) {
 			return true
 		}
 		return false
@@ -262,30 +262,30 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 		if s == "" {
 			return false
 		}
-		if regexp.MustCompile(`(?i)^0?\d{1,4}(?:\s|[_-])*(?:end|fin|final)$`).MatchString(s) {
+		if reExtractBracketTitleAliasesAndRemoveFromTokens14.MatchString(s) {
 			return true
 		}
-		if regexp.MustCompile(`(?i)^\d{1,4}(?:\s*(?:&|＆|\+|＋|/|／|,|，|、)\s*\d{1,4})+$`).MatchString(s) {
+		if reExtractBracketTitleAliasesAndRemoveFromTokens15.MatchString(s) {
 			return true
 		}
 		// Composite EP + special index like "07+ES07" / "07 + ES07".
-		if regexp.MustCompile(`(?i)^\d{1,4}\s*\+\s*(?:es|sp|ova|oad|ona|ex)0*\d{1,3}$`).MatchString(s) {
+		if reExtractBracketTitleAliasesAndRemoveFromTokens16.MatchString(s) {
 			return true
 		}
 		// Standalone special index like "ES07".
-		if regexp.MustCompile(`(?i)^(?:es|sp|ova|oad|ona|ex)0*\d{1,3}$`).MatchString(s) {
+		if reExtractBracketTitleAliasesAndRemoveFromTokens17.MatchString(s) {
 			return true
 		}
-		if regexp.MustCompile(`(?i)^0?\d{1,4}[vV]\d{1,2}$`).MatchString(s) {
+		if reExtractBracketTitleAliasesAndRemoveFromTokens18.MatchString(s) {
 			return true
 		}
-		if regexp.MustCompile(`(?i)^(?:S\d{1,2}E)?\d{1,4}(?:\s*[-~]\s*\d{1,4})?\s*[\(（]\s*(?:S\d{1,2}E)?\d{1,4}(?:\s*[-~]\s*\d{1,4})?\s*[\)）]$`).MatchString(s) {
+		if reExtractBracketTitleAliasesAndRemoveFromTokens19.MatchString(s) {
 			return true
 		}
-		if regexp.MustCompile(`(?i)^第?\d{1,4}(?:\s*-\s*\d{1,4})?(?:集|话|話|回|章)(?:\s|$)`).MatchString(s) {
+		if reExtractBracketTitleAliasesAndRemoveFromTokens20.MatchString(s) {
 			return true
 		}
-		if regexp.MustCompile(`^\d{1,4}$`).MatchString(s) {
+		if reExtractBracketTitleAliasesAndRemoveFromTokens21.MatchString(s) {
 			return true
 		}
 		if episodeOfTotalPattern.MatchString(s) {
@@ -294,21 +294,21 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 		if episodeRangePattern.MatchString(normalizeDigitRange(s)) {
 			return true
 		}
-		if regexp.MustCompile(`(?i)^ep\s*\d{1,4}$`).MatchString(s) {
+		if reExtractBracketTitleAliasesAndRemoveFromTokens22.MatchString(s) {
 			return true
 		}
-		if regexp.MustCompile(`(?i)^0?\d{1,4}\s*(?:&|＆)\s*(?:sp|ova|oad|oav|pv|op|ed)(?:\s|$)`).MatchString(s) {
+		if reExtractBracketTitleAliasesAndRemoveFromTokens23.MatchString(s) {
 			return true
 		}
 		// Patterns like "01_标题" are often episode markers. Keep this strict (underscore only)
 		// to avoid misclassifying titles like "86 - 不存在的战区".
-		if m := regexp.MustCompile(`^0?(\d{1,4})_+(.+)$`).FindStringSubmatch(s); len(m) == 3 {
+		if m := reExtractBracketTitleAliasesAndRemoveFromTokens24.FindStringSubmatch(s); len(m) == 3 {
 			n := strings.TrimLeft(m[1], "0")
 			if n == "" {
 				n = "0"
 			}
 			if n != "0" {
-				if v := regexp.MustCompile(`^\d+$`).FindString(n); v != "" {
+				if v := reExtractBracketTitleAliasesAndRemoveFromTokens25.FindString(n); v != "" {
 					if hasCJK(m[2]) {
 						return true
 					}
@@ -596,7 +596,7 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 			i = end
 			continue
 		}
-		compactSP := regexp.MustCompile(`[^0-9A-Za-z]+`).ReplaceAllString(inner, "")
+		compactSP := reExtractBracketTitleAliasesAndRemoveFromTokens26.ReplaceAllString(inner, "")
 		if compactSP != "" {
 			if m := spKindPattern.FindStringSubmatch(compactSP); len(m) >= 2 {
 				i = end
@@ -681,21 +681,21 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 		if s == "" {
 			return ""
 		}
-		if m := regexp.MustCompile(`(?i)\bS(\d{1,2})\b`).FindStringSubmatch(s); len(m) == 2 {
+		if m := reExtractBracketTitleAliasesAndRemoveFromTokens27.FindStringSubmatch(s); len(m) == 2 {
 			v := strings.TrimLeft(m[1], "0")
 			if v == "" {
 				v = m[1]
 			}
 			return v
 		}
-		if m := regexp.MustCompile(`(?i)\bSeason\s*(\d{1,2})\b`).FindStringSubmatch(s); len(m) == 2 {
+		if m := reExtractBracketTitleAliasesAndRemoveFromTokens28.FindStringSubmatch(s); len(m) == 2 {
 			v := strings.TrimLeft(m[1], "0")
 			if v == "" {
 				v = m[1]
 			}
 			return v
 		}
-		if m := regexp.MustCompile(`^第?([一二三四五六七八九十0-9]{1,3})季$`).FindStringSubmatch(s); len(m) == 2 {
+		if m := reExtractBracketTitleAliasesAndRemoveFromTokens29.FindStringSubmatch(s); len(m) == 2 {
 			if v := parseSmallSeasonNumberToken(m[1]); v != "" {
 				return v
 			}
@@ -769,3 +769,36 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 	}
 	return mainTitle, aliases, mainStart, mainEnd
 }
+
+// Regular expressions hoisted out of function bodies so they are compiled once at init.
+var (
+	reExtractBracketTitleAliasesAndRemoveFromTokens1  = regexp.MustCompile(`\b(\d{1,4})\s*-\s*(\d{1,4})\b`)
+	reExtractBracketTitleAliasesAndRemoveFromTokens2  = regexp.MustCompile(`\s+`)
+	reExtractBracketTitleAliasesAndRemoveFromTokens3  = regexp.MustCompile(`(?i)^0?\d{1,4}(?:\s|[_-])*(?:end|fin|final)$`)
+	reExtractBracketTitleAliasesAndRemoveFromTokens4  = regexp.MustCompile(`(?i)^0?\d{1,4}\s*[-~]\s*0?\d{1,4}(?:\.\d{1,2})?.*$`)
+	reExtractBracketTitleAliasesAndRemoveFromTokens5  = regexp.MustCompile(`(?i)^\d{1,4}(?:\s*(?:&|＆|\+|＋|/|／|,|，|、)\s*\d{1,4})+$`)
+	reExtractBracketTitleAliasesAndRemoveFromTokens6  = regexp.MustCompile(`第\d{1,4}(?:集|话|話)`)
+	reExtractBracketTitleAliasesAndRemoveFromTokens7  = regexp.MustCompile(`总集篇\s*0*\d{1,3}\s*[_\s-]+\s*\d{1,4}(?:\s*\.\s*\d{1,2})?`)
+	reExtractBracketTitleAliasesAndRemoveFromTokens8  = regexp.MustCompile(`(?i)^(?:S\d{1,2}E)?\d{1,4}(?:\s*[-~]\s*\d{1,4})?\s*[\(（]\s*(?:S\d{1,2}E)?\d{1,4}(?:\s*[-~]\s*\d{1,4})?\s*[\)）]$`)
+	reExtractBracketTitleAliasesAndRemoveFromTokens9  = regexp.MustCompile(`(?i)\bTV\s*0*\d{1,4}\s*[-~]\s*\d{1,4}\s*(?:FIN|FINAL)?\b`)
+	reExtractBracketTitleAliasesAndRemoveFromTokens10 = regexp.MustCompile(`(?i)\bS\d{1,2}E\d{1,4}\b`)
+	reExtractBracketTitleAliasesAndRemoveFromTokens11 = regexp.MustCompile(`(?i)\b(?:ep|e)\s*\d{1,4}(?:\.\d{1,2})?\b`)
+	reExtractBracketTitleAliasesAndRemoveFromTokens12 = regexp.MustCompile(`(?i)\b(?:v\d{1,2}|ver\.?\d{1,2}|rev\d{1,2}|repack|proper|rerip|remaster)\b`)
+	reExtractBracketTitleAliasesAndRemoveFromTokens13 = regexp.MustCompile(`(?i)\b\d{3,4}p\b`)
+	reExtractBracketTitleAliasesAndRemoveFromTokens14 = regexp.MustCompile(`(?i)^0?\d{1,4}(?:\s|[_-])*(?:end|fin|final)$`)
+	reExtractBracketTitleAliasesAndRemoveFromTokens15 = regexp.MustCompile(`(?i)^\d{1,4}(?:\s*(?:&|＆|\+|＋|/|／|,|，|、)\s*\d{1,4})+$`)
+	reExtractBracketTitleAliasesAndRemoveFromTokens16 = regexp.MustCompile(`(?i)^\d{1,4}\s*\+\s*(?:es|sp|ova|oad|ona|ex)0*\d{1,3}$`)
+	reExtractBracketTitleAliasesAndRemoveFromTokens17 = regexp.MustCompile(`(?i)^(?:es|sp|ova|oad|ona|ex)0*\d{1,3}$`)
+	reExtractBracketTitleAliasesAndRemoveFromTokens18 = regexp.MustCompile(`(?i)^0?\d{1,4}[vV]\d{1,2}$`)
+	reExtractBracketTitleAliasesAndRemoveFromTokens19 = regexp.MustCompile(`(?i)^(?:S\d{1,2}E)?\d{1,4}(?:\s*[-~]\s*\d{1,4})?\s*[\(（]\s*(?:S\d{1,2}E)?\d{1,4}(?:\s*[-~]\s*\d{1,4})?\s*[\)）]$`)
+	reExtractBracketTitleAliasesAndRemoveFromTokens20 = regexp.MustCompile(`(?i)^第?\d{1,4}(?:\s*-\s*\d{1,4})?(?:集|话|話|回|章)(?:\s|$)`)
+	reExtractBracketTitleAliasesAndRemoveFromTokens21 = regexp.MustCompile(`^\d{1,4}$`)
+	reExtractBracketTitleAliasesAndRemoveFromTokens22 = regexp.MustCompile(`(?i)^ep\s*\d{1,4}$`)
+	reExtractBracketTitleAliasesAndRemoveFromTokens23 = regexp.MustCompile(`(?i)^0?\d{1,4}\s*(?:&|＆)\s*(?:sp|ova|oad|oav|pv|op|ed)(?:\s|$)`)
+	reExtractBracketTitleAliasesAndRemoveFromTokens24 = regexp.MustCompile(`^0?(\d{1,4})_+(.+)$`)
+	reExtractBracketTitleAliasesAndRemoveFromTokens25 = regexp.MustCompile(`^\d+$`)
+	reExtractBracketTitleAliasesAndRemoveFromTokens26 = regexp.MustCompile(`[^0-9A-Za-z]+`)
+	reExtractBracketTitleAliasesAndRemoveFromTokens27 = regexp.MustCompile(`(?i)\bS(\d{1,2})\b`)
+	reExtractBracketTitleAliasesAndRemoveFromTokens28 = regexp.MustCompile(`(?i)\bSeason\s*(\d{1,2})\b`)
+	reExtractBracketTitleAliasesAndRemoveFromTokens29 = regexp.MustCompile(`^第?([一二三四五六七八九十0-9]{1,3})季$`)
+)

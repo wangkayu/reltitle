@@ -393,7 +393,7 @@ func isLikelyTechContextToken(s string) bool {
 	if s == "" {
 		return false
 	}
-	if regexp.MustCompile(`^\d{3,4}P$`).MatchString(s) {
+	if reIsLikelyTechContextToken1.MatchString(s) {
 		return true
 	}
 	switch s {
@@ -1107,7 +1107,7 @@ func removePreYearNoiseNumberTokens(tokens []model.Token) {
 			continue
 		}
 		cand := strings.TrimSpace(tokens[j].Text)
-		if !regexp.MustCompile(`^\d{2,4}$`).MatchString(cand) {
+		if !reRemovePreYearNoiseNumberTokens1.MatchString(cand) {
 			continue
 		}
 		// Only remove when we already have a multi-word latin title prefix to reduce false positives.
@@ -1337,3 +1337,9 @@ func consumeStarWrappedLeadingMeta(tokens []model.Token, start int) (int, bool) 
 	}
 	return start, false
 }
+
+// Regular expressions hoisted out of function bodies so they are compiled once at init.
+var (
+	reIsLikelyTechContextToken1       = regexp.MustCompile(`^\d{3,4}P$`)
+	reRemovePreYearNoiseNumberTokens1 = regexp.MustCompile(`^\d{2,4}$`)
+)

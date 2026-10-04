@@ -54,14 +54,14 @@ func extractTechAudioSlotAndRemoveFromTokens(tokens []model.Token, attrs *[]mode
 			return "", i
 		}
 		t0 := strings.TrimSpace(tokens[i].Text)
-		if regexp.MustCompile(`^\d\.\d(?:\.\d)?$`).MatchString(t0) {
+		if reExtractTechAudioSlotAndRemoveFromTokens1.MatchString(t0) {
 			return t0, i + 1
 		}
 		if i+2 < end && i+2 < len(tokens) {
 			a := strings.TrimSpace(tokens[i].Text)
 			b := strings.TrimSpace(tokens[i+1].Text)
 			c := strings.TrimSpace(tokens[i+2].Text)
-			if regexp.MustCompile(`^\d$`).MatchString(a) && b == "." && regexp.MustCompile(`^\d$`).MatchString(c) {
+			if reExtractTechAudioSlotAndRemoveFromTokens2.MatchString(a) && b == "." && reExtractTechAudioSlotAndRemoveFromTokens3.MatchString(c) {
 				return a + "." + c, i + 3
 			}
 		}
@@ -75,7 +75,7 @@ func extractTechAudioSlotAndRemoveFromTokens(tokens []model.Token, attrs *[]mode
 		}
 		low := strings.ToLower(s)
 		low = strings.ReplaceAll(low, "_", "-")
-		m := regexp.MustCompile(`(?i)^(aac|flac|opus|ac3|eac3|ddp|dd|truehd|dts(?:-hdma)?|dtshdma|pcm)x(\d{1,2})$`).FindStringSubmatch(low)
+		m := reExtractTechAudioSlotAndRemoveFromTokens4.FindStringSubmatch(low)
 		if len(m) != 3 {
 			return "", 0
 		}
@@ -104,7 +104,7 @@ func extractTechAudioSlotAndRemoveFromTokens(tokens []model.Token, attrs *[]mode
 		}
 		low := strings.ToLower(s)
 		low = strings.ReplaceAll(low, "_", "-")
-		m := regexp.MustCompile(`(?i)^(aac|flac|opus|ac3|eac3|ddp|dd|truehd|dts(?:-hdma)?|dtshdma|pcm)(\d\.\d)?$`).FindStringSubmatch(low)
+		m := reExtractTechAudioSlotAndRemoveFromTokens5.FindStringSubmatch(low)
 		if len(m) == 3 {
 			codec := canonCodec(m[1])
 			ch := strings.TrimSpace(m[2])
@@ -132,7 +132,7 @@ func extractTechAudioSlotAndRemoveFromTokens(tokens []model.Token, attrs *[]mode
 				return true
 			}
 		}
-		if regexp.MustCompile(`^\d\.\d(?:\.\d)?$`).MatchString(strings.TrimSpace(s)) {
+		if reExtractTechAudioSlotAndRemoveFromTokens6.MatchString(strings.TrimSpace(s)) {
 			return true
 		}
 		if strings.Contains(low, "atmos") || strings.Contains(low, "dtsx") || strings.Contains(low, "dts:x") {
@@ -591,3 +591,13 @@ func extractTechAudioSlotAndRemoveFromTokens(tokens []model.Token, attrs *[]mode
 	}
 	return &model.AudioSlot{Tracks: allTracks}
 }
+
+// Regular expressions hoisted out of function bodies so they are compiled once at init.
+var (
+	reExtractTechAudioSlotAndRemoveFromTokens1 = regexp.MustCompile(`^\d\.\d(?:\.\d)?$`)
+	reExtractTechAudioSlotAndRemoveFromTokens2 = regexp.MustCompile(`^\d$`)
+	reExtractTechAudioSlotAndRemoveFromTokens3 = regexp.MustCompile(`^\d$`)
+	reExtractTechAudioSlotAndRemoveFromTokens4 = regexp.MustCompile(`(?i)^(aac|flac|opus|ac3|eac3|ddp|dd|truehd|dts(?:-hdma)?|dtshdma|pcm)x(\d{1,2})$`)
+	reExtractTechAudioSlotAndRemoveFromTokens5 = regexp.MustCompile(`(?i)^(aac|flac|opus|ac3|eac3|ddp|dd|truehd|dts(?:-hdma)?|dtshdma|pcm)(\d\.\d)?$`)
+	reExtractTechAudioSlotAndRemoveFromTokens6 = regexp.MustCompile(`^\d\.\d(?:\.\d)?$`)
+)

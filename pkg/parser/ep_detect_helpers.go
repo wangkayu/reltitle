@@ -51,7 +51,7 @@ func detectSeasonRangeByKeyword(tokens []model.Token) (seasonRange string, seaso
 		l := strings.TrimSpace(tokens[i+1].Text)
 		sep := strings.ToLower(strings.TrimSpace(tokens[i+2].Text))
 		r := strings.TrimSpace(tokens[i+3].Text)
-		if !regexp.MustCompile(`^\d{1,2}$`).MatchString(l) || !regexp.MustCompile(`^\d{1,2}$`).MatchString(r) {
+		if !reDetectSeasonRangeByKeyword1.MatchString(l) || !reDetectSeasonRangeByKeyword2.MatchString(r) {
 			continue
 		}
 		if !(sep == "&" || sep == "＆" || sep == "+" || sep == "＋" || sep == "and" || sep == "et" || sep == "to") {
@@ -636,7 +636,7 @@ func parseSmallSeasonNumberToken(s string) string {
 		return ""
 	}
 	// digits
-	if regexp.MustCompile(`^\d{1,2}$`).MatchString(s) {
+	if reParseSmallSeasonNumberToken1.MatchString(s) {
 		return strings.TrimLeft(s, "0")
 	}
 	cn1 := map[rune]int{'一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9}
@@ -698,3 +698,10 @@ func seasonTokenValue(text string) string {
 	}
 	return ""
 }
+
+// Regular expressions hoisted out of function bodies so they are compiled once at init.
+var (
+	reDetectSeasonRangeByKeyword1  = regexp.MustCompile(`^\d{1,2}$`)
+	reDetectSeasonRangeByKeyword2  = regexp.MustCompile(`^\d{1,2}$`)
+	reParseSmallSeasonNumberToken1 = regexp.MustCompile(`^\d{1,2}$`)
+)

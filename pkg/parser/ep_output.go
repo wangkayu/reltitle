@@ -57,10 +57,10 @@ func hasAmbiguousExtraNumberAfterPrimaryRange(rawTitle string, episodeRange stri
 		return false
 	}
 	tail := rawTitle[loc[1]:]
-	if !regexp.MustCompile(`(?i)\b(?:and|&|\+|plus)\b`).MatchString(tail) {
+	if !reHasAmbiguousExtraNumberAfterPrimaryRange1.MatchString(tail) {
 		return false
 	}
-	return regexp.MustCompile(`\b\d{1,4}\b`).MatchString(tail)
+	return reHasAmbiguousExtraNumberAfterPrimaryRange2.MatchString(tail)
 }
 
 func pruneBatchEPSlotForConservativeOutput(epslot *model.EPSlot, contentKind string, episode string, episodeRange string, spKind string) *model.EPSlot {
@@ -938,24 +938,33 @@ func extractExplicitSeasonNumber(s string) string {
 	if s == "" {
 		return ""
 	}
-	if m := regexp.MustCompile(`(?i)\bS(\d{1,2})\b`).FindStringSubmatch(s); len(m) == 2 {
+	if m := reExtractExplicitSeasonNumber1.FindStringSubmatch(s); len(m) == 2 {
 		v := strings.TrimLeft(m[1], "0")
 		if v == "" {
 			v = m[1]
 		}
 		return v
 	}
-	if m := regexp.MustCompile(`(?i)\bSeason\s*(\d{1,2})\b`).FindStringSubmatch(s); len(m) == 2 {
+	if m := reExtractExplicitSeasonNumber2.FindStringSubmatch(s); len(m) == 2 {
 		v := strings.TrimLeft(m[1], "0")
 		if v == "" {
 			v = m[1]
 		}
 		return v
 	}
-	if m := regexp.MustCompile(`^第?([一二三四五六七八九十0-9]{1,3})季$`).FindStringSubmatch(s); len(m) == 2 {
+	if m := reExtractExplicitSeasonNumber3.FindStringSubmatch(s); len(m) == 2 {
 		if v := parseSmallSeasonNumberToken(m[1]); v != "" {
 			return v
 		}
 	}
 	return ""
 }
+
+// Regular expressions hoisted out of function bodies so they are compiled once at init.
+var (
+	reHasAmbiguousExtraNumberAfterPrimaryRange1 = regexp.MustCompile(`(?i)\b(?:and|&|\+|plus)\b`)
+	reHasAmbiguousExtraNumberAfterPrimaryRange2 = regexp.MustCompile(`\b\d{1,4}\b`)
+	reExtractExplicitSeasonNumber1              = regexp.MustCompile(`(?i)\bS(\d{1,2})\b`)
+	reExtractExplicitSeasonNumber2              = regexp.MustCompile(`(?i)\bSeason\s*(\d{1,2})\b`)
+	reExtractExplicitSeasonNumber3              = regexp.MustCompile(`^第?([一二三四五六七八九十0-9]{1,3})季$`)
+)

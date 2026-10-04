@@ -504,10 +504,10 @@ func looksLikeParenMetaOrTech(tokens []model.Token, openIdx int, limit int) bool
 	if strings.Contains(low, "mkv") || strings.Contains(low, "mp4") {
 		return true
 	}
-	if regexp.MustCompile(`\b(?:19|20)\d{2}\b`).FindStringIndex(inner) != nil {
+	if reLooksLikeParenMetaOrTech1.FindStringIndex(inner) != nil {
 		return true
 	}
-	if regexp.MustCompile(`(?i)\b(?:s\d{1,2}|season\s*\d{1,2}|cour\s*\d{1,2}|part\s*\d{1,2})\b`).FindStringIndex(inner) != nil {
+	if reLooksLikeParenMetaOrTech2.FindStringIndex(inner) != nil {
 		return true
 	}
 	return false
@@ -523,30 +523,30 @@ func normalizeTitleMain(s string) string {
 	s = strings.ReplaceAll(s, "＆", "&")
 	// Remove region restriction notes when they are embedded in title tokens.
 	// Keep other parenthetical notes like "（※似乎可行？）".
-	reRegion := regexp.MustCompile(`（\s*仅限港澳台地区\s*）|（\s*僅限港澳台地區\s*）|\(\s*仅限港澳台地区\s*\)|\(\s*僅限港澳台地區\s*\)`)
+	reRegion := reNormalizeTitleMain1
 	s = reRegion.ReplaceAllString(s, "")
 	// Remove embedded audio-version notes that should be structured as audio metadata
 	// rather than retained in the canonical title surface.
-	reAudioMeta := regexp.MustCompile(`（\s*(?:日配版|日语配音版|日語配音版|中配版?|中文配音版?|中文配音|国语配音|國語配音)\s*）|\(\s*(?:(?:Japanese|JPN|JP)\s+(?:Dub|Audio)|(?:Mandarin(?:\s+Chinese)?|Chinese)\s+Dub)\s*\)`)
+	reAudioMeta := reNormalizeTitleMain2
 	s = reAudioMeta.ReplaceAllString(s, "")
 	s = strings.TrimSpace(s)
 	// Compact spaces around hyphen only for very short left parts (e.g. "X - Clamp" -> "X-Clamp").
-	reSingleLetterHyphen := regexp.MustCompile(`(?i)\b([a-z0-9])\s*-\s*([a-z0-9]{2,})\b`)
+	reSingleLetterHyphen := reNormalizeTitleMain3
 	s = reSingleLetterHyphen.ReplaceAllString(s, "$1-$2")
 	// Compact spaces around hyphen for common latin honorific suffixes (e.g. "Kyuuketsuki - chan" -> "Kyuuketsuki-chan").
 	// Keep this conservative to avoid merging multi-part titles like "... - The Outcast - ...".
-	reLatinSuffixHyphen := regexp.MustCompile(`\b([A-Za-z0-9]{2,})\s*-\s*([a-z]{2,4})\b`)
+	reLatinSuffixHyphen := reNormalizeTitleMain4
 	s = reLatinSuffixHyphen.ReplaceAllString(s, "$1-$2")
-	reLatinDot := regexp.MustCompile(`(?i)\b([a-z0-9]{2,})\s*\.\s*([a-z0-9]{2,})\b`)
+	reLatinDot := reNormalizeTitleMain5
 	s = reLatinDot.ReplaceAllString(s, "$1.$2")
-	reDigitHyphen := regexp.MustCompile(`\b(\d{1,4})\s*-\s*(\d{1,4})\b`)
+	reDigitHyphen := reNormalizeTitleMain6
 	s = reDigitHyphen.ReplaceAllString(s, "$1-$2")
 	s = strings.TrimSpace(s)
 	s = normalizeSpacedUnderscore(s)
 	if hasCJK(s) && !hasLatin(s) {
-		s = regexp.MustCompile(`([【（「『《〈])\s+`).ReplaceAllString(s, "$1")
-		s = regexp.MustCompile(`\s+([】）」』》〉])`).ReplaceAllString(s, "$1")
-		s = regexp.MustCompile(`([】）」』》〉])\s+([\p{Han}\p{Hiragana}\p{Katakana}\p{Hangul}])`).ReplaceAllString(s, "$1$2")
+		s = reNormalizeTitleMain7.ReplaceAllString(s, "$1")
+		s = reNormalizeTitleMain8.ReplaceAllString(s, "$1")
+		s = reNormalizeTitleMain9.ReplaceAllString(s, "$1$2")
 		s = strings.TrimSpace(s)
 		s = strings.TrimRight(s, "。")
 		s = strings.TrimSpace(s)
@@ -588,3 +588,18 @@ func normalizeSpacedUnderscore(s string) string {
 	s = reMultiSpace.ReplaceAllString(s, " ")
 	return strings.TrimSpace(s)
 }
+
+// Regular expressions hoisted out of function bodies so they are compiled once at init.
+var (
+	reLooksLikeParenMetaOrTech1 = regexp.MustCompile(`\b(?:19|20)\d{2}\b`)
+	reLooksLikeParenMetaOrTech2 = regexp.MustCompile(`(?i)\b(?:s\d{1,2}|season\s*\d{1,2}|cour\s*\d{1,2}|part\s*\d{1,2})\b`)
+	reNormalizeTitleMain1       = regexp.MustCompile(`（\s*仅限港澳台地区\s*）|（\s*僅限港澳台地區\s*）|\(\s*仅限港澳台地区\s*\)|\(\s*僅限港澳台地區\s*\)`)
+	reNormalizeTitleMain2       = regexp.MustCompile(`（\s*(?:日配版|日语配音版|日語配音版|中配版?|中文配音版?|中文配音|国语配音|國語配音)\s*）|\(\s*(?:(?:Japanese|JPN|JP)\s+(?:Dub|Audio)|(?:Mandarin(?:\s+Chinese)?|Chinese)\s+Dub)\s*\)`)
+	reNormalizeTitleMain3       = regexp.MustCompile(`(?i)\b([a-z0-9])\s*-\s*([a-z0-9]{2,})\b`)
+	reNormalizeTitleMain4       = regexp.MustCompile(`\b([A-Za-z0-9]{2,})\s*-\s*([a-z]{2,4})\b`)
+	reNormalizeTitleMain5       = regexp.MustCompile(`(?i)\b([a-z0-9]{2,})\s*\.\s*([a-z0-9]{2,})\b`)
+	reNormalizeTitleMain6       = regexp.MustCompile(`\b(\d{1,4})\s*-\s*(\d{1,4})\b`)
+	reNormalizeTitleMain7       = regexp.MustCompile(`([【（「『《〈])\s+`)
+	reNormalizeTitleMain8       = regexp.MustCompile(`\s+([】）」』》〉])`)
+	reNormalizeTitleMain9       = regexp.MustCompile(`([】）」』》〉])\s+([\p{Han}\p{Hiragana}\p{Katakana}\p{Hangul}])`)
+)

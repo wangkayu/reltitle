@@ -391,7 +391,7 @@ func isLikelyMetaBracketText(s string) bool {
 		return true
 	}
 	// Common combined language tags like "CHS&JPN" / "CHT&JPN" / "CHS&CHT&JPN".
-	if regexp.MustCompile(`(?i)^(?:CHS|CHT|JPN|JP|ENG)(?:\s*(?:&|＆|\+|＋)\s*(?:CHS|CHT|JPN|JP|ENG))+$`).MatchString(trim) {
+	if reIsLikelyMetaBracketText1.MatchString(trim) {
 		return true
 	}
 	if strings.Contains(s, "简") || strings.Contains(s, "繁") {
@@ -422,16 +422,16 @@ func isEpisodeLikeBracketText(s string) bool {
 	if ss == "" {
 		return false
 	}
-	if regexp.MustCompile(`(?i)^0?\d{1,4}\s*[-~]\s*0?\d{1,4}(?:\.\d{1,2})?.*$`).MatchString(ss) {
+	if reIsEpisodeLikeBracketText1.MatchString(ss) {
 		return true
 	}
-	if regexp.MustCompile(`(?i)^第?\d{1,4}(?:\s*-\s*\d{1,4})?(?:集|话|話|回|章)(?:\s|$)`).MatchString(ss) {
+	if reIsEpisodeLikeBracketText2.MatchString(ss) {
 		return true
 	}
-	if regexp.MustCompile(`(?i)^0?\d{1,4}\s*(?:&|＆)\s*(?:sp|ova|oad|ona|ex|pv|op|ed)(?:\s|$)`).MatchString(ss) {
+	if reIsEpisodeLikeBracketText3.MatchString(ss) {
 		return true
 	}
-	if regexp.MustCompile(`^0?\d{1,4}[_\s-]+.+$`).MatchString(ss) {
+	if reIsEpisodeLikeBracketText4.MatchString(ss) {
 		return true
 	}
 	return false
@@ -463,3 +463,12 @@ var seasonWordPattern = regexp.MustCompile(`(?i)^season$`)
 var seasonWordLoosePattern = regexp.MustCompile(`(?i)^(season|saison)$`)
 var seasonOrdinalPattern = regexp.MustCompile(`(?i)^(\d{1,2})(?:st|nd|rd|th)$`)
 var seasonCJKPattern = regexp.MustCompile(`^第?([一二三四五六七八九十0-9]{1,3})季$`)
+
+// Regular expressions hoisted out of function bodies so they are compiled once at init.
+var (
+	reIsLikelyMetaBracketText1  = regexp.MustCompile(`(?i)^(?:CHS|CHT|JPN|JP|ENG)(?:\s*(?:&|＆|\+|＋)\s*(?:CHS|CHT|JPN|JP|ENG))+$`)
+	reIsEpisodeLikeBracketText1 = regexp.MustCompile(`(?i)^0?\d{1,4}\s*[-~]\s*0?\d{1,4}(?:\.\d{1,2})?.*$`)
+	reIsEpisodeLikeBracketText2 = regexp.MustCompile(`(?i)^第?\d{1,4}(?:\s*-\s*\d{1,4})?(?:集|话|話|回|章)(?:\s|$)`)
+	reIsEpisodeLikeBracketText3 = regexp.MustCompile(`(?i)^0?\d{1,4}\s*(?:&|＆)\s*(?:sp|ova|oad|ona|ex|pv|op|ed)(?:\s|$)`)
+	reIsEpisodeLikeBracketText4 = regexp.MustCompile(`^0?\d{1,4}[_\s-]+.+$`)
+)

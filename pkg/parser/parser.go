@@ -1031,7 +1031,7 @@ func (p *Parser) Parse(rawTitle string) (*model.ParseResult, error) {
 	}
 	if strings.TrimSpace(packKind) == "" {
 		if strings.TrimSpace(episode) == "" && strings.TrimSpace(episodeRange) == "" {
-			if regexp.MustCompile(`(?i)\bBD\b`).MatchString(rawTitle) {
+			if reParse1.MatchString(rawTitle) {
 				packKind = "bd"
 			}
 		}
@@ -1338,3 +1338,8 @@ func (p *Parser) Parse(rawTitle string) (*model.ParseResult, error) {
 
 	return res, nil
 }
+
+// Regular expressions hoisted out of function bodies so they are compiled once at init.
+var (
+	reParse1 = regexp.MustCompile(`(?i)\bBD\b`)
+)

@@ -91,7 +91,7 @@ func isTailGroupLike(s string) bool {
 	if strings.HasPrefix(ss, "-") || strings.HasPrefix(ss, "@") {
 		return true
 	}
-	if regexp.MustCompile(`^[A-Z0-9]{2,10}$`).MatchString(ss) {
+	if reIsTailGroupLike1.MatchString(ss) {
 		return true
 	}
 	return false
@@ -380,7 +380,7 @@ func detectSPKind(tokens []model.Token) string {
 			}
 			continue
 		}
-		if m := regexp.MustCompile(`(?i)^0?\d{1,3}\s*(?:&|＆)\s*(sp|ova|oad|ona|ex|ncop|nced|pv)\b`).FindStringSubmatch(txt); len(m) == 2 {
+		if m := reDetectSPKind1.FindStringSubmatch(txt); len(m) == 2 {
 			return normalizeSPKindToken(m[1])
 		}
 		m := spKindPattern.FindStringSubmatch(txt)
@@ -413,8 +413,8 @@ func extractSeasonRangeAndRemoveFromTokens(tokens []model.Token) string {
 		if mid != "-" {
 			continue
 		}
-		ml := regexp.MustCompile(`(?i)^s(\d{1,2})$`).FindStringSubmatch(l)
-		mr := regexp.MustCompile(`(?i)^s(\d{1,2})$`).FindStringSubmatch(r)
+		ml := reExtractSeasonRangeAndRemoveFromTokens1.FindStringSubmatch(l)
+		mr := reExtractSeasonRangeAndRemoveFromTokens2.FindStringSubmatch(r)
 		if len(ml) != 2 || len(mr) != 2 {
 			continue
 		}
@@ -637,3 +637,11 @@ func detectMovieIndexAndKeyword(tokens []model.Token) (movieIndex string, tokenI
 	}
 	return "", -1, hasMovieKeyword
 }
+
+// Regular expressions hoisted out of function bodies so they are compiled once at init.
+var (
+	reIsTailGroupLike1                       = regexp.MustCompile(`^[A-Z0-9]{2,10}$`)
+	reDetectSPKind1                          = regexp.MustCompile(`(?i)^0?\d{1,3}\s*(?:&|＆)\s*(sp|ova|oad|ona|ex|ncop|nced|pv)\b`)
+	reExtractSeasonRangeAndRemoveFromTokens1 = regexp.MustCompile(`(?i)^s(\d{1,2})$`)
+	reExtractSeasonRangeAndRemoveFromTokens2 = regexp.MustCompile(`(?i)^s(\d{1,2})$`)
+)

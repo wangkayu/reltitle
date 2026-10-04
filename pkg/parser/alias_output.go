@@ -137,7 +137,7 @@ func extractGuardedDVDRIPReleaseTagAttrsAndRemoveFromTokens(tokens []model.Token
 			}
 			// Common resolution signals
 			if strings.HasSuffix(t, "P") {
-				if regexp.MustCompile(`^\d{3,4}P$`).MatchString(t) {
+				if reExtractGuardedDVDRIPReleaseTagAttrsAndRemoveFromTokens1.MatchString(t) {
 					return true
 				}
 			}
@@ -308,7 +308,7 @@ func (p *Parser) normalizeAliasCandidateForOutput(s string) string {
 		}
 		ss = reTitleTrimMetaTail.ReplaceAllString(ss, "")
 		ss = reTitleTrimVolTail.ReplaceAllString(ss, "")
-		ss = regexp.MustCompile(`\s+`).ReplaceAllString(ss, " ")
+		ss = reNormalizeAliasCandidateForOutput1.ReplaceAllString(ss, " ")
 		ss = strings.TrimSpace(ss)
 		ss = strings.Trim(ss, "-_/;:,+ ")
 	}
@@ -718,11 +718,11 @@ func extractSingleSlashSeasonBridgeSides(rawTitle string) (string, string, bool)
 	if s == "" {
 		return "", "", false
 	}
-	s = regexp.MustCompile(`^\s*(?:\[[^\]]+\]|【[^】]+】)\s*`).ReplaceAllString(s, "")
-	if loc := regexp.MustCompile(`\s+-\s+\d{1,4}(?:\.\d+)?\b`).FindStringIndex(s); loc != nil {
+	s = reExtractSingleSlashSeasonBridgeSides1.ReplaceAllString(s, "")
+	if loc := reExtractSingleSlashSeasonBridgeSides2.FindStringIndex(s); loc != nil {
 		s = strings.TrimSpace(s[:loc[0]])
 	}
-	if loc := regexp.MustCompile(`\[\s*\d{1,4}(?:\.\d+)?\s*\]`).FindStringIndex(s); loc != nil {
+	if loc := reExtractSingleSlashSeasonBridgeSides3.FindStringIndex(s); loc != nil {
 		s = strings.TrimSpace(s[:loc[0]])
 	}
 	norm := strings.ReplaceAll(s, "／", "/")
@@ -1195,18 +1195,18 @@ func (p *Parser) isValidAliasToken(s string) bool {
 	if up == "SP" || up == "OVA" || up == "OAD" || up == "ONA" || up == "EX" || up == "PV" || up == "OP" || up == "ED" {
 		return false
 	}
-	if regexp.MustCompile(`^\d{1,4}\s*[-~]\s*\d{1,4}$`).MatchString(s) {
+	if reIsValidAliasToken1.MatchString(s) {
 		return false
 	}
 	// Versioned episode tokens like "07v2" are not aliases.
-	if regexp.MustCompile(`(?i)^\d{1,4}[vV]\d{1,2}$`).MatchString(s) {
+	if reIsValidAliasToken2.MatchString(s) {
 		return false
 	}
 	// Pure version tags like "v2" / "ver2" should not be aliases.
-	if regexp.MustCompile(`(?i)^v(?:er)?\.?\s*\d{1,3}$`).MatchString(s) {
+	if reIsValidAliasToken3.MatchString(s) {
 		return false
 	}
-	if regexp.MustCompile(`^\d{1,4}(?:\s+\d{1,4})+$`).MatchString(s) {
+	if reIsValidAliasToken4.MatchString(s) {
 		return false
 	}
 	if len([]rune(s)) < 2 {
@@ -1217,16 +1217,16 @@ func (p *Parser) isValidAliasToken(s string) bool {
 	if strings.EqualFold(s, "BD") {
 		return false
 	}
-	if regexp.MustCompile(`(?i)^[a-z]{2}-[a-z]{2}$`).MatchString(low) {
+	if reIsValidAliasToken5.MatchString(low) {
 		return false
 	}
-	if regexp.MustCompile(`(?i)^(?:sp|ova|oad|ona|ex|pv|op|ed)\d{1,3}$`).MatchString(low) {
+	if reIsValidAliasToken6.MatchString(low) {
 		return false
 	}
 	if episodeSPAliasPattern.MatchString(s) || episodeSPAliasAmpPattern.MatchString(s) {
 		return false
 	}
-	if regexp.MustCompile(`(?i)^[0-9a-f]{8}$`).MatchString(low) {
+	if reIsValidAliasToken7.MatchString(low) {
 		return false
 	}
 	if strings.Contains(s, "招募") || strings.Contains(s, "仅限") || strings.Contains(s, "港澳") || strings.Contains(s, "臺") || strings.Contains(s, "台") || strings.Contains(s, "停播") || strings.Contains(s, "停更") {
@@ -1236,10 +1236,10 @@ func (p *Parser) isValidAliasToken(s string) bool {
 	if strings.Contains(low, "bdrip") {
 		return false
 	}
-	if regexp.MustCompile(`(?i)\bvol\s*\.?\s*\d{1,3}\b`).FindStringIndex(low) != nil {
+	if reIsValidAliasToken8.FindStringIndex(low) != nil {
 		return false
 	}
-	if regexp.MustCompile(`(?i)\bvolume\s*\d{1,3}\b`).FindStringIndex(low) != nil {
+	if reIsValidAliasToken9.FindStringIndex(low) != nil {
 		return false
 	}
 	if p.hasAliasMetaFromDictionary(s) {
@@ -1359,3 +1359,21 @@ func mergeAliases(a []string, b []string) []string {
 	}
 	return out
 }
+
+// Regular expressions hoisted out of function bodies so they are compiled once at init.
+var (
+	reExtractGuardedDVDRIPReleaseTagAttrsAndRemoveFromTokens1 = regexp.MustCompile(`^\d{3,4}P$`)
+	reNormalizeAliasCandidateForOutput1                       = regexp.MustCompile(`\s+`)
+	reExtractSingleSlashSeasonBridgeSides1                    = regexp.MustCompile(`^\s*(?:\[[^\]]+\]|【[^】]+】)\s*`)
+	reExtractSingleSlashSeasonBridgeSides2                    = regexp.MustCompile(`\s+-\s+\d{1,4}(?:\.\d+)?\b`)
+	reExtractSingleSlashSeasonBridgeSides3                    = regexp.MustCompile(`\[\s*\d{1,4}(?:\.\d+)?\s*\]`)
+	reIsValidAliasToken1                                      = regexp.MustCompile(`^\d{1,4}\s*[-~]\s*\d{1,4}$`)
+	reIsValidAliasToken2                                      = regexp.MustCompile(`(?i)^\d{1,4}[vV]\d{1,2}$`)
+	reIsValidAliasToken3                                      = regexp.MustCompile(`(?i)^v(?:er)?\.?\s*\d{1,3}$`)
+	reIsValidAliasToken4                                      = regexp.MustCompile(`^\d{1,4}(?:\s+\d{1,4})+$`)
+	reIsValidAliasToken5                                      = regexp.MustCompile(`(?i)^[a-z]{2}-[a-z]{2}$`)
+	reIsValidAliasToken6                                      = regexp.MustCompile(`(?i)^(?:sp|ova|oad|ona|ex|pv|op|ed)\d{1,3}$`)
+	reIsValidAliasToken7                                      = regexp.MustCompile(`(?i)^[0-9a-f]{8}$`)
+	reIsValidAliasToken8                                      = regexp.MustCompile(`(?i)\bvol\s*\.?\s*\d{1,3}\b`)
+	reIsValidAliasToken9                                      = regexp.MustCompile(`(?i)\bvolume\s*\d{1,3}\b`)
+)

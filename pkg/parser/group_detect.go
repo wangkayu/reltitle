@@ -189,10 +189,10 @@ func (p *Parser) detectTailGroupFromRawTitle(rawTitle string) string {
 	if s == "" {
 		return ""
 	}
-	if regexp.MustCompile(`(?i)\bcustom\b\s*$`).MatchString(s) {
+	if reDetectTailGroupFromRawTitle1.MatchString(s) {
 		return ""
 	}
-	if regexp.MustCompile(`(?i)\bhi[\s_-]*res\b\s*$`).MatchString(s) {
+	if reDetectTailGroupFromRawTitle2.MatchString(s) {
 		return ""
 	}
 	if m := tailGroupFromRawTitlePattern.FindStringSubmatch(s); len(m) == 2 {
@@ -266,13 +266,13 @@ func isLikelySubtitleBracketGroupText(s string) bool {
 		return true
 	}
 	// Multi-language subtitle markers like "Multi language subs", "Multi subs", etc.
-	if regexp.MustCompile(`(?i)^multi\s+language\s+subs?$`).MatchString(strings.TrimSpace(s)) {
+	if reIsLikelySubtitleBracketGroupText1.MatchString(strings.TrimSpace(s)) {
 		return true
 	}
-	if regexp.MustCompile(`(?i)^sub(?:title|titles)?(?:[_ .-]+[\p{L}]{2,16})+$`).MatchString(strings.TrimSpace(s)) {
+	if reIsLikelySubtitleBracketGroupText2.MatchString(strings.TrimSpace(s)) {
 		return true
 	}
-	return regexp.MustCompile(`(?i)^sub(?:title|titles)?[_ .-]?[a-z]{2,8}$`).MatchString(low)
+	return reIsLikelySubtitleBracketGroupText3.MatchString(low)
 }
 
 func detectHeadBracketGroupFromRawTitle(rawTitle string) string {
@@ -336,3 +336,12 @@ func promoteFrenchMultiNoteToAudioFlag(attrs []model.Attribute) {
 		attrs[i].Source = "heuristic_multi_audio"
 	}
 }
+
+// Regular expressions hoisted out of function bodies so they are compiled once at init.
+var (
+	reDetectTailGroupFromRawTitle1      = regexp.MustCompile(`(?i)\bcustom\b\s*$`)
+	reDetectTailGroupFromRawTitle2      = regexp.MustCompile(`(?i)\bhi[\s_-]*res\b\s*$`)
+	reIsLikelySubtitleBracketGroupText1 = regexp.MustCompile(`(?i)^multi\s+language\s+subs?$`)
+	reIsLikelySubtitleBracketGroupText2 = regexp.MustCompile(`(?i)^sub(?:title|titles)?(?:[_ .-]+[\p{L}]{2,16})+$`)
+	reIsLikelySubtitleBracketGroupText3 = regexp.MustCompile(`(?i)^sub(?:title|titles)?[_ .-]?[a-z]{2,8}$`)
+)

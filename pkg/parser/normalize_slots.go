@@ -846,7 +846,7 @@ func normalizeStreamMetaText(s string) string {
 	ss = strings.ReplaceAll(ss, " - ", "-")
 	ss = strings.ReplaceAll(ss, " _ ", "_")
 	// Collapse repeated whitespace.
-	ss = regexp.MustCompile(`\s+`).ReplaceAllString(ss, " ")
+	ss = reNormalizeStreamMetaText1.ReplaceAllString(ss, " ")
 	return strings.TrimSpace(ss)
 }
 
@@ -930,7 +930,7 @@ func (p *Parser) applyStreamingReleaseRouteV1(tailParenBlock string, aliases *[]
 		return
 	}
 	// Split by common delimiters (including fullwidth variants).
-	spl := regexp.MustCompile(`[,，;；\|/]+`).Split(block, -1)
+	spl := reApplyStreamingReleaseRouteV11.Split(block, -1)
 	aliasCands := make([]string, 0, len(spl))
 	for _, it := range spl {
 		it = strings.TrimSpace(it)
@@ -978,7 +978,7 @@ func stripSeasonOrPartSuffix(s string) string {
 	}
 	// Guard: numeric ranges like "17-26" are often part of title/alias (e.g. SweetSub releases),
 	// not a season/part suffix.
-	if regexp.MustCompile(`\b\d{1,4}\s*-\s*\d{1,4}\s*$`).FindStringIndex(s) != nil {
+	if reStripSeasonOrPartSuffix1.FindStringIndex(s) != nil {
 		return ""
 	}
 	if !looksLikeSeasonOrPartSuffix(s) {
@@ -986,15 +986,15 @@ func stripSeasonOrPartSuffix(s string) string {
 	}
 	// Remove explicit season expressions.
 	out := s
-	out = regexp.MustCompile(`(?i)\b\d{1,2}(?:st|nd|rd|th)?\s*season\b`).ReplaceAllString(out, "")
-	out = regexp.MustCompile(`(?i)\bseason\s*\d{1,2}\b`).ReplaceAllString(out, "")
-	out = regexp.MustCompile(`(?i)\bs\s*\d{1,2}\b`).ReplaceAllString(out, "")
-	out = regexp.MustCompile(`第\s*[一二三四五六七八九十0-9]{1,3}\s*(?:季|期|部)`).ReplaceAllString(out, "")
+	out = reStripSeasonOrPartSuffix2.ReplaceAllString(out, "")
+	out = reStripSeasonOrPartSuffix3.ReplaceAllString(out, "")
+	out = reStripSeasonOrPartSuffix4.ReplaceAllString(out, "")
+	out = reStripSeasonOrPartSuffix5.ReplaceAllString(out, "")
 	out = strings.TrimSpace(out)
 	// Remove common sequel suffixes at end.
-	out = regexp.MustCompile(`\s+[0-9]{1,2}\s*$`).ReplaceAllString(out, "")
-	out = regexp.MustCompile(`(?i)\s+(?:ii|iii|iv|v|vi|vii|viii|ix|x)\s*$`).ReplaceAllString(out, "")
-	out = regexp.MustCompile(`\s*[贰貳弐二三四五六七八九十]\s*$`).ReplaceAllString(out, "")
+	out = reStripSeasonOrPartSuffix6.ReplaceAllString(out, "")
+	out = reStripSeasonOrPartSuffix7.ReplaceAllString(out, "")
+	out = reStripSeasonOrPartSuffix8.ReplaceAllString(out, "")
 	out = strings.TrimSpace(out)
 	if out == "" || out == s {
 		return ""
@@ -1025,19 +1025,19 @@ func looksLikeSeasonOrPartSuffix(s string) bool {
 		return false
 	}
 	// Common patterns: title + " 2" / " II" / "贰" / "第2季" etc.
-	if regexp.MustCompile(`(?i)\bseason\b`).MatchString(s) {
+	if reLooksLikeSeasonOrPartSuffix1.MatchString(s) {
 		return true
 	}
-	if regexp.MustCompile(`(?i)\bs\d{1,2}\b`).MatchString(s) {
+	if reLooksLikeSeasonOrPartSuffix2.MatchString(s) {
 		return true
 	}
-	if regexp.MustCompile(`(?i)\b\d{1,2}(?:st|nd|rd|th)?\s*season\b`).MatchString(s) {
+	if reLooksLikeSeasonOrPartSuffix3.MatchString(s) {
 		return true
 	}
-	if regexp.MustCompile(`第\s*[一二三四五六七八九十0-9]{1,3}\s*(?:季|期|部)`).FindStringIndex(s) != nil {
+	if reLooksLikeSeasonOrPartSuffix4.FindStringIndex(s) != nil {
 		return true
 	}
-	if regexp.MustCompile(`\s(?:[0-9]{1,2}|[一二三四五六七八九十]|[贰貳弐参參三四五六七八九十])\s*$`).FindStringIndex(s) != nil {
+	if reLooksLikeSeasonOrPartSuffix5.FindStringIndex(s) != nil {
 		return true
 	}
 	return false
@@ -1181,3 +1181,22 @@ func extractPlatformRegionAttrsAndRemoveFromTokens(tokens []model.Token, out *[]
 		tokens[i].Text = cleaned
 	}
 }
+
+// Regular expressions hoisted out of function bodies so they are compiled once at init.
+var (
+	reNormalizeStreamMetaText1      = regexp.MustCompile(`\s+`)
+	reApplyStreamingReleaseRouteV11 = regexp.MustCompile(`[,，;；\|/]+`)
+	reStripSeasonOrPartSuffix1      = regexp.MustCompile(`\b\d{1,4}\s*-\s*\d{1,4}\s*$`)
+	reStripSeasonOrPartSuffix2      = regexp.MustCompile(`(?i)\b\d{1,2}(?:st|nd|rd|th)?\s*season\b`)
+	reStripSeasonOrPartSuffix3      = regexp.MustCompile(`(?i)\bseason\s*\d{1,2}\b`)
+	reStripSeasonOrPartSuffix4      = regexp.MustCompile(`(?i)\bs\s*\d{1,2}\b`)
+	reStripSeasonOrPartSuffix5      = regexp.MustCompile(`第\s*[一二三四五六七八九十0-9]{1,3}\s*(?:季|期|部)`)
+	reStripSeasonOrPartSuffix6      = regexp.MustCompile(`\s+[0-9]{1,2}\s*$`)
+	reStripSeasonOrPartSuffix7      = regexp.MustCompile(`(?i)\s+(?:ii|iii|iv|v|vi|vii|viii|ix|x)\s*$`)
+	reStripSeasonOrPartSuffix8      = regexp.MustCompile(`\s*[贰貳弐二三四五六七八九十]\s*$`)
+	reLooksLikeSeasonOrPartSuffix1  = regexp.MustCompile(`(?i)\bseason\b`)
+	reLooksLikeSeasonOrPartSuffix2  = regexp.MustCompile(`(?i)\bs\d{1,2}\b`)
+	reLooksLikeSeasonOrPartSuffix3  = regexp.MustCompile(`(?i)\b\d{1,2}(?:st|nd|rd|th)?\s*season\b`)
+	reLooksLikeSeasonOrPartSuffix4  = regexp.MustCompile(`第\s*[一二三四五六七八九十0-9]{1,3}\s*(?:季|期|部)`)
+	reLooksLikeSeasonOrPartSuffix5  = regexp.MustCompile(`\s(?:[0-9]{1,2}|[一二三四五六七八九十]|[贰貳弐参參三四五六七八九十])\s*$`)
+)

@@ -77,7 +77,7 @@ func extractCompositeEditionNotes(text string) []string {
 	if text == "" {
 		return nil
 	}
-	parts := regexp.MustCompile(`[&＆+/／|｜,，]+`).Split(text, -1)
+	parts := reExtractCompositeEditionNotes1.Split(text, -1)
 	if len(parts) <= 1 {
 		return nil
 	}
@@ -208,7 +208,7 @@ func extractRestoreEditionAttrsAndRemoveFromTokens(tokens []model.Token, out *[]
 		}
 		return -1
 	}
-	reRestore := regexp.MustCompile(`(?i)(?:数字修复|數字修復|修复版|修復版|修复|修復|重制|重製|restore(?:d)?|remaster(?:ed)?)`)
+	reRestore := reExtractRestoreEditionAttrsAndRemoveFromTokens1
 	for i := 0; i < len(tokens); i++ {
 		if tokens[i].Removed {
 			continue
@@ -737,3 +737,9 @@ func detectEpisode(tokens []model.Token) (string, int) {
 var tailGroupPattern = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9]{2,20}$`)
 var tailGroupHyphenPrefixPattern = regexp.MustCompile(`(?i)^(?:x?264|x?265|h?264|h?265|\d\.\d|pcm|flac|aac|ac3|eac3|ddp|dts|opus|truehd|atmos)(?:\d\.\d)?$`)
 var tailGroupTechTokenPattern = regexp.MustCompile(`(?i)^(?:dts(?:hd|hdma)?|hdma|truehd|eac3|ac3|flac|opus|pcm|ma\d{1,2}p|ddp\d{0,2})$`)
+
+// Regular expressions hoisted out of function bodies so they are compiled once at init.
+var (
+	reExtractCompositeEditionNotes1                  = regexp.MustCompile(`[&＆+/／|｜,，]+`)
+	reExtractRestoreEditionAttrsAndRemoveFromTokens1 = regexp.MustCompile(`(?i)(?:数字修复|數字修復|修复版|修復版|修复|修復|重制|重製|restore(?:d)?|remaster(?:ed)?)`)
+)

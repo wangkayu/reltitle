@@ -218,7 +218,7 @@ func detectParenAbsoluteEpisodeAlternate(tokens []model.Token, primary *model.EP
 	if (open != "(" && open != "（") || (close != ")" && close != "）") {
 		return model.EPReference{}, false
 	}
-	if !episodeOfTotalPattern.MatchString(inner) && !regexp.MustCompile(`^\d{1,4}(?:\.\d{1,2})?$`).MatchString(inner) {
+	if !episodeOfTotalPattern.MatchString(inner) && !reDetectParenAbsoluteEpisodeAlternate1.MatchString(inner) {
 		return model.EPReference{}, false
 	}
 	norm := strings.TrimLeft(inner, "0")
@@ -334,3 +334,8 @@ func normalizeEpisodeIdentity(s string) string {
 	}
 	return s
 }
+
+// Regular expressions hoisted out of function bodies so they are compiled once at init.
+var (
+	reDetectParenAbsoluteEpisodeAlternate1 = regexp.MustCompile(`^\d{1,4}(?:\.\d{1,2})?$`)
+)

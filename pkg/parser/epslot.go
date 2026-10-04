@@ -150,7 +150,7 @@ func buildEPSlotCandidates(tokens []model.Token, season string, seasonIdx int, e
 					continue
 				}
 				if inner := bracketBlockInnerText(tokens, i); inner != "" {
-					norm := regexp.MustCompile(`\b(\d{1,4})\s*[-~]\s*(\d{1,4})\b`).ReplaceAllString(inner, "$1-$2")
+					norm := reBuildEPSlotCandidates1.ReplaceAllString(inner, "$1-$2")
 					if episodeRangePattern.MatchString(strings.TrimSpace(norm)) {
 						prev := ""
 						next := ""
@@ -307,3 +307,8 @@ func finalizeEPSlotPrimary(epslot *model.EPSlot, season string, episode string, 
 		return
 	}
 }
+
+// Regular expressions hoisted out of function bodies so they are compiled once at init.
+var (
+	reBuildEPSlotCandidates1 = regexp.MustCompile(`\b(\d{1,4})\s*[-~]\s*(\d{1,4})\b`)
+)

@@ -106,7 +106,7 @@ func trimMovieDashEpisodeTailFromTitle(rawTitle string, title string, episode st
 		return title
 	}
 	out := strings.TrimSpace(title)
-	out = regexp.MustCompile(`(?:\s*[-:：]\s*)?0*\d{1,3}\s*$`).ReplaceAllString(out, "")
+	out = reTrimMovieDashEpisodeTailFromTitle1.ReplaceAllString(out, "")
 	out = strings.TrimSpace(strings.Trim(out, "-:： "))
 	if out != "" && !isMovieKeywordText(out) {
 		base := strings.TrimSpace(movieIndex)
@@ -452,3 +452,8 @@ func computeEpRoute(tokens []model.Token, episode string, episodeList string, ep
 
 var packExtraMarkerPattern = regexp.MustCompile(`(?i)^(?:\+\s*)?(movie|special|sp|ova|oad|ona|ex)$`)
 var packSeasonTokenPattern = regexp.MustCompile(`(?i)^s0*\d{1,2}$`)
+
+// Regular expressions hoisted out of function bodies so they are compiled once at init.
+var (
+	reTrimMovieDashEpisodeTailFromTitle1 = regexp.MustCompile(`(?:\s*[-:：]\s*)?0*\d{1,3}\s*$`)
+)

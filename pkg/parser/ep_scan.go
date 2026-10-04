@@ -84,20 +84,20 @@ func extractSeasonKeywordValue(text string) string {
 	if text == "" {
 		return ""
 	}
-	if m := regexp.MustCompile(`^第?([一二三四五六七八九十0-9]{1,3})期$`).FindStringSubmatch(text); len(m) == 2 {
+	if m := reExtractSeasonKeywordValue1.FindStringSubmatch(text); len(m) == 2 {
 		if v := parseSmallSeasonNumberToken(m[1]); v != "" {
 			return v
 		}
 	}
-	if m := regexp.MustCompile(`^(\d{1,2})期$`).FindStringSubmatch(text); len(m) == 2 {
+	if m := reExtractSeasonKeywordValue2.FindStringSubmatch(text); len(m) == 2 {
 		return strings.TrimLeft(m[1], "0")
 	}
-	if m := regexp.MustCompile(`^第?([一二三四五六七八九十0-9]{1,3})季.+$`).FindStringSubmatch(text); len(m) == 2 {
+	if m := reExtractSeasonKeywordValue3.FindStringSubmatch(text); len(m) == 2 {
 		if v := parseSmallSeasonNumberToken(m[1]); v != "" {
 			return v
 		}
 	}
-	if m := regexp.MustCompile(`^第?([一二三四五六七八九十0-9]{1,3})期.+$`).FindStringSubmatch(text); len(m) == 2 {
+	if m := reExtractSeasonKeywordValue4.FindStringSubmatch(text); len(m) == 2 {
 		if v := parseSmallSeasonNumberToken(m[1]); v != "" {
 			return v
 		}
@@ -410,7 +410,7 @@ func detectEpisodeRange(tokens []model.Token) (string, int) {
 				if isLikelyMetaBracketText(txt) && !isEpisodeLikeBracketText(txt) {
 					continue
 				}
-				if m := regexp.MustCompile(`(?i)^第?(\d{1,4})\s*[-~]\s*(\d{1,4})(?:集|话|話|回|章)(?:\s|$)`).FindStringSubmatch(strings.TrimSpace(txt)); len(m) == 3 {
+				if m := reDetectEpisodeRange1.FindStringSubmatch(strings.TrimSpace(txt)); len(m) == 3 {
 					l := strings.TrimLeft(m[1], "0")
 					if l == "" {
 						l = "0"
@@ -1130,7 +1130,7 @@ func looksLikeDateOrTimeText(s string) bool {
 	if strings.Contains(low, "整理时间") || strings.Contains(low, "整理時間") {
 		return true
 	}
-	compact := regexp.MustCompile(`\s*([./-])\s*`).ReplaceAllString(low, "$1")
+	compact := reLooksLikeDateOrTimeText1.ReplaceAllString(low, "$1")
 	if dateYMDPattern.MatchString(low) || dateYMDPattern.MatchString(compact) {
 		return true
 	}
@@ -1620,7 +1620,7 @@ func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
 			if i+2 < len(tokens) && !tokens[i+1].Removed && !tokens[i+2].Removed {
 				n := strings.TrimSpace(tokens[i+1].Text)
 				suf := strings.TrimSpace(tokens[i+2].Text)
-				if regexp.MustCompile(`^\d{1,4}$`).MatchString(n) && (suf == "集" || suf == "话" || suf == "話") {
+				if reDetectEpisodeWithVersion1.MatchString(n) && (suf == "集" || suf == "话" || suf == "話") {
 					nn := strings.TrimLeft(n, "0")
 					if nn == "" {
 						nn = "0"
@@ -2105,3 +2105,14 @@ func hasLaterBracketEpisodeCandidate(tokens []model.Token, from int) bool {
 	}
 	return false
 }
+
+// Regular expressions hoisted out of function bodies so they are compiled once at init.
+var (
+	reExtractSeasonKeywordValue1 = regexp.MustCompile(`^第?([一二三四五六七八九十0-9]{1,3})期$`)
+	reExtractSeasonKeywordValue2 = regexp.MustCompile(`^(\d{1,2})期$`)
+	reExtractSeasonKeywordValue3 = regexp.MustCompile(`^第?([一二三四五六七八九十0-9]{1,3})季.+$`)
+	reExtractSeasonKeywordValue4 = regexp.MustCompile(`^第?([一二三四五六七八九十0-9]{1,3})期.+$`)
+	reDetectEpisodeRange1        = regexp.MustCompile(`(?i)^第?(\d{1,4})\s*[-~]\s*(\d{1,4})(?:集|话|話|回|章)(?:\s|$)`)
+	reLooksLikeDateOrTimeText1   = regexp.MustCompile(`\s*([./-])\s*`)
+	reDetectEpisodeWithVersion1  = regexp.MustCompile(`^\d{1,4}$`)
+)

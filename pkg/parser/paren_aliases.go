@@ -60,7 +60,7 @@ func (p *Parser) extractParenAliasesAndRemoveFromTitle(tokens []model.Token, tit
 		}
 		if looksLikeParenMetaOrTech(tokens, openIdx, end) && !isSearchHint {
 			if attrs != nil {
-				spl := regexp.MustCompile(`[,，;；\|/]+`).Split(inner, -1)
+				spl := reExtractParenAliasesAndRemoveFromTitle1.Split(inner, -1)
 				for _, it := range spl {
 					it = strings.TrimSpace(it)
 					if it == "" {
@@ -681,3 +681,8 @@ func headAliasBracketPair(s string) (open string, close string, ok bool) {
 	}
 	return "", "", false
 }
+
+// Regular expressions hoisted out of function bodies so they are compiled once at init.
+var (
+	reExtractParenAliasesAndRemoveFromTitle1 = regexp.MustCompile(`[,，;；\|/]+`)
+)

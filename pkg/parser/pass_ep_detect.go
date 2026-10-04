@@ -29,7 +29,7 @@ func detectSeasonFromAttrs(attrs []model.Attribute) (season string, tokenIdx int
 		}
 		// Some early passes emit season markers like "S2" as note and remove the token.
 		// Treat these as season candidates to avoid losing season info.
-		if m := regexp.MustCompile(`(?i)^s(\d{1,2})$`).FindStringSubmatch(s); len(m) == 2 {
+		if m := reDetectSeasonFromAttrs1.FindStringSubmatch(s); len(m) == 2 {
 			s = strings.TrimLeft(m[1], "0")
 			if s == "" {
 				s = m[1]
@@ -287,12 +287,12 @@ func passDetectEpisodeRangeAndEpisode(tokens []model.Token, attrs *[]model.Attri
 				continue
 			}
 			// TV tagged range case: tokens like [ "TV01", "-", "25Fin" ].
-			if m := regexp.MustCompile(`(?i)^(tv)0*(\d{1,4})$`).FindStringSubmatch(text); len(m) == 3 {
+			if m := rePassDetectEpisodeRangeAndEpisode1.FindStringSubmatch(text); len(m) == 3 {
 				if i+2 < len(tokens) {
 					sep := strings.TrimSpace(tokens[i+1].Text)
 					if sep == "-" || sep == "~" {
 						rawR := strings.TrimSpace(tokens[i+2].Text)
-						mm := regexp.MustCompile(`(?i)^(\d{1,4})(fin|final)?$`).FindStringSubmatch(rawR)
+						mm := rePassDetectEpisodeRangeAndEpisode2.FindStringSubmatch(rawR)
 						if len(mm) >= 2 {
 							l := strings.TrimLeft(strings.TrimSpace(m[2]), "0")
 							if l == "" {
@@ -324,7 +324,7 @@ func passDetectEpisodeRangeAndEpisode(tokens []model.Token, attrs *[]model.Attri
 					sep := strings.TrimSpace(tokens[i+2].Text)
 					rawR := strings.TrimSpace(tokens[i+3].Text)
 					if (sep == "-" || sep == "~") && episodeOfTotalPattern.MatchString(lraw) {
-						mm := regexp.MustCompile(`(?i)^(\d{1,4})(fin|final)?$`).FindStringSubmatch(rawR)
+						mm := rePassDetectEpisodeRangeAndEpisode3.FindStringSubmatch(rawR)
 						if len(mm) >= 2 {
 							l := strings.TrimLeft(lraw, "0")
 							if l == "" {
@@ -361,7 +361,7 @@ func passDetectEpisodeRangeAndEpisode(tokens []model.Token, attrs *[]model.Attri
 					continue
 				}
 				n1 := strings.TrimSpace(tokens[i+2].Text)
-				if !regexp.MustCompile(`^\d{1,4}$`).MatchString(n1) {
+				if !rePassDetectEpisodeRangeAndEpisode4.MatchString(n1) {
 					continue
 				}
 				ep := n1
@@ -369,7 +369,7 @@ func passDetectEpisodeRangeAndEpisode(tokens []model.Token, attrs *[]model.Attri
 				if i+4 < len(tokens) {
 					dot := strings.TrimSpace(tokens[i+3].Text)
 					n2 := strings.TrimSpace(tokens[i+4].Text)
-					if dot == "." && regexp.MustCompile(`^\d{1,2}$`).MatchString(n2) {
+					if dot == "." && rePassDetectEpisodeRangeAndEpisode5.MatchString(n2) {
 						ep = n1 + "." + n2
 						end = i + 4
 					}
@@ -701,3 +701,13 @@ func detectEpisodeList(tokens []model.Token) (episodeList string, firstEpisode s
 	}
 	return "", "", -1
 }
+
+// Regular expressions hoisted out of function bodies so they are compiled once at init.
+var (
+	reDetectSeasonFromAttrs1            = regexp.MustCompile(`(?i)^s(\d{1,2})$`)
+	rePassDetectEpisodeRangeAndEpisode1 = regexp.MustCompile(`(?i)^(tv)0*(\d{1,4})$`)
+	rePassDetectEpisodeRangeAndEpisode2 = regexp.MustCompile(`(?i)^(\d{1,4})(fin|final)?$`)
+	rePassDetectEpisodeRangeAndEpisode3 = regexp.MustCompile(`(?i)^(\d{1,4})(fin|final)?$`)
+	rePassDetectEpisodeRangeAndEpisode4 = regexp.MustCompile(`^\d{1,4}$`)
+	rePassDetectEpisodeRangeAndEpisode5 = regexp.MustCompile(`^\d{1,2}$`)
+)

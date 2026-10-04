@@ -1022,643 +1022,67 @@ func detectEpisodeFromSPBracketSegment(tokens []model.Token) (string, int, bool)
 	return "", -1, false
 }
 
+// detectEpisodeWithVersion orchestrates the episode-with-version scan. The
+// scanning state and the per-pattern logic live in ep_scan_version.go; each
+// scan* method returning true mirrors a `continue` of this loop.
 func detectEpisodeWithVersion(tokens []model.Token) (string, int, string, int) {
-	bestIdx := -1
-	best := ""
-	bestScore := -1
-	bestVer := ""
-	bestConsumedEnd := -1
-	bestKeywordIdx := -1
-	bestKeywordDashIdx := -1
-
-	// Pattern: "Episode 52" / "- Episode 52" (common in English TV rip naming).
-	for i := 0; i+1 < len(tokens); i++ {
-		if epScanSkipped(tokens, i) || epScanSkipped(tokens, i+1) {
-			continue
-		}
-		kw := strings.TrimSpace(tokens[i].Text)
-		if !(strings.EqualFold(kw, "episode") || strings.EqualFold(kw, "ep")) {
-			continue
-		}
-		if isInBracket(tokens, i) || isInParen(tokens, i) {
-			continue
-		}
-		d := strings.TrimSpace(tokens[i+1].Text)
-		if !episodeOfTotalPattern.MatchString(d) {
-			continue
-		}
-		if yearPattern.MatchString(d) {
-			continue
-		}
-		score := 74
-		dashIdx := -1
-		// Prefer the explicit "- Episode N" style, but do not require it.
-		if i-1 >= 0 {
-			prev := strings.TrimSpace(tokens[i-1].Text)
-			if prev == "-" {
-				score += 4
-				dashIdx = i - 1
-			}
-		}
-		n := strings.TrimLeft(d, "0")
-		if n == "" {
-			n = "0"
-		}
-		if score > bestScore {
-			best = n
-			bestIdx = i + 1
-			bestScore = score
-			bestConsumedEnd = i + 1
-			bestKeywordIdx = i
-			bestKeywordDashIdx = dashIdx
-		}
-	}
-
+	s := newEpVersionScan(tokens)
+	s.scanEpisodeKeyword()
 	for i := 0; i < len(tokens); i++ {
-		if epScanSkipped(tokens, i) {
-			// Protected = known-title span: numbers inside are title text,
-			// not episode numbers. Removed = already consumed elsewhere.
-			continue
-		}
-		if isTitlePrefixedDigitRangeInBracket(tokens, i) {
-			continue
-		}
-		if isRightSideOfPlainDigitRangeInTitle(tokens, i) {
-			continue
-		}
-		if isRightSideOfSharedPrefixSeasonEpisodeRange(tokens, i) {
-			continue
-		}
 		inBracket := isInBracket(tokens, i)
-		if inBracket {
-			if txt := bracketBlockInnerText(tokens, i); txt != "" {
-				if isBracketScheduleNoticeText(txt) {
-					continue
-				}
-				if isLikelyMetaBracketText(txt) && !isEpisodeLikeBracketText(txt) {
-					continue
-				}
-			}
-			if isBracketLeadingNumericTitlePrefix(tokens, i) {
-				continue
-			}
-		}
-		if isInParen(tokens, i) {
+		if s.skip(i, inBracket) {
 			continue
 		}
-		if looksLikeCodecNumber(tokens, i) {
+		s.scanSubMarkerEpisode(i)
+		if s.scanVersionSuffixedEpisode(i) {
 			continue
 		}
-		if looksLikeDottedNumericSequence(tokens, i) {
+		if s.scanParenSuffixEpisode(i) {
 			continue
 		}
-		if looksLikeDashSeparatedTechSuffix(tokens, i) {
+		if s.scanCompactEndFlagEpisode(i) {
 			continue
 		}
-		if yearPattern.MatchString(tokens[i].Text) {
+		if s.scanSplitEndFlagEpisode(i, inBracket) {
 			continue
 		}
-		// Pattern: "... 06 Sub ..." where episode number is followed by a subtitle marker.
-		// Note: earlier passes (tech_subs) may mark the following "Sub" token as Removed,
-		// but we still want to detect the episode boundary.
-		if i+1 < len(tokens) {
-			next := strings.TrimSpace(tokens[i+1].Text)
-			if strings.EqualFold(next, "sub") || strings.EqualFold(next, "subs") {
-				cur := strings.TrimSpace(tokens[i].Text)
-				if episodeOfTotalPattern.MatchString(cur) && !yearPattern.MatchString(cur) {
-					n := strings.TrimLeft(cur, "0")
-					if n == "" {
-						n = "0"
-					}
-					if n != "0" {
-						score := len(cur) + 92
-						if score > bestScore {
-							bestScore = score
-							bestIdx = i
-							best = n
-							bestVer = ""
-						}
-					}
-				}
-			}
-		}
-		// Support version-suffixed episode tokens like "02v2" / "12.5v2".
-		if mm := episodeWithVersionPattern.FindStringSubmatch(strings.TrimSpace(tokens[i].Text)); len(mm) == 4 {
-			n := strings.TrimLeft(mm[1], "0")
-			if n == "" {
-				n = "0"
-			}
-			if strings.TrimSpace(mm[2]) != "" {
-				n = n + "." + strings.TrimSpace(mm[2])
-			}
-			ver := strings.TrimLeft(mm[3], "0")
-			if ver == "" {
-				ver = mm[3]
-			}
-			score := len(mm[1]) + 97
-			if score > bestScore {
-				bestScore = score
-				bestIdx = i
-				best = n
-				bestVer = "v" + ver
-			}
+		if s.scanBracketNumericEpisode(i, inBracket) {
 			continue
 		}
-		// Support episode tokens with trailing parenthetical marker:
-		// e.g. "03（Onair）" / "03(Premium)".
-		if mm := episodeWithParenSuffixPattern.FindStringSubmatch(strings.TrimSpace(tokens[i].Text)); len(mm) >= 4 {
-			if yearPattern.MatchString(strings.TrimSpace(mm[2])) {
-				continue
-			}
-			n := strings.TrimLeft(mm[2], "0")
-			if n == "" {
-				n = "0"
-			}
-			if strings.TrimSpace(mm[3]) != "" {
-				n = n + "." + strings.TrimSpace(mm[3])
-			}
-			if n != "0" {
-				score := len(mm[2]) + 91
-				if score > bestScore {
-					bestScore = score
-					bestIdx = i
-					best = n
-					bestVer = ""
-				}
-			}
+		if s.scanSPKindEpisode(i) {
 			continue
 		}
-		// Compact end-flag episode token, e.g. "12END"/"12FIN".
-		if mm := episodeEndSuffixPattern.FindStringSubmatch(strings.TrimSpace(tokens[i].Text)); len(mm) == 3 {
-			n := strings.TrimLeft(mm[1], "0")
-			if n == "" {
-				n = "0"
-			}
-			if n != "0" {
-				score := len(mm[1]) + 96
-				if score > bestScore {
-					bestScore = score
-					bestIdx = i
-					best = n
-					bestVer = ""
-				}
-			}
+		if s.scanStarEmbeddedEpisode(i) {
 			continue
 		}
-		// Split end-flag episode token inside a bracket block, e.g. "48_END" / "48-FIN".
-		if inBracket && i+2 < len(tokens) && !tokens[i+1].Removed && !tokens[i+2].Removed {
-			cur := strings.TrimSpace(tokens[i].Text)
-			sep := strings.TrimSpace(tokens[i+1].Text)
-			next := strings.ToUpper(strings.TrimSpace(tokens[i+2].Text))
-			if episodeOfTotalPattern.MatchString(cur) && (sep == "_" || sep == "-") && (next == "END" || next == "FIN" || next == "FINAL") {
-				n := strings.TrimLeft(cur, "0")
-				if n == "" {
-					n = "0"
-				}
-				if n != "0" {
-					score := len(cur) + 96
-					if score > bestScore {
-						bestScore = score
-						bestIdx = i
-						best = n
-						bestVer = ""
-					}
-				}
-				continue
-			}
-		}
-		if inBracket {
-			if looksLikeBracketCodecNumber(tokens, i) {
-				continue
-			}
-			n := strings.TrimSpace(tokens[i].Text)
-			if episodeOfTotalPattern.MatchString(n) {
-				if looksLikeVolumeContextNumberToken(tokens, i) {
-					continue
-				}
-				if hasMatchingSeasonNumberAroundToken(tokens, i, 12) && !hasDashSeparatorAroundToken(tokens, i) && !isStandaloneNumericBracketBlock(tokens, i) {
-					continue
-				}
-				if i-2 >= 0 {
-					prevSep := strings.TrimSpace(tokens[i-1].Text)
-					prevLead := strings.TrimSpace(tokens[i-2].Text)
-					if prevSep == "-" && bracketCatalogIDPrefixPattern.MatchString(prevLead) {
-						continue
-					}
-				}
-				nn := strings.TrimLeft(n, "0")
-				if nn == "" {
-					nn = "0"
-				}
-				if isBracketLeadingNumericTitlePrefix(tokens, i) {
-					continue
-				}
-				score := len(n) + 40
-				if score > bestScore {
-					bestScore = score
-					bestIdx = i
-					best = nn
-				}
-				continue
-			}
-		}
-		// Support explicit SP-kind episode tokens like "OVA02" / "SP01" / "OAD3".
-		// These are strong episode markers and should not be missed.
-		if mm := spKindEpisodePattern.FindStringSubmatch(strings.TrimSpace(tokens[i].Text)); len(mm) == 2 {
-			nn := strings.TrimLeft(mm[1], "0")
-			if nn == "" {
-				nn = "0"
-			}
-			if nn != "0" {
-				score := len(mm[1]) + 98
-				if score > bestScore {
-					bestScore = score
-					bestIdx = i
-					best = nn
-				}
-				continue
-			}
-		}
-		// Support patterns like "...★01★..." where tokenizer keeps the whole token.
-		if mm := starEpisodeEmbeddedPattern.FindStringSubmatch(tokens[i].Text); len(mm) == 2 {
-			nn := strings.TrimLeft(mm[1], "0")
-			if nn == "" {
-				nn = "0"
-			}
-			score := len(mm[1]) + 60
-			if score > bestScore {
-				bestScore = score
-				bestIdx = i
-				best = nn
-			}
+		if s.scanEmbeddedChineseSuffixEpisode(i) {
 			continue
 		}
-		// Support cases like "作品名...第08集" where tokenizer keeps the episode suffix attached.
-		if mm := embeddedChineseEpisodeSuffixPattern.FindStringSubmatch(tokens[i].Text); len(mm) == 2 {
-			nn := strings.TrimLeft(mm[1], "0")
-			if nn == "" {
-				nn = "0"
-			}
-			if nn != "0" {
-				score := len(mm[1]) + 95
-				if score > bestScore {
-					bestScore = score
-					bestIdx = i
-					best = nn
-				}
-				continue
-			}
-		}
-		if strings.TrimSpace(tokens[i].Text) == "第" {
-			if i+2 < len(tokens) && !tokens[i+1].Removed && !tokens[i+2].Removed {
-				n := strings.TrimSpace(tokens[i+1].Text)
-				suf := strings.TrimSpace(tokens[i+2].Text)
-				if reDetectEpisodeWithVersion1.MatchString(n) && (suf == "集" || suf == "话" || suf == "話") {
-					nn := strings.TrimLeft(n, "0")
-					if nn == "" {
-						nn = "0"
-					}
-					if nn != "0" {
-						score := len(n) + 90
-						if score > bestScore {
-							bestScore = score
-							bestIdx = i
-							best = nn
-						}
-						continue
-					}
-				}
-			}
-		}
-		if mm := chineseEpisodeSuffixPattern.FindStringSubmatch(tokens[i].Text); len(mm) == 2 {
-			n := strings.TrimLeft(mm[1], "0")
-			if n == "" {
-				n = "0"
-			}
-			if n == "0" {
-				continue
-			}
-			score := len(mm[1]) + 90
-			if score > bestScore {
-				bestScore = score
-				bestIdx = i
-				best = n
-			}
+		if s.scanSplitChineseEpisode(i) {
 			continue
 		}
-		if mm := chineseEpisodeWithSuffixMarkerPattern.FindStringSubmatch(tokens[i].Text); len(mm) == 2 {
-			n := strings.TrimLeft(mm[1], "0")
-			if n == "" {
-				n = "0"
-			}
-			score := len(mm[1]) + 90
-			if score > bestScore {
-				bestScore = score
-				bestIdx = i
-				best = n
-			}
+		if s.scanChineseSuffixEpisode(i) {
 			continue
 		}
-		if mm := chineseEpisodeLeadingPattern.FindStringSubmatch(tokens[i].Text); len(mm) == 2 {
-			n := strings.TrimLeft(mm[1], "0")
-			if n == "" {
-				n = "0"
-			}
-			score := len(mm[1]) + 86
-			if score > bestScore {
-				bestScore = score
-				bestIdx = i
-				best = n
-			}
+		if s.scanChineseSuffixMarkerEpisode(i) {
 			continue
 		}
-		if mm := chineseEpisodeDecimalSuffixPattern.FindStringSubmatch(strings.TrimSpace(tokens[i].Text)); len(mm) == 3 {
-			maj := strings.TrimLeft(mm[1], "0")
-			if maj == "" {
-				maj = "0"
-			}
-			dec := strings.TrimSpace(mm[2])
-			if dec != "" {
-				n := maj + "." + dec
-				score := len(mm[1]) + 93
-				if score > bestScore {
-					bestScore = score
-					bestIdx = i
-					best = n
-				}
-				continue
-			}
+		if s.scanChineseLeadingEpisode(i) {
+			continue
 		}
-		if i+2 < len(tokens) {
-			left := strings.TrimSpace(tokens[i].Text)
-			dot := strings.TrimSpace(tokens[i+1].Text)
-			right := strings.TrimSpace(tokens[i+2].Text)
-			if strings.HasPrefix(left, "第") && dot == "." {
-				if lm := chineseEpisodeDecimalHeadPattern.FindStringSubmatch(left); len(lm) == 2 {
-					if rm := chineseEpisodeDecimalTailPattern.FindStringSubmatch(right); len(rm) == 2 {
-						maj := strings.TrimLeft(lm[1], "0")
-						if maj == "" {
-							maj = "0"
-						}
-						dec := strings.TrimSpace(rm[1])
-						if dec != "" {
-							n := maj + "." + dec
-							score := len(lm[1]) + 93
-							if score > bestScore {
-								bestScore = score
-								bestIdx = i
-								best = n
-							}
-							continue
-						}
-					}
-				}
-			}
+		if s.scanChineseDecimalSuffixEpisode(i) {
+			continue
 		}
-		if i+2 < len(tokens) {
-			left := strings.TrimSpace(tokens[i].Text)
-			dot := strings.TrimSpace(tokens[i+1].Text)
-			right := strings.TrimSpace(tokens[i+2].Text)
-			if dot == "." && splitDecimalEpisodeRightPattern.MatchString(right) {
-				if mm := episodePattern.FindStringSubmatch(left); len(mm) >= 3 {
-					if len(mm) >= 4 && strings.TrimSpace(mm[3]) != "" {
-						// Already a single-token decimal episode like 12.5.
-					} else {
-						prefix := strings.TrimSpace(mm[1])
-						maj := strings.TrimLeft(mm[2], "0")
-						if maj == "" {
-							maj = "0"
-						}
-						n := maj + "." + right
-						score := len(mm[2])
-						ok := false
-						if prefix != "" {
-							ok = true
-							score += 72
-						} else if inBracket {
-							if isBracketLeadingNumericTitlePrefix(tokens, i) {
-								continue
-							}
-							ok = true
-							score += 96
-						} else if i-1 >= 0 {
-							sep := strings.TrimSpace(tokens[i-1].Text)
-							if sep == "-" || sep == "★" || sep == "☆" {
-								rightBoundary := false
-								if i+3 < len(tokens) {
-									rightBoundary = isEpisodeBoundaryRightToken(tokens[i+3].Text)
-								}
-								if sep == "-" && !rightBoundary {
-									continue
-								}
-								ok = true
-								if sep == "-" {
-									score += 94
-								} else {
-									score += 92
-								}
-							}
-						}
-						if ok && score > bestScore {
-							bestScore = score
-							bestIdx = i
-							best = n
-							bestVer = ""
-							bestConsumedEnd = i + 2
-						}
-						if ok {
-							continue
-						}
-					}
-				}
-			}
+		if s.scanSplitChineseDecimalEpisode(i) {
+			continue
 		}
-		m := episodePattern.FindStringSubmatch(tokens[i].Text)
-		if len(m) >= 3 {
-			prefix := strings.TrimSpace(m[1])
-			n := strings.TrimLeft(m[2], "0")
-			if n == "" {
-				n = "0"
-			}
-			if len(m) >= 4 {
-				dec := strings.TrimSpace(m[3])
-				if dec != "" {
-					n = n + "." + dec
-				}
-			}
-			// Guard: bracketed catalog IDs like "[KAXA-9023]" are product codes, not episodes.
-			if prefix == "" && inBracket && i-2 >= 0 {
-				prevSep := strings.TrimSpace(tokens[i-1].Text)
-				prevLead := strings.TrimSpace(tokens[i-2].Text)
-				if prevSep == "-" && bracketCatalogIDPrefixPattern.MatchString(prevLead) {
-					continue
-				}
-			}
-			if prefix == "" && looksLikeVolumeContextNumberToken(tokens, i) {
-				continue
-			}
-			if prefix == "" && inBracket && hasMatchingSeasonNumberAroundToken(tokens, i, 12) && !hasDashSeparatorAroundToken(tokens, i) && !isStandaloneNumericBracketBlock(tokens, i) {
-				continue
-			}
-			signalScore := 0
-			if prefix == "" {
-				if shouldSkipPartIndexEpisodeCandidate(tokens, i, inBracket) {
-					continue
-				}
-				ok := false
-				if inBracket {
-					if isBracketLeadingNumericTitlePrefix(tokens, i) {
-						continue
-					}
-					ok = true
-					signalScore = 96
-				}
-				if i-1 >= 0 {
-					sep := strings.TrimSpace(tokens[i-1].Text)
-					if sep == "-" {
-						ok = true
-						if signalScore < 94 {
-							signalScore = 94
-						}
-						rightBoundary := false
-						if i+1 < len(tokens) {
-							rightBoundary = isEpisodeBoundaryRightToken(tokens[i+1].Text)
-						}
-						if i-2 >= 0 {
-							prev2 := strings.TrimSpace(tokens[i-2].Text)
-							if looksLikeCodecPrefixToken(prev2) {
-								ok = false
-							}
-							if inBracket && bracketCatalogIDPrefixPattern.MatchString(prev2) {
-								ok = false
-							}
-						}
-						// Guard: reject cases like "Gintama-3 nen" where the number is followed by a word.
-						if !inBracket {
-							if i+1 < len(tokens) {
-								nextWord := strings.TrimSpace(tokens[i+1].Text)
-								if !rightBoundary && (looksLikeLowercaseLatinWordToken(nextWord) || looksLikeBitDepthWordToken(nextWord)) {
-									ok = false
-								}
-							}
-						}
-						// avoid U-20 style (letter + '-' + digits)
-						if i-2 >= 0 {
-							p := strings.TrimSpace(tokens[i-2].Text)
-							if len(p) <= 2 {
-								allLetters := true
-								for _, r := range p {
-									if !(('A' <= r && r <= 'Z') || ('a' <= r && r <= 'z')) {
-										allLetters = false
-										break
-									}
-								}
-								if allLetters && hasUpperASCII(p) {
-									if !rightBoundary {
-										ok = false
-									}
-								}
-							}
-						}
-						// Guard: title season suffix before bracket episode, e.g.
-						// "... Monogatari -2 [01] ...", should prefer [01].
-						if ok && !inBracket && hasLaterBracketEpisodeCandidate(tokens, i+1) {
-							if hasMatchingSeasonNumberAroundToken(tokens, i, 12) {
-								ok = false
-							}
-						}
-					} else if sep == "★" || sep == "☆" {
-						ok = true
-						if signalScore < 92 {
-							signalScore = 92
-						}
-					}
-				}
-				if !ok {
-					if i+1 < len(tokens) {
-						next := strings.TrimSpace(tokens[i+1].Text)
-						if next == "[" || next == "【" || next == "(" || next == "（" {
-							if n != "0" {
-								if n != "720" && n != "1080" && n != "2160" && n != "480" && n != "540" {
-									if hasLaterBracketEpisodeCandidate(tokens, i+1) {
-										if hasMatchingSeasonNumberAroundToken(tokens, i, 12) {
-											continue
-										}
-										if i-1 >= 0 {
-											prev := strings.TrimSpace(tokens[i-1].Text)
-											if isLikelyBracketTitleWordToken(prev) && !strings.EqualFold(prev, "episode") && !strings.EqualFold(prev, "ep") {
-												continue
-											}
-										}
-									}
-									ok = true
-									if signalScore < 88 {
-										signalScore = 88
-									}
-								}
-							}
-						}
-					}
-					if !ok {
-						continue
-					}
-				}
-				if n == "0" {
-					isStrongZero := inBracket
-					if !isStrongZero && i-1 >= 0 && strings.TrimSpace(tokens[i-1].Text) == "-" {
-						if i+1 < len(tokens) && isEpisodeBoundaryRightToken(tokens[i+1].Text) {
-							isStrongZero = true
-						}
-					}
-					if !isStrongZero {
-						continue
-					}
-				}
-			}
-			score := len(m[2])
-			if prefix != "" {
-				// Medium EP signal: EP12 / E12 / 第12
-				score += 72
-			} else if signalScore > 0 {
-				// Strong EP signal: bracketed number / dash-number / star-number.
-				score += signalScore
-			}
-			if score > bestScore {
-				bestScore = score
-				bestIdx = i
-				best = n
-				bestVer = ""
-				bestConsumedEnd = i
-			}
+		if s.scanSplitDecimalEpisode(i, inBracket) {
+			continue
 		}
+		s.scanGenericEpisode(i, inBracket)
 	}
-	if bestIdx >= 0 {
-		if bestConsumedEnd < bestIdx {
-			bestConsumedEnd = bestIdx
-		}
-		if bestKeywordIdx >= 0 && bestKeywordIdx < len(tokens) {
-			tokens[bestKeywordIdx].Removed = true
-		}
-		if bestKeywordDashIdx >= 0 && bestKeywordDashIdx < len(tokens) {
-			tokens[bestKeywordDashIdx].Removed = true
-		}
-		for j := bestIdx + 1; j <= bestConsumedEnd && j < len(tokens); j++ {
-			tokens[j].Removed = true
-		}
-		text := strings.TrimSpace(tokens[bestIdx].Text)
-		// If the episode token is itself a special/extra marker token like "OVA02",
-		// or a version-suffixed token like "05v2", remove it to avoid polluting title
-		// and being misclassified as tail_group later.
-		if spKindEpisodePattern.MatchString(text) || episodeVersionSuffixPattern.MatchString(text) {
-			tokens[bestIdx].Removed = true
-		}
-	}
-	if bestIdx >= 0 && bestVer != "" {
-		return best, bestIdx, bestVer, bestIdx
-	}
-	return best, bestIdx, "", -1
+	return s.finish()
 }
-
 func shouldSkipPartIndexEpisodeCandidate(tokens []model.Token, idx int, inBracket bool) bool {
 	if inBracket || idx <= 0 || idx >= len(tokens) {
 		return false

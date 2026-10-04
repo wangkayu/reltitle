@@ -1,5 +1,7 @@
 package config
 
+// Config is the aggregate of the 13 YAML files loaded by LoadAll; the parser
+// precompiles it into rule structures in New().
 type Config struct {
 	Lexicon            LexiconConfig            `json:"lexicon"`
 	TemplateCatalog    TemplateCatalogConfig    `json:"template_catalog"`
@@ -17,11 +19,15 @@ type Config struct {
 	DictNotePromotion   DictNotePromotionConfig   `json:"dict_note_promotion,omitempty"`
 }
 
+// TitleKnowledgeConfig is title_knowledge.yaml: known works whose title spans
+// must be protected from episode/season detection.
 type TitleKnowledgeConfig struct {
 	UpdatedAt string                `yaml:"updated_at" json:"updated_at"`
 	Entries   []TitleKnowledgeEntry `yaml:"entries" json:"entries"`
 }
 
+// TitleKnowledgeEntry is one known work. The entry applies only when the raw
+// title contains every fragment in RawMustContainAll.
 type TitleKnowledgeEntry struct {
 	ID                string   `yaml:"id" json:"id"`
 	Enabled           bool     `yaml:"enabled" json:"enabled"`
@@ -30,12 +36,16 @@ type TitleKnowledgeEntry struct {
 	RawMustContainAll []string `yaml:"raw_must_contain_all" json:"raw_must_contain_all"`
 }
 
+// LexiconConfig is lexicon.yaml: token-sequence rules that emit attributes.
 type LexiconConfig struct {
 	Version   string         `yaml:"version" json:"version"`
 	UpdatedAt string         `yaml:"updated_at" json:"updated_at"`
 	Entries   []LexiconEntry `yaml:"entries" json:"entries"`
 }
 
+// LexiconEntry matches an ordered token sequence and emits attributes.
+// AnyOf holds alternative clauses that share the entry ID (e.g. script
+// variants). Remove marks matched tokens consumed.
 type LexiconEntry struct {
 	ID         string          `yaml:"id" json:"id"`
 	Scope      string          `yaml:"scope" json:"scope"`
@@ -46,6 +56,7 @@ type LexiconEntry struct {
 	Confidence float64         `yaml:"confidence" json:"confidence"`
 }
 
+// LexiconClause is one alternative inside LexiconEntry.AnyOf.
 type LexiconClause struct {
 	Scope      string        `yaml:"scope" json:"scope"`
 	Tokens     []string      `yaml:"tokens" json:"tokens"`
@@ -54,12 +65,17 @@ type LexiconClause struct {
 	Confidence float64       `yaml:"confidence" json:"confidence"`
 }
 
+// LexiconEmit is one attribute produced by a lexicon match; TokenIndex selects
+// which matched token the attribute spans (-1 for none).
 type LexiconEmit struct {
 	Type       string `yaml:"type" json:"type"`
 	Normalized string `yaml:"normalized" json:"normalized"`
 	TokenIndex int    `yaml:"token_index" json:"token_index"`
 }
 
+// InferenceRulesConfig is inference_rules.yaml. Only ContentTypeInference is
+// read by the parser; the old design-note sections live under
+// docs/dev/reference/.
 type InferenceRulesConfig struct {
 	Version              string                     `yaml:"version" json:"version"`
 	UpdatedAt            string                     `yaml:"updated_at" json:"updated_at"`
@@ -67,6 +83,8 @@ type InferenceRulesConfig struct {
 	ContentTypeInference []ContentTypeInferenceRule `yaml:"content_type_inference" json:"content_type_inference"`
 }
 
+// ContentTypeInferenceRule maps a condition to a content kind
+// (MOVIE / BATCH / SPECIAL / TV_EP / UNKNOWN); higher Priority wins.
 type ContentTypeInferenceRule struct {
 	Name         string         `yaml:"name" json:"name"`
 	Priority     int            `yaml:"priority" json:"priority"`
@@ -80,6 +98,8 @@ type ContentTypeInferenceRule struct {
 	Examples any `yaml:"examples" json:"-"` // reference-only, never read by the parser
 }
 
+// TemplateCatalogConfig is template_catalog.yaml: the title-layout templates,
+// grouped by the content kind they apply to.
 type TemplateCatalogConfig struct {
 	Version            string        `yaml:"version" json:"version"`
 	UpdatedAt          string        `yaml:"updated_at" json:"updated_at"`
@@ -93,6 +113,9 @@ type TemplateCatalogConfig struct {
 	Statistics any `yaml:"statistics" json:"-"` // reference-only, never read by the parser
 }
 
+// TemplateDef is one title layout. Signature lists the required slots
+// (G T E R S SE M I X C SP); Conditions gate on platform/source/signals;
+// RouteID selects the downstream route.
 type TemplateDef struct {
 	ID           string              `yaml:"id" json:"id"`
 	Name         string              `yaml:"name" json:"name"`
@@ -112,6 +135,8 @@ type TemplateDef struct {
 	SPKind           string `yaml:"sp_kind" json:"-"`
 }
 
+// TemplateSignals describes layout traits of a template (slot order, group
+// position, etc.) used by the template-signal adjudication.
 type TemplateSignals struct {
 	SlotOrder               []string `yaml:"slot_order" json:"slot_order"`
 	GroupPosition           string   `yaml:"group_position" json:"group_position"`
@@ -122,10 +147,13 @@ type TemplateSignals struct {
 	TechStartsAfterEPStrict bool     `yaml:"tech_starts_after_ep" json:"tech_starts_after_ep"`
 }
 
+// TemplateConditions gates a template on parse-state requirements.
 type TemplateConditions struct {
 	Require *TemplateConditionRequire `yaml:"require" json:"require"`
 }
 
+// TemplateConditionRequire lists the hard requirements of a template; every
+// set field must hold for the template to be eligible.
 type TemplateConditionRequire struct {
 	PlatformIn   []string `yaml:"platform_in" json:"platform_in"`
 	SourceTypeIn []string `yaml:"source_type_in" json:"source_type_in"`
@@ -151,6 +179,8 @@ type GroupDef struct {
 	ConfidenceBoost float64  `yaml:"confidence_boost" json:"confidence_boost"`
 }
 
+// DictCanonicalValuesConfig is dict_canonical_values.yaml: canonical value
+// lists per attribute type and their alias mappings.
 type DictCanonicalValuesConfig struct {
 	Version     string         `yaml:"version" json:"version"`
 	UpdatedAt   string         `yaml:"updated_at" json:"updated_at"`
@@ -158,6 +188,8 @@ type DictCanonicalValuesConfig struct {
 	Canonical   map[string]any `yaml:"canonical" json:"canonical"`
 }
 
+// DictTokenSynonymsConfig is dict_token_synonyms.yaml: raw-token to canonical
+// value mappings (e.g. "web-dl" -> "WEB-DL").
 type DictTokenSynonymsConfig struct {
 	Version     string             `yaml:"version" json:"version"`
 	UpdatedAt   string             `yaml:"updated_at" json:"updated_at"`
@@ -165,6 +197,8 @@ type DictTokenSynonymsConfig struct {
 	Rules       []TokenSynonymRule `yaml:"rules" json:"rules"`
 }
 
+// TokenSynonymRule maps the raw tokens in RawTokens to one canonical value;
+// higher Priority wins on overlap.
 type TokenSynonymRule struct {
 	ID        string             `yaml:"id" json:"id"`
 	RawTokens []string           `yaml:"raw_tokens" json:"raw_tokens"`
@@ -172,12 +206,16 @@ type TokenSynonymRule struct {
 	Priority  int                `yaml:"priority" json:"priority"`
 }
 
+// TokenSynonymTarget is the canonical value a TokenSynonymRule emits;
+// NormalizedFromToken takes the value from the matched token instead.
 type TokenSynonymTarget struct {
 	Type                string `yaml:"type" json:"type"`
 	Normalized          string `yaml:"normalized" json:"normalized"`
 	NormalizedFromToken bool   `yaml:"normalized_from_token" json:"normalized_from_token"`
 }
 
+// DictAliasNoiseWordsConfig is dict_alias_noise_words.yaml: noise words and
+// patterns stripped from inferred aliases.
 type DictAliasNoiseWordsConfig struct {
 	Version     string           `yaml:"version" json:"version"`
 	UpdatedAt   string           `yaml:"updated_at" json:"updated_at"`
@@ -185,12 +223,16 @@ type DictAliasNoiseWordsConfig struct {
 	AliasNoise  AliasNoiseConfig `yaml:"alias_noise" json:"alias_noise"`
 }
 
+// AliasNoiseConfig lists exact words, regex patterns, and inline strip words
+// treated as noise when cleaning up aliases.
 type AliasNoiseConfig struct {
 	ExactWordsCaseInsensitive       []string `yaml:"exact_words_case_insensitive" json:"exact_words_case_insensitive"`
 	RegexPatterns                   []string `yaml:"regex_patterns" json:"regex_patterns"`
 	InlineStripWordsCaseInsensitive []string `yaml:"inline_strip_words_case_insensitive" json:"inline_strip_words_case_insensitive"`
 }
 
+// DictNotePromotionConfig is dict_note_promotion.yaml: promotes untyped note
+// attributes to typed ones (e.g. note "WEB" -> source_type "WEBRip").
 type DictNotePromotionConfig struct {
 	Version       string              `yaml:"version" json:"version"`
 	UpdatedAt     string              `yaml:"updated_at" json:"updated_at"`
@@ -200,22 +242,28 @@ type DictNotePromotionConfig struct {
 	NoteWhitelist []string            `yaml:"note_whitelist" json:"note_whitelist"`
 }
 
+// NotePromotionRule promotes a matching note attribute to a typed attribute.
 type NotePromotionRule struct {
 	ID        string             `yaml:"id" json:"id"`
 	Match     NotePromotionMatch `yaml:"match" json:"match"`
 	PromoteTo NotePromotionTo    `yaml:"promote_to" json:"promote_to"`
 }
 
+// NotePromotionMatch selects the note values a rule applies to.
 type NotePromotionMatch struct {
 	NoteValuesCaseInsensitive []string `yaml:"note_values_case_insensitive" json:"note_values_case_insensitive"`
 }
 
+// NotePromotionTo is the typed attribute produced by a promotion;
+// NormalizedFromToken takes the value from the note token instead.
 type NotePromotionTo struct {
 	Type                string `yaml:"type" json:"type"`
 	Normalized          string `yaml:"normalized" json:"normalized"`
 	NormalizedFromToken bool   `yaml:"normalized_from_token" json:"normalized_from_token"`
 }
 
+// GroupRouteConfig is group_route_overrides.yaml: per-group/layout overrides
+// that force title, template, content kind and more.
 type GroupRouteConfig struct {
 	Version     string               `yaml:"version" json:"version"`
 	UpdatedAt   string               `yaml:"updated_at" json:"updated_at"`
@@ -224,6 +272,7 @@ type GroupRouteConfig struct {
 	Overrides   []GroupRouteOverride `yaml:"overrides" json:"overrides"`
 }
 
+// GroupRouteOverride is one override; higher Priority matches first.
 type GroupRouteOverride struct {
 	ID       string              `yaml:"id" json:"id"`
 	Enabled  bool                `yaml:"enabled" json:"enabled"`
@@ -233,6 +282,7 @@ type GroupRouteOverride struct {
 	Guard    map[string][]string `yaml:"guard" json:"guard"`
 }
 
+// GroupRouteMatch selects the releases an override applies to.
 type GroupRouteMatch struct {
 	GroupIn                 []string `yaml:"group_in" json:"group_in"`
 	RawMustContainAny       []string `yaml:"raw_must_contain_any" json:"raw_must_contain_any"`
@@ -242,6 +292,8 @@ type GroupRouteMatch struct {
 	EpisodeTitleSepIn       []string `yaml:"episode_title_sep_in" json:"episode_title_sep_in"`
 }
 
+// GroupRouteOutput is the forced result of an override. ForceTemplateID may
+// name a virtual template not present in the catalog.
 type GroupRouteOutput struct {
 	ForceGroup         string   `yaml:"force_group" json:"force_group"`
 	ForceTitle         string   `yaml:"force_title" json:"force_title"`
@@ -253,6 +305,8 @@ type GroupRouteOutput struct {
 	AliasStripPrefixes []string `yaml:"alias_strip_prefixes" json:"alias_strip_prefixes"`
 }
 
+// RouteFamiliesConfig is route_families.yaml: narrows the eligible templates
+// before template matching, by raw-title keywords, source type, etc.
 type RouteFamiliesConfig struct {
 	Version     string            `yaml:"version" json:"version"`
 	UpdatedAt   string            `yaml:"updated_at" json:"updated_at"`
@@ -261,6 +315,7 @@ type RouteFamiliesConfig struct {
 	Families    []RouteFamilyRule `yaml:"families" json:"families"`
 }
 
+// RouteFamilyRule is one route family; higher Priority matches first.
 type RouteFamilyRule struct {
 	ID       string            `yaml:"id" json:"id"`
 	Enabled  bool              `yaml:"enabled" json:"enabled"`
@@ -269,6 +324,7 @@ type RouteFamilyRule struct {
 	Select   RouteFamilySelect `yaml:"select" json:"select"`
 }
 
+// RouteFamilyMatch selects the releases a route family applies to.
 type RouteFamilyMatch struct {
 	RawMustContainAny    []string `yaml:"raw_must_contain_any" json:"raw_must_contain_any"`
 	RawMustNotContainAny []string `yaml:"raw_must_not_contain_any" json:"raw_must_not_contain_any"`
@@ -276,12 +332,15 @@ type RouteFamilyMatch struct {
 	NoteIn               []string `yaml:"note_in" json:"note_in"`
 }
 
+// RouteFamilySelect constrains template choice for a matched family.
 type RouteFamilySelect struct {
 	PreferredTemplateCategories []string `yaml:"preferred_template_categories" json:"preferred_template_categories"`
 	StrictTemplateFilter        bool     `yaml:"strict_template_filter" json:"strict_template_filter"`
 	AllowedRouteIDs             []string `yaml:"allowed_route_ids" json:"allowed_route_ids"`
 }
 
+// GroupSlot2PlatformConfig is group_slot2_platform_rules.yaml: per-group
+// platform/language inference from the second bracket slot.
 type GroupSlot2PlatformConfig struct {
 	Version     string                         `yaml:"version" json:"version"`
 	UpdatedAt   string                         `yaml:"updated_at" json:"updated_at"`
@@ -289,6 +348,8 @@ type GroupSlot2PlatformConfig struct {
 	Rules       []GroupSlot2PlatformRuleConfig `yaml:"rules" json:"rules"`
 }
 
+// GroupSlot2PlatformRuleConfig is one slot2 rule; higher Priority matches
+// first.
 type GroupSlot2PlatformRuleConfig struct {
 	ID        string                              `yaml:"id" json:"id"`
 	Enabled   bool                                `yaml:"enabled" json:"enabled"`
@@ -299,12 +360,17 @@ type GroupSlot2PlatformRuleConfig struct {
 	Output    GroupSlot2PlatformOutputConfig      `yaml:"output" json:"output"`
 }
 
+// GroupSlot2PlatformMatchConfig selects the group and bracket slot a rule
+// inspects (SlotIndex defaults to 2).
 type GroupSlot2PlatformMatchConfig struct {
 	GroupIn    []string `yaml:"group_in" json:"group_in"`
 	GroupRegex string   `yaml:"group_regex" json:"group_regex"`
 	SlotIndex  int      `yaml:"slot_index" json:"slot_index"`
 }
 
+// GroupSlot2PlatformKeywordsConfig lists the keyword classes used when
+// interpreting the slot text (Cantonese, distributor, language metadata, and
+// words to trim before inference).
 type GroupSlot2PlatformKeywordsConfig struct {
 	Yue          []string `yaml:"yue" json:"yue"`
 	Distributor  []string `yaml:"distributor" json:"distributor"`
@@ -312,11 +378,14 @@ type GroupSlot2PlatformKeywordsConfig struct {
 	TrimForInfer []string `yaml:"trim_for_infer" json:"trim_for_infer"`
 }
 
+// GroupSlot2PlatformWhitelistConfig maps slot text containing any of
+// ContainsAny to a normalized platform value.
 type GroupSlot2PlatformWhitelistConfig struct {
 	ContainsAny []string `yaml:"contains_any" json:"contains_any"`
 	Normalized  string   `yaml:"normalized" json:"normalized"`
 }
 
+// GroupSlot2PlatformOutputConfig controls what a matched rule emits.
 type GroupSlot2PlatformOutputConfig struct {
 	EmitAudioLang             string  `yaml:"emit_audio_lang" json:"emit_audio_lang"`
 	NoteOnDistributor         string  `yaml:"note_on_distributor" json:"note_on_distributor"`
@@ -324,12 +393,16 @@ type GroupSlot2PlatformOutputConfig struct {
 	UnknownPlatformConfidence float64 `yaml:"unknown_platform_confidence" json:"unknown_platform_confidence"`
 }
 
+// PackProfileRulesConfig is pack_profile_rules.yaml: infers a pack profile
+// (e.g. movie_series_mix) for batch content.
 type PackProfileRulesConfig struct {
 	UpdatedAt   string                  `yaml:"updated_at" json:"updated_at"`
 	Description string                  `yaml:"description" json:"description"`
 	Rules       []PackProfileRuleConfig `yaml:"rules" json:"rules"`
 }
 
+// PackProfileRuleConfig is one pack-profile rule; higher Priority matches
+// first. Emit is the profile value.
 type PackProfileRuleConfig struct {
 	ID       string                `yaml:"id" json:"id"`
 	Enabled  bool                  `yaml:"enabled" json:"enabled"`
@@ -338,6 +411,8 @@ type PackProfileRuleConfig struct {
 	Emit     string                `yaml:"emit" json:"emit"`
 }
 
+// PackProfileWhenConfig is the condition under which a pack-profile rule
+// fires; every set field must hold.
 type PackProfileWhenConfig struct {
 	ContentKindIn       []string `yaml:"content_kind_in" json:"content_kind_in"`
 	PackKindIn          []string `yaml:"pack_kind_in" json:"pack_kind_in"`

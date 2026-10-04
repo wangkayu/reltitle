@@ -5,6 +5,9 @@ import (
 	"unicode"
 )
 
+// Tokenize splits a raw release title into tokens: whitespace, brackets and
+// separator runes become boundaries, and CJK/Latin transitions split words.
+// The returned strings are the Text of the parser's model.Token values.
 func Tokenize(rawTitle string) []string {
 	var tokens []string
 	var current strings.Builder

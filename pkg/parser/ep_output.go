@@ -90,7 +90,7 @@ func shouldPruneWeakBatchRangePrimary(epslot *model.EPSlot, episodeRange string,
 	if epslot == nil || epslot.Primary == nil {
 		return false
 	}
-	if !strings.EqualFold(strings.TrimSpace(epslot.Primary.Kind), "RANGE") {
+	if epslot.Primary.Kind.Canonical() != model.EPKindRange {
 		return false
 	}
 	if strings.TrimSpace(spKind) != "" {
@@ -114,8 +114,8 @@ func shouldPruneWeakBatchRangePrimary(epslot *model.EPSlot, episodeRange string,
 	left := strings.TrimSpace(bounds[0])
 	right := strings.TrimSpace(bounds[1])
 	for _, c := range epslot.Candidates {
-		kind := strings.ToUpper(strings.TrimSpace(c.Kind))
-		if kind != "EP" && kind != "EP_LIST" {
+		kind := c.Kind.Canonical()
+		if kind != model.EPKindEP && kind != model.EPKindEPList {
 			continue
 		}
 		ep := strings.TrimSpace(c.Episode)
@@ -134,7 +134,7 @@ func shouldPreferSPPrimaryForSpecial(contentKind string, spKind string, epslot *
 	if strings.TrimSpace(spKind) == "" || epslot == nil || epslot.Primary == nil {
 		return false
 	}
-	if !strings.EqualFold(strings.TrimSpace(epslot.Primary.Kind), "EP") {
+	if epslot.Primary.Kind.Canonical() != model.EPKindEP {
 		return false
 	}
 	return strings.EqualFold(strings.TrimSpace(epslot.Primary.Source), "ep_digit_token")
@@ -146,19 +146,19 @@ func forceSPPrimaryFromSPKind(epslot *model.EPSlot, season string, spKind string
 		return epslot
 	}
 	primary := model.EPEntity{
-		Kind:   "SP",
-		Axis:   k,
+		Kind:   model.EPKindSP,
+		Axis:   model.EPAxis(k),
 		Season: strings.TrimSpace(season),
 		SPKind: k,
 		Source: "sp_kind_final",
 	}
 	if epslot == nil {
-		return &model.EPSlot{Primary: &primary, Candidates: []model.EPEntity{{Kind: "SP", Axis: k, Season: strings.TrimSpace(season), SPKind: k, Source: "sp_kind"}}}
+		return &model.EPSlot{Primary: &primary, Candidates: []model.EPEntity{{Kind: model.EPKindSP, Axis: model.EPAxis(k), Season: strings.TrimSpace(season), SPKind: k, Source: "sp_kind"}}}
 	}
 	candidates := make([]model.EPEntity, 0, len(epslot.Candidates)+1)
-	candidates = append(candidates, model.EPEntity{Kind: "SP", Axis: k, Season: strings.TrimSpace(season), SPKind: k, Source: "sp_kind"})
+	candidates = append(candidates, model.EPEntity{Kind: model.EPKindSP, Axis: model.EPAxis(k), Season: strings.TrimSpace(season), SPKind: k, Source: "sp_kind"})
 	for _, c := range epslot.Candidates {
-		if strings.EqualFold(strings.TrimSpace(c.Kind), "SP") && strings.EqualFold(strings.TrimSpace(c.SPKind), k) {
+		if c.Kind.Canonical() == model.EPKindSP && strings.EqualFold(strings.TrimSpace(c.SPKind), k) {
 			continue
 		}
 		candidates = append(candidates, c)

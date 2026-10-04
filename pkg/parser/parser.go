@@ -1212,12 +1212,12 @@ func (p *Parser) applyEpSegRoute(st *parseState) {
 	}
 	isMarukoRoute := strings.EqualFold(strings.TrimSpace(st.routeID), "group_epseg_maruko_v1")
 	st.aliases = pruneEpisodeLikeAliases(st.aliases)
-	axis := "ABS"
+	axis := model.EPAxisABS
 	if strings.TrimSpace(st.season) != "" {
-		axis = "SE"
+		axis = model.EPAxisSE
 	}
 	primary := &model.EPEntity{
-		Kind:       "EP",
+		Kind:       model.EPKindEP,
 		Axis:       axis,
 		Episode:    st.episode,
 		SPKind:     st.spKind,
@@ -1262,8 +1262,8 @@ func (p *Parser) applyAPTX4869ConanRoute(st *parseState) {
 		st.attrs = append(st.attrs, groupRouteNote(strings.TrimSpace(epTitle)))
 	}
 	st.epslot = newEPSlot(&model.EPEntity{
-		Kind:       "EP",
-		Axis:       "ABS",
+		Kind:       model.EPKindEP,
+		Axis:       model.EPAxisABS,
 		Episode:    st.episode,
 		TokenStart: -1,
 		TokenEnd:   -1,

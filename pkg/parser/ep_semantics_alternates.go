@@ -18,11 +18,11 @@ func buildEPReferenceFromPrimaryCandidate(p *model.EPEntity, season string, seas
 	spKind = strings.TrimSpace(spKind)
 
 	if p != nil {
-		kind := strings.ToUpper(strings.TrimSpace(p.Kind))
-		if kind != "" && kind != "NONE" {
+		kind := p.Kind.Canonical()
+		if kind != "" && kind != model.EPKindNone {
 			out := &model.EPReference{
 				Kind:       kind,
-				Axis:       strings.ToUpper(strings.TrimSpace(p.Axis)),
+				Axis:       p.Axis.Canonical(),
 				Season:     firstNonEmpty(strings.TrimSpace(p.Season), season),
 				SPKind:     firstNonEmpty(strings.TrimSpace(p.SPKind), spKind),
 				Source:     strings.TrimSpace(p.Source),
@@ -30,16 +30,16 @@ func buildEPReferenceFromPrimaryCandidate(p *model.EPEntity, season string, seas
 				TokenEnd:   p.TokenEnd,
 			}
 			switch out.Kind {
-			case "EP":
+			case model.EPKindEP:
 				out.Episode = strings.TrimSpace(p.Episode)
-			case "EP_LIST":
+			case model.EPKindEPList:
 				out.Episode = strings.TrimSpace(p.Episode)
 				out.EpisodeList = splitEpisodeListCSV(strings.TrimSpace(p.EpisodeList))
-			case "RANGE":
+			case model.EPKindRange:
 				start, end := splitNormalizedRangeBounds(firstNonEmpty(strings.TrimSpace(p.EpisodeRange), episodeRange))
 				out.RangeStart = start
 				out.RangeEnd = end
-			case "SEASON_RANGE":
+			case model.EPKindSeasonRange:
 				out.SeasonRange = firstNonEmpty(strings.TrimSpace(p.EpisodeRange), seasonRange)
 			}
 			return out
@@ -48,8 +48,8 @@ func buildEPReferenceFromPrimaryCandidate(p *model.EPEntity, season string, seas
 
 	if seasonRange != "" {
 		return &model.EPReference{
-			Kind:        "SEASON_RANGE",
-			Axis:        "SE",
+			Kind:        model.EPKindSeasonRange,
+			Axis:        model.EPAxisSE,
 			Season:      season,
 			SeasonRange: seasonRange,
 			Source:      "canonical",
@@ -59,8 +59,8 @@ func buildEPReferenceFromPrimaryCandidate(p *model.EPEntity, season string, seas
 	}
 	if season != "" && episode == "" && episodeList == "" && episodeRange == "" && spKind == "" {
 		return &model.EPReference{
-			Kind:       "SEASON",
-			Axis:       "SE",
+			Kind:       model.EPKindSeason,
+			Axis:       model.EPAxisSE,
 			Season:     season,
 			Source:     "canonical",
 			TokenStart: -1,
@@ -70,12 +70,12 @@ func buildEPReferenceFromPrimaryCandidate(p *model.EPEntity, season string, seas
 	switch {
 	case episodeRange != "":
 		start, end := splitNormalizedRangeBounds(episodeRange)
-		axis := "ABS"
+		axis := model.EPAxisABS
 		if season != "" {
-			axis = "SE"
+			axis = model.EPAxisSE
 		}
 		return &model.EPReference{
-			Kind:       "RANGE",
+			Kind:       model.EPKindRange,
 			Axis:       axis,
 			Season:     season,
 			RangeStart: start,
@@ -85,12 +85,12 @@ func buildEPReferenceFromPrimaryCandidate(p *model.EPEntity, season string, seas
 			TokenEnd:   -1,
 		}
 	case episodeList != "":
-		axis := "ABS"
+		axis := model.EPAxisABS
 		if season != "" {
-			axis = "SE"
+			axis = model.EPAxisSE
 		}
 		return &model.EPReference{
-			Kind:        "EP_LIST",
+			Kind:        model.EPKindEPList,
 			Axis:        axis,
 			Season:      season,
 			Episode:     episode,
@@ -100,12 +100,12 @@ func buildEPReferenceFromPrimaryCandidate(p *model.EPEntity, season string, seas
 			TokenEnd:    -1,
 		}
 	case episode != "":
-		axis := "ABS"
+		axis := model.EPAxisABS
 		if season != "" {
-			axis = "SE"
+			axis = model.EPAxisSE
 		}
 		return &model.EPReference{
-			Kind:       "EP",
+			Kind:       model.EPKindEP,
 			Axis:       axis,
 			Season:     season,
 			Episode:    episode,
@@ -116,8 +116,8 @@ func buildEPReferenceFromPrimaryCandidate(p *model.EPEntity, season string, seas
 		}
 	case spKind != "":
 		return &model.EPReference{
-			Kind:       "SP",
-			Axis:       strings.ToUpper(spKind),
+			Kind:       model.EPKindSP,
+			Axis:       model.EPAxis(strings.ToUpper(spKind)),
 			Season:     season,
 			SPKind:     strings.ToUpper(spKind),
 			Source:     "canonical",
@@ -136,8 +136,8 @@ func collectAlternateEPReferences(rawTitle string, tokens []model.Token, primary
 	out := make([]model.EPReference, 0, 2)
 	seen := map[string]struct{}{}
 	add := func(ref model.EPReference) {
-		ref.Kind = strings.ToUpper(strings.TrimSpace(ref.Kind))
-		ref.Axis = strings.ToUpper(strings.TrimSpace(ref.Axis))
+		ref.Kind = ref.Kind.Canonical()
+		ref.Axis = ref.Axis.Canonical()
 		ref.Season = strings.TrimSpace(ref.Season)
 		ref.SeasonRange = strings.TrimSpace(ref.SeasonRange)
 		ref.Episode = strings.TrimSpace(ref.Episode)
@@ -146,12 +146,12 @@ func collectAlternateEPReferences(rawTitle string, tokens []model.Token, primary
 		ref.SPKind = strings.ToUpper(strings.TrimSpace(ref.SPKind))
 		ref.Relation = strings.TrimSpace(ref.Relation)
 		ref.Source = strings.TrimSpace(ref.Source)
-		if ref.Kind == "" || ref.Kind == "NONE" {
+		if ref.Kind == "" || ref.Kind == model.EPKindNone {
 			return
 		}
 		key := strings.Join([]string{
-			ref.Kind,
-			ref.Axis,
+			string(ref.Kind),
+			string(ref.Axis),
 			ref.Season,
 			ref.SeasonRange,
 			ref.Episode,
@@ -185,7 +185,7 @@ func collectAlternateEPReferences(rawTitle string, tokens []model.Token, primary
 }
 
 func overridePrimaryWithSummaryCatalogEpisode(rawTitle string, primary *model.EPReference) *model.EPReference {
-	if primary == nil || strings.ToUpper(strings.TrimSpace(primary.Kind)) != "EP" {
+	if primary == nil || primary.Kind.Canonical() != model.EPKindEP {
 		return primary
 	}
 	m := parenSummaryAltSxxExxPattern.FindStringSubmatch(rawTitle)
@@ -198,7 +198,7 @@ func overridePrimaryWithSummaryCatalogEpisode(rawTitle string, primary *model.EP
 		return primary
 	}
 	cp := *primary
-	cp.Axis = "ABS"
+	cp.Axis = model.EPAxisABS
 	cp.Season = ""
 	cp.Episode = normalizeEpisodeIdentity(m[1])
 	cp.Source = "summary_episode_primary"
@@ -206,7 +206,7 @@ func overridePrimaryWithSummaryCatalogEpisode(rawTitle string, primary *model.EP
 }
 
 func detectParenAbsoluteEpisodeAlternate(tokens []model.Token, primary *model.EPReference) (model.EPReference, bool) {
-	if primary == nil || strings.ToUpper(strings.TrimSpace(primary.Kind)) != "EP" {
+	if primary == nil || primary.Kind.Canonical() != model.EPKindEP {
 		return model.EPReference{}, false
 	}
 	if primary.TokenEnd < 0 || primary.TokenEnd+2 >= len(tokens) {
@@ -240,8 +240,8 @@ func detectParenAbsoluteEpisodeAlternate(tokens []model.Token, primary *model.EP
 		return model.EPReference{}, false
 	}
 	return model.EPReference{
-		Kind:       "EP",
-		Axis:       "ABS",
+		Kind:       model.EPKindEP,
+		Axis:       model.EPAxisABS,
 		Episode:    norm,
 		Relation:   "overall",
 		Source:     "paren_alt_episode",
@@ -251,7 +251,7 @@ func detectParenAbsoluteEpisodeAlternate(tokens []model.Token, primary *model.EP
 }
 
 func detectSummaryCatalogEpisodeAlternate(rawTitle string, primary *model.EPReference) (model.EPReference, bool) {
-	if primary == nil || strings.ToUpper(strings.TrimSpace(primary.Kind)) != "EP" {
+	if primary == nil || primary.Kind.Canonical() != model.EPKindEP {
 		return model.EPReference{}, false
 	}
 	if strings.TrimSpace(primary.Episode) == "" {
@@ -265,8 +265,8 @@ func detectSummaryCatalogEpisodeAlternate(rawTitle string, primary *model.EPRefe
 		return model.EPReference{}, false
 	}
 	return model.EPReference{
-		Kind:       "EP",
-		Axis:       "SE",
+		Kind:       model.EPKindEP,
+		Axis:       model.EPAxisSE,
 		Season:     normalizeEpisodeIdentity(m[2]),
 		Episode:    normalizeEpisodeIdentity(m[3]),
 		Relation:   "catalog",
@@ -277,7 +277,7 @@ func detectSummaryCatalogEpisodeAlternate(rawTitle string, primary *model.EPRefe
 }
 
 func detectParenRangeAlternateFromRaw(rawTitle string, primary *model.EPReference) (model.EPReference, bool) {
-	if primary == nil || strings.ToUpper(strings.TrimSpace(primary.Kind)) != "RANGE" {
+	if primary == nil || primary.Kind.Canonical() != model.EPKindRange {
 		return model.EPReference{}, false
 	}
 	start := strings.TrimSpace(primary.RangeStart)
@@ -301,8 +301,8 @@ func detectParenRangeAlternateFromRaw(rawTitle string, primary *model.EPReferenc
 		return model.EPReference{}, false
 	}
 	return model.EPReference{
-		Kind:       "RANGE",
-		Axis:       "ABS",
+		Kind:       model.EPKindRange,
+		Axis:       model.EPAxisABS,
 		RangeStart: altStart,
 		RangeEnd:   altEnd,
 		Relation:   "overall",

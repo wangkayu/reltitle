@@ -71,8 +71,8 @@ func (s *EPSemantics) SyncLegacyMirrorsFromPrimary() {
 	s.RangeEnd = ""
 	s.SPKind = ""
 	s.Source = ""
-	s.Kind = strings.TrimSpace(s.Primary.Kind)
-	s.Axis = strings.TrimSpace(s.Primary.Axis)
+	s.Kind = EPKind(strings.TrimSpace(string(s.Primary.Kind)))
+	s.Axis = EPAxis(strings.TrimSpace(string(s.Primary.Axis)))
 	s.Season = strings.TrimSpace(s.Primary.Season)
 	s.SeasonRange = strings.TrimSpace(s.Primary.SeasonRange)
 	s.Episode = strings.TrimSpace(s.Primary.Episode)
@@ -195,22 +195,22 @@ func (r *ParseResult) CanonicalEpRoute() string {
 	if sem == nil {
 		return ""
 	}
-	k := strings.ToUpper(strings.TrimSpace(sem.Kind))
+	k := sem.Kind.Canonical()
 	source := strings.TrimSpace(sem.Source)
 	season := strings.TrimSpace(sem.Season)
 	if sem.Primary != nil {
-		k = strings.ToUpper(strings.TrimSpace(sem.Primary.Kind))
+		k = sem.Primary.Kind.Canonical()
 		source = strings.TrimSpace(sem.Primary.Source)
 		season = strings.TrimSpace(sem.Primary.Season)
 	}
 	switch k {
-	case "RANGE":
+	case EPKindRange:
 		return "RANGE"
-	case "EP_LIST":
+	case EPKindEPList:
 		return "EP_LIST"
-	case "SP":
+	case EPKindSP:
 		return "SP_ONLY"
-	case "EP":
+	case EPKindEP:
 		if strings.EqualFold(source, "tagged_ep_final") {
 			return "ABS_EP"
 		}
@@ -218,7 +218,7 @@ func (r *ParseResult) CanonicalEpRoute() string {
 			return "SXXEXX"
 		}
 		return "PLAIN_EP"
-	case "SEASON", "SEASON_RANGE":
+	case EPKindSeason, EPKindSeasonRange:
 		return "NONE"
 	default:
 		return ""

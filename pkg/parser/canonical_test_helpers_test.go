@@ -57,9 +57,9 @@ func canonicalEPSemantics(res *model.ParseResult) *model.EPSemantics {
 func canonicalEPKind(res *model.ParseResult) string {
 	if sem := canonicalEPSemantics(res); sem != nil {
 		if sem.Primary != nil {
-			return strings.ToUpper(strings.TrimSpace(sem.Primary.Kind))
+			return string(sem.Primary.Kind.Canonical())
 		}
-		return strings.ToUpper(strings.TrimSpace(sem.Kind))
+		return string(sem.Kind.Canonical())
 	}
 	return ""
 }
@@ -67,9 +67,9 @@ func canonicalEPKind(res *model.ParseResult) string {
 func canonicalEPAxis(res *model.ParseResult) string {
 	if sem := canonicalEPSemantics(res); sem != nil {
 		if sem.Primary != nil {
-			return strings.ToUpper(strings.TrimSpace(sem.Primary.Axis))
+			return string(sem.Primary.Axis.Canonical())
 		}
-		return strings.ToUpper(strings.TrimSpace(sem.Axis))
+		return string(sem.Axis.Canonical())
 	}
 	return ""
 }

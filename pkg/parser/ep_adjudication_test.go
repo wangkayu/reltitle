@@ -19,7 +19,7 @@ func decisionTokens(raw string) []model.Token {
 
 func hasCandidateKind(cands []model.EPEntity, kind string) bool {
 	for _, c := range cands {
-		if strings.EqualFold(strings.TrimSpace(c.Kind), kind) {
+		if strings.EqualFold(strings.TrimSpace(string(c.Kind)), kind) {
 			return true
 		}
 	}
@@ -38,7 +38,7 @@ func TestEPDecisionChoosePrimary_SuppressesSeasonWordFalseRange(t *testing.T) {
 	if primary == nil {
 		t.Fatalf("primary should not be nil")
 	}
-	if got := strings.ToUpper(strings.TrimSpace(primary.Kind)); got != "EP" {
+	if got := strings.ToUpper(strings.TrimSpace(string(primary.Kind))); got != "EP" {
 		t.Fatalf("primary.kind=%q want=%q", got, "EP")
 	}
 	if got := strings.TrimSpace(primary.Episode); got != "1" {
@@ -63,7 +63,7 @@ func TestEPDecisionChoosePrimary_SuppressesPartIndexFalseRange(t *testing.T) {
 	if primary == nil {
 		t.Fatalf("primary should not be nil")
 	}
-	if got := strings.ToUpper(strings.TrimSpace(primary.Kind)); got != "EP" {
+	if got := strings.ToUpper(strings.TrimSpace(string(primary.Kind))); got != "EP" {
 		t.Fatalf("primary.kind=%q want=%q", got, "EP")
 	}
 	if got := strings.TrimSpace(primary.Episode); got != "25" {
@@ -89,7 +89,7 @@ func TestEPDecisionChoosePrimary_SuppressesAliasSeasonEchoFalseRange(t *testing.
 	if primary == nil {
 		t.Fatalf("primary should not be nil")
 	}
-	if got := strings.ToUpper(strings.TrimSpace(primary.Kind)); got != "EP" {
+	if got := strings.ToUpper(strings.TrimSpace(string(primary.Kind))); got != "EP" {
 		t.Fatalf("primary.kind=%q want=%q", got, "EP")
 	}
 	if got := strings.TrimSpace(primary.Episode); got != "14" {
@@ -114,7 +114,7 @@ func TestEPDecisionChoosePrimary_KeepsTrueDelimitedRange(t *testing.T) {
 	if primary == nil {
 		t.Fatalf("primary should not be nil")
 	}
-	if got := strings.ToUpper(strings.TrimSpace(primary.Kind)); got != "RANGE" {
+	if got := strings.ToUpper(strings.TrimSpace(string(primary.Kind))); got != "RANGE" {
 		t.Fatalf("primary.kind=%q want=%q", got, "RANGE")
 	}
 	if got := strings.TrimSpace(primary.EpisodeRange); got != "1-20" {
@@ -140,7 +140,7 @@ func TestEPDecisionChoosePrimary_KeepsSharedPrefixSeasonEpisodeRange(t *testing.
 	if primary == nil {
 		t.Fatalf("primary should not be nil")
 	}
-	if got := strings.ToUpper(strings.TrimSpace(primary.Kind)); got != "RANGE" {
+	if got := strings.ToUpper(strings.TrimSpace(string(primary.Kind))); got != "RANGE" {
 		t.Fatalf("primary.kind=%q want=%q", got, "RANGE")
 	}
 	if got := strings.TrimSpace(primary.EpisodeRange); got != "7-9" {

@@ -1,8 +1,21 @@
 package model
 
+import "strings"
+
 // AttrType names the category of an Attribute, e.g. "title", "group",
 // "resolution". See the Attr* constants for the full set.
 type AttrType string
+
+// EPKind names the shape of an episode/season conclusion: a plain episode, a
+// season, a range, a list, or a special. See the EPKind* constants for the
+// full set.
+type EPKind string
+
+// EPAxis names the numbering axis of an episode conclusion: SE (seasonal),
+// ABS (absolute), TV, OVA, SP, or UNKNOWN. Note EPEntity.Axis may carry
+// values beyond this set when derived from SP-kind tokens (e.g. "OAD",
+// "ONA", "EX"); compare with Canonical and the EPAxis* constants.
+type EPAxis string
 
 // Attribute is one recognized piece of a release title: a typed, normalized
 // value with the token span it came from, a heuristic confidence, and the
@@ -47,8 +60,8 @@ type ParseResult struct {
 // EPReference is one episode/season/range conclusion: the primary parse
 // result or an alternate candidate. TokenStart/TokenEnd are internal only.
 type EPReference struct {
-	Kind        string   `json:"kind,omitempty"` // NONE | SEASON | EP | EP_LIST | RANGE | SEASON_RANGE | SP
-	Axis        string   `json:"axis,omitempty"` // SE | ABS | TV | OVA | SP | UNKNOWN
+	Kind        EPKind   `json:"kind,omitempty"` // NONE | SEASON | EP | EP_LIST | RANGE | SEASON_RANGE | SP
+	Axis        EPAxis   `json:"axis,omitempty"` // SE | ABS | TV | OVA | SP | UNKNOWN
 	Season      string   `json:"season,omitempty"`
 	SeasonRange string   `json:"season_range,omitempty"` // e.g. S1-S3
 	Episode     string   `json:"episode,omitempty"`
@@ -71,8 +84,8 @@ type EPSemantics struct {
 
 	// Legacy mirrors remain available to Go callers for now, but are no longer
 	// serialized. Canonical accessors should prefer Primary.
-	Kind        string   `json:"-"`
-	Axis        string   `json:"-"`
+	Kind        EPKind   `json:"-"`
+	Axis        EPAxis   `json:"-"`
 	Season      string   `json:"-"`
 	SeasonRange string   `json:"-"`
 	Episode     string   `json:"-"`
@@ -94,8 +107,8 @@ type EPSlot struct {
 // stable, so we can support composite epslot without encoding semantics into
 // Attribute.Normalized strings.
 type EPEntity struct {
-	Kind         string `json:"kind,omitempty"` // EP | EP_LIST | RANGE | SP
-	Axis         string `json:"axis,omitempty"` // SE | ABS | TV | OVA | SP | UNKNOWN
+	Kind         EPKind `json:"kind,omitempty"` // EP | EP_LIST | RANGE | SP
+	Axis         EPAxis `json:"axis,omitempty"` // SE | ABS | TV | OVA | SP | UNKNOWN
 	Season       string `json:"season,omitempty"`
 	Episode      string `json:"episode,omitempty"`
 	EpisodeRange string `json:"episode_range,omitempty"`
@@ -173,3 +186,36 @@ const (
 	AttrAudioObject   AttrType = "audio_object"
 	AttrContentRating AttrType = "content_rating"
 )
+
+const (
+	EPKindNone        EPKind = "NONE"
+	EPKindSeason      EPKind = "SEASON"
+	EPKindEP          EPKind = "EP"
+	EPKindEPList      EPKind = "EP_LIST"
+	EPKindRange       EPKind = "RANGE"
+	EPKindSeasonRange EPKind = "SEASON_RANGE"
+	EPKindSP          EPKind = "SP"
+)
+
+const (
+	EPAxisSE      EPAxis = "SE"
+	EPAxisABS     EPAxis = "ABS"
+	EPAxisTV      EPAxis = "TV"
+	EPAxisOVA     EPAxis = "OVA"
+	EPAxisSP      EPAxis = "SP"
+	EPAxisUnknown EPAxis = "UNKNOWN"
+)
+
+// Canonical returns the normalized form of k: trimmed and uppercased. Values
+// may arrive lowercase or padded from defensive normalization paths; compare
+// with Canonical against the EPKind* constants.
+func (k EPKind) Canonical() EPKind {
+	return EPKind(strings.ToUpper(strings.TrimSpace(string(k))))
+}
+
+// Canonical returns the normalized form of a: trimmed and uppercased. Values
+// may arrive lowercase or padded from defensive normalization paths; compare
+// with Canonical against the EPAxis* constants.
+func (a EPAxis) Canonical() EPAxis {
+	return EPAxis(strings.ToUpper(strings.TrimSpace(string(a))))
+}

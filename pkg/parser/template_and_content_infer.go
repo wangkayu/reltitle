@@ -48,114 +48,46 @@ func matchContentTypeCondition(r config.ContentTypeInferenceRule, hasEpisode boo
 	if cond == nil {
 		return false
 	}
-	if v, ok := cond["default"]; ok {
-		b, _ := v.(bool)
-		if b {
-			return true
-		}
+	if cond.Default != nil && *cond.Default {
+		return true
 	}
-	if v, ok := cond["has_episode"]; ok {
-		b, _ := v.(bool)
-		if b != hasEpisode {
+	// HasX requires the flag to equal the value; NoX requires it to differ.
+	pairs := []struct {
+		want *bool
+		got  bool
+		neg  bool // true for the no_* keys
+	}{
+		{cond.HasEpisode, hasEpisode, false},
+		{cond.NoEpisode, hasEpisode, true},
+		{cond.HasEpisodeRange, hasEpisodeRange, false},
+		{cond.NoEpisodeRange, hasEpisodeRange, true},
+		{cond.HasSeason, hasSeason, false},
+		{cond.HasSeasonRange, hasSeasonRange, false},
+		{cond.HasTech, hasTech, false},
+		{cond.HasMovieKeyword, hasMovieKeyword, false},
+		{cond.NoMovieKeyword, hasMovieKeyword, true},
+		{cond.HasPackKind, hasPackKind, false},
+		{cond.HasSPKind, hasSPKind, false},
+		{cond.HasMovieIndex, hasMovieIndex, false},
+		{cond.HasMovieIndexRange, hasMovieIndexRange, false},
+		{cond.NoMovieIndexRange, hasMovieIndexRange, true},
+		{cond.HasYear, hasYear, false},
+		{cond.NoYear, hasYear, true},
+	}
+	for _, p := range pairs {
+		if p.want == nil {
+			continue
+		}
+		if !p.neg && *p.want != p.got {
+			return false
+		}
+		if p.neg && *p.want == p.got {
 			return false
 		}
 	}
-	if v, ok := cond["no_episode"]; ok {
-		b, _ := v.(bool)
-		if b == hasEpisode {
+	if cond.SPKind != "" {
+		if !strings.EqualFold(cond.SPKind, spKind) {
 			return false
-		}
-	}
-	if v, ok := cond["has_episode_range"]; ok {
-		b, _ := v.(bool)
-		if b != hasEpisodeRange {
-			return false
-		}
-	}
-	if v, ok := cond["no_episode_range"]; ok {
-		b, _ := v.(bool)
-		if b == hasEpisodeRange {
-			return false
-		}
-	}
-	if v, ok := cond["has_season"]; ok {
-		b, _ := v.(bool)
-		if b != hasSeason {
-			return false
-		}
-	}
-	if v, ok := cond["has_season_range"]; ok {
-		b, _ := v.(bool)
-		if b != hasSeasonRange {
-			return false
-		}
-	}
-	if v, ok := cond["has_tech"]; ok {
-		b, _ := v.(bool)
-		if b != hasTech {
-			return false
-		}
-	}
-	if v, ok := cond["has_movie_keyword"]; ok {
-		b, _ := v.(bool)
-		if b != hasMovieKeyword {
-			return false
-		}
-	}
-	if v, ok := cond["no_movie_keyword"]; ok {
-		b, _ := v.(bool)
-		if b == hasMovieKeyword {
-			return false
-		}
-	}
-	if v, ok := cond["has_pack_kind"]; ok {
-		b, _ := v.(bool)
-		if b != hasPackKind {
-			return false
-		}
-	}
-	if v, ok := cond["has_sp_kind"]; ok {
-		b, _ := v.(bool)
-		if b != hasSPKind {
-			return false
-		}
-	}
-	if v, ok := cond["has_movie_index"]; ok {
-		b, _ := v.(bool)
-		if b != hasMovieIndex {
-			return false
-		}
-	}
-	if v, ok := cond["has_movie_index_range"]; ok {
-		b, _ := v.(bool)
-		if b != hasMovieIndexRange {
-			return false
-		}
-	}
-	if v, ok := cond["no_movie_index_range"]; ok {
-		b, _ := v.(bool)
-		if b == hasMovieIndexRange {
-			return false
-		}
-	}
-	if v, ok := cond["has_year"]; ok {
-		b, _ := v.(bool)
-		if b != hasYear {
-			return false
-		}
-	}
-	if v, ok := cond["no_year"]; ok {
-		b, _ := v.(bool)
-		if b == hasYear {
-			return false
-		}
-	}
-	if v, ok := cond["sp_kind"]; ok {
-		want, _ := v.(string)
-		if want != "" {
-			if !strings.EqualFold(want, spKind) {
-				return false
-			}
 		}
 	}
 	return true

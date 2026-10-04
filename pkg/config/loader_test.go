@@ -78,6 +78,21 @@ func TestLoadAllFileProblems(t *testing.T) {
 			want: "rulez",
 		},
 		{
+			name: "unknown condition key in an inference rule",
+			mutate: func(t *testing.T, dir string) {
+				path := filepath.Join(dir, "inference_rules.yaml")
+				data, err := os.ReadFile(path)
+				if err != nil {
+					t.Fatal(err)
+				}
+				s := strings.Replace(string(data), "has_movie_index: true", "has_epsiode: true", 1)
+				if err := os.WriteFile(path, []byte(s), 0o644); err != nil {
+					t.Fatal(err)
+				}
+			},
+			want: "has_epsiode",
+		},
+		{
 			name: "empty file",
 			mutate: func(t *testing.T, dir string) {
 				writeFile(t, dir, "title_knowledge.yaml", "")
@@ -145,9 +160,6 @@ func TestValidateProblems(t *testing.T) {
 		{"template unknown signature field", func(c *Config) {
 			c.TemplateCatalog.TVEpisodeTemplates[0].Signature = "G T Q"
 		}, `unknown signature field "Q"`},
-		{"inference unknown condition key", func(c *Config) {
-			c.Inference.ContentTypeInference[0].Condition["has_epsiode"] = true
-		}, `unknown condition key "has_epsiode"`},
 		{"route family dangling route id", func(c *Config) {
 			c.RouteFamilies.Families[0].Select.AllowedRouteIDs = []string{"no_such_route"}
 		}, `matches no template route_id`},

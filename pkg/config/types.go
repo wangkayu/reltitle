@@ -86,16 +86,43 @@ type InferenceRulesConfig struct {
 // ContentTypeInferenceRule maps a condition to a content kind
 // (MOVIE / BATCH / SPECIAL / TV_EP / UNKNOWN); higher Priority wins.
 type ContentTypeInferenceRule struct {
-	Name         string         `yaml:"name" json:"name"`
-	Priority     int            `yaml:"priority" json:"priority"`
-	Condition    map[string]any `yaml:"condition" json:"condition"`
-	Result       string         `yaml:"result" json:"result"`
-	Confidence   float64        `yaml:"confidence" json:"confidence"`
-	Description  string         `yaml:"description" json:"description"`
-	Keywords     []string       `yaml:"keywords" json:"keywords"`
-	PackKeywords []string       `yaml:"pack_keywords" json:"pack_keywords"`
+	Name         string                         `yaml:"name" json:"name"`
+	Priority     int                            `yaml:"priority" json:"priority"`
+	Condition    *ContentTypeInferenceCondition `yaml:"condition" json:"condition"`
+	Result       string                         `yaml:"result" json:"result"`
+	Confidence   float64                        `yaml:"confidence" json:"confidence"`
+	Description  string                         `yaml:"description" json:"description"`
+	Keywords     []string                       `yaml:"keywords" json:"keywords"`
+	PackKeywords []string                       `yaml:"pack_keywords" json:"pack_keywords"`
 
 	Examples any `yaml:"examples" json:"-"` // reference-only, never read by the parser
+}
+
+// ContentTypeInferenceCondition is the typed condition of a
+// ContentTypeInferenceRule. A nil *bool means "not constrained"; a set field
+// must hold for the rule to match. Note the asymmetry: HasX requires the flag
+// to equal the value, while NoX requires the flag to differ from the value
+// (so NoEpisode: false requires an episode to be present). Because decoding
+// is strict (KnownFields), a misspelled key fails at load time.
+type ContentTypeInferenceCondition struct {
+	Default            *bool  `yaml:"default" json:"default,omitempty"`
+	HasEpisode         *bool  `yaml:"has_episode" json:"has_episode,omitempty"`
+	NoEpisode          *bool  `yaml:"no_episode" json:"no_episode,omitempty"`
+	HasEpisodeRange    *bool  `yaml:"has_episode_range" json:"has_episode_range,omitempty"`
+	NoEpisodeRange     *bool  `yaml:"no_episode_range" json:"no_episode_range,omitempty"`
+	HasSeason          *bool  `yaml:"has_season" json:"has_season,omitempty"`
+	HasSeasonRange     *bool  `yaml:"has_season_range" json:"has_season_range,omitempty"`
+	HasTech            *bool  `yaml:"has_tech" json:"has_tech,omitempty"`
+	HasMovieKeyword    *bool  `yaml:"has_movie_keyword" json:"has_movie_keyword,omitempty"`
+	NoMovieKeyword     *bool  `yaml:"no_movie_keyword" json:"no_movie_keyword,omitempty"`
+	HasPackKind        *bool  `yaml:"has_pack_kind" json:"has_pack_kind,omitempty"`
+	HasSPKind          *bool  `yaml:"has_sp_kind" json:"has_sp_kind,omitempty"`
+	HasMovieIndex      *bool  `yaml:"has_movie_index" json:"has_movie_index,omitempty"`
+	HasMovieIndexRange *bool  `yaml:"has_movie_index_range" json:"has_movie_index_range,omitempty"`
+	NoMovieIndexRange  *bool  `yaml:"no_movie_index_range" json:"no_movie_index_range,omitempty"`
+	HasYear            *bool  `yaml:"has_year" json:"has_year,omitempty"`
+	NoYear             *bool  `yaml:"no_year" json:"no_year,omitempty"`
+	SPKind             string `yaml:"sp_kind" json:"sp_kind,omitempty"`
 }
 
 // TemplateCatalogConfig is template_catalog.yaml: the title-layout templates,

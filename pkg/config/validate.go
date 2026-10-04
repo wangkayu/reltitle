@@ -36,15 +36,8 @@ var signatureFields = map[string]bool{
 	"X": true, "C": true, "SP": true, "OVA": true, "OAD": true, "ONA": true, "EX": true, "CONTENTS": true,
 }
 
-// inferenceConditionKeys are the condition keys read by matchContentTypeCondition
-// (see pkg/parser/template_and_content_infer.go).
-var inferenceConditionKeys = map[string]bool{
-	"default": true, "has_episode": true, "no_episode": true, "has_episode_range": true,
-	"no_episode_range": true, "has_season": true, "has_season_range": true, "has_tech": true,
-	"has_movie_keyword": true, "no_movie_keyword": true, "has_pack_kind": true, "has_sp_kind": true,
-	"has_movie_index": true, "has_movie_index_range": true, "no_movie_index_range": true,
-	"has_year": true, "no_year": true, "sp_kind": true,
-}
+// (inference rule conditions are strongly typed as ContentTypeInferenceCondition,
+// so an unknown key already fails at decode time via KnownFields.)
 
 var lexiconScopes = map[string]bool{"": true, "bracket": true, "paren": true, "plain": true}
 
@@ -177,11 +170,6 @@ func (v *validator) inference(in InferenceRulesConfig) {
 			v.addf(file, "rule %q has no result", r.Name)
 		}
 		v.confidence(file, fmt.Sprintf("rule %q", r.Name), r.Confidence)
-		for key := range r.Condition {
-			if !inferenceConditionKeys[key] {
-				v.addf(file, "rule %q: unknown condition key %q", r.Name, key)
-			}
-		}
 	}
 }
 

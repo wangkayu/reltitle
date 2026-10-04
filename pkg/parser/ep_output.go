@@ -103,8 +103,8 @@ func shouldPruneWeakBatchRangePrimary(epslot *model.EPSlot, episodeRange string,
 	if rangeText == "" {
 		return false
 	}
-	source := strings.ToLower(strings.TrimSpace(epslot.Primary.Source))
-	if source != "episode_range" && source != "episode_range_final" {
+	source := epslot.Primary.Source.Canonical()
+	if source != model.EPSourceEpisodeRange && source != model.EPSourceEpisodeRangeFinal {
 		return false
 	}
 	bounds := strings.SplitN(normalizeEpisodeRangeText(rangeText), "-", 2)
@@ -137,7 +137,7 @@ func shouldPreferSPPrimaryForSpecial(contentKind model.ContentKind, spKind strin
 	if epslot.Primary.Kind.Canonical() != model.EPKindEP {
 		return false
 	}
-	return strings.EqualFold(strings.TrimSpace(epslot.Primary.Source), "ep_digit_token")
+	return epslot.Primary.Source.Canonical() == model.EPSourceEPDigitToken
 }
 
 func forceSPPrimaryFromSPKind(epslot *model.EPSlot, season string, spKind string) *model.EPSlot {
@@ -150,13 +150,13 @@ func forceSPPrimaryFromSPKind(epslot *model.EPSlot, season string, spKind string
 		Axis:   model.EPAxis(k),
 		Season: strings.TrimSpace(season),
 		SPKind: k,
-		Source: "sp_kind_final",
+		Source: model.EPSourceSPKindFinal,
 	}
 	if epslot == nil {
-		return &model.EPSlot{Primary: &primary, Candidates: []model.EPEntity{{Kind: model.EPKindSP, Axis: model.EPAxis(k), Season: strings.TrimSpace(season), SPKind: k, Source: "sp_kind"}}}
+		return &model.EPSlot{Primary: &primary, Candidates: []model.EPEntity{{Kind: model.EPKindSP, Axis: model.EPAxis(k), Season: strings.TrimSpace(season), SPKind: k, Source: model.EPSourceSPKind}}}
 	}
 	candidates := make([]model.EPEntity, 0, len(epslot.Candidates)+1)
-	candidates = append(candidates, model.EPEntity{Kind: model.EPKindSP, Axis: model.EPAxis(k), Season: strings.TrimSpace(season), SPKind: k, Source: "sp_kind"})
+	candidates = append(candidates, model.EPEntity{Kind: model.EPKindSP, Axis: model.EPAxis(k), Season: strings.TrimSpace(season), SPKind: k, Source: model.EPSourceSPKind})
 	for _, c := range epslot.Candidates {
 		if c.Kind.Canonical() == model.EPKindSP && strings.EqualFold(strings.TrimSpace(c.SPKind), k) {
 			continue

@@ -80,7 +80,7 @@ func epslotCandidateKey(c model.EPEntity) string {
 		strings.TrimSpace(c.EpisodeList) + "|" +
 		strings.TrimSpace(c.SPKind) + "|" +
 		strconv.Itoa(c.TokenStart) + ":" + strconv.Itoa(c.TokenEnd) + "|" +
-		strings.TrimSpace(c.Source)
+		strings.TrimSpace(string(c.Source))
 }
 
 func scoreSeasonHint(h epSeasonHint) int {
@@ -253,7 +253,7 @@ func shouldSuppressEpisodeCandidate(tokens []model.Token, c model.EPEntity, seas
 	if c.Kind.Canonical() != model.EPKindEP {
 		return "", false
 	}
-	if !strings.EqualFold(strings.TrimSpace(c.Source), "ep_digit_token") {
+	if c.Source.Canonical() != model.EPSourceEPDigitToken {
 		return "", false
 	}
 	if !hasSPCandidate(cands) {
@@ -279,7 +279,7 @@ func shouldSuppressEpisodeCandidate(tokens []model.Token, c model.EPEntity, seas
 
 func scoreEPCandidate(tokens []model.Token, c model.EPEntity) int {
 	kind := c.Kind.Canonical()
-	source := strings.ToLower(strings.TrimSpace(c.Source))
+	source := string(c.Source.Canonical())
 	switch kind {
 	case model.EPKindEP:
 		switch {
@@ -397,7 +397,7 @@ func buildCanonicalPrimaryEntity(season string, episode string, episodeRange str
 			EpisodeRange: episodeRange,
 			TokenStart:   episodeRangeIdx,
 			TokenEnd:     episodeRangeIdx + 1,
-			Source:       "canonical",
+			Source:       model.EPSourceCanonical,
 		}
 	case episodeList != "":
 		first := episode
@@ -414,7 +414,7 @@ func buildCanonicalPrimaryEntity(season string, episode string, episodeRange str
 			EpisodeList: episodeList,
 			TokenStart:  episodeListIdx,
 			TokenEnd:    episodeListIdx + 1,
-			Source:      "canonical",
+			Source:      model.EPSourceCanonical,
 		}
 	case episode != "":
 		return &model.EPEntity{
@@ -424,7 +424,7 @@ func buildCanonicalPrimaryEntity(season string, episode string, episodeRange str
 			Episode:    episode,
 			TokenStart: episodeIdx,
 			TokenEnd:   episodeIdx + 1,
-			Source:     "canonical",
+			Source:     model.EPSourceCanonical,
 		}
 	case spKind != "":
 		return &model.EPEntity{
@@ -432,7 +432,7 @@ func buildCanonicalPrimaryEntity(season string, episode string, episodeRange str
 			Axis:   model.EPAxis(spKind),
 			Season: season,
 			SPKind: spKind,
-			Source: "canonical",
+			Source: model.EPSourceCanonical,
 		}
 	default:
 		return nil
@@ -583,28 +583,27 @@ func adjudicateEPDecisionIntoContext(tokens []model.Token, ctx *parseContext) {
 	}
 }
 
-func finalizeEPCandidateSource(c model.EPEntity) string {
-	source := strings.TrimSpace(c.Source)
-	switch {
-	case strings.EqualFold(source, "sxxexx"):
-		return "sxxexx_final"
-	case strings.EqualFold(source, "episode_list"):
-		return "episode_list_final"
-	case strings.EqualFold(source, "episode_range"):
-		return "episode_range_final"
-	case strings.EqualFold(source, "episode"):
-		return "episode_final"
-	case strings.EqualFold(source, "tagged_ep"):
-		return "tagged_ep_final"
-	case strings.EqualFold(source, "tagged_range"):
-		return "tagged_range_final"
-	case strings.EqualFold(source, "sp_kind"), strings.EqualFold(source, "sp_token"):
-		return "sp_kind_final"
+func finalizeEPCandidateSource(c model.EPEntity) model.EPSource {
+	switch c.Source.Canonical() {
+	case model.EPSourceSxxExx:
+		return model.EPSourceSxxExxFinal
+	case model.EPSourceEpisodeList:
+		return model.EPSourceEpisodeListFinal
+	case model.EPSourceEpisodeRange:
+		return model.EPSourceEpisodeRangeFinal
+	case model.EPSourceEpisode:
+		return model.EPSourceEpisodeFinal
+	case model.EPSourceTaggedEP:
+		return model.EPSourceTaggedEPFinal
+	case model.EPSourceTaggedRange:
+		return model.EPSourceTaggedRangeFinal
+	case model.EPSourceSPKind, model.EPSourceSPToken:
+		return model.EPSourceSPKindFinal
 	default:
-		if source == "" {
-			return "canonical"
+		if strings.TrimSpace(string(c.Source)) == "" {
+			return model.EPSourceCanonical
 		}
-		return source
+		return model.EPSource(strings.TrimSpace(string(c.Source)))
 	}
 }
 

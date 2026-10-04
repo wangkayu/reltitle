@@ -82,7 +82,7 @@ func (s *EPSemantics) SyncLegacyMirrorsFromPrimary() {
 	s.RangeStart = strings.TrimSpace(s.Primary.RangeStart)
 	s.RangeEnd = strings.TrimSpace(s.Primary.RangeEnd)
 	s.SPKind = strings.TrimSpace(s.Primary.SPKind)
-	s.Source = strings.TrimSpace(s.Primary.Source)
+	s.Source = EPSource(strings.TrimSpace(string(s.Primary.Source)))
 }
 
 func cloneEPSemantics(in *EPSemantics) *EPSemantics {
@@ -196,11 +196,11 @@ func (r *ParseResult) CanonicalEpRoute() string {
 		return ""
 	}
 	k := sem.Kind.Canonical()
-	source := strings.TrimSpace(sem.Source)
+	source := strings.TrimSpace(string(sem.Source))
 	season := strings.TrimSpace(sem.Season)
 	if sem.Primary != nil {
 		k = sem.Primary.Kind.Canonical()
-		source = strings.TrimSpace(sem.Primary.Source)
+		source = strings.TrimSpace(string(sem.Primary.Source))
 		season = strings.TrimSpace(sem.Primary.Season)
 	}
 	switch k {

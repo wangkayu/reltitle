@@ -25,7 +25,7 @@ func buildEPReferenceFromPrimaryCandidate(p *model.EPEntity, season string, seas
 				Axis:       p.Axis.Canonical(),
 				Season:     firstNonEmpty(strings.TrimSpace(p.Season), season),
 				SPKind:     firstNonEmpty(strings.TrimSpace(p.SPKind), spKind),
-				Source:     strings.TrimSpace(p.Source),
+				Source:     model.EPSource(strings.TrimSpace(string(p.Source))),
 				TokenStart: p.TokenStart,
 				TokenEnd:   p.TokenEnd,
 			}
@@ -52,7 +52,7 @@ func buildEPReferenceFromPrimaryCandidate(p *model.EPEntity, season string, seas
 			Axis:        model.EPAxisSE,
 			Season:      season,
 			SeasonRange: seasonRange,
-			Source:      "canonical",
+			Source:      model.EPSourceCanonical,
 			TokenStart:  -1,
 			TokenEnd:    -1,
 		}
@@ -62,7 +62,7 @@ func buildEPReferenceFromPrimaryCandidate(p *model.EPEntity, season string, seas
 			Kind:       model.EPKindSeason,
 			Axis:       model.EPAxisSE,
 			Season:     season,
-			Source:     "canonical",
+			Source:     model.EPSourceCanonical,
 			TokenStart: -1,
 			TokenEnd:   -1,
 		}
@@ -80,7 +80,7 @@ func buildEPReferenceFromPrimaryCandidate(p *model.EPEntity, season string, seas
 			Season:     season,
 			RangeStart: start,
 			RangeEnd:   end,
-			Source:     "canonical",
+			Source:     model.EPSourceCanonical,
 			TokenStart: -1,
 			TokenEnd:   -1,
 		}
@@ -95,7 +95,7 @@ func buildEPReferenceFromPrimaryCandidate(p *model.EPEntity, season string, seas
 			Season:      season,
 			Episode:     episode,
 			EpisodeList: splitEpisodeListCSV(episodeList),
-			Source:      "canonical",
+			Source:      model.EPSourceCanonical,
 			TokenStart:  -1,
 			TokenEnd:    -1,
 		}
@@ -110,7 +110,7 @@ func buildEPReferenceFromPrimaryCandidate(p *model.EPEntity, season string, seas
 			Season:     season,
 			Episode:    episode,
 			SPKind:     strings.ToUpper(spKind),
-			Source:     "canonical",
+			Source:     model.EPSourceCanonical,
 			TokenStart: -1,
 			TokenEnd:   -1,
 		}
@@ -120,7 +120,7 @@ func buildEPReferenceFromPrimaryCandidate(p *model.EPEntity, season string, seas
 			Axis:       model.EPAxis(strings.ToUpper(spKind)),
 			Season:     season,
 			SPKind:     strings.ToUpper(spKind),
-			Source:     "canonical",
+			Source:     model.EPSourceCanonical,
 			TokenStart: -1,
 			TokenEnd:   -1,
 		}
@@ -145,7 +145,7 @@ func collectAlternateEPReferences(rawTitle string, tokens []model.Token, primary
 		ref.RangeEnd = strings.TrimSpace(ref.RangeEnd)
 		ref.SPKind = strings.ToUpper(strings.TrimSpace(ref.SPKind))
 		ref.Relation = strings.TrimSpace(ref.Relation)
-		ref.Source = strings.TrimSpace(ref.Source)
+		ref.Source = model.EPSource(strings.TrimSpace(string(ref.Source)))
 		if ref.Kind == "" || ref.Kind == model.EPKindNone {
 			return
 		}
@@ -159,7 +159,7 @@ func collectAlternateEPReferences(rawTitle string, tokens []model.Token, primary
 			ref.RangeEnd,
 			ref.SPKind,
 			ref.Relation,
-			ref.Source,
+			string(ref.Source),
 		}, "|")
 		if _, ok := seen[key]; ok {
 			return
@@ -201,7 +201,7 @@ func overridePrimaryWithSummaryCatalogEpisode(rawTitle string, primary *model.EP
 	cp.Axis = model.EPAxisABS
 	cp.Season = ""
 	cp.Episode = normalizeEpisodeIdentity(m[1])
-	cp.Source = "summary_episode_primary"
+	cp.Source = model.EPSourceSummaryEpisodePrimary
 	return &cp
 }
 
@@ -244,7 +244,7 @@ func detectParenAbsoluteEpisodeAlternate(tokens []model.Token, primary *model.EP
 		Axis:       model.EPAxisABS,
 		Episode:    norm,
 		Relation:   "overall",
-		Source:     "paren_alt_episode",
+		Source:     model.EPSourceParenAltEpisode,
 		TokenStart: primary.TokenEnd + 1,
 		TokenEnd:   primary.TokenEnd + 2,
 	}, true
@@ -270,7 +270,7 @@ func detectSummaryCatalogEpisodeAlternate(rawTitle string, primary *model.EPRefe
 		Season:     normalizeEpisodeIdentity(m[2]),
 		Episode:    normalizeEpisodeIdentity(m[3]),
 		Relation:   "catalog",
-		Source:     "summary_catalog_paren",
+		Source:     model.EPSourceSummaryCatalogParen,
 		TokenStart: -1,
 		TokenEnd:   -1,
 	}, true
@@ -306,7 +306,7 @@ func detectParenRangeAlternateFromRaw(rawTitle string, primary *model.EPReferenc
 		RangeStart: altStart,
 		RangeEnd:   altEnd,
 		Relation:   "overall",
-		Source:     "paren_alt_range",
+		Source:     model.EPSourceParenAltRange,
 		TokenStart: -1,
 		TokenEnd:   -1,
 	}, true

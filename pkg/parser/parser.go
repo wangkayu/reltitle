@@ -1223,7 +1223,7 @@ func (p *Parser) applyEpSegRoute(st *parseState) {
 		SPKind:     st.spKind,
 		TokenStart: -1,
 		TokenEnd:   -1,
-		Source:     "group_route_override",
+		Source:     model.EPSourceGroupRouteOverride,
 	}
 	if isMarukoRoute {
 		st.epslot = newEPSlot(primary)
@@ -1267,7 +1267,7 @@ func (p *Parser) applyAPTX4869ConanRoute(st *parseState) {
 		Episode:    st.episode,
 		TokenStart: -1,
 		TokenEnd:   -1,
-		Source:     "group_route_override",
+		Source:     model.EPSourceGroupRouteOverride,
 	})
 	p.reclassify(st)
 	p.rematchTemplate(st)

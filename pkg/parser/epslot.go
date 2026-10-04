@@ -27,13 +27,13 @@ func buildEPSlotCandidates(tokens []model.Token, season string, seasonIdx int, e
 		axisSE = model.EPAxisSE
 	}
 	if strings.TrimSpace(episodeFromSxxExx) != "" && sxxExxIdx >= 0 {
-		add(model.EPEntity{Kind: model.EPKindEP, Axis: model.EPAxisSE, Season: season, Episode: episodeFromSxxExx, TokenStart: sxxExxIdx, TokenEnd: sxxExxIdx + 1, Source: "sxxexx"})
+		add(model.EPEntity{Kind: model.EPKindEP, Axis: model.EPAxisSE, Season: season, Episode: episodeFromSxxExx, TokenStart: sxxExxIdx, TokenEnd: sxxExxIdx + 1, Source: model.EPSourceSxxExx})
 	}
 	if strings.TrimSpace(episode) != "" && episodeIdx >= 0 {
-		add(model.EPEntity{Kind: model.EPKindEP, Axis: axisSE, Season: season, Episode: episode, TokenStart: episodeIdx, TokenEnd: episodeIdx + 1, Source: "episode"})
+		add(model.EPEntity{Kind: model.EPKindEP, Axis: axisSE, Season: season, Episode: episode, TokenStart: episodeIdx, TokenEnd: episodeIdx + 1, Source: model.EPSourceEpisode})
 	}
 	if strings.TrimSpace(episodeRange) != "" && episodeRangeIdx >= 0 {
-		add(model.EPEntity{Kind: model.EPKindRange, Axis: axisSE, Season: season, EpisodeRange: episodeRange, TokenStart: episodeRangeIdx, TokenEnd: episodeRangeIdx + 1, Source: "episode_range"})
+		add(model.EPEntity{Kind: model.EPKindRange, Axis: axisSE, Season: season, EpisodeRange: episodeRange, TokenStart: episodeRangeIdx, TokenEnd: episodeRangeIdx + 1, Source: model.EPSourceEpisodeRange})
 	}
 	if strings.TrimSpace(episodeList) != "" && episodeListIdx >= 0 {
 		first := strings.TrimSpace(episode)
@@ -42,14 +42,14 @@ func buildEPSlotCandidates(tokens []model.Token, season string, seasonIdx int, e
 				first = strings.TrimSpace(parts[0])
 			}
 		}
-		add(model.EPEntity{Kind: model.EPKindEPList, Axis: axisSE, Season: season, Episode: first, EpisodeList: strings.TrimSpace(episodeList), TokenStart: episodeListIdx, TokenEnd: episodeListIdx + 1, Source: "episode_list"})
+		add(model.EPEntity{Kind: model.EPKindEPList, Axis: axisSE, Season: season, Episode: first, EpisodeList: strings.TrimSpace(episodeList), TokenStart: episodeListIdx, TokenEnd: episodeListIdx + 1, Source: model.EPSourceEpisodeList})
 	}
 	if strings.TrimSpace(spKind) != "" {
 		ax := strings.ToUpper(strings.TrimSpace(spKind))
 		if ax == "" {
 			ax = "SP"
 		}
-		add(model.EPEntity{Kind: model.EPKindSP, Axis: model.EPAxis(ax), Season: season, SPKind: strings.ToUpper(strings.TrimSpace(spKind)), Source: "sp_kind"})
+		add(model.EPEntity{Kind: model.EPKindSP, Axis: model.EPAxis(ax), Season: season, SPKind: strings.ToUpper(strings.TrimSpace(spKind)), Source: model.EPSourceSPKind})
 	}
 
 	// Scan tokens for additional episode-like candidates.
@@ -72,9 +72,9 @@ func buildEPSlotCandidates(tokens []model.Token, season string, seasonIdx int, e
 			axis := model.EPAxis(strings.ToUpper(strings.TrimSpace(m[1])))
 			val := strings.TrimSpace(m[2])
 			if strings.ContainsAny(val, "-~") {
-				add(model.EPEntity{Kind: model.EPKindRange, Axis: axis, Season: season, EpisodeRange: val, TokenStart: i, TokenEnd: i + 1, Source: "tagged_range"})
+				add(model.EPEntity{Kind: model.EPKindRange, Axis: axis, Season: season, EpisodeRange: val, TokenStart: i, TokenEnd: i + 1, Source: model.EPSourceTaggedRange})
 			} else {
-				add(model.EPEntity{Kind: model.EPKindEP, Axis: axis, Season: season, Episode: strings.TrimLeft(val, "0"), TokenStart: i, TokenEnd: i + 1, Source: "tagged_ep"})
+				add(model.EPEntity{Kind: model.EPKindEP, Axis: axis, Season: season, Episode: strings.TrimLeft(val, "0"), TokenStart: i, TokenEnd: i + 1, Source: model.EPSourceTaggedEP})
 			}
 			continue
 		}
@@ -92,7 +92,7 @@ func buildEPSlotCandidates(tokens []model.Token, season string, seasonIdx int, e
 			if !shouldAcceptSPKindToken(tokens, i, k, suffix) {
 				continue
 			}
-			e := model.EPEntity{Kind: model.EPKindSP, Axis: model.EPAxis(k), Season: season, SPKind: k, TokenStart: i, TokenEnd: i + 1, Source: "sp_token"}
+			e := model.EPEntity{Kind: model.EPKindSP, Axis: model.EPAxis(k), Season: season, SPKind: k, TokenStart: i, TokenEnd: i + 1, Source: model.EPSourceSPToken}
 			if idx != "" {
 				e.Episode = idx
 			}
@@ -101,7 +101,7 @@ func buildEPSlotCandidates(tokens []model.Token, season string, seasonIdx int, e
 		}
 		// Range candidates in bracket or plain like 01-12 / 25-48.
 		if m := episodeRangePattern.FindStringSubmatch(txt); len(m) == 3 {
-			add(model.EPEntity{Kind: model.EPKindRange, Axis: axisSE, Season: season, EpisodeRange: strings.TrimSpace(txt), TokenStart: i, TokenEnd: i + 1, Source: "range_token"})
+			add(model.EPEntity{Kind: model.EPKindRange, Axis: axisSE, Season: season, EpisodeRange: strings.TrimSpace(txt), TokenStart: i, TokenEnd: i + 1, Source: model.EPSourceRangeToken})
 			continue
 		}
 		// Single episode digits (often in brackets). Keep it conservative.
@@ -182,7 +182,7 @@ func buildEPSlotCandidates(tokens []model.Token, season string, seasonIdx int, e
 			if nn == "" {
 				nn = "0"
 			}
-			add(model.EPEntity{Kind: model.EPKindEP, Axis: axisSE, Season: season, Episode: nn, TokenStart: i, TokenEnd: i + 1, Source: "ep_digit_token"})
+			add(model.EPEntity{Kind: model.EPKindEP, Axis: axisSE, Season: season, Episode: nn, TokenStart: i, TokenEnd: i + 1, Source: model.EPSourceEPDigitToken})
 			continue
 		}
 	}

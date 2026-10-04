@@ -77,9 +77,9 @@ func canonicalEPAxis(res *model.ParseResult) string {
 func canonicalEPSource(res *model.ParseResult) string {
 	if sem := canonicalEPSemantics(res); sem != nil {
 		if sem.Primary != nil {
-			return strings.TrimSpace(sem.Primary.Source)
+			return strings.TrimSpace(string(sem.Primary.Source))
 		}
-		return strings.TrimSpace(sem.Source)
+		return strings.TrimSpace(string(sem.Source))
 	}
 	return ""
 }

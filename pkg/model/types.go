@@ -26,6 +26,11 @@ type ContentKind string
 // AudioSource* constants for the full set.
 type AudioSource string
 
+// EPSource names the pipeline stage that produced an episode conclusion
+// (EPEntity, EPReference, and the EPSemantics legacy mirror). See the
+// EPSource* constants for the full set.
+type EPSource string
+
 // Attribute is one recognized piece of a release title: a typed, normalized
 // value with the token span it came from, a heuristic confidence, and the
 // pipeline stage that produced it (Source, e.g. "lexicon", "canonical",
@@ -79,7 +84,7 @@ type EPReference struct {
 	RangeEnd    string   `json:"range_end,omitempty"`
 	SPKind      string   `json:"sp_kind,omitempty"`
 	Relation    string   `json:"relation,omitempty"` // overall | catalog | alt_cut | etc
-	Source      string   `json:"source,omitempty"`
+	Source      EPSource `json:"source,omitempty"`
 
 	TokenStart int `json:"-"`
 	TokenEnd   int `json:"-"`
@@ -102,7 +107,7 @@ type EPSemantics struct {
 	RangeStart  string   `json:"-"`
 	RangeEnd    string   `json:"-"`
 	SPKind      string   `json:"-"`
-	Source      string   `json:"-"`
+	Source      EPSource `json:"-"`
 }
 
 // EPSlot is the internal, pre-output form of EPSemantics used while the
@@ -116,16 +121,16 @@ type EPSlot struct {
 // stable, so we can support composite epslot without encoding semantics into
 // Attribute.Normalized strings.
 type EPEntity struct {
-	Kind         EPKind `json:"kind,omitempty"` // EP | EP_LIST | RANGE | SP
-	Axis         EPAxis `json:"axis,omitempty"` // SE | ABS | TV | OVA | SP | UNKNOWN
-	Season       string `json:"season,omitempty"`
-	Episode      string `json:"episode,omitempty"`
-	EpisodeRange string `json:"episode_range,omitempty"`
-	EpisodeList  string `json:"episode_list,omitempty"` // comma-separated list, e.g. "804,805"
-	SPKind       string `json:"sp_kind,omitempty"`      // OVA/OAD/ONA/EX/SP
-	TokenStart   int    `json:"token_start,omitempty"`
-	TokenEnd     int    `json:"token_end,omitempty"`
-	Source       string `json:"source,omitempty"` // sxxexx/episode/episode_range/sp_kind/etc
+	Kind         EPKind   `json:"kind,omitempty"` // EP | EP_LIST | RANGE | SP
+	Axis         EPAxis   `json:"axis,omitempty"` // SE | ABS | TV | OVA | SP | UNKNOWN
+	Season       string   `json:"season,omitempty"`
+	Episode      string   `json:"episode,omitempty"`
+	EpisodeRange string   `json:"episode_range,omitempty"`
+	EpisodeList  string   `json:"episode_list,omitempty"` // comma-separated list, e.g. "804,805"
+	SPKind       string   `json:"sp_kind,omitempty"`      // OVA/OAD/ONA/EX/SP
+	TokenStart   int      `json:"token_start,omitempty"`
+	TokenEnd     int      `json:"token_end,omitempty"`
+	Source       EPSource `json:"source,omitempty"` // sxxexx/episode/episode_range/sp_kind/etc
 }
 
 // AudioSlot is the recognized set of audio tracks on the release.
@@ -247,6 +252,41 @@ const (
 // against the AudioSource* constants.
 func (s AudioSource) Canonical() AudioSource {
 	return AudioSource(strings.ToLower(strings.TrimSpace(string(s))))
+}
+
+const (
+	EPSourceSxxExx             EPSource = "sxxexx"
+	EPSourceEpisode            EPSource = "episode"
+	EPSourceEpisodeList        EPSource = "episode_list"
+	EPSourceEpisodeRange       EPSource = "episode_range"
+	EPSourceSPKind             EPSource = "sp_kind"
+	EPSourceSPToken            EPSource = "sp_token"
+	EPSourceTaggedEP           EPSource = "tagged_ep"
+	EPSourceTaggedRange        EPSource = "tagged_range"
+	EPSourceRangeToken         EPSource = "range_token"
+	EPSourceEPDigitToken       EPSource = "ep_digit_token"
+	EPSourceCanonical          EPSource = "canonical"
+	EPSourceGroupRouteOverride EPSource = "group_route_override"
+
+	EPSourceSxxExxFinal       EPSource = "sxxexx_final"
+	EPSourceEpisodeFinal      EPSource = "episode_final"
+	EPSourceEpisodeListFinal  EPSource = "episode_list_final"
+	EPSourceEpisodeRangeFinal EPSource = "episode_range_final"
+	EPSourceTaggedEPFinal     EPSource = "tagged_ep_final"
+	EPSourceTaggedRangeFinal  EPSource = "tagged_range_final"
+	EPSourceSPKindFinal       EPSource = "sp_kind_final"
+
+	EPSourceParenAltEpisode       EPSource = "paren_alt_episode"
+	EPSourceParenAltRange         EPSource = "paren_alt_range"
+	EPSourceSummaryCatalogParen   EPSource = "summary_catalog_paren"
+	EPSourceSummaryEpisodePrimary EPSource = "summary_episode_primary"
+)
+
+// Canonical returns the normalized form of s: trimmed and lowercased. Source
+// values are lowercase snake_case by convention; compare with Canonical
+// against the EPSource* constants.
+func (s EPSource) Canonical() EPSource {
+	return EPSource(strings.ToLower(strings.TrimSpace(string(s))))
 }
 
 // Canonical returns the normalized form of c: trimmed and uppercased. Values

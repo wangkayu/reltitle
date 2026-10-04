@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	"title-parser/pkg/model"
+	"reltitle/pkg/model"
 )
 
 var parenSummaryAltSxxExxPattern = regexp.MustCompile(`(?i)(\d{1,4}(?:\.\d{1,2})?)\s*(?:总集篇|總集篇|总集|總集|recap|special)\s*[\(（]\s*S0*(\d{1,2})E0*(\d{1,4})\s*[\)）]`)

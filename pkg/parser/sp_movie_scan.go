@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	"title-parser/pkg/config"
-	"title-parser/pkg/model"
+	"reltitle/pkg/config"
+	"reltitle/pkg/model"
 )
 
 func (p *Parser) inferTailAliasesFromPipes(tokens []model.Token, attrs []model.Attribute, group string) []string {

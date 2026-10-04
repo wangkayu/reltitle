@@ -4,7 +4,7 @@ import (
 	"sort"
 	"strings"
 
-	"title-parser/pkg/model"
+	"reltitle/pkg/model"
 )
 
 func normalizePackPlusMarker(s string) (string, bool) {

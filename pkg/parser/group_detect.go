@@ -4,8 +4,8 @@ import (
 	"regexp"
 	"strings"
 
-	"title-parser/pkg/model"
-	"title-parser/pkg/tokenize"
+	"reltitle/pkg/model"
+	"reltitle/pkg/tokenize"
 )
 
 func (p *Parser) inferAliasesFromAdjacentBrackets(tokens []model.Token, titleEnd int, episodeIdx int, episodeRangeIdx int) []string {

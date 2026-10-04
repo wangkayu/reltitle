@@ -3,8 +3,8 @@ package parser
 import (
 	"testing"
 
-	"title-parser/pkg/config"
-	"title-parser/pkg/model"
+	"reltitle/pkg/config"
+	"reltitle/pkg/model"
 )
 
 func TestParserPlatformPriority_BSTXBeatsTX(t *testing.T) {

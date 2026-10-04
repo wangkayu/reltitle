@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"title-parser/pkg/model"
+	"reltitle/pkg/model"
 )
 
 var specialIndexTokenPattern = regexp.MustCompile(`(?i)^(es|sp|ova|oad|ona|ex|ncop|nced|pv)0*(\d{1,3})$`)

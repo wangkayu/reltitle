@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	"title-parser/pkg/model"
+	"reltitle/pkg/model"
 )
 
 var bracketStandaloneMIndexPattern = regexp.MustCompile(`(?i)^m0*(\d{1,3})$`)

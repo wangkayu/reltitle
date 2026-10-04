@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"title-parser/pkg/model"
-	"title-parser/pkg/tokenize"
+	"reltitle/pkg/model"
+	"reltitle/pkg/tokenize"
 )
 
 func decisionTokens(raw string) []model.Token {

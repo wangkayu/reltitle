@@ -4,8 +4,8 @@ import (
 	"regexp"
 	"strings"
 
-	"title-parser/pkg/config"
-	"title-parser/pkg/model"
+	"reltitle/pkg/config"
+	"reltitle/pkg/model"
 )
 
 var (

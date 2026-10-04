@@ -3,7 +3,7 @@ package parser
 import (
 	"testing"
 
-	"title-parser/pkg/model"
+	"reltitle/pkg/model"
 )
 
 func TestPromoteNoteAttributes(t *testing.T) {

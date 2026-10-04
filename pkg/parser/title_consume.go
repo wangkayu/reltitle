@@ -4,7 +4,7 @@ import (
 	"strings"
 	"unicode"
 
-	"title-parser/pkg/model"
+	"reltitle/pkg/model"
 )
 
 func hasTechAttr(attrs []model.Attribute) bool {

@@ -5,8 +5,8 @@ import (
 	"strings"
 	"unicode"
 
-	"title-parser/pkg/model"
-	"title-parser/pkg/tokenize"
+	"reltitle/pkg/model"
+	"reltitle/pkg/tokenize"
 )
 
 func extractVersionAttrsAndRemoveFromTokens(tokens []model.Token, out *[]model.Attribute) string {

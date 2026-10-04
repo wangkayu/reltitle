@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	"title-parser/pkg/model"
+	"reltitle/pkg/model"
 )
 
 func isInBracket(tokens []model.Token, idx int) bool {

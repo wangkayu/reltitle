@@ -1,4 +1,4 @@
-module title-parser
+module reltitle
 
 go 1.22
 

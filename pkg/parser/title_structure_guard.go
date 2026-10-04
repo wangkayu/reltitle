@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	"title-parser/pkg/model"
+	"reltitle/pkg/model"
 )
 
 // protectTitleLeadingDigits marks a lone digit token at the START of the title

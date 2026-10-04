@@ -1,8 +1,8 @@
 package parser
 
 import (
+	"reltitle/pkg/config"
 	"testing"
-	"title-parser/pkg/config"
 )
 
 func TestGroupKnowledge(t *testing.T) {

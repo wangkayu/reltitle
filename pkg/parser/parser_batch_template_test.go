@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"title-parser/pkg/config"
-	"title-parser/pkg/model"
+	"reltitle/pkg/config"
+	"reltitle/pkg/model"
 )
 
 func TestParserBatchSourceType_BDRipPack(t *testing.T) {

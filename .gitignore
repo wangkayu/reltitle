@@ -2,7 +2,7 @@
 /bin/
 /dist/
 /parse
-/title-parser
+/reltitle
 *.test
 *.tar.gz
 *.zip

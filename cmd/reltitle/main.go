@@ -8,8 +8,8 @@ import (
 	"os"
 	"strings"
 
-	"title-parser/pkg/config"
-	"title-parser/pkg/parser"
+	"reltitle/pkg/config"
+	"reltitle/pkg/parser"
 )
 
 func main() {

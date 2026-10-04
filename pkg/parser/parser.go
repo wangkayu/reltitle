@@ -7,9 +7,9 @@ import (
 	"sort"
 	"strings"
 
-	"title-parser/pkg/config"
-	"title-parser/pkg/model"
-	"title-parser/pkg/tokenize"
+	"reltitle/pkg/config"
+	"reltitle/pkg/model"
+	"reltitle/pkg/tokenize"
 )
 
 type Parser struct {

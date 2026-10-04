@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	"title-parser/pkg/model"
+	"reltitle/pkg/model"
 )
 
 var reGroupSlot2PlatformCompactFilter = regexp.MustCompile(`(?i)[^a-z0-9\p{Han}]`)

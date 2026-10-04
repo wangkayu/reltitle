@@ -3,7 +3,7 @@ package parser
 import (
 	"strings"
 
-	"title-parser/pkg/model"
+	"reltitle/pkg/model"
 )
 
 func passExtractTagCodeAudioLang(tokens []model.Token, attrs *[]model.Attribute, ctx *parseContext) {

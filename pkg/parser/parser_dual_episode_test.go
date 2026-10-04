@@ -3,7 +3,7 @@ package parser
 import (
 	"testing"
 
-	"title-parser/pkg/config"
+	"reltitle/pkg/config"
 )
 
 func TestParserDualEpisode_SeasonEpisodeWithParenAbsolute(t *testing.T) {

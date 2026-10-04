@@ -3,7 +3,7 @@ package parser
 import (
 	"testing"
 
-	"title-parser/pkg/config"
+	"reltitle/pkg/config"
 )
 
 func TestParserEpisodeRange_PlainDashAfterTitleDelimiter(t *testing.T) {

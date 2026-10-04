@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	"title-parser/pkg/model"
+	"reltitle/pkg/model"
 )
 
 func extractTechAudioSlotAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Attribute, audioCodecCanonical map[string]string) *model.AudioSlot {

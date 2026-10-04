@@ -1,6 +1,6 @@
 package parser
 
-import "title-parser/pkg/model"
+import "reltitle/pkg/model"
 
 type parseContext struct {
 	RawTitle        string

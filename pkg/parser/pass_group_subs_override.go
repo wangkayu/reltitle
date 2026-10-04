@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	"title-parser/pkg/model"
+	"reltitle/pkg/model"
 )
 
 var subsX2TokenPattern = regexp.MustCompile(`(?i)^(ass|srt)x2$`)

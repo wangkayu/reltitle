@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"title-parser/pkg/model"
+	"reltitle/pkg/model"
 )
 
 func shouldDropEpisodeRangeForMovieRange(rawTitle string, movieIndexRange string, episode string, episodeRange string) bool {

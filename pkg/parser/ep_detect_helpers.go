@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"title-parser/pkg/model"
+	"reltitle/pkg/model"
 )
 
 var dashSeasonEpisodePattern = regexp.MustCompile(`^\d{1,2}$`)

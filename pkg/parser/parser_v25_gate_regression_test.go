@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"title-parser/pkg/config"
+	"reltitle/pkg/config"
 )
 
 func TestParserV25GateRegression_AliasMetaCleanup(t *testing.T) {

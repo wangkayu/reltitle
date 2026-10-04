@@ -6,8 +6,8 @@ import (
 	"strings"
 	"unicode"
 
-	"title-parser/pkg/model"
-	"title-parser/pkg/tokenize"
+	"reltitle/pkg/model"
+	"reltitle/pkg/tokenize"
 )
 
 func mergeConsecutiveLatin(parts []string) []string {

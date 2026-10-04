@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"title-parser/pkg/config"
+	"reltitle/pkg/config"
 )
 
 func TestParserSPEPPolicy_Matrix(t *testing.T) {

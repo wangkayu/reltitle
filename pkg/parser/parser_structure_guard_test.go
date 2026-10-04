@@ -3,9 +3,9 @@ package parser
 import (
 	"testing"
 
-	"title-parser/pkg/config"
-	"title-parser/pkg/model"
-	"title-parser/pkg/tokenize"
+	"reltitle/pkg/config"
+	"reltitle/pkg/model"
+	"reltitle/pkg/tokenize"
 )
 
 // Structure guard tests: protectTitleFractionSpans must recognize "N/N"

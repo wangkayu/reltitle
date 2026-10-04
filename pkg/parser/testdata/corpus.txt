@@ -402,3 +402,32 @@ Some Show S01 1080p WEB-DL H264 AAC
 [Group] 某某作品 / Some Title - 08 [1080p][简日双语]
 [Group] Some Show - 05.5 [1080p]
 [Group] Some Show S01E01-E12 [1080p]
+#
+# --- extra coverage: branches the regression tests did not reach ---
+# LoliHouse ASSx2/SRTx2 soft-sub markers (and a non-LoliHouse control)
+[LoliHouse] Some Show - 05 [WebRip 1080p HEVC-10bit AAC][ASSx2]
+[LoliHouse] Some Show - 06 [WebRip 1080p HEVC-10bit AAC][SRTx2]
+[LoliHouse] Some Show - 07 (SRTx2) [WebRip 1080p HEVC-10bit AAC]
+[Group] Some Show - 05 [WebRip 1080p HEVC-10bit AAC][ASSx2]
+# star-wrapped leading notices
+★1月新番★ [Group] Some Show - 03 [1080p]
+☆4月新番☆[Group] 某作品 - 08 [1080p][CHS]
+★招募中★ [Group] Some Show - 01 [1080p]
+# episode axis from the surrounding tokens
+[Group] 某作品 第05集 [1080p]
+[Group] 某作品 第5话 [1080p][CHS]
+[Group] 某作品 05话 [1080p]
+[Group] Some Show EP05 [1080p]
+[Group] Some Show Episode 05 [1080p]
+[Group] Some Show [05/12][1080p]
+[Group] Some Show - [05/12] [1080p]
+# pack contents lists
+[Group] 某作品：TV动画 (2009年版)+剧场版+ONA篇+小说+漫画+音乐会+CD+其他；日语音轨; 外挂简中字幕 [BDRip 1080p]
+[Group] 某作品：TV动画+剧场版+OVA；日语音轨；简中字幕 [BDRip 1080p]
+# tagged TV ranges and summary specials
+[Group] Some Show [TV01-25Fin][BDRip 1080p]
+[Group] Some Show [TV 01 - 101Fin][BDRip 1080p]
+[Group] Some Show [TV 01 - 26][BDRip 1080p]
+# NOTE: currently episode=12 (the .5 is dropped); passDetectEpisodeRangeAndEpisode's comment says ABS:12.5 is intended
+[Group] Some Show [总集篇01_12.5][1080p]
+[Group] Some Show [总集篇02_13][1080p]

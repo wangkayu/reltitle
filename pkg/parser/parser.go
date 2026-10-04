@@ -485,7 +485,10 @@ func buildTypeCanonicalMap(cfg *config.Config, targetType string) map[string]str
 			out[key] = cc
 		}
 	}
-	for raw, canonical := range readNestedStringMap(cfg.DictCanonicalValues.Canonical, "mappings", targetKey+"_aliases") {
+	aliases := readNestedStringMap(cfg.DictCanonicalValues.Canonical, "mappings", targetKey+"_aliases")
+	// Iterate in key order so colliding entries resolve the same way on every run.
+	for _, raw := range sortedKeys(aliases) {
+		canonical := aliases[raw]
 		rr := strings.ToLower(strings.TrimSpace(raw))
 		cc := strings.TrimSpace(canonical)
 		if rr == "" || cc == "" {
@@ -499,12 +502,23 @@ func buildTypeCanonicalMap(cfg *config.Config, targetType string) map[string]str
 	return out
 }
 
+func sortedKeys(m map[string]string) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
 func buildPackKindSourceTypeMap(cfg *config.Config) map[string]string {
 	out := make(map[string]string)
 	if cfg == nil {
 		return out
 	}
-	for raw, canonical := range readNestedStringMap(cfg.DictCanonicalValues.Canonical, "mappings", "pack_kind_to_source_type") {
+	mappings := readNestedStringMap(cfg.DictCanonicalValues.Canonical, "mappings", "pack_kind_to_source_type")
+	for _, raw := range sortedKeys(mappings) {
+		canonical := mappings[raw]
 		rr := strings.ToLower(strings.TrimSpace(raw))
 		cc := strings.TrimSpace(canonical)
 		if rr == "" || cc == "" {

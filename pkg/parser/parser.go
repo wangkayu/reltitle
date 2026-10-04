@@ -1299,7 +1299,6 @@ func (p *Parser) canonicalizeAttributes(st *parseState) {
 // data that does not belong to the content kind.
 func (p *Parser) finalizeEpisodeSignals(st *parseState) {
 	st.epslot = syncEPSlotWithCanonicalSignals(st.epslot, st.season, st.episode, st.episodeRange, st.episodeList, st.spKind, st.episodeIdx, st.episodeRangeIdx, st.ctx.EpisodeListIdx)
-	st.epslot = adjudicateEPSlotPrimaryAxis(st.epslot, st.tokens, st.season)
 	st.epslot = pruneBatchEPSlotForConservativeOutput(st.epslot, st.contentKind, st.episode, st.episodeRange, st.spKind)
 	if shouldPreferSPPrimaryForSpecial(st.contentKind, st.spKind, st.epslot) {
 		st.episode = ""

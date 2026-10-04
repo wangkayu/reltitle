@@ -14,6 +14,10 @@ var bracketInlineMovieRangePattern = regexp.MustCompile(`(?i)\b(?:movie|film)\s*
 var bracketInlineMovieIndexPattern = regexp.MustCompile(`(?i)\b(?:movie|film)\s*0*(\d{1,3})\b`)
 var bracketInlineMovieRangeCapturePattern = regexp.MustCompile(`(?i)\b(?:movie|film)\s*0*(\d{1,3})\s*[-~]\s*0*(\d{1,3})\b`)
 
+// extractBracketTitleAliasesAndRemoveFromTokens scans the leading bracket blocks
+// before the tech section: the blocks become the main title and alias candidates,
+// and the consumed tokens are marked Removed. Returns the main title, aliases,
+// and the token span of the main title block.
 func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Attribute, aliasValid func(string) bool) (string, []string, int, int) {
 	if len(tokens) == 0 {
 		return "", nil, -1, -1
@@ -36,18 +40,6 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 			bestGroupConf = a.Confidence
 			groupText = g
 		}
-	}
-	compactKey := func(s string) string {
-		s = strings.TrimSpace(s)
-		if s == "" {
-			return ""
-		}
-		s = strings.ToLower(s)
-		s = strings.ReplaceAll(s, " ", "")
-		s = strings.ReplaceAll(s, "&", "")
-		s = strings.ReplaceAll(s, "-", "")
-		s = strings.ReplaceAll(s, "_", "")
-		return s
 	}
 
 	techStart, hasTechStart := firstTechTokenIndexFromAttrs(*attrs)
@@ -75,435 +67,466 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 		start = 0
 	}
 
-	normalizeDigitRange := func(s string) string {
-		s = strings.TrimSpace(s)
-		if s == "" {
-			return ""
-		}
-		s = reExtractBracketTitleAliasesAndRemoveFromTokens1.ReplaceAllString(s, "$1-$2")
-		s = reExtractBracketTitleAliasesAndRemoveFromTokens2.ReplaceAllString(s, " ")
-		return strings.TrimSpace(s)
-	}
+	searchHintAliases := findBracketSearchHintAliases(tokens, attrs)
 
-	parseStandaloneMovieIndex := func(s string) (string, bool) {
-		s = strings.TrimSpace(s)
-		if s == "" {
-			return "", false
+	blocks := scanBracketTitleBlocks(tokens, attrs, start, techStart, groupText)
+	if len(blocks) < 2 {
+		return "", searchHintAliases, -1, -1
+	}
+	return selectBracketMainAndAliases(tokens, attrs, aliasValid, blocks, searchHintAliases)
+}
+
+// bracketAliasCompactKey folds a string for comparison: lowercase, no spaces,
+// no "&", "-" or "_". Used to tell the group block apart from title blocks.
+func bracketAliasCompactKey(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return ""
+	}
+	s = strings.ToLower(s)
+	s = strings.ReplaceAll(s, " ", "")
+	s = strings.ReplaceAll(s, "&", "")
+	s = strings.ReplaceAll(s, "-", "")
+	s = strings.ReplaceAll(s, "_", "")
+	return s
+}
+
+func normalizeBracketDigitRange(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return ""
+	}
+	s = reExtractBracketTitleAliasesAndRemoveFromTokens1.ReplaceAllString(s, "$1-$2")
+	s = reExtractBracketTitleAliasesAndRemoveFromTokens2.ReplaceAllString(s, " ")
+	return strings.TrimSpace(s)
+}
+
+func parseBracketStandaloneMovieIndex(s string) (string, bool) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return "", false
+	}
+	if strings.ContainsAny(s, "+-/~") {
+		return "", false
+	}
+	if m := bracketStandaloneMIndexPattern.FindStringSubmatch(s); len(m) == 2 {
+		n := strings.TrimLeft(strings.TrimSpace(m[1]), "0")
+		if n == "" {
+			n = "0"
 		}
-		if strings.ContainsAny(s, "+-/~") {
-			return "", false
+		return n, true
+	}
+	if m := bracketStandaloneMovieIndexPattern.FindStringSubmatch(s); len(m) == 2 {
+		n := strings.TrimLeft(strings.TrimSpace(m[1]), "0")
+		if n == "" {
+			n = "0"
 		}
-		if m := bracketStandaloneMIndexPattern.FindStringSubmatch(s); len(m) == 2 {
-			n := strings.TrimLeft(strings.TrimSpace(m[1]), "0")
-			if n == "" {
-				n = "0"
-			}
+		return n, true
+	}
+	return "", false
+}
+
+func parseBracketInlineMovieIndex(s string) (string, bool) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return "", false
+	}
+	if bracketInlineMovieRangePattern.MatchString(s) {
+		return "", false
+	}
+	if m := bracketInlineMovieIndexPattern.FindStringSubmatch(s); len(m) == 2 {
+		n := strings.TrimLeft(strings.TrimSpace(m[1]), "0")
+		if n == "" {
+			n = "0"
+		}
+		if n != "0" {
 			return n, true
 		}
-		if m := bracketStandaloneMovieIndexPattern.FindStringSubmatch(s); len(m) == 2 {
-			n := strings.TrimLeft(strings.TrimSpace(m[1]), "0")
-			if n == "" {
-				n = "0"
-			}
+	}
+	return "", false
+}
+
+func parseBracketInlineMovieIndexRange(s string) (string, bool) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return "", false
+	}
+	m := bracketInlineMovieRangeCapturePattern.FindStringSubmatch(s)
+	if len(m) != 3 {
+		return "", false
+	}
+	left, ok := parseMovieRangeDigits(m[1], m[2])
+	if !ok {
+		return "", false
+	}
+	return left, true
+}
+
+func parseBracketContextualNumericMovieIndex(s string, hasMovieContext bool) (string, bool) {
+	if !hasMovieContext {
+		return "", false
+	}
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return "", false
+	}
+	if strings.ContainsAny(s, "+-/~") {
+		return "", false
+	}
+	if m := bracketStandaloneNumericIndexPattern.FindStringSubmatch(s); len(m) == 2 {
+		n := strings.TrimLeft(strings.TrimSpace(m[1]), "0")
+		if n == "" {
+			n = "0"
+		}
+		if n != "0" {
 			return n, true
 		}
-		return "", false
 	}
+	return "", false
+}
 
-	parseInlineMovieIndex := func(s string) (string, bool) {
-		s = strings.TrimSpace(s)
-		if s == "" {
-			return "", false
-		}
-		if bracketInlineMovieRangePattern.MatchString(s) {
-			return "", false
-		}
-		if m := bracketInlineMovieIndexPattern.FindStringSubmatch(s); len(m) == 2 {
-			n := strings.TrimLeft(strings.TrimSpace(m[1]), "0")
-			if n == "" {
-				n = "0"
-			}
-			if n != "0" {
-				return n, true
-			}
-		}
-		return "", false
-	}
-
-	parseInlineMovieIndexRange := func(s string) (string, bool) {
-		s = strings.TrimSpace(s)
-		if s == "" {
-			return "", false
-		}
-		m := bracketInlineMovieRangeCapturePattern.FindStringSubmatch(s)
-		if len(m) != 3 {
-			return "", false
-		}
-		left, ok := parseMovieRangeDigits(m[1], m[2])
-		if !ok {
-			return "", false
-		}
-		return left, true
-	}
-
-	parseContextualNumericMovieIndex := func(s string, hasMovieContext bool) (string, bool) {
-		if !hasMovieContext {
-			return "", false
-		}
-		s = strings.TrimSpace(s)
-		if s == "" {
-			return "", false
-		}
-		if strings.ContainsAny(s, "+-/~") {
-			return "", false
-		}
-		if m := bracketStandaloneNumericIndexPattern.FindStringSubmatch(s); len(m) == 2 {
-			n := strings.TrimLeft(strings.TrimSpace(m[1]), "0")
-			if n == "" {
-				n = "0"
-			}
-			if n != "0" {
-				return n, true
-			}
-		}
-		return "", false
-	}
-
-	hasMovieKeyword := func(s string) bool {
-		s = strings.TrimSpace(s)
-		if s == "" {
-			return false
-		}
-		if bracketInlineMovieIndexPattern.FindStringIndex(s) != nil {
-			return true
-		}
-		if strings.Contains(s, "劇場版") || strings.Contains(s, "剧场版") || strings.Contains(s, "映画") || strings.Contains(s, "大电影") || strings.Contains(s, "大電影") {
-			return true
-		}
+func hasBracketMovieKeyword(s string) bool {
+	s = strings.TrimSpace(s)
+	if s == "" {
 		return false
 	}
+	if bracketInlineMovieIndexPattern.FindStringIndex(s) != nil {
+		return true
+	}
+	if strings.Contains(s, "劇場版") || strings.Contains(s, "剧场版") || strings.Contains(s, "映画") || strings.Contains(s, "大电影") || strings.Contains(s, "大電影") {
+		return true
+	}
+	return false
+}
 
-	containsEpisodeMarker := func(s string) bool {
-		s = strings.TrimSpace(s)
-		if s == "" {
-			return false
-		}
-		if reExtractBracketTitleAliasesAndRemoveFromTokens3.MatchString(s) {
-			return true
-		}
-		// Batch range forms should stay in token stream for episode_range detection.
-		// Examples: "01-24TV全集", "01-12 全集", "01-12FIN", "01-12TV全集+SP+特典映像".
-		if reExtractBracketTitleAliasesAndRemoveFromTokens4.MatchString(s) {
-			return true
-		}
-		// Multi-episode list forms: "804&805", "07+08".
-		if reExtractBracketTitleAliasesAndRemoveFromTokens5.MatchString(s) {
-			return true
-		}
-		// Any embedded episode marker like "第687集" (even with extra words) should be kept
-		// for episode detection and should not be used as main title/alias.
-		if reExtractBracketTitleAliasesAndRemoveFromTokens6.FindStringIndex(s) != nil {
-			return true
-		}
-		// Summary/special blocks like "总集篇01_12.5" should be treated as episode markers.
-		// Tokenizer may split it into "总集篇01_12 . 5".
-		if reExtractBracketTitleAliasesAndRemoveFromTokens7.FindStringIndex(s) != nil {
-			return true
-		}
-		// Dual episode markers like "01(73)" / "S01E01(13)" / "01-10(17-26)" should stay
-		// in the token stream for later EP adjudication.
-		if reExtractBracketTitleAliasesAndRemoveFromTokens8.MatchString(s) {
-			return true
-		}
-		// Tagged TV ranges like "TV01-25Fin" should be treated as episode/range markers.
-		if reExtractBracketTitleAliasesAndRemoveFromTokens9.FindStringIndex(s) != nil {
-			return true
-		}
-		if reExtractBracketTitleAliasesAndRemoveFromTokens10.FindStringIndex(s) != nil {
-			return true
-		}
-		if reExtractBracketTitleAliasesAndRemoveFromTokens11.FindStringIndex(s) != nil {
-			return true
-		}
+func bracketContainsEpisodeMarker(s string) bool {
+	s = strings.TrimSpace(s)
+	if s == "" {
 		return false
 	}
+	if reExtractBracketTitleAliasesAndRemoveFromTokens3.MatchString(s) {
+		return true
+	}
+	// Batch range forms should stay in token stream for episode_range detection.
+	// Examples: "01-24TV全集", "01-12 全集", "01-12FIN", "01-12TV全集+SP+特典映像".
+	if reExtractBracketTitleAliasesAndRemoveFromTokens4.MatchString(s) {
+		return true
+	}
+	// Multi-episode list forms: "804&805", "07+08".
+	if reExtractBracketTitleAliasesAndRemoveFromTokens5.MatchString(s) {
+		return true
+	}
+	// Any embedded episode marker like "第687集" (even with extra words) should be kept
+	// for episode detection and should not be used as main title/alias.
+	if reExtractBracketTitleAliasesAndRemoveFromTokens6.FindStringIndex(s) != nil {
+		return true
+	}
+	// Summary/special blocks like "总集篇01_12.5" should be treated as episode markers.
+	// Tokenizer may split it into "总集篇01_12 . 5".
+	if reExtractBracketTitleAliasesAndRemoveFromTokens7.FindStringIndex(s) != nil {
+		return true
+	}
+	// Dual episode markers like "01(73)" / "S01E01(13)" / "01-10(17-26)" should stay
+	// in the token stream for later EP adjudication.
+	if reExtractBracketTitleAliasesAndRemoveFromTokens8.MatchString(s) {
+		return true
+	}
+	// Tagged TV ranges like "TV01-25Fin" should be treated as episode/range markers.
+	if reExtractBracketTitleAliasesAndRemoveFromTokens9.FindStringIndex(s) != nil {
+		return true
+	}
+	if reExtractBracketTitleAliasesAndRemoveFromTokens10.FindStringIndex(s) != nil {
+		return true
+	}
+	if reExtractBracketTitleAliasesAndRemoveFromTokens11.FindStringIndex(s) != nil {
+		return true
+	}
+	return false
+}
 
-	isLikelyTechLike := func(s string) bool {
-		low := strings.ToLower(strings.TrimSpace(s))
-		if low == "" {
-			return false
-		}
-		if hasCJK(s) || hasLatin(s) {
-		} else {
-			if isLikelyMetaBracketText(s) {
-				return true
-			}
-		}
-		if strings.Contains(low, "webrip") || strings.Contains(low, "web-dl") || strings.Contains(low, "webdl") {
-			return true
-		}
-		if strings.Contains(low, "hevc") || strings.Contains(low, "x265") || strings.Contains(low, "h265") || strings.Contains(low, "x264") || strings.Contains(low, "h264") || strings.Contains(low, "avc") {
-			return true
-		}
-		if strings.Contains(low, "8bit") || strings.Contains(low, "10bit") || strings.Contains(low, "bit") {
-			return true
-		}
-		if reExtractBracketTitleAliasesAndRemoveFromTokens12.MatchString(s) {
-			return true
-		}
-		if reExtractBracketTitleAliasesAndRemoveFromTokens13.MatchString(s) {
-			return true
-		}
+func isLikelyBracketTechLike(s string) bool {
+	low := strings.ToLower(strings.TrimSpace(s))
+	if low == "" {
 		return false
 	}
+	if hasCJK(s) || hasLatin(s) {
+	} else {
+		if isLikelyMetaBracketText(s) {
+			return true
+		}
+	}
+	if strings.Contains(low, "webrip") || strings.Contains(low, "web-dl") || strings.Contains(low, "webdl") {
+		return true
+	}
+	if strings.Contains(low, "hevc") || strings.Contains(low, "x265") || strings.Contains(low, "h265") || strings.Contains(low, "x264") || strings.Contains(low, "h264") || strings.Contains(low, "avc") {
+		return true
+	}
+	if strings.Contains(low, "8bit") || strings.Contains(low, "10bit") || strings.Contains(low, "bit") {
+		return true
+	}
+	if reExtractBracketTitleAliasesAndRemoveFromTokens12.MatchString(s) {
+		return true
+	}
+	if reExtractBracketTitleAliasesAndRemoveFromTokens13.MatchString(s) {
+		return true
+	}
+	return false
+}
 
-	looksLikeEpOnly := func(s string) bool {
-		s = strings.TrimSpace(s)
-		if s == "" {
-			return false
+func looksLikeBracketEpOnly(s string) bool {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return false
+	}
+	if reExtractBracketTitleAliasesAndRemoveFromTokens14.MatchString(s) {
+		return true
+	}
+	if reExtractBracketTitleAliasesAndRemoveFromTokens15.MatchString(s) {
+		return true
+	}
+	// Composite EP + special index like "07+ES07" / "07 + ES07".
+	if reExtractBracketTitleAliasesAndRemoveFromTokens16.MatchString(s) {
+		return true
+	}
+	// Standalone special index like "ES07".
+	if reExtractBracketTitleAliasesAndRemoveFromTokens17.MatchString(s) {
+		return true
+	}
+	if reExtractBracketTitleAliasesAndRemoveFromTokens18.MatchString(s) {
+		return true
+	}
+	if reExtractBracketTitleAliasesAndRemoveFromTokens19.MatchString(s) {
+		return true
+	}
+	if reExtractBracketTitleAliasesAndRemoveFromTokens20.MatchString(s) {
+		return true
+	}
+	if reExtractBracketTitleAliasesAndRemoveFromTokens21.MatchString(s) {
+		return true
+	}
+	if episodeOfTotalPattern.MatchString(s) {
+		return true
+	}
+	if episodeRangePattern.MatchString(normalizeBracketDigitRange(s)) {
+		return true
+	}
+	if reExtractBracketTitleAliasesAndRemoveFromTokens22.MatchString(s) {
+		return true
+	}
+	if reExtractBracketTitleAliasesAndRemoveFromTokens23.MatchString(s) {
+		return true
+	}
+	// Patterns like "01_标题" are often episode markers. Keep this strict (underscore only)
+	// to avoid misclassifying titles like "86 - 不存在的战区".
+	if m := reExtractBracketTitleAliasesAndRemoveFromTokens24.FindStringSubmatch(s); len(m) == 3 {
+		n := strings.TrimLeft(m[1], "0")
+		if n == "" {
+			n = "0"
 		}
-		if reExtractBracketTitleAliasesAndRemoveFromTokens14.MatchString(s) {
-			return true
-		}
-		if reExtractBracketTitleAliasesAndRemoveFromTokens15.MatchString(s) {
-			return true
-		}
-		// Composite EP + special index like "07+ES07" / "07 + ES07".
-		if reExtractBracketTitleAliasesAndRemoveFromTokens16.MatchString(s) {
-			return true
-		}
-		// Standalone special index like "ES07".
-		if reExtractBracketTitleAliasesAndRemoveFromTokens17.MatchString(s) {
-			return true
-		}
-		if reExtractBracketTitleAliasesAndRemoveFromTokens18.MatchString(s) {
-			return true
-		}
-		if reExtractBracketTitleAliasesAndRemoveFromTokens19.MatchString(s) {
-			return true
-		}
-		if reExtractBracketTitleAliasesAndRemoveFromTokens20.MatchString(s) {
-			return true
-		}
-		if reExtractBracketTitleAliasesAndRemoveFromTokens21.MatchString(s) {
-			return true
-		}
-		if episodeOfTotalPattern.MatchString(s) {
-			return true
-		}
-		if episodeRangePattern.MatchString(normalizeDigitRange(s)) {
-			return true
-		}
-		if reExtractBracketTitleAliasesAndRemoveFromTokens22.MatchString(s) {
-			return true
-		}
-		if reExtractBracketTitleAliasesAndRemoveFromTokens23.MatchString(s) {
-			return true
-		}
-		// Patterns like "01_标题" are often episode markers. Keep this strict (underscore only)
-		// to avoid misclassifying titles like "86 - 不存在的战区".
-		if m := reExtractBracketTitleAliasesAndRemoveFromTokens24.FindStringSubmatch(s); len(m) == 3 {
-			n := strings.TrimLeft(m[1], "0")
-			if n == "" {
-				n = "0"
-			}
-			if n != "0" {
-				if v := reExtractBracketTitleAliasesAndRemoveFromTokens25.FindString(n); v != "" {
-					if hasCJK(m[2]) {
-						return true
-					}
+		if n != "0" {
+			if v := reExtractBracketTitleAliasesAndRemoveFromTokens25.FindString(n); v != "" {
+				if hasCJK(m[2]) {
+					return true
 				}
 			}
 		}
-		return false
 	}
+	return false
+}
 
-	findSearchHintAlias := func() []string {
-		out := make([]string, 0, 6)
-		for i := 0; i < len(tokens); i++ {
-			if tokens[i].Removed {
-				continue
-			}
-			t := strings.TrimSpace(tokens[i].Text)
-			if t == "" {
-				continue
-			}
-			if !strings.Contains(t, "检索") && !strings.Contains(t, "檢索") && !strings.Contains(t, "索引") && !strings.Contains(t, "搜索") && !strings.Contains(t, "搜尋") && !strings.Contains(strings.ToLower(t), "search") {
-				continue
-			}
+// findBracketSearchHintAliases extracts the aliases listed after a search-hint
+// keyword (检索用: / search: / ...), records the hint keyword as a note
+// attribute, and marks the hint span consumed.
+func findBracketSearchHintAliases(tokens []model.Token, attrs *[]model.Attribute) []string {
+	out := make([]string, 0, 6)
+	for i := 0; i < len(tokens); i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		t := strings.TrimSpace(tokens[i].Text)
+		if t == "" {
+			continue
+		}
+		if !strings.Contains(t, "检索") && !strings.Contains(t, "檢索") && !strings.Contains(t, "索引") && !strings.Contains(t, "搜索") && !strings.Contains(t, "搜尋") && !strings.Contains(strings.ToLower(t), "search") {
+			continue
+		}
 
-			if i+2 < len(tokens) {
-				sep := strings.TrimSpace(tokens[i+1].Text)
-				if sep == ":" || sep == "：" {
-					end := len(tokens)
-					inParen := isInParen(tokens, i)
-					if inParen {
-						depth := 0
-						for j := i; j < len(tokens); j++ {
-							if tokens[j].Text == "(" || tokens[j].Text == "（" {
-								depth++
+		if i+2 < len(tokens) {
+			sep := strings.TrimSpace(tokens[i+1].Text)
+			if sep == ":" || sep == "：" {
+				end := len(tokens)
+				inParen := isInParen(tokens, i)
+				if inParen {
+					depth := 0
+					for j := i; j < len(tokens); j++ {
+						if tokens[j].Text == "(" || tokens[j].Text == "（" {
+							depth++
+							continue
+						}
+						if tokens[j].Text == ")" || tokens[j].Text == "）" {
+							if depth == 0 {
+								end = j
+								break
+							}
+							depth--
+						}
+					}
+				} else {
+					depth := 0
+					for j := i; j < len(tokens); j++ {
+						if tokens[j].Text == "[" || tokens[j].Text == "【" {
+							depth++
+							continue
+						}
+						if tokens[j].Text == "]" || tokens[j].Text == "】" {
+							if depth == 0 {
+								end = j
+								break
+							}
+							depth--
+						}
+					}
+				}
+
+				parts := make([]string, 0, 16)
+				for j := i + 2; j < end && j < len(tokens); j++ {
+					if tokens[j].Removed {
+						continue
+					}
+					p := strings.TrimSpace(tokens[j].Text)
+					if p == "" {
+						continue
+					}
+					if p == "(" || p == ")" || p == "（" || p == "）" || p == "[" || p == "]" || p == "【" || p == "】" {
+						continue
+					}
+					parts = append(parts, p)
+				}
+				cand := strings.TrimSpace(strings.Join(parts, " "))
+				cand = strings.Trim(cand, "()（）")
+				cand = strings.TrimSpace(cand)
+				if cand != "" {
+					cands, isHint, hintKeyword := splitAliasCandidatesFromParenContent(strings.TrimSpace(t + ":" + cand))
+					if isHint {
+						hk := strings.TrimSpace(hintKeyword)
+						if hk != "" {
+							*attrs = append(*attrs, model.Attribute{Type: model.AttrNote, Normalized: hk, Confidence: 0.6, Source: "hint_keyword"})
+						}
+						for _, a := range cands {
+							a = cleanAliasToken(a)
+							if a == "" {
 								continue
 							}
-							if tokens[j].Text == ")" || tokens[j].Text == "）" {
-								if depth == 0 {
-									end = j
-									break
-								}
-								depth--
-							}
-						}
-					} else {
-						depth := 0
-						for j := i; j < len(tokens); j++ {
-							if tokens[j].Text == "[" || tokens[j].Text == "【" {
-								depth++
+							compact := strings.ReplaceAll(a, " ", "")
+							if len([]rune(compact)) < 4 {
 								continue
 							}
-							if tokens[j].Text == "]" || tokens[j].Text == "】" {
-								if depth == 0 {
-									end = j
-									break
-								}
-								depth--
+							if isLikelyMetaBracketText(a) {
+								continue
 							}
-						}
-					}
-
-					parts := make([]string, 0, 16)
-					for j := i + 2; j < end && j < len(tokens); j++ {
-						if tokens[j].Removed {
-							continue
-						}
-						p := strings.TrimSpace(tokens[j].Text)
-						if p == "" {
-							continue
-						}
-						if p == "(" || p == ")" || p == "（" || p == "）" || p == "[" || p == "]" || p == "【" || p == "】" {
-							continue
-						}
-						parts = append(parts, p)
-					}
-					cand := strings.TrimSpace(strings.Join(parts, " "))
-					cand = strings.Trim(cand, "()（）")
-					cand = strings.TrimSpace(cand)
-					if cand != "" {
-						cands, isHint, hintKeyword := splitAliasCandidatesFromParenContent(strings.TrimSpace(t + ":" + cand))
-						if isHint {
-							hk := strings.TrimSpace(hintKeyword)
-							if hk != "" {
-								*attrs = append(*attrs, model.Attribute{Type: model.AttrNote, Normalized: hk, Confidence: 0.6, Source: "hint_keyword"})
+							if !hasCJK(a) && len([]rune(a)) < 3 {
+								continue
 							}
-							for _, a := range cands {
-								a = cleanAliasToken(a)
-								if a == "" {
-									continue
-								}
-								compact := strings.ReplaceAll(a, " ", "")
-								if len([]rune(compact)) < 4 {
-									continue
-								}
-								if isLikelyMetaBracketText(a) {
-									continue
-								}
-								if !hasCJK(a) && len([]rune(a)) < 3 {
-									continue
-								}
-								if len([]rune(a)) > 400 {
-									continue
-								}
-								out = append(out, a)
+							if len([]rune(a)) > 400 {
+								continue
 							}
-							openIdx := i
-							if inParen {
-								depth := 0
-								for j := i - 1; j >= 0; j-- {
-									tj := tokens[j].Text
-									if tj == ")" || tj == "）" {
-										depth++
-										continue
+							out = append(out, a)
+						}
+						openIdx := i
+						if inParen {
+							depth := 0
+							for j := i - 1; j >= 0; j-- {
+								tj := tokens[j].Text
+								if tj == ")" || tj == "）" {
+									depth++
+									continue
+								}
+								if tj == "(" || tj == "（" {
+									if depth == 0 {
+										openIdx = j
+										break
 									}
-									if tj == "(" || tj == "（" {
-										if depth == 0 {
-											openIdx = j
-											break
-										}
-										depth--
-									}
-								}
-							} else {
-								depth := 0
-								for j := i - 1; j >= 0; j-- {
-									tj := tokens[j].Text
-									if tj == "]" || tj == "】" {
-										depth++
-										continue
-									}
-									if tj == "[" || tj == "【" {
-										if depth == 0 {
-											openIdx = j
-											break
-										}
-										depth--
-									}
+									depth--
 								}
 							}
-							for j := openIdx; j <= end && j >= 0 && j < len(tokens); j++ {
-								tokens[j].Removed = true
+						} else {
+							depth := 0
+							for j := i - 1; j >= 0; j-- {
+								tj := tokens[j].Text
+								if tj == "]" || tj == "】" {
+									depth++
+									continue
+								}
+								if tj == "[" || tj == "【" {
+									if depth == 0 {
+										openIdx = j
+										break
+									}
+									depth--
+								}
 							}
-							continue
 						}
+						for j := openIdx; j <= end && j >= 0 && j < len(tokens); j++ {
+							tokens[j].Removed = true
+						}
+						continue
 					}
 				}
 			}
+		}
 
-			if idx := strings.IndexAny(t, ":："); idx >= 0 {
-				inner := strings.TrimSpace(t[idx+1:])
-				inner = strings.Trim(inner, "()（）")
-				inner = strings.TrimSpace(inner)
-				if inner == "" {
-					continue
+		if idx := strings.IndexAny(t, ":："); idx >= 0 {
+			inner := strings.TrimSpace(t[idx+1:])
+			inner = strings.Trim(inner, "()（）")
+			inner = strings.TrimSpace(inner)
+			if inner == "" {
+				continue
+			}
+			cands, isHint, hintKeyword := splitAliasCandidatesFromParenContent(strings.TrimSpace(t[:idx] + ":" + inner))
+			if isHint {
+				hk := strings.TrimSpace(hintKeyword)
+				if hk != "" {
+					*attrs = append(*attrs, model.Attribute{Type: model.AttrNote, Normalized: hk, Confidence: 0.6, Source: "hint_keyword"})
 				}
-				cands, isHint, hintKeyword := splitAliasCandidatesFromParenContent(strings.TrimSpace(t[:idx] + ":" + inner))
-				if isHint {
-					hk := strings.TrimSpace(hintKeyword)
-					if hk != "" {
-						*attrs = append(*attrs, model.Attribute{Type: model.AttrNote, Normalized: hk, Confidence: 0.6, Source: "hint_keyword"})
+				for _, a := range cands {
+					a = cleanAliasToken(a)
+					if a == "" {
+						continue
 					}
-					for _, a := range cands {
-						a = cleanAliasToken(a)
-						if a == "" {
-							continue
-						}
-						if isLikelyMetaBracketText(a) {
-							continue
-						}
-						if !hasCJK(a) && len([]rune(a)) < 3 {
-							continue
-						}
-						if len([]rune(a)) > 400 {
-							continue
-						}
-						out = append(out, a)
+					if isLikelyMetaBracketText(a) {
+						continue
 					}
-					tokens[i].Removed = true
+					if !hasCJK(a) && len([]rune(a)) < 3 {
+						continue
+					}
+					if len([]rune(a)) > 400 {
+						continue
+					}
+					out = append(out, a)
 				}
+				tokens[i].Removed = true
 			}
 		}
-		if len(out) == 0 {
-			return nil
-		}
-		return out
 	}
-
-	searchHintAliases := findSearchHintAlias()
-
-	type blk struct {
-		open  int
-		close int
-		inner string
+	if len(out) == 0 {
+		return nil
 	}
+	return out
+}
 
-	blocks := make([]blk, 0, 4)
+// bracketTitleBlock is one leading bracket block: its token span and inner text.
+type bracketTitleBlock struct {
+	open  int
+	close int
+	inner string
+}
+
+// scanBracketTitleBlocks collects the leading bracket blocks that are title
+// candidates, skipping blocks that are the group, meta text, episode markers,
+// SP kinds, or tech-like. Movie index blocks emit attributes and are consumed
+// instead of becoming title candidates.
+func scanBracketTitleBlocks(tokens []model.Token, attrs *[]model.Attribute, start, techStart int, groupText string) []bracketTitleBlock {
+	blocks := make([]bracketTitleBlock, 0, 4)
 	for i := start; i < techStart && i < len(tokens); i++ {
 		if tokens[i].Removed {
 			continue
@@ -549,20 +572,20 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 			parts = append(parts, p)
 		}
 		inner := strings.TrimSpace(strings.Join(parts, " "))
-		inner = normalizeDigitRange(inner)
+		inner = normalizeBracketDigitRange(inner)
 		innerRaw := strings.TrimSpace(strings.Join(partsRaw, " "))
-		innerRaw = normalizeDigitRange(innerRaw)
+		innerRaw = normalizeBracketDigitRange(innerRaw)
 		if inner == "" {
 			i = end
 			continue
 		}
-		if compactKey(inner) != "" && compactKey(groupText) != "" {
-			if compactKey(inner) == compactKey(groupText) {
+		if bracketAliasCompactKey(inner) != "" && bracketAliasCompactKey(groupText) != "" {
+			if bracketAliasCompactKey(inner) == bracketAliasCompactKey(groupText) {
 				i = end
 				continue
 			}
 		}
-		if mi, ok := parseInlineMovieIndex(innerRaw); ok {
+		if mi, ok := parseBracketInlineMovieIndex(innerRaw); ok {
 			*attrs = append(*attrs, model.Attribute{
 				Type:       model.AttrMovieIndex,
 				Normalized: mi,
@@ -572,7 +595,7 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 				Source:     "bracket_inline_movie_index",
 			})
 		}
-		if mr, ok := parseInlineMovieIndexRange(innerRaw); ok {
+		if mr, ok := parseBracketInlineMovieIndexRange(innerRaw); ok {
 			*attrs = append(*attrs, model.Attribute{
 				Type:       model.AttrMovieIndexRange,
 				Normalized: mr,
@@ -590,7 +613,7 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 			i = end
 			continue
 		}
-		if containsEpisodeMarker(inner) || containsEpisodeMarker(innerRaw) {
+		if bracketContainsEpisodeMarker(inner) || bracketContainsEpisodeMarker(innerRaw) {
 			// Keep this block in tokens for episode detection. Do not consume it
 			// into title/alias candidates.
 			i = end
@@ -603,7 +626,7 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 				continue
 			}
 		}
-		if mi, ok := parseStandaloneMovieIndex(innerRaw); ok {
+		if mi, ok := parseBracketStandaloneMovieIndex(innerRaw); ok {
 			// [M21] / [Movie 21] after title blocks should be treated as movie_index.
 			// Keep title/alias extraction deterministic and avoid leaking Mxx as alias.
 			if len(blocks) > 0 {
@@ -624,7 +647,7 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 		}
 		hasMovieContext := false
 		for bi := 0; bi < len(blocks); bi++ {
-			if hasMovieKeyword(blocks[bi].inner) {
+			if hasBracketMovieKeyword(blocks[bi].inner) {
 				hasMovieContext = true
 				break
 			}
@@ -634,7 +657,7 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 				if a.Type != model.AttrNote && a.Type != model.AttrTitle {
 					continue
 				}
-				if hasMovieKeyword(a.Normalized) {
+				if hasBracketMovieKeyword(a.Normalized) {
 					hasMovieContext = true
 					break
 				}
@@ -644,7 +667,7 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 				}
 			}
 		}
-		if mi, ok := parseContextualNumericMovieIndex(innerRaw, hasMovieContext); ok {
+		if mi, ok := parseBracketContextualNumericMovieIndex(innerRaw, hasMovieContext); ok {
 			*attrs = append(*attrs, model.Attribute{
 				Type:       model.AttrMovieIndex,
 				Normalized: mi,
@@ -659,50 +682,26 @@ func extractBracketTitleAliasesAndRemoveFromTokens(tokens []model.Token, attrs *
 			i = end
 			continue
 		}
-		if isLikelyTechLike(inner) {
+		if isLikelyBracketTechLike(inner) {
 			break
 		}
-		if looksLikeEpOnly(inner) || looksLikeEpOnly(innerRaw) {
+		if looksLikeBracketEpOnly(inner) || looksLikeBracketEpOnly(innerRaw) {
 			if len(blocks) == 0 {
 				i = end
 				continue
 			}
 			break
 		}
-		blocks = append(blocks, blk{open: i, close: end, inner: inner})
+		blocks = append(blocks, bracketTitleBlock{open: i, close: end, inner: inner})
 		i = end
 	}
-	if len(blocks) < 2 {
-		return "", searchHintAliases, -1, -1
-	}
+	return blocks
+}
 
-	extractExplicitSeasonNumber := func(s string) string {
-		s = strings.TrimSpace(s)
-		if s == "" {
-			return ""
-		}
-		if m := reExtractBracketTitleAliasesAndRemoveFromTokens27.FindStringSubmatch(s); len(m) == 2 {
-			v := strings.TrimLeft(m[1], "0")
-			if v == "" {
-				v = m[1]
-			}
-			return v
-		}
-		if m := reExtractBracketTitleAliasesAndRemoveFromTokens28.FindStringSubmatch(s); len(m) == 2 {
-			v := strings.TrimLeft(m[1], "0")
-			if v == "" {
-				v = m[1]
-			}
-			return v
-		}
-		if m := reExtractBracketTitleAliasesAndRemoveFromTokens29.FindStringSubmatch(s); len(m) == 2 {
-			if v := parseSmallSeasonNumberToken(m[1]); v != "" {
-				return v
-			}
-		}
-		return ""
-	}
-
+// selectBracketMainAndAliases scores the collected title blocks (CJK-heavy and
+// longer wins), records explicit season numbers as note attributes, cleans and
+// dedupes the remaining blocks into aliases, and marks all blocks consumed.
+func selectBracketMainAndAliases(tokens []model.Token, attrs *[]model.Attribute, aliasValid func(string) bool, blocks []bracketTitleBlock, searchHintAliases []string) (string, []string, int, int) {
 	mainIdx := 0
 	bestScore := -1
 	for i := range blocks {
@@ -798,7 +797,4 @@ var (
 	reExtractBracketTitleAliasesAndRemoveFromTokens24 = regexp.MustCompile(`^0?(\d{1,4})_+(.+)$`)
 	reExtractBracketTitleAliasesAndRemoveFromTokens25 = regexp.MustCompile(`^\d+$`)
 	reExtractBracketTitleAliasesAndRemoveFromTokens26 = regexp.MustCompile(`[^0-9A-Za-z]+`)
-	reExtractBracketTitleAliasesAndRemoveFromTokens27 = regexp.MustCompile(`(?i)\bS(\d{1,2})\b`)
-	reExtractBracketTitleAliasesAndRemoveFromTokens28 = regexp.MustCompile(`(?i)\bSeason\s*(\d{1,2})\b`)
-	reExtractBracketTitleAliasesAndRemoveFromTokens29 = regexp.MustCompile(`^第?([一二三四五六七八九十0-9]{1,3})季$`)
 )

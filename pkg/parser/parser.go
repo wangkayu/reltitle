@@ -12,6 +12,9 @@ import (
 	"reltitle/pkg/tokenize"
 )
 
+// Parser parses anime/film release titles into structured results. Build one
+// with NewDefault (embedded configs) or New (custom configs); after New the
+// Parser is read-only and safe to share across goroutines.
 type Parser struct {
 	cfg                   *config.Config
 	groupIndex            map[string]*config.GroupDef // 字幕组索引: normalized pattern -> GroupDef
@@ -99,6 +102,8 @@ type packProfileRule struct {
 
 var wxhResolutionPattern = regexp.MustCompile(`(?i)^(\d{2,5})\s*[x×X]\s*(\d{2,5})(?:\s*([ip]))?$`)
 
+// New precompiles cfg into sorted rule structures. A nil cfg yields an empty
+// configuration; callers normally use NewDefault or config.LoadAll.
 func New(cfg *config.Config) *Parser {
 	if cfg == nil {
 		cfg = &config.Config{}
@@ -665,6 +670,9 @@ func normalizeRawTitleForParsing(raw string) string {
 	return s
 }
 
+// Parse parses one raw release title and returns the full result. It only
+// returns an error when the title is empty; anything unrecognized falls back
+// to the UNKNOWN template or note attributes.
 func (p *Parser) Parse(rawTitle string) (*model.ParseResult, error) {
 	if strings.TrimSpace(rawTitle) == "" {
 		return nil, errors.New("empty title")

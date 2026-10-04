@@ -38,6 +38,11 @@ func removeBracketsAroundFullyConsumedBlocks(tokens []model.Token) {
 				}
 			}
 		}
+		if closeIdx < 0 {
+			// Unclosed bracket: nothing to clean up. Moving i back to closeIdx (-1)
+			// would restart the scan from the first token and never terminate.
+			continue
+		}
 		if closeIdx <= i+1 {
 			i = closeIdx
 			continue

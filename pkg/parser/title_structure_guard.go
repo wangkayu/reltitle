@@ -9,7 +9,8 @@ import (
 
 // protectTitleLeadingDigits marks a lone digit token at the START of the title
 // zone as Protected — but ONLY when it sits in a strict template slot:
-//   [group] N - EP [tech]   /   [group] N [EP] [tech]   /   [group] N [tech]
+//
+//	[group] N - EP [tech]   /   [group] N [EP] [tech]   /   [group] N [tech]
 //
 // This is the "86" case. "[Group] 86 - 03 [1080p]" has 86 in the title slot
 // (first token after the group) followed by a clear episode slot, so 86 is the

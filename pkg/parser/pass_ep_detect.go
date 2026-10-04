@@ -10,7 +10,6 @@ import (
 
 var specialIndexTokenPattern = regexp.MustCompile(`(?i)^(es|sp|ova|oad|ona|ex|ncop|nced|pv)0*(\d{1,3})$`)
 var episodePlusSpecialPattern = regexp.MustCompile(`(?i)^(\d{1,4})\s*\+\s*(es|sp|ova|oad|ona|ex|ncop|nced|pv)0*(\d{1,3})$`)
-var summarySpecialPattern = regexp.MustCompile(`^(总集篇)0*(\d{1,3})[_-](\d{1,4}(?:\.\d{1,2})?)$`)
 var summarySpecialLeadPattern = regexp.MustCompile(`^(总集篇)0*(\d{1,3})$`)
 var episodeListPattern = regexp.MustCompile(`(?i)^\s*\d{1,4}(?:\s*(?:&|＆|\+|＋|/|／|,|，|、)\s*\d{1,4})+\s*$`)
 var episodeListDigitsPattern = regexp.MustCompile(`\d{1,4}`)
@@ -269,21 +268,6 @@ func passDetectEpisodeRangeAndEpisode(tokens []model.Token, attrs *[]model.Attri
 			}
 			text := strings.TrimSpace(tokens[i].Text)
 			if text == "" {
-				continue
-			}
-			if m := summarySpecialPattern.FindStringSubmatch(text); len(m) == 4 {
-				flag := strings.TrimSpace(m[1])
-				idx := strings.TrimSpace(m[2])
-				if strings.TrimSpace(idx) != "" {
-					*attrs = append(*attrs, model.Attribute{Type: model.AttrSpecialFlag, Normalized: flag, TokenStart: i, TokenEnd: i + 1, Confidence: 0.85, Source: "special_summary"})
-					*attrs = append(*attrs, model.Attribute{Type: model.AttrSpecialIndex, Normalized: idx, TokenStart: i, TokenEnd: i + 1, Confidence: 0.85, Source: "special_summary"})
-				}
-				ep := strings.TrimSpace(m[3])
-				if ep != "" {
-					tokens[i].Text = "ABS:" + ep
-					taggedEpisode = ep
-					taggedEpisodeIdx = i
-				}
 				continue
 			}
 			// TV tagged range case: tokens like [ "TV01", "-", "25Fin" ].

@@ -158,3 +158,69 @@ func TestParserKnownTitleDropsSlashFragmentAliases(t *testing.T) {
 		}
 	}
 }
+
+func TestParserTitleAdjunct(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+	tests := []struct {
+		raw     string
+		episode string
+		aliases []string
+		title   string
+	}{
+		{"[ANi] The Anime「幻想水滸傳」 - 01 [1080P][Baha][WEB-DL][AAC AVC][CHT].mp4", "1", nil, "The Anime「幻想水滸傳」"},
+		{"[ANi] The Anime「幻想水滸傳」 - 01 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]", "1", nil, "The Anime「幻想水滸傳」"},
+		{"[黒ネズミたち] The Anime「幻想水滸傳」 / Gensou Suikoden - 01 (ABEMA 1920x1080 AVC AAC MKV)", "1", []string{"Gensou Suikoden"}, "The Anime「幻想水滸傳」"},
+		{"[G] The Anime「幻想水滸傳」 - 12v2 [1080P]", "12", nil, "The Anime「幻想水滸傳」"},
+		{"[G] The Animation「某作品」 - 03 [1080p]", "3", nil, "The Animation「某作品」"},
+		{"[G] The Anime 某作品 - 03 [1080p]", "3", nil, "The Anime 某作品"},
+		{"[G] 快刀乱麻 THE ANIMATION - 03 [1080p]", "3", nil, "快刀乱麻 THE ANIMATION"},
+		{"[G] 某作品 The Anime - 03 [1080p]", "3", nil, "某作品 The Anime"},
+		{"[Erai-raws] Rick and Morty - The Anime - 09 [1080p]", "9", nil, "Rick and Morty - The Anime"},
+		{"[ToonsHub] Rick and Morty The Anime S01E09 [1080p]", "9", nil, "Rick and Morty The Anime"},
+		{"[G] Rick and Morty: The Anime - 09 [1080p]", "9", nil, "Rick and Morty : The Anime"},
+		{"[G] 小城日常 / CITY THE ANIMATION - 13 [1080p]", "13", []string{"CITY THE ANIMATION"}, "小城日常"},
+		{"[G] CITY シティ The Animation - 13 [1080p]", "13", nil, "CITY シティ The Animation"},
+		{"[G] Persona4 the ANIMATION - 03 [720p]", "3", nil, "Persona4 the ANIMATION"},
+		{"[G] Akibas Trip - The Animation - 01 [720p]", "1", nil, "Akibas Trip - The Animation"},
+		{"[G] Hamatora_~The_Animation~_-_01 [720p]", "1", nil, "Hamatora ~The Animation~"},
+	}
+	for _, tc := range tests {
+		res, err := p.Parse(tc.raw)
+		if err != nil {
+			t.Fatalf("parse %q: %v", tc.raw, err)
+		}
+		if got := canonicalTitle(res); got != tc.title {
+			t.Errorf("%q: title=%q want %q", tc.raw, got, tc.title)
+		}
+		if got := canonicalEpisode(res); got != tc.episode {
+			t.Errorf("%q: episode=%q want %q", tc.raw, got, tc.episode)
+		}
+		got := attrValues(res, model.AttrTitleAlias)
+		if len(got) != len(tc.aliases) || (len(got) == 1 && got[0] != tc.aliases[0]) {
+			t.Errorf("%q: aliases=%q want %q", tc.raw, got, tc.aliases)
+		}
+	}
+}
+
+// The Latin + CJK rule itself stays: for a title not in the dictionary the CJK part is the
+// title and the Latin part an alias.
+func TestParserLatinThenCJKTitleSplitsWithoutDictionary(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	res, err := New(cfg).Parse("[G] Some Show「某作品」 - 03 [1080P]")
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	if got := canonicalTitle(res); got != "某作品" {
+		t.Errorf("title=%q want 某作品", got)
+	}
+	if got := attrValues(res, model.AttrTitleAlias); len(got) != 1 || got[0] != "Some Show" {
+		t.Errorf("aliases=%q want [Some Show]", got)
+	}
+}

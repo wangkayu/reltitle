@@ -7,12 +7,22 @@ import (
 	"github.com/wangkayu/reltitle/pkg/model"
 )
 
+var titleAdjunctPattern = regexp.MustCompile(`(?i)\bthe[\s_.]+(?:anime|animation)\b`)
+
+func normalizeTitleAdjunct(s string) string {
+	if !titleAdjunctPattern.MatchString(s) {
+		return s
+	}
+	s = strings.NewReplacer("「 ", "「", " 」", "」", "『 ", "『", " 』", "』").Replace(s)
+	return strings.NewReplacer(" 「", "「", " 『", "『").Replace(s)
+}
+
 func inferTitleAndAliasesFromTitleCore(title string, aliasValid func(string) bool) (string, []string) {
 	s := strings.TrimSpace(title)
 	if s == "" {
 		return "", nil
 	}
-	s = normalizeSpacedUnderscore(s)
+	s = normalizeTitleAdjunct(normalizeSpacedUnderscore(s))
 	if strings.Contains(s, "_") && !strings.ContainsAny(s, "/／") {
 		if main, aliases, ok := inferTitleAliasFromUnderscoreBridge(s, aliasValid); ok {
 			return main, aliases
@@ -259,7 +269,8 @@ func inferTitleAndAliasesFromTitleCore(title string, aliasValid func(string) boo
 	}
 
 	if hasCJK(s) && hasLatin(s) {
-		if !isSimpleMixedScriptAliasCandidate(s) {
+		// A title adjunct belongs to its segment, not to a separate script alias.
+		if titleAdjunctPattern.MatchString(s) || !isSimpleMixedScriptAliasCandidate(s) {
 			return normalizeTitleMain(s), nil
 		}
 		fields := strings.Fields(s)

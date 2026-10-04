@@ -456,3 +456,22 @@ Some Show S01 1080p WEB-DL H264 AAC
 [G] 乱马1/2 - 05 [1080P]
 [ToonsHub] 乱马1/2 第三季 / Ranma 1/2 (2024) Season 3 - 01 [1080P][MKV]
 [G] 乱马1/2 / Ranma 1/2 - 05 [1080P]
+# Title adjuncts stay attached without a work-specific dictionary entry.
+[ANi] The Anime「幻想水滸傳」 - 01 [1080P][Baha][WEB-DL][AAC AVC][CHT].mp4
+[ANi] The Anime「幻想水滸傳」 - 01 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]
+[黒ネズミたち] The Anime「幻想水滸傳」 / Gensou Suikoden - 01 (ABEMA 1920x1080 AVC AAC MKV)
+# Latin text followed by CJK text without a dictionary entry: the CJK part is the title, the Latin part an alias.
+[G] Some Show「某作品」 - 03 [1080P]
+[G] Some Show 某作品 - 03 [1080P]
+[G] The Animation「某作品」 - 03 [1080p]
+[G] The Anime 某作品 - 03 [1080p]
+[G] 快刀乱麻 THE ANIMATION - 03 [1080p]
+[G] 某作品 The Anime - 03 [1080p]
+[Erai-raws] Rick and Morty - The Anime - 09 [1080p]
+[ToonsHub] Rick and Morty The Anime S01E09 [1080p]
+[G] Rick and Morty: The Anime - 09 [1080p]
+[G] 小城日常 / CITY THE ANIMATION - 13 [1080p]
+[G] CITY シティ The Animation - 13 [1080p]
+[G] Persona4 the ANIMATION - 03 [720p]
+[G] Akibas Trip - The Animation - 01 [720p]
+[G] Hamatora_~The_Animation~_-_01 [720p]

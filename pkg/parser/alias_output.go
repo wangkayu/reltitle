@@ -700,7 +700,13 @@ func cleanTitleToken(s string) string {
 	if s == "" {
 		return ""
 	}
-	s = strings.Trim(s, "[]{}【】『』「」")
+	if titleAdjunctPattern.MatchString(s) {
+		// Corner quotes can enclose the attached work name rather than the whole title.
+		s = strings.Trim(s, "[]{}【】")
+		s = normalizeTitleAdjunct(s)
+	} else {
+		s = strings.Trim(s, "[]{}【】『』「」")
+	}
 	s = strings.TrimSpace(s)
 	s = normalizeTitleMain(s)
 	s = stripFileExtSuffix(s)

@@ -449,9 +449,11 @@ Some Show S01 1080p WEB-DL H264 AAC
 [Nix-Raws] 拉拉熊 / 拉拉熊 / リラックマ / Rilakkuma Goyururi Yume no Tabi S01E26 [CR WEB-DL 1080p AVC AAC][简繁内封]
 # NOTE: the stray 』 stays in the title (corner-bracket quotes are deliberately left alone)
 [LoliHouse] 『你们先走我断后』，于是10年后我成为了传说 / Koko wa Ore ni Makasete Saki ni Ike to Itte kara 10-nen ga Tattara Densetsu ni Natteita. [01-12 合集][WebRip 1080p HEVC-10bit AAC][简繁内封字幕][Fin]
-# 1/2 is part of the title (title_knowledge.yaml: ranma_one_half_*). The first line below still gets a noisy extra
-# alias ("Ranma 1-3"); title, season and episode are correct.
+# 1/2 is part of the title (title_knowledge.yaml: ranma_one_half_*); its protected slash is not an alias delimiter.
+# NOTE: the two lines at the end that write "Ranma 1/2" with a slash still get fragment aliases ("Ranma 1", "Ranma"); known, unrelated to the slash delimiter fix.
 [ToonsHub] 乱马1/2 第三季 / Ranma 1-2 (2024) Season 3 - 01 [1080P][DUAL][CHS&CHT&JP&EN&KO][MKV]
 [G] 乱马1/2 第二季 - 05 [1080P]
 [G] Ranma 1/2 - 01 [1080P]
 [G] 乱马1/2 - 05 [1080P]
+[ToonsHub] 乱马1/2 第三季 / Ranma 1/2 (2024) Season 3 - 01 [1080P][MKV]
+[G] 乱马1/2 / Ranma 1/2 - 05 [1080P]

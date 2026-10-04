@@ -119,7 +119,8 @@ func (p *Parser) extractPreEpisodePipeAliasesAndConsume(tokens []model.Token, st
 			continue
 		}
 		t := strings.TrimSpace(tokens[i].Text)
-		if isAliasChainDelimiterToken(t) {
+		// A protected token is part of a known title ("乱马1/2", "22/7"), not a delimiter.
+		if isAliasChainDelimiterToken(t) && !tokens[i].Protected {
 			if firstDelim < 0 {
 				firstDelim = i
 			}
@@ -168,7 +169,7 @@ func (p *Parser) extractPreEpisodePipeAliasesAndConsume(tokens []model.Token, st
 		isSplit := i == scanEnd
 		if !isSplit {
 			t := strings.TrimSpace(tokens[i].Text)
-			if isAliasChainDelimiterToken(t) {
+			if isAliasChainDelimiterToken(t) && !tokens[i].Protected {
 				isSplit = true
 				delimCount++
 			}
@@ -225,7 +226,7 @@ func (p *Parser) extractPreEpisodePipeAliasesAndConsume(tokens []model.Token, st
 			continue
 		}
 		t := strings.TrimSpace(tokens[i].Text)
-		if isAliasChainDelimiterToken(t) {
+		if isAliasChainDelimiterToken(t) && !tokens[i].Protected {
 			tokens[i].Removed = true
 		}
 	}

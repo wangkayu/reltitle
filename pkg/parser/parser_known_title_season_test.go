@@ -70,3 +70,51 @@ func TestProtectTitleLeadingDigitsIgnoresDigitAfterProtectedTitle(t *testing.T) 
 		t.Fatalf("leading title digit: protected=%v/%v, want true/false", lead[0].Protected, lead[2].Protected)
 	}
 }
+
+// "乱马1/2 第三季 / Ranma 1-2 ..." has two slashes: the one inside the known title and the
+// bilingual separator. The slash alias chain needs two delimiters, so the protected "/" of
+// "乱马1/2" used to trigger it and produce the noisy alias "Ranma 1-3".
+func TestParserProtectedSlashIsNotAnAliasDelimiter(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	res, err := New(cfg).Parse("[ToonsHub] 乱马1/2 第三季 / Ranma 1-2 (2024) Season 3 - 01 [1080P][DUAL][CHS&CHT&JP&EN&KO][MKV]")
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	if got := canonicalTitle(res); got != "乱马1/2" {
+		t.Errorf("title=%q want 乱马1/2", got)
+	}
+	want := []string{"Ranma 1-2", "Ranma 1"}
+	got := attrValues(res, model.AttrTitleAlias)
+	if len(got) != len(want) {
+		t.Fatalf("aliases=%q want %q", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("aliases=%q want %q", got, want)
+		}
+	}
+	if canonicalSeason(res) != "3" || canonicalEpisode(res) != "1" {
+		t.Errorf("season/episode=%q/%q want 3/1", canonicalSeason(res), canonicalEpisode(res))
+	}
+}
+
+// A plain bilingual title (one separator slash) must still split into title and alias.
+func TestParserBilingualSlashStillSplitsAliases(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	res, err := New(cfg).Parse("[ToonsHub] 青之箱 第二季 / Blue Box Season 2 - 01 [1080P][MKV]")
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	if got := canonicalTitle(res); got != "青之箱" {
+		t.Errorf("title=%q want 青之箱", got)
+	}
+	if got := attrValues(res, model.AttrTitleAlias); len(got) != 1 || got[0] != "Blue Box" {
+		t.Errorf("aliases=%q want [Blue Box]", got)
+	}
+}

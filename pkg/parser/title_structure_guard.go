@@ -31,8 +31,14 @@ func protectTitleLeadingDigits(tokens []model.Token, groupEnd int) {
 	}
 	first := -1
 	for j := start; j < len(tokens); j++ {
-		if tokens[j].Protected || tokens[j].Removed {
+		if tokens[j].Removed {
 			continue
+		}
+		if tokens[j].Protected {
+			// Title content (title dictionary, "N/N" span) already precedes any digit
+			// that follows, so that digit is not the leading title digit. Skipping
+			// protected tokens here made "乱马1/2 第二季 - 05" protect the episode "05".
+			return
 		}
 		t := strings.TrimSpace(tokens[j].Text)
 		if t == "" {

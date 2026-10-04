@@ -121,6 +121,10 @@ func buildEPSlotCandidates(tokens []model.Token, season string, seasonIdx int, e
 			if hasMatchingSeasonNumberAroundToken(tokens, i, 12) && !hasDashSeparatorAroundToken(tokens, i) {
 				continue
 			}
+			// "Season 3 - 01": the 3 is the season value, not an episode candidate.
+			if i > 0 && seasonWordLoosePattern.MatchString(strings.TrimSpace(tokens[i-1].Text)) {
+				continue
+			}
 			if !isInBracket(tokens, i) && !isInParen(tokens, i) {
 				if len(txt) >= 3 && !strings.HasPrefix(txt, "0") {
 					continue

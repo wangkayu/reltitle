@@ -27,19 +27,29 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 
 	fs := flag.NewFlagSet("reltitle", flag.ContinueOnError)
 	fs.SetOutput(stderr)
-	configDir := fs.String("config", "configs", "config directory")
+	configDir := fs.String("config", "", "config directory (default: the configs embedded in the binary)")
 	titleArg := fs.String("title", "", "title to parse")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
 
-	cfg, err := config.LoadAll(*configDir)
+	var (
+		p   *parser.Parser
+		err error
+	)
+	if *configDir == "" {
+		p, err = parser.NewDefault()
+	} else {
+		var cfg *config.Config
+		cfg, err = config.LoadAll(*configDir)
+		if err == nil {
+			p = parser.New(cfg)
+		}
+	}
 	if err != nil {
 		fmt.Fprintf(stderr, "load config: %v\n", err)
 		return 1
 	}
-
-	p := parser.New(cfg)
 
 	raw := strings.TrimSpace(*titleArg)
 	if raw == "" {

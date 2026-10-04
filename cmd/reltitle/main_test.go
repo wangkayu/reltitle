@@ -57,6 +57,18 @@ func TestRunTitleSources(t *testing.T) {
 	}
 }
 
+func TestRunDefaultEmbeddedConfig(t *testing.T) {
+	// Without -config the CLI must use the configs embedded in the binary.
+	const title = "[Group] Some Show - 03 [1080p]"
+	code, stdout, stderr := runCLI(t, "", "-title", title)
+	if code != 0 {
+		t.Fatalf("exit code %d, stderr: %s", code, stderr)
+	}
+	if got := decodeRawTitle(t, stdout); got != title {
+		t.Fatalf("raw_title=%q, want %q", got, title)
+	}
+}
+
 func TestRunNoTitle(t *testing.T) {
 	for name, stdin := range map[string]string{"empty stdin": "", "blank line": "   \n"} {
 		t.Run(name, func(t *testing.T) {

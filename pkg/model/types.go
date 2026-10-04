@@ -17,6 +17,11 @@ type EPKind string
 // "ONA", "EX"); compare with Canonical and the EPAxis* constants.
 type EPAxis string
 
+// ContentKind names the coarse content classification of a release: a TV
+// episode, a movie, a batch pack, a special, or unknown. See the ContentKind*
+// constants for the full set.
+type ContentKind string
+
 // Attribute is one recognized piece of a release title: a typed, normalized
 // value with the token span it came from, a heuristic confidence, and the
 // pipeline stage that produced it (Source, e.g. "lexicon", "canonical",
@@ -47,7 +52,7 @@ type Token struct {
 // attributes are not serialized into Attributes — they live in EPSemantics.
 type ParseResult struct {
 	RawTitle           string       `json:"raw_title"`
-	ContentKind        string       `json:"content_kind,omitempty"`
+	ContentKind        ContentKind  `json:"content_kind,omitempty"`
 	ContentConfidence  float64      `json:"content_confidence,omitempty"`
 	TemplateID         string       `json:"template_id,omitempty"`
 	TemplateConfidence float64      `json:"template_confidence,omitempty"`
@@ -218,4 +223,19 @@ func (k EPKind) Canonical() EPKind {
 // with Canonical against the EPAxis* constants.
 func (a EPAxis) Canonical() EPAxis {
 	return EPAxis(strings.ToUpper(strings.TrimSpace(string(a))))
+}
+
+const (
+	ContentKindTVEP    ContentKind = "TV_EP"
+	ContentKindMovie   ContentKind = "MOVIE"
+	ContentKindBatch   ContentKind = "BATCH"
+	ContentKindSpecial ContentKind = "SPECIAL"
+	ContentKindUnknown ContentKind = "UNKNOWN"
+)
+
+// Canonical returns the normalized form of c: trimmed and uppercased. Values
+// may arrive lowercase or padded from defensive normalization paths or config;
+// compare with Canonical against the ContentKind* constants.
+func (c ContentKind) Canonical() ContentKind {
+	return ContentKind(strings.ToUpper(strings.TrimSpace(string(c))))
 }

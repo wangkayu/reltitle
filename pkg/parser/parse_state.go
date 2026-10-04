@@ -50,7 +50,7 @@ type parseState struct {
 	movieRouteHardExcluded bool
 	movieContentSignal     bool
 	epRoute                string
-	contentKind            string
+	contentKind            model.ContentKind
 	contentConf            float64
 	templateID             string
 	templateConf           float64

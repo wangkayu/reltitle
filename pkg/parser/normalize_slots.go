@@ -473,8 +473,8 @@ func (p *Parser) normalizeSubtitleAttrs(attrs []model.Attribute, tokens []model.
 	return out
 }
 
-func (p *Parser) enrichBatchSourceTypeFromPackKind(attrs []model.Attribute, contentKind string) []model.Attribute {
-	if !strings.EqualFold(strings.TrimSpace(contentKind), "BATCH") {
+func (p *Parser) enrichBatchSourceTypeFromPackKind(attrs []model.Attribute, contentKind model.ContentKind) []model.Attribute {
+	if contentKind.Canonical() != model.ContentKindBatch {
 		return attrs
 	}
 	hasSource := false

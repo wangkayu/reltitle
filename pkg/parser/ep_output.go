@@ -17,12 +17,12 @@ func stripLegacyEPAttributes(attrs []model.Attribute) []model.Attribute {
 	return attrs
 }
 
-func pruneCanonicalEpisodeSignalsForOutput(rawTitle string, contentKind string, packKind string, season string, episode string, episodeList string, episodeRange string, spKind string, movieIndex string, movieIndexRange string, epslot *model.EPSlot) (string, string, string, string, *model.EPSlot) {
-	kind := strings.ToUpper(strings.TrimSpace(contentKind))
+func pruneCanonicalEpisodeSignalsForOutput(rawTitle string, contentKind model.ContentKind, packKind string, season string, episode string, episodeList string, episodeRange string, spKind string, movieIndex string, movieIndexRange string, epslot *model.EPSlot) (model.ContentKind, string, string, string, *model.EPSlot) {
+	kind := contentKind.Canonical()
 	if strings.TrimSpace(movieIndex) != "" && strings.TrimSpace(movieIndexRange) == "" && strings.TrimSpace(season) == "" && strings.TrimSpace(episodeRange) != "" && movieDashEpisodePattern.MatchString(rawTitle) {
-		return "MOVIE", "", "", "", nil
+		return model.ContentKindMovie, "", "", "", nil
 	}
-	if kind != "BATCH" {
+	if kind != model.ContentKindBatch {
 		return contentKind, episode, episodeList, episodeRange, epslot
 	}
 	pk := strings.TrimSpace(packKind)
@@ -63,12 +63,12 @@ func hasAmbiguousExtraNumberAfterPrimaryRange(rawTitle string, episodeRange stri
 	return reHasAmbiguousExtraNumberAfterPrimaryRange2.MatchString(tail)
 }
 
-func pruneBatchEPSlotForConservativeOutput(epslot *model.EPSlot, contentKind string, episode string, episodeRange string, spKind string) *model.EPSlot {
+func pruneBatchEPSlotForConservativeOutput(epslot *model.EPSlot, contentKind model.ContentKind, episode string, episodeRange string, spKind string) *model.EPSlot {
 	if epslot == nil {
 		return nil
 	}
-	kind := strings.ToUpper(strings.TrimSpace(contentKind))
-	if kind != "BATCH" && kind != "MOVIE" {
+	kind := contentKind.Canonical()
+	if kind != model.ContentKindBatch && kind != model.ContentKindMovie {
 		return epslot
 	}
 	// For BATCH/MOVIE outputs, keep epslot only when we have a confirmed primary or
@@ -127,8 +127,8 @@ func shouldPruneWeakBatchRangePrimary(epslot *model.EPSlot, episodeRange string,
 	return false
 }
 
-func shouldPreferSPPrimaryForSpecial(contentKind string, spKind string, epslot *model.EPSlot) bool {
-	if !strings.EqualFold(strings.TrimSpace(contentKind), "SPECIAL") {
+func shouldPreferSPPrimaryForSpecial(contentKind model.ContentKind, spKind string, epslot *model.EPSlot) bool {
+	if contentKind.Canonical() != model.ContentKindSpecial {
 		return false
 	}
 	if strings.TrimSpace(spKind) == "" || epslot == nil || epslot.Primary == nil {

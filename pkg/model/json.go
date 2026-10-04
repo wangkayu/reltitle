@@ -17,7 +17,7 @@ type parseResultWire struct {
 func (r ParseResult) MarshalJSON() ([]byte, error) {
 	wire := parseResultWire{
 		RawTitle:           r.RawTitle,
-		ContentKind:        r.ContentKind,
+		ContentKind:        string(r.ContentKind),
 		ContentConfidence:  r.ContentConfidence,
 		TemplateID:         r.TemplateID,
 		TemplateConfidence: r.TemplateConfidence,

@@ -8,7 +8,7 @@ import (
 	"reltitle/pkg/model"
 )
 
-func inferContentKind(cfg *config.Config, episode string, episodeRange string, season string, seasonRange string, packKind string, spKind string, movieIndex string, movieIndexRange string, hasTech bool, hasMovieKeyword bool, hasYear bool, movieRouteHardExcluded bool, hasMovieContentSignal bool) (string, float64) {
+func inferContentKind(cfg *config.Config, episode string, episodeRange string, season string, seasonRange string, packKind string, spKind string, movieIndex string, movieIndexRange string, hasTech bool, hasMovieKeyword bool, hasYear bool, movieRouteHardExcluded bool, hasMovieContentSignal bool) (model.ContentKind, float64) {
 	hasEpisode := episode != ""
 	hasEpisodeRange := episodeRange != ""
 	hasSeason := season != ""
@@ -19,16 +19,16 @@ func inferContentKind(cfg *config.Config, episode string, episodeRange string, s
 	hasMovieIndexRange := movieIndexRange != ""
 
 	if hasMovieIndexRange {
-		return "BATCH", 0.95
+		return model.ContentKindBatch, 0.95
 	}
 
 	if movieRouteHardExcluded && hasMovieContentSignal {
-		return "BATCH", 0.95
+		return model.ContentKindBatch, 0.95
 	}
 
 	// Season-scoped specials like "Season 2 - SP" are still SPECIAL, not season packs.
 	if hasSPKind && !hasPackKind && !hasEpisode && !hasEpisodeRange && !hasSeasonRange {
-		return "SPECIAL", 0.85
+		return model.ContentKindSpecial, 0.85
 	}
 
 	rules := append([]config.ContentTypeInferenceRule(nil), cfg.Inference.ContentTypeInference...)
@@ -36,11 +36,11 @@ func inferContentKind(cfg *config.Config, episode string, episodeRange string, s
 
 	for _, r := range rules {
 		if matchContentTypeCondition(r, hasEpisode, hasEpisodeRange, hasSeason, hasSeasonRange, hasPackKind, hasSPKind, hasMovieIndex, hasMovieIndexRange, hasTech, hasMovieKeyword, hasYear, spKind) {
-			return r.Result, r.Confidence
+			return model.ContentKind(r.Result), r.Confidence
 		}
 	}
 
-	return "UNKNOWN", 0.5
+	return model.ContentKindUnknown, 0.5
 }
 
 func matchContentTypeCondition(r config.ContentTypeInferenceRule, hasEpisode bool, hasEpisodeRange bool, hasSeason bool, hasSeasonRange bool, hasPackKind bool, hasSPKind bool, hasMovieIndex bool, hasMovieIndexRange bool, hasTech bool, hasMovieKeyword bool, hasYear bool, spKind string) bool {
@@ -93,7 +93,7 @@ func matchContentTypeCondition(r config.ContentTypeInferenceRule, hasEpisode boo
 	return true
 }
 
-func matchTemplate(cfg *config.Config, epRoute string, contentKind string, group string, episode string, episodeRange string, season string, packKind string, spKind string, movieIndex string, hasTech bool, hasMovieKeyword bool, attrs []model.Attribute, tokens []model.Token) (string, float64, string) {
+func matchTemplate(cfg *config.Config, epRoute string, contentKind model.ContentKind, group string, episode string, episodeRange string, season string, packKind string, spKind string, movieIndex string, hasTech bool, hasMovieKeyword bool, attrs []model.Attribute, tokens []model.Token) (string, float64, string) {
 	family := detectRouteFamily(cfg, attrs, tokens)
 	epRoute = strings.TrimSpace(epRoute)
 	if epRoute == "RANGE" {
@@ -133,7 +133,7 @@ func matchTemplate(cfg *config.Config, epRoute string, contentKind string, group
 	}
 
 	admitStreaming := isStreamingRelease(tokens, attrs)
-	isBatchContent := strings.EqualFold(strings.TrimSpace(contentKind), "BATCH")
+	isBatchContent := contentKind.Canonical() == model.ContentKindBatch
 	strictRouteIDs := collectStrictRouteIDs(cfg)
 	allowedByFamily := allowedStrictRouteIDsForFamily(family)
 	selectBest := func(tpls []config.TemplateDef, enforceEpRoute bool) (string, float64, string) {
@@ -221,13 +221,13 @@ func matchTemplate(cfg *config.Config, epRoute string, contentKind string, group
 		}
 	}
 
-	if strings.EqualFold(strings.TrimSpace(contentKind), "BATCH") {
+	if contentKind.Canonical() == model.ContentKindBatch {
 		if id, conf, route := selectBest(cfg.TemplateCatalog.BatchTemplates, false); strings.TrimSpace(id) != "" {
 			return id, conf, route
 		}
 	}
 
-	if strings.EqualFold(strings.TrimSpace(contentKind), "UNKNOWN") {
+	if contentKind.Canonical() == model.ContentKindUnknown {
 		if strings.TrimSpace(episode) == "" &&
 			strings.TrimSpace(episodeRange) == "" &&
 			strings.TrimSpace(season) == "" &&
@@ -433,17 +433,18 @@ func templateConditionsSatisfiable(cond *config.TemplateConditions, attrs []mode
 	return true
 }
 
-func templatesByContentKind(cfg *config.Config, contentKind string) []config.TemplateDef {
+func templatesByContentKind(cfg *config.Config, contentKind model.ContentKind) []config.TemplateDef {
+	// Deliberately an exact match (no Canonical): unknown values fall through to nil.
 	switch contentKind {
-	case "TV_EP":
+	case model.ContentKindTVEP:
 		return cfg.TemplateCatalog.TVEpisodeTemplates
-	case "BATCH":
+	case model.ContentKindBatch:
 		return cfg.TemplateCatalog.BatchTemplates
-	case "MOVIE":
+	case model.ContentKindMovie:
 		return cfg.TemplateCatalog.MovieTemplates
-	case "SP", "SPECIAL":
+	case "SP", model.ContentKindSpecial:
 		return cfg.TemplateCatalog.SpecialTemplates
-	case "UNKNOWN":
+	case model.ContentKindUnknown:
 		return cfg.TemplateCatalog.UnknownTemplates
 	default:
 		return nil

@@ -15,9 +15,9 @@ func (p *Parser) applyGroupRouteOverride(
 	title string,
 	aliases []string,
 	templateID string,
-	contentKind string,
+	contentKind model.ContentKind,
 	routeID string,
-) (string, string, []string, string, string, string, bool) {
+) (string, string, []string, string, model.ContentKind, string, bool) {
 	if p == nil || len(p.groupRouteRules) == 0 {
 		return group, title, aliases, templateID, contentKind, routeID, false
 	}
@@ -80,7 +80,7 @@ func (p *Parser) applyGroupRouteOverride(
 			outTemplateID = r.forceTemplateID
 		}
 		if strings.TrimSpace(r.forceContentKind) != "" {
-			outContentKind = r.forceContentKind
+			outContentKind = model.ContentKind(r.forceContentKind)
 		}
 		if strings.TrimSpace(r.forceRouteID) != "" {
 			outRouteID = r.forceRouteID

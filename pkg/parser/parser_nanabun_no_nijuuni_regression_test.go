@@ -39,7 +39,7 @@ func TestNanabunNoNijuuniHalfWidthSlash(t *testing.T) {
 		if !containsAlias(canonicalAliases(res), "Nanabun no Nijuuni") {
 			t.Fatalf("missing romaji alias: %v for %q", canonicalAliases(res), c.raw)
 		}
-		if got := res.ContentKind; got != c.wantKind {
+		if got := string(res.ContentKind); got != c.wantKind {
 			t.Fatalf("content kind=%q want %q for %q", got, c.wantKind, c.raw)
 		}
 		if got := canonicalEPKind(res); got != c.wantEPKind {

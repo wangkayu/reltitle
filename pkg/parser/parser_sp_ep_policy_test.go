@@ -109,7 +109,7 @@ func TestParserSPEPPolicy_Matrix(t *testing.T) {
 			if err != nil {
 				t.Fatalf("parse failed: %v", err)
 			}
-			if tc.wantKind != "" && res.ContentKind != tc.wantKind {
+			if tc.wantKind != "" && string(res.ContentKind) != tc.wantKind {
 				t.Fatalf("content_kind=%q want=%q", res.ContentKind, tc.wantKind)
 			}
 			if got := canonicalEpisode(res); got != tc.wantEpisode {

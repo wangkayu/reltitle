@@ -5,30 +5,30 @@ import (
 	"strings"
 )
 
-func isUnknownOutput(contentKind string, templateID string) bool {
-	if strings.EqualFold(strings.TrimSpace(contentKind), "UNKNOWN") {
+func isUnknownOutput(contentKind model.ContentKind, templateID string) bool {
+	if contentKind.Canonical() == model.ContentKindUnknown {
 		return true
 	}
 	return strings.EqualFold(strings.TrimSpace(templateID), "TF_UNKNOWN_DEFAULT")
 }
 
-func normalizeContentKindByTemplateID(contentKind string, templateID string) string {
+func normalizeContentKindByTemplateID(contentKind model.ContentKind, templateID string) model.ContentKind {
 	tid := strings.TrimSpace(templateID)
 	if tid == "" {
 		return contentKind
 	}
-	cur := strings.ToUpper(strings.TrimSpace(contentKind))
+	cur := contentKind.Canonical()
 	switch {
 	case strings.HasPrefix(tid, "TF_BATCH_"):
-		return "BATCH"
+		return model.ContentKindBatch
 	case strings.HasPrefix(tid, "TF_MOVIE_"):
-		if cur == "" || cur == "UNKNOWN" || cur == "TV_EP" {
-			return "MOVIE"
+		if cur == "" || cur == model.ContentKindUnknown || cur == model.ContentKindTVEP {
+			return model.ContentKindMovie
 		}
 		return contentKind
 	case strings.HasPrefix(tid, "TF_SPECIAL_"), strings.HasPrefix(tid, "TF_SP_"):
-		if cur == "" || cur == "UNKNOWN" {
-			return "SPECIAL"
+		if cur == "" || cur == model.ContentKindUnknown {
+			return model.ContentKindSpecial
 		}
 		return contentKind
 	default:

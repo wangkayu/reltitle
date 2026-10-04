@@ -61,8 +61,8 @@ func shouldDemoteEpisodeToMovieIndex(rawTitle string, episode string, episodeRan
 	return false
 }
 
-func normalizeMovieEpisodeSignals(rawTitle string, contentKind string, episode string, episodeRange string, season string, seasonRange string, packKind string, hasMovieKeyword bool, movieIndex string, movieIndexRange string, episodeIdx int, movieIndexIdx int) (string, string, int, int, bool) {
-	if !strings.EqualFold(strings.TrimSpace(contentKind), "MOVIE") {
+func normalizeMovieEpisodeSignals(rawTitle string, contentKind model.ContentKind, episode string, episodeRange string, season string, seasonRange string, packKind string, hasMovieKeyword bool, movieIndex string, movieIndexRange string, episodeIdx int, movieIndexIdx int) (string, string, int, int, bool) {
+	if contentKind.Canonical() != model.ContentKindMovie {
 		return episode, movieIndex, episodeIdx, movieIndexIdx, false
 	}
 	if strings.TrimSpace(movieIndexRange) != "" {
@@ -306,8 +306,8 @@ func dropContentsAttrsInsideTitleSpan(attrs []model.Attribute, titleStart int, t
 	return out
 }
 
-func (p *Parser) inferPackProfile(contentKind string, packKind string, season string, seasonRange string, attrs []model.Attribute) string {
-	contentKindUp := strings.ToUpper(strings.TrimSpace(contentKind))
+func (p *Parser) inferPackProfile(contentKind model.ContentKind, packKind string, season string, seasonRange string, attrs []model.Attribute) string {
+	contentKindUp := string(contentKind.Canonical())
 	packKindLow := strings.ToLower(strings.TrimSpace(packKind))
 	hasSeason := strings.TrimSpace(season) != ""
 	hasSeasonRange := strings.TrimSpace(seasonRange) != ""

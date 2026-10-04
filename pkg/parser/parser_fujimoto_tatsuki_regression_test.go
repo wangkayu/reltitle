@@ -148,7 +148,7 @@ func TestUnrelatedTitle17_26NotAffectedByKnowledge(t *testing.T) {
 		if got := canonicalTitle(res); got != "Some Show" && got != "Random Anime" {
 			t.Fatalf("title=%q for %q", got, c.raw)
 		}
-		if got := res.ContentKind; got != c.wantKind {
+		if got := string(res.ContentKind); got != c.wantKind {
 			t.Fatalf("content kind=%q want %q for %q", got, c.wantKind, c.raw)
 		}
 		if got := canonicalEpisodeRange(res); got != c.wantRange {

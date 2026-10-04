@@ -54,37 +54,6 @@ func cloneEPReference(in *EPReference) *EPReference {
 	return &cp
 }
 
-func (s *EPSemantics) SyncLegacyMirrorsFromPrimary() {
-	if s == nil {
-		return
-	}
-	if s.Primary == nil {
-		return
-	}
-	s.Kind = ""
-	s.Axis = ""
-	s.Season = ""
-	s.SeasonRange = ""
-	s.Episode = ""
-	s.EpisodeList = nil
-	s.RangeStart = ""
-	s.RangeEnd = ""
-	s.SPKind = ""
-	s.Source = ""
-	s.Kind = EPKind(strings.TrimSpace(string(s.Primary.Kind)))
-	s.Axis = EPAxis(strings.TrimSpace(string(s.Primary.Axis)))
-	s.Season = strings.TrimSpace(s.Primary.Season)
-	s.SeasonRange = strings.TrimSpace(s.Primary.SeasonRange)
-	s.Episode = strings.TrimSpace(s.Primary.Episode)
-	if len(s.Primary.EpisodeList) > 0 {
-		s.EpisodeList = append([]string(nil), s.Primary.EpisodeList...)
-	}
-	s.RangeStart = strings.TrimSpace(s.Primary.RangeStart)
-	s.RangeEnd = strings.TrimSpace(s.Primary.RangeEnd)
-	s.SPKind = strings.TrimSpace(s.Primary.SPKind)
-	s.Source = EPSource(strings.TrimSpace(string(s.Primary.Source)))
-}
-
 func cloneEPSemantics(in *EPSemantics) *EPSemantics {
 	if in == nil {
 		return nil
@@ -101,7 +70,6 @@ func cloneEPSemantics(in *EPSemantics) *EPSemantics {
 			cp.Alternates = append(cp.Alternates, altCopy)
 		}
 	}
-	cp.SyncLegacyMirrorsFromPrimary()
 	return &cp
 }
 
@@ -113,23 +81,16 @@ func (r *ParseResult) CanonicalEPSemantics() *EPSemantics {
 }
 
 func (r *ParseResult) CanonicalEpisode() string {
-	if sem := r.CanonicalEPSemantics(); sem != nil {
-		if sem.Primary != nil {
-			return strings.TrimSpace(sem.Primary.Episode)
-		}
-		return strings.TrimSpace(sem.Episode)
+	if sem := r.CanonicalEPSemantics(); sem != nil && sem.Primary != nil {
+		return strings.TrimSpace(sem.Primary.Episode)
 	}
 	return ""
 }
 
 func (r *ParseResult) CanonicalEpisodeRange() string {
-	if sem := r.CanonicalEPSemantics(); sem != nil {
-		start := strings.TrimSpace(sem.RangeStart)
-		end := strings.TrimSpace(sem.RangeEnd)
-		if sem.Primary != nil {
-			start = strings.TrimSpace(sem.Primary.RangeStart)
-			end = strings.TrimSpace(sem.Primary.RangeEnd)
-		}
+	if sem := r.CanonicalEPSemantics(); sem != nil && sem.Primary != nil {
+		start := strings.TrimSpace(sem.Primary.RangeStart)
+		end := strings.TrimSpace(sem.Primary.RangeEnd)
 		if start != "" && end != "" {
 			return start + "-" + end
 		}
@@ -138,21 +99,15 @@ func (r *ParseResult) CanonicalEpisodeRange() string {
 }
 
 func (r *ParseResult) CanonicalSeason() string {
-	if sem := r.CanonicalEPSemantics(); sem != nil {
-		if sem.Primary != nil {
-			return strings.TrimSpace(sem.Primary.Season)
-		}
-		return strings.TrimSpace(sem.Season)
+	if sem := r.CanonicalEPSemantics(); sem != nil && sem.Primary != nil {
+		return strings.TrimSpace(sem.Primary.Season)
 	}
 	return ""
 }
 
 func (r *ParseResult) CanonicalSeasonRange() string {
-	if sem := r.CanonicalEPSemantics(); sem != nil {
-		if sem.Primary != nil {
-			return strings.TrimSpace(sem.Primary.SeasonRange)
-		}
-		return strings.TrimSpace(sem.SeasonRange)
+	if sem := r.CanonicalEPSemantics(); sem != nil && sem.Primary != nil {
+		return strings.TrimSpace(sem.Primary.SeasonRange)
 	}
 	return ""
 }
@@ -170,11 +125,8 @@ func (r *ParseResult) CanonicalPackProfile() string {
 }
 
 func (r *ParseResult) CanonicalSPKind() string {
-	if sem := r.CanonicalEPSemantics(); sem != nil {
-		if sem.Primary != nil {
-			return strings.TrimSpace(sem.Primary.SPKind)
-		}
-		return strings.TrimSpace(sem.SPKind)
+	if sem := r.CanonicalEPSemantics(); sem != nil && sem.Primary != nil {
+		return strings.TrimSpace(sem.Primary.SPKind)
 	}
 	return ""
 }
@@ -192,17 +144,12 @@ func (r *ParseResult) CanonicalEpRoute() string {
 		return ""
 	}
 	sem := r.CanonicalEPSemantics()
-	if sem == nil {
+	if sem == nil || sem.Primary == nil {
 		return ""
 	}
-	k := sem.Kind.Canonical()
-	source := strings.TrimSpace(string(sem.Source))
-	season := strings.TrimSpace(sem.Season)
-	if sem.Primary != nil {
-		k = sem.Primary.Kind.Canonical()
-		source = strings.TrimSpace(string(sem.Primary.Source))
-		season = strings.TrimSpace(sem.Primary.Season)
-	}
+	k := sem.Primary.Kind.Canonical()
+	source := sem.Primary.Source.Canonical()
+	season := strings.TrimSpace(sem.Primary.Season)
 	switch k {
 	case EPKindRange:
 		return "RANGE"
@@ -211,7 +158,7 @@ func (r *ParseResult) CanonicalEpRoute() string {
 	case EPKindSP:
 		return "SP_ONLY"
 	case EPKindEP:
-		if strings.EqualFold(source, "tagged_ep_final") {
+		if source == EPSourceTaggedEPFinal {
 			return "ABS_EP"
 		}
 		if season != "" {

@@ -111,21 +111,6 @@ func TestCanonicalEpisodeRange(t *testing.T) {
 	}
 }
 
-// Without a Primary the legacy mirror fields are used.
-func TestCanonicalEPAccessorsFallBackToLegacyFields(t *testing.T) {
-	r := &ParseResult{EPSemantics: &EPSemantics{Kind: "ep", Season: "3", Episode: "7", RangeStart: "1", RangeEnd: "2", SPKind: "OAD", SeasonRange: "S1-S2"}}
-	if r.CanonicalEpisode() != "7" || r.CanonicalSeason() != "3" || r.CanonicalSPKind() != "OAD" || r.CanonicalSeasonRange() != "S1-S2" {
-		t.Fatalf("legacy fields not used: ep=%q season=%q sp=%q seasonRange=%q",
-			r.CanonicalEpisode(), r.CanonicalSeason(), r.CanonicalSPKind(), r.CanonicalSeasonRange())
-	}
-	if got := r.CanonicalEpisodeRange(); got != "1-2" {
-		t.Errorf("CanonicalEpisodeRange=%q, want 1-2", got)
-	}
-	if got := r.CanonicalEpRoute(); got != "SXXEXX" {
-		t.Errorf("CanonicalEpRoute=%q, want SXXEXX (kind is upper-cased, season present)", got)
-	}
-}
-
 func TestCanonicalEpRoute(t *testing.T) {
 	tests := []struct {
 		name string
@@ -173,40 +158,4 @@ func TestCanonicalEPSemanticsReturnsIndependentCopy(t *testing.T) {
 	if r.EPSemantics.Primary.EpisodeList[0] != "1" || r.EPSemantics.Primary.Episode != " 1 " || r.EPSemantics.Alternates[0].EpisodeList[0] != "9" {
 		t.Fatalf("mutating the copy changed the original: %+v / %+v", r.EPSemantics.Primary, r.EPSemantics.Alternates)
 	}
-}
-
-func TestSyncLegacyMirrorsFromPrimary(t *testing.T) {
-	s := &EPSemantics{
-		Kind: "stale", Episode: "stale", EpisodeList: []string{"stale"},
-		Primary: &EPReference{
-			Kind: " EP ", Axis: "SE", Season: "2", SeasonRange: "S1-S2", Episode: " 5 ",
-			EpisodeList: []string{"5", "6"}, RangeStart: "5", RangeEnd: "6", SPKind: "OVA", Source: " src ",
-		},
-	}
-	s.SyncLegacyMirrorsFromPrimary()
-
-	want := EPSemantics{
-		Kind: "EP", Axis: "SE", Season: "2", SeasonRange: "S1-S2", Episode: "5",
-		EpisodeList: []string{"5", "6"}, RangeStart: "5", RangeEnd: "6", SPKind: "OVA", Source: "src",
-	}
-	got := *s
-	got.Primary = nil
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("mirrors not synced from primary:\n got  %+v\n want %+v", got, want)
-	}
-
-	s.Primary.EpisodeList[0] = "changed"
-	if s.EpisodeList[0] != "5" {
-		t.Fatal("legacy EpisodeList shares memory with Primary")
-	}
-}
-
-func TestSyncLegacyMirrorsWithoutPrimaryKeepsFields(t *testing.T) {
-	s := &EPSemantics{Kind: "EP", Episode: "3"}
-	s.SyncLegacyMirrorsFromPrimary()
-	if s.Kind != "EP" || s.Episode != "3" {
-		t.Fatalf("fields changed without a primary: %+v", s)
-	}
-	var nilSem *EPSemantics
-	nilSem.SyncLegacyMirrorsFromPrimary() // must not panic
 }

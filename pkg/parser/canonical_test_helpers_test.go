@@ -55,31 +55,22 @@ func canonicalEPSemantics(res *model.ParseResult) *model.EPSemantics {
 }
 
 func canonicalEPKind(res *model.ParseResult) string {
-	if sem := canonicalEPSemantics(res); sem != nil {
-		if sem.Primary != nil {
-			return string(sem.Primary.Kind.Canonical())
-		}
-		return string(sem.Kind.Canonical())
+	if sem := canonicalEPSemantics(res); sem != nil && sem.Primary != nil {
+		return string(sem.Primary.Kind.Canonical())
 	}
 	return ""
 }
 
 func canonicalEPAxis(res *model.ParseResult) string {
-	if sem := canonicalEPSemantics(res); sem != nil {
-		if sem.Primary != nil {
-			return string(sem.Primary.Axis.Canonical())
-		}
-		return string(sem.Axis.Canonical())
+	if sem := canonicalEPSemantics(res); sem != nil && sem.Primary != nil {
+		return string(sem.Primary.Axis.Canonical())
 	}
 	return ""
 }
 
 func canonicalEPSource(res *model.ParseResult) string {
-	if sem := canonicalEPSemantics(res); sem != nil {
-		if sem.Primary != nil {
-			return strings.TrimSpace(string(sem.Primary.Source))
-		}
-		return strings.TrimSpace(string(sem.Source))
+	if sem := canonicalEPSemantics(res); sem != nil && sem.Primary != nil {
+		return strings.TrimSpace(string(sem.Primary.Source))
 	}
 	return ""
 }
@@ -88,9 +79,6 @@ func canonicalEpisodeList(res *model.ParseResult) []string {
 	if sem := canonicalEPSemantics(res); sem != nil {
 		if sem.Primary != nil && len(sem.Primary.EpisodeList) > 0 {
 			return append([]string(nil), sem.Primary.EpisodeList...)
-		}
-		if len(sem.EpisodeList) > 0 {
-			return append([]string(nil), sem.EpisodeList...)
 		}
 	}
 	return nil

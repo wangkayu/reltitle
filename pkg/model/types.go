@@ -99,19 +99,6 @@ type EPReference struct {
 type EPSemantics struct {
 	Primary    *EPReference  `json:"primary,omitempty"`
 	Alternates []EPReference `json:"alternates,omitempty"`
-
-	// Legacy mirrors remain available to Go callers for now, but are no longer
-	// serialized. Canonical accessors should prefer Primary.
-	Kind        EPKind   `json:"-"`
-	Axis        EPAxis   `json:"-"`
-	Season      string   `json:"-"`
-	SeasonRange string   `json:"-"`
-	Episode     string   `json:"-"`
-	EpisodeList []string `json:"-"`
-	RangeStart  string   `json:"-"`
-	RangeEnd    string   `json:"-"`
-	SPKind      string   `json:"-"`
-	Source      EPSource `json:"-"`
 }
 
 // EPSlot is the internal, pre-output form of EPSemantics used while the

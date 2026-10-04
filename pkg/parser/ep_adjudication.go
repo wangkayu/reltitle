@@ -622,7 +622,6 @@ func buildCanonicalEPSemantics(rawTitle string, tokens []model.Token, epslot *mo
 		Primary:    primary,
 		Alternates: collectAlternateEPReferences(rawTitle, tokens, primary),
 	}
-	out.SyncLegacyMirrorsFromPrimary()
 	return out
 }
 

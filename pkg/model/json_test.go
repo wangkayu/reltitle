@@ -6,16 +6,18 @@ import (
 	"testing"
 )
 
-func TestParseResultMarshalJSON_HardCutsLegacyEPSemanticsFields(t *testing.T) {
+func TestParseResultMarshalJSON_FiltersEpisodeAttributes(t *testing.T) {
 	res := ParseResult{
 		RawTitle:    "[A] Sample - 01",
 		ContentKind: "TV_EP",
 		EPSemantics: &EPSemantics{
-			Kind:    "EP",
-			Axis:    "SE",
-			Season:  "2",
-			Episode: "1",
-			Source:  "episode_final",
+			Primary: &EPReference{
+				Kind:    "EP",
+				Axis:    "SE",
+				Season:  "2",
+				Episode: "1",
+				Source:  "episode_final",
+			},
 		},
 		Attributes: []Attribute{
 			{Type: AttrTitle, Normalized: "Sample"},

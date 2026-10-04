@@ -66,6 +66,21 @@ type InferenceRulesConfig struct {
 	UpdatedAt            string                     `yaml:"updated_at" json:"updated_at"`
 	Description          string                     `yaml:"description" json:"description"`
 	ContentTypeInference []ContentTypeInferenceRule `yaml:"content_type_inference" json:"content_type_inference"`
+
+	// Reference-only sections: kept in inference_rules.yaml as design notes for humans.
+	// They are declared so strict decoding accepts them, but the parser never reads them.
+	ContentsDemotion    any `yaml:"contents_demotion" json:"-"`
+	SPKindInference     any `yaml:"sp_kind_inference" json:"-"`
+	EpisodeInference    any `yaml:"episode_inference" json:"-"`
+	TitleInference      any `yaml:"title_inference" json:"-"`
+	AliasesInference    any `yaml:"aliases_inference" json:"-"`
+	AliasFiltering      any `yaml:"alias_filtering" json:"-"`
+	LanguageDetection   any `yaml:"language_detection" json:"-"`
+	TemplateFamilyRules any `yaml:"template_family_rules" json:"-"`
+	GroupSpecificRules  any `yaml:"group_specific_rules" json:"-"`
+	SuccessMetrics      any `yaml:"success_metrics" json:"-"`
+	CleaningStrategy    any `yaml:"cleaning_strategy" json:"-"`
+	TitleAreaDetection  any `yaml:"title_area_detection" json:"-"`
 }
 
 type ContentTypeInferenceRule struct {
@@ -77,6 +92,8 @@ type ContentTypeInferenceRule struct {
 	Description  string         `yaml:"description" json:"description"`
 	Keywords     []string       `yaml:"keywords" json:"keywords"`
 	PackKeywords []string       `yaml:"pack_keywords" json:"pack_keywords"`
+
+	Examples any `yaml:"examples" json:"-"` // reference-only, never read by the parser
 }
 
 type TemplateCatalogConfig struct {
@@ -88,6 +105,8 @@ type TemplateCatalogConfig struct {
 	MovieTemplates     []TemplateDef `yaml:"movie_templates" json:"movie_templates"`
 	SpecialTemplates   []TemplateDef `yaml:"special_templates" json:"special_templates"`
 	UnknownTemplates   []TemplateDef `yaml:"unknown_templates" json:"unknown_templates"`
+
+	Statistics any `yaml:"statistics" json:"-"` // reference-only, never read by the parser
 }
 
 type TemplateDef struct {
@@ -101,6 +120,12 @@ type TemplateDef struct {
 	RouteID      string              `yaml:"route_id" json:"route_id"`
 	Conditions   *TemplateConditions `yaml:"conditions" json:"conditions"`
 	Signals      *TemplateSignals    `yaml:"signals" json:"signals"`
+
+	// Reference-only keys: documentation in template_catalog.yaml, never read by the parser.
+	Pattern          any    `yaml:"pattern" json:"-"`
+	KeySignals       any    `yaml:"key_signals" json:"-"`
+	ContentsHandling any    `yaml:"contents_handling" json:"-"`
+	SPKind           string `yaml:"sp_kind" json:"-"`
 }
 
 type TemplateSignals struct {

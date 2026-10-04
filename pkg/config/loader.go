@@ -1,49 +1,56 @@
 package config
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
 	"gopkg.in/yaml.v3"
 )
 
+// LoadAll reads every config file from baseDir and validates the result.
+//
+// All files are required. Decoding is strict: an unknown key is an error, so a
+// typo cannot silently disable a rule. Every problem found is reported, not just
+// the first one.
 func LoadAll(baseDir string) (*Config, error) {
 	cfg := &Config{}
-
-	lexiconPath := filepath.Join(baseDir, "lexicon.yaml")
-	if err := loadYAMLFile(lexiconPath, &cfg.Lexicon); err != nil {
-		return nil, fmt.Errorf("load lexicon: %w", err)
+	files := []struct {
+		name string
+		out  any
+	}{
+		{"lexicon.yaml", &cfg.Lexicon},
+		{"template_catalog.yaml", &cfg.TemplateCatalog},
+		{"inference_rules.yaml", &cfg.Inference},
+		{"grouplist.yaml", &cfg.GroupList},
+		{"dict_canonical_values.yaml", &cfg.DictCanonicalValues},
+		{"dict_token_synonyms.yaml", &cfg.DictTokenSynonyms},
+		{"dict_token_slot_candidates.yaml", &cfg.DictTokenSlotCandidates},
+		{"dict_alias_noise_words.yaml", &cfg.DictAliasNoiseWords},
+		{"dict_note_promotion.yaml", &cfg.DictNotePromotion},
+		{"group_route_overrides.yaml", &cfg.GroupRoute},
+		{"route_families.yaml", &cfg.RouteFamilies},
+		{"group_slot2_platform_rules.yaml", &cfg.GroupSlot2Platform},
+		{"pack_profile_rules.yaml", &cfg.PackProfileRules},
+		{"title_knowledge.yaml", &cfg.TitleKnowledge},
 	}
 
-	templateCatalogPath := filepath.Join(baseDir, "template_catalog.yaml")
-	if err := loadYAMLFile(templateCatalogPath, &cfg.TemplateCatalog); err != nil {
-		return nil, fmt.Errorf("load template_catalog: %w", err)
+	var errs []error
+	for _, f := range files {
+		if err := loadYAMLFile(filepath.Join(baseDir, f.name), f.out); err != nil {
+			errs = append(errs, fmt.Errorf("%s: %w", f.name, err))
+		}
+	}
+	if len(errs) > 0 {
+		return nil, fmt.Errorf("directory %q: %w", baseDir, errors.Join(errs...))
 	}
 
-	inferenceRulesPath := filepath.Join(baseDir, "inference_rules.yaml")
-	if err := loadYAMLFile(inferenceRulesPath, &cfg.Inference); err != nil {
-		return nil, fmt.Errorf("load inference_rules: %w", err)
+	if err := cfg.Validate(); err != nil {
+		return nil, fmt.Errorf("directory %q: invalid config: %w", baseDir, err)
 	}
-
-	// Load group list (optional, for token identification assistance)
-	groupListPath := filepath.Join(baseDir, "grouplist.yaml")
-	if err := loadYAMLFile(groupListPath, &cfg.GroupList); err != nil {
-		// GroupList is optional, log but don't fail
-		fmt.Fprintf(os.Stderr, "Warning: failed to load grouplist.yaml: %v\n", err)
-	}
-
-	_ = loadYAMLFile(filepath.Join(baseDir, "dict_canonical_values.yaml"), &cfg.DictCanonicalValues)
-	_ = loadYAMLFile(filepath.Join(baseDir, "dict_token_synonyms.yaml"), &cfg.DictTokenSynonyms)
-	_ = loadYAMLFile(filepath.Join(baseDir, "dict_token_slot_candidates.yaml"), &cfg.DictTokenSlotCandidates)
-	_ = loadYAMLFile(filepath.Join(baseDir, "dict_alias_noise_words.yaml"), &cfg.DictAliasNoiseWords)
-	_ = loadYAMLFile(filepath.Join(baseDir, "dict_note_promotion.yaml"), &cfg.DictNotePromotion)
-	_ = loadYAMLFile(filepath.Join(baseDir, "group_route_overrides.yaml"), &cfg.GroupRoute)
-	_ = loadYAMLFile(filepath.Join(baseDir, "route_families.yaml"), &cfg.RouteFamilies)
-	_ = loadYAMLFile(filepath.Join(baseDir, "group_slot2_platform_rules.yaml"), &cfg.GroupSlot2Platform)
-	_ = loadYAMLFile(filepath.Join(baseDir, "pack_profile_rules.yaml"), &cfg.PackProfileRules)
-	_ = loadYAMLFile(filepath.Join(baseDir, "title_knowledge.yaml"), &cfg.TitleKnowledge)
-
 	return cfg, nil
 }
 
@@ -52,5 +59,13 @@ func loadYAMLFile(path string, out any) error {
 	if err != nil {
 		return err
 	}
-	return yaml.Unmarshal(data, out)
+	dec := yaml.NewDecoder(bytes.NewReader(data))
+	dec.KnownFields(true)
+	if err := dec.Decode(out); err != nil {
+		if errors.Is(err, io.EOF) {
+			return errors.New("file is empty")
+		}
+		return err
+	}
+	return nil
 }

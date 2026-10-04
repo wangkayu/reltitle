@@ -300,31 +300,6 @@ func shouldAcceptSPKindToken(tokens []model.Token, idx int, kind string, suffix 
 	return false
 }
 
-func hasNearbyEpisodeNumberToken(tokens []model.Token, idx int) bool {
-	if idx < 0 || idx >= len(tokens) {
-		return false
-	}
-	if idx+1 < len(tokens) && !tokens[idx+1].Removed && isShortEpisodeNumberToken(tokens[idx+1].Text) {
-		return true
-	}
-	if idx+2 < len(tokens) && !tokens[idx+2].Removed {
-		sep := strings.TrimSpace(tokens[idx+1].Text)
-		if isSimpleBoundarySep(sep) && isShortEpisodeNumberToken(tokens[idx+2].Text) {
-			return true
-		}
-	}
-	if idx-1 >= 0 && !tokens[idx-1].Removed && isShortEpisodeNumberToken(tokens[idx-1].Text) {
-		return true
-	}
-	if idx-2 >= 0 && !tokens[idx-2].Removed {
-		sep := strings.TrimSpace(tokens[idx-1].Text)
-		if isSimpleBoundarySep(sep) && isShortEpisodeNumberToken(tokens[idx-2].Text) {
-			return true
-		}
-	}
-	return false
-}
-
 func hasSPTailMetaBoundary(tokens []model.Token, idx int) bool {
 	if idx < 0 || idx >= len(tokens) {
 		return false

@@ -501,48 +501,6 @@ func templateConditionsSatisfiable(cond *config.TemplateConditions, attrs []mode
 	return true
 }
 
-func hasSourceTypeInTokens(tokens []model.Token, want []string) bool {
-	if len(tokens) == 0 || len(want) == 0 {
-		return false
-	}
-	wantSet := map[string]bool{}
-	for _, w := range want {
-		ww := strings.ToUpper(strings.TrimSpace(w))
-		if ww != "" {
-			wantSet[ww] = true
-		}
-	}
-	for i := 0; i < len(tokens); i++ {
-		t := strings.ToUpper(strings.TrimSpace(tokens[i].Text))
-		if t == "" {
-			continue
-		}
-		if wantSet[t] {
-			return true
-		}
-		if wantSet["WEBRIP"] || wantSet["WEB-RIP"] {
-			if t == "WEBRIP" || t == "WEB-RIP" {
-				return true
-			}
-		}
-		if wantSet["WEB-DL"] {
-			if t == "WEB-DL" {
-				return true
-			}
-			if t == "WEB" {
-				if i+2 < len(tokens) {
-					t1 := strings.ToUpper(strings.TrimSpace(tokens[i+1].Text))
-					t2 := strings.ToUpper(strings.TrimSpace(tokens[i+2].Text))
-					if (t1 == "-" && t2 == "DL") || t1 == "DL" {
-						return true
-					}
-				}
-			}
-		}
-	}
-	return false
-}
-
 func templatesByContentKind(cfg *config.Config, contentKind string) []config.TemplateDef {
 	switch contentKind {
 	case "TV_EP":

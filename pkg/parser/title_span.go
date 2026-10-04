@@ -263,32 +263,6 @@ func (p *Parser) looksLikeDotSeparatedMetaCutToken(s string) bool {
 	return false
 }
 
-func skipLeadingBracketBlocks(tokens []model.Token) int {
-	i := 0
-	for i < len(tokens) && tokens[i].Text == "[" {
-		end := -1
-		depth := 0
-		for j := i; j < len(tokens); j++ {
-			if tokens[j].Text == "[" {
-				depth++
-			} else if tokens[j].Text == "]" {
-				if depth > 0 {
-					depth--
-					if depth == 0 {
-						end = j
-						break
-					}
-				}
-			}
-		}
-		if end < 0 {
-			break
-		}
-		i = end + 1
-	}
-	return i
-}
-
 func titleStartAfterLeadingEmptyBracketBlocks(tokens []model.Token) int {
 	i := 0
 	for i < len(tokens) {

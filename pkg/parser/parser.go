@@ -775,8 +775,8 @@ func (p *Parser) Parse(rawTitle string) (*model.ParseResult, error) {
 	ctx.AudioCodecCanonical = p.audioCodecCanonical
 	ctx.SeasonRange = seasonRange
 	ctx.Group = group
-	for _, pass := range defaultParsePasses() {
-		pass(tokens, &attrs, ctx)
+	for _, np := range parsePasses {
+		np.Pass(tokens, &attrs, ctx)
 	}
 	attrs = pruneGroupSpanTechArtifacts(attrs, groupSpan)
 	// PackKind may be refined/overridden by parse passes (e.g. contents markers like TV+OAD).
@@ -1050,7 +1050,7 @@ func (p *Parser) Parse(rawTitle string) (*model.ParseResult, error) {
 	movieRouteHardExcluded := hasMovieRouteHardExclusion(rawTitle, attrs, episodeRange, season, seasonRange, packKind)
 	movieContentSignal := hasMovieContentSignal(attrs, hasMovieKeyword, movieIndex, spKind)
 	epRoute := computeEpRoute(tokens, episode, episodeList, episodeRange, season, seasonRange, spKind, movieIndex, hasMovieKeyword, movieRouteHardExcluded)
-	contentKind, contentConf := inferContentKind(p.cfg, episode, episodeRange, season, seasonRange, packKind, spKind, movieIndex, movieIndexRange, hasTech, hasMovieKeyword, hasYear, movieRouteHardExcluded, movieContentSignal)
+	contentKind, _ := inferContentKind(p.cfg, episode, episodeRange, season, seasonRange, packKind, spKind, movieIndex, movieIndexRange, hasTech, hasMovieKeyword, hasYear, movieRouteHardExcluded, movieContentSignal)
 	if ep2, mi2, epIdx2, miIdx2, changed := normalizeMovieEpisodeSignals(rawTitle, contentKind, episode, episodeRange, season, seasonRange, packKind, hasMovieKeyword, movieIndex, movieIndexRange, episodeIdx, movieIndexIdx); changed {
 		episode, movieIndex, episodeIdx, movieIndexIdx = ep2, mi2, epIdx2, miIdx2
 		title = trimMovieDashEpisodeTailFromTitle(rawTitle, title, episode, movieIndex)
@@ -1058,10 +1058,9 @@ func (p *Parser) Parse(rawTitle string) (*model.ParseResult, error) {
 		movieRouteHardExcluded = hasMovieRouteHardExclusion(rawTitle, attrs, episodeRange, season, seasonRange, packKind)
 		movieContentSignal = hasMovieContentSignal(attrs, hasMovieKeyword, movieIndex, spKind)
 		epRoute = computeEpRoute(tokens, episode, episodeList, episodeRange, season, seasonRange, spKind, movieIndex, hasMovieKeyword, movieRouteHardExcluded)
-		contentKind, contentConf = inferContentKind(p.cfg, episode, episodeRange, season, seasonRange, packKind, spKind, movieIndex, movieIndexRange, hasTech, hasMovieKeyword, hasYear, movieRouteHardExcluded, movieContentSignal)
+		contentKind, _ = inferContentKind(p.cfg, episode, episodeRange, season, seasonRange, packKind, spKind, movieIndex, movieIndexRange, hasTech, hasMovieKeyword, hasYear, movieRouteHardExcluded, movieContentSignal)
 	}
-	templateID, templateConf, routeID := matchTemplate(p.cfg, epRoute, contentKind, group, episode, episodeRange, season, packKind, spKind, movieIndex, hasTech, hasMovieKeyword, attrs, tokens)
-	contentKind = normalizeContentKindByTemplateID(contentKind, templateID)
+	templateID, _, _ := matchTemplate(p.cfg, epRoute, contentKind, group, episode, episodeRange, season, packKind, spKind, movieIndex, hasTech, hasMovieKeyword, attrs, tokens)
 	attrs, group, episode, episodeIdx, episodeRange, episodeRangeIdx, season, seasonIdx, signalEvents := applyTemplateSignalAdjudication(
 		p.cfg,
 		templateID,
@@ -1093,7 +1092,7 @@ func (p *Parser) Parse(rawTitle string) (*model.ParseResult, error) {
 	movieRouteHardExcluded = hasMovieRouteHardExclusion(rawTitle, attrs, episodeRange, season, seasonRange, packKind)
 	movieContentSignal = hasMovieContentSignal(attrs, hasMovieKeyword, movieIndex, spKind)
 	epRoute = computeEpRoute(tokens, episode, episodeList, episodeRange, season, seasonRange, spKind, movieIndex, hasMovieKeyword, movieRouteHardExcluded)
-	contentKind, contentConf = inferContentKind(p.cfg, episode, episodeRange, season, seasonRange, packKind, spKind, movieIndex, movieIndexRange, hasTech, hasMovieKeyword, hasYear, movieRouteHardExcluded, movieContentSignal)
+	contentKind, contentConf := inferContentKind(p.cfg, episode, episodeRange, season, seasonRange, packKind, spKind, movieIndex, movieIndexRange, hasTech, hasMovieKeyword, hasYear, movieRouteHardExcluded, movieContentSignal)
 	if shouldDropEpisodeRangeForMovieRange(rawTitle, movieIndexRange, episode, episodeRange) {
 		episode = ""
 		episodeIdx = -1
@@ -1106,8 +1105,8 @@ func (p *Parser) Parse(rawTitle string) (*model.ParseResult, error) {
 		epRoute = computeEpRoute(tokens, episode, episodeList, episodeRange, season, seasonRange, spKind, movieIndex, hasMovieKeyword, movieRouteHardExcluded)
 		contentKind, contentConf = inferContentKind(p.cfg, episode, episodeRange, season, seasonRange, packKind, spKind, movieIndex, movieIndexRange, hasTech, hasMovieKeyword, hasYear, movieRouteHardExcluded, movieContentSignal)
 	}
-	if ep2, mi2, epIdx2, miIdx2, changed := normalizeMovieEpisodeSignals(rawTitle, contentKind, episode, episodeRange, season, seasonRange, packKind, hasMovieKeyword, movieIndex, movieIndexRange, episodeIdx, movieIndexIdx); changed {
-		episode, movieIndex, episodeIdx, movieIndexIdx = ep2, mi2, epIdx2, miIdx2
+	if ep2, mi2, epIdx2, _, changed := normalizeMovieEpisodeSignals(rawTitle, contentKind, episode, episodeRange, season, seasonRange, packKind, hasMovieKeyword, movieIndex, movieIndexRange, episodeIdx, movieIndexIdx); changed {
+		episode, movieIndex, episodeIdx = ep2, mi2, epIdx2
 		title = trimMovieDashEpisodeTailFromTitle(rawTitle, title, episode, movieIndex)
 		epslot = nil
 		movieRouteHardExcluded = hasMovieRouteHardExclusion(rawTitle, attrs, episodeRange, season, seasonRange, packKind)
@@ -1115,7 +1114,7 @@ func (p *Parser) Parse(rawTitle string) (*model.ParseResult, error) {
 		epRoute = computeEpRoute(tokens, episode, episodeList, episodeRange, season, seasonRange, spKind, movieIndex, hasMovieKeyword, movieRouteHardExcluded)
 		contentKind, contentConf = inferContentKind(p.cfg, episode, episodeRange, season, seasonRange, packKind, spKind, movieIndex, movieIndexRange, hasTech, hasMovieKeyword, hasYear, movieRouteHardExcluded, movieContentSignal)
 	}
-	templateID, templateConf, routeID = matchTemplate(p.cfg, epRoute, contentKind, group, episode, episodeRange, season, packKind, spKind, movieIndex, hasTech, hasMovieKeyword, attrs, tokens)
+	templateID, templateConf, routeID := matchTemplate(p.cfg, epRoute, contentKind, group, episode, episodeRange, season, packKind, spKind, movieIndex, hasTech, hasMovieKeyword, attrs, tokens)
 	contentKind = normalizeContentKindByTemplateID(contentKind, templateID)
 	if strings.HasPrefix(routeID, "streaming_release_") {
 		p.applyStreamingReleaseRouteV1(tailParenBlock, &aliases, &attrs)

@@ -728,12 +728,6 @@ func shouldUseUnderscoreEditionRoute(rawTitle string) bool {
 	return strings.EqualFold(strings.TrimSpace(toks[1]), "shincaps")
 }
 
-// Backward compatible wrapper.
-func detectEpisode(tokens []model.Token) (string, int) {
-	ep, idx, _, _ := detectEpisodeWithVersion(tokens)
-	return ep, idx
-}
-
 var tailGroupPattern = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9]{2,20}$`)
 var tailGroupHyphenPrefixPattern = regexp.MustCompile(`(?i)^(?:x?264|x?265|h?264|h?265|\d\.\d|pcm|flac|aac|ac3|eac3|ddp|dts|opus|truehd|atmos)(?:\d\.\d)?$`)
 var tailGroupTechTokenPattern = regexp.MustCompile(`(?i)^(?:dts(?:hd|hdma)?|hdma|truehd|eac3|ac3|flac|opus|pcm|ma\d{1,2}p|ddp\d{0,2})$`)

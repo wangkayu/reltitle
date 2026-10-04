@@ -365,8 +365,6 @@ func isTitleNoiseToken(s string) bool {
 	}
 	// Only treat as title noise when it's a standalone restriction note, not when glued to a valid title.
 	// Examples to drop: "仅限港澳台地区" "（仅限港澳台地区）".
-	low := strings.ToLower(s)
-	_ = low
 	s2 := strings.Trim(s, "()（）[]【】")
 	s2 = strings.TrimSpace(s2)
 	if strings.HasPrefix(s2, "仅限") {

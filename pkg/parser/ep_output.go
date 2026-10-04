@@ -127,56 +127,6 @@ func shouldPruneWeakBatchRangePrimary(epslot *model.EPSlot, episodeRange string,
 	return false
 }
 
-func ensureSPPrimaryFromSPKind(epslot *model.EPSlot, season string, episode string, episodeRange string, episodeList string, spKind string) *model.EPSlot {
-	k := strings.ToUpper(strings.TrimSpace(spKind))
-	if k == "" {
-		return epslot
-	}
-	if strings.TrimSpace(episode) != "" || strings.TrimSpace(episodeRange) != "" || strings.TrimSpace(episodeList) != "" {
-		return epslot
-	}
-	if epslot == nil {
-		e := model.EPEntity{
-			Kind:   "SP",
-			Axis:   k,
-			Season: season,
-			SPKind: k,
-			Source: "sp_kind_final",
-		}
-		return &model.EPSlot{
-			Primary:    &e,
-			Candidates: []model.EPEntity{{Kind: "SP", Axis: k, Season: season, SPKind: k, Source: "sp_kind"}},
-		}
-	}
-	if epslot.Primary == nil {
-		e := model.EPEntity{
-			Kind:   "SP",
-			Axis:   k,
-			Season: season,
-			SPKind: k,
-			Source: "sp_kind_final",
-		}
-		epslot.Primary = &e
-	}
-	hasSPCandidate := false
-	for _, c := range epslot.Candidates {
-		if strings.EqualFold(strings.TrimSpace(c.Kind), "SP") && strings.EqualFold(strings.TrimSpace(c.SPKind), k) {
-			hasSPCandidate = true
-			break
-		}
-	}
-	if !hasSPCandidate {
-		epslot.Candidates = append(epslot.Candidates, model.EPEntity{
-			Kind:   "SP",
-			Axis:   k,
-			Season: season,
-			SPKind: k,
-			Source: "sp_kind",
-		})
-	}
-	return epslot
-}
-
 func shouldPreferSPPrimaryForSpecial(contentKind string, spKind string, epslot *model.EPSlot) bool {
 	if !strings.EqualFold(strings.TrimSpace(contentKind), "SPECIAL") {
 		return false

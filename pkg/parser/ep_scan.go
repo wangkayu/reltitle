@@ -712,10 +712,6 @@ func bracketBlockInnerText(tokens []model.Token, idx int) string {
 	return strings.TrimSpace(strings.Join(parts, " "))
 }
 
-func extractTitleFromSpan(tokens []model.Token, start int, end int) string {
-	return extractTitleFromSpanAllowRemoved(tokens, start, end, false)
-}
-
 func extractTitleFromSpanAllowRemoved(tokens []model.Token, start int, end int, allowRemoved bool) string {
 	if start < 0 {
 		start = 0

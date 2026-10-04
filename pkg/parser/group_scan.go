@@ -18,15 +18,13 @@ func extractHeadBracketGroup(tokens []model.Token) (string, [2]int) {
 	if start >= len(tokens) {
 		return "", [2]int{0, 0}
 	}
-	open0, close0, ok0 := headGroupBracketPair(tokens[start].Text)
+	_, _, ok0 := headGroupBracketPair(tokens[start].Text)
 	if !ok0 {
 		return "", [2]int{0, 0}
 	}
 
 	blocks := make([][3]int, 0, 4)
 	i := start
-	_ = open0
-	_ = close0
 	for i < len(tokens) {
 		if tokens[i].Removed {
 			i++
@@ -435,24 +433,6 @@ func isEpisodeLikeBracketText(s string) bool {
 		return true
 	}
 	return false
-}
-
-func scoreGroupCandidate(s string) int {
-	low := strings.ToLower(strings.TrimSpace(s))
-	score := 0
-	if strings.Contains(s, "字幕") || strings.Contains(s, "漢化") || strings.Contains(s, "汉化") {
-		score += 200
-	}
-	if strings.Contains(low, "subs") || strings.Contains(low, "sub") || strings.Contains(low, "raw") {
-		score += 120
-	}
-	if strings.Contains(s, "&") || strings.Contains(s, "＆") {
-		score += 40
-	}
-	if len([]rune(s)) <= 16 {
-		score += 10
-	}
-	return score
 }
 
 var sxxExxPattern = regexp.MustCompile(`(?i)^s(\d{1,2})e(\d{1,4})(?:v\d+)?(?:[^0-9a-z].*)?$`)

@@ -345,3 +345,173 @@ var (
 	reIsLikelySubtitleBracketGroupText2 = regexp.MustCompile(`(?i)^sub(?:title|titles)?(?:[_ .-]+[\p{L}]{2,16})+$`)
 	reIsLikelySubtitleBracketGroupText3 = regexp.MustCompile(`(?i)^sub(?:title|titles)?[_ .-]?[a-z]{2,8}$`)
 )
+
+func normalizeGroupText(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return ""
+	}
+	s = strings.Join(strings.Fields(s), " ")
+	s = groupHyphenSpacePattern.ReplaceAllString(s, `$1-$2`)
+	// Normalize '&' / '＆' without surrounding spaces.
+	s = groupAmpSpacePattern.ReplaceAllString(s, "&")
+	// Normalize ',' / '，' without surrounding spaces.
+	s = groupCommaSpacePattern.ReplaceAllString(s, ",")
+	return s
+}
+
+func detectTechPrefixedGroup(tokens []model.Token) (string, int) {
+	tech := map[string]bool{
+		"pcm":  true,
+		"x264": true,
+		"x265": true,
+		"h264": true,
+		"h265": true,
+	}
+	for i := 0; i+3 < len(tokens); i++ {
+		if tokens[i].Removed || tokens[i+1].Removed || tokens[i+2].Removed {
+			continue
+		}
+		if isInBracket(tokens, i) || isInParen(tokens, i) {
+			continue
+		}
+		k := strings.ToLower(strings.TrimSpace(tokens[i].Text))
+		if !tech[k] {
+			continue
+		}
+		if strings.TrimSpace(tokens[i+1].Text) != "-" {
+			continue
+		}
+		g := strings.TrimSpace(tokens[i+2].Text)
+		if !isTailGroupToken(g) {
+			continue
+		}
+		if !hasUpperASCII(g) {
+			continue
+		}
+		if strings.TrimSpace(tokens[i+3].Text) != "-" {
+			continue
+		}
+		return g, i + 2
+	}
+	return "", -1
+}
+
+func extractInlineStarGroup(tokens []model.Token) string {
+	if len(tokens) == 0 {
+		return ""
+	}
+	if tokens[0].Removed {
+		return ""
+	}
+	validLeft := func(left string) bool {
+		left = strings.TrimSpace(left)
+		if left == "" {
+			return false
+		}
+		if looksLikeLeadingTitleMeta(left) {
+			return false
+		}
+		if len([]rune(left)) > 24 {
+			return false
+		}
+		// must contain at least one non-ascii rune or '&'
+		hasNonASCII := false
+		for _, r := range left {
+			if r == '&' {
+				hasNonASCII = true
+				break
+			}
+			if r > 127 {
+				hasNonASCII = true
+				break
+			}
+		}
+		return hasNonASCII
+	}
+
+	// Case A: tokenizer split the delimiter into its own token.
+	// Example: ["六四位元字幕組", "★", "..."].
+	if len(tokens) >= 2 {
+		sep := strings.TrimSpace(tokens[1].Text)
+		if sep == "★" || sep == "☆" {
+			left := strings.TrimSpace(tokens[0].Text)
+			if validLeft(left) {
+				hasRight := false
+				maxLookahead := 16
+				if maxLookahead > len(tokens) {
+					maxLookahead = len(tokens)
+				}
+				for j := 2; j < maxLookahead; j++ {
+					if tokens[j].Removed {
+						continue
+					}
+					if strings.TrimSpace(tokens[j].Text) != "" {
+						hasRight = true
+						break
+					}
+				}
+				if hasRight {
+					tokens[0].Removed = true
+					tokens[1].Removed = true
+					return left
+				}
+			}
+		}
+	}
+	// Case A2: two-token group prefix before star.
+	// Example: ["SFSub&", "六四位元字幕組", "★", "..."].
+	if len(tokens) >= 3 {
+		sep := strings.TrimSpace(tokens[2].Text)
+		if sep == "★" || sep == "☆" {
+			leftA := strings.TrimSpace(tokens[0].Text)
+			leftB := strings.TrimSpace(tokens[1].Text)
+			joined := strings.TrimSpace(leftA + " " + leftB)
+			if validLeft(joined) || (strings.HasSuffix(leftA, "&") && hasStrongGroupKeyword(leftB)) {
+				hasRight := false
+				maxLookahead := 20
+				if maxLookahead > len(tokens) {
+					maxLookahead = len(tokens)
+				}
+				for j := 3; j < maxLookahead; j++ {
+					if tokens[j].Removed {
+						continue
+					}
+					if strings.TrimSpace(tokens[j].Text) != "" {
+						hasRight = true
+						break
+					}
+				}
+				if hasRight {
+					tokens[0].Removed = true
+					tokens[1].Removed = true
+					tokens[2].Removed = true
+					return joined
+				}
+			}
+		}
+	}
+
+	// Case B: delimiter is embedded in the first token.
+	text := tokens[0].Text
+	idx := strings.IndexAny(text, "★☆")
+	if idx <= 0 {
+		return ""
+	}
+	left := strings.TrimSpace(text[:idx])
+	right := strings.TrimSpace(text[idx+len("★"):])
+	if left == "" || right == "" {
+		return ""
+	}
+	if !validLeft(left) {
+		return ""
+	}
+	tokens[0].Text = right
+	return left
+}
+
+var groupHyphenSpacePattern = regexp.MustCompile(`([A-Za-z0-9])\s*-\s*([A-Za-z0-9])`)
+
+var groupCommaSpacePattern = regexp.MustCompile(`\s*[,，]\s*`)
+
+var groupAmpSpacePattern = regexp.MustCompile(`\s*[&＆]\s*`)

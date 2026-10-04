@@ -7,20 +7,6 @@ import (
 	"reltitle/pkg/model"
 )
 
-func isInBracket(tokens []model.Token, idx int) bool {
-	depth := 0
-	for i := 0; i < idx; i++ {
-		if tokens[i].Text == "[" || tokens[i].Text == "【" {
-			depth++
-		} else if tokens[i].Text == "]" || tokens[i].Text == "】" {
-			if depth > 0 {
-				depth--
-			}
-		}
-	}
-	return depth > 0
-}
-
 // removeBracketsAroundFullyConsumedBlocks removes bracket tokens ( [ ] 【 】 ) whose
 // entire inner block has already been consumed by attribute/episode extraction.
 // Example: "[08]" and "[WebRip]" leave the inner tokens removed but the bracket
@@ -601,3 +587,67 @@ var (
 	reNormalizeTitleMain8       = regexp.MustCompile(`\s+([】）」』》〉])`)
 	reNormalizeTitleMain9       = regexp.MustCompile(`([】）」』》〉])\s+([\p{Han}\p{Hiragana}\p{Katakana}\p{Hangul}])`)
 )
+
+func extractSearchHintIndexAttrsAndRemoveFromTokens(tokens []model.Token, out *[]model.Attribute) {
+	if out == nil {
+		return
+	}
+	for i := 0; i < len(tokens); i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		text := strings.TrimSpace(tokens[i].Text)
+		if text == "" {
+			continue
+		}
+		if !strings.Contains(text, "检索用") {
+			continue
+		}
+		if !strings.Contains(text, "(") && !strings.Contains(text, "（") {
+			continue
+		}
+
+		end := i
+		for j := i; j < len(tokens); j++ {
+			if tokens[j].Removed {
+				continue
+			}
+			end = j
+			tj := strings.TrimSpace(tokens[j].Text)
+			if strings.Contains(tj, ")") || strings.Contains(tj, "）") {
+				break
+			}
+		}
+
+		for k := i; k <= end; k++ {
+			tokens[k].Removed = true
+		}
+		*out = append(*out, model.Attribute{Type: model.AttrNote, Normalized: "检索用", TokenStart: i, TokenEnd: end + 1, Confidence: 0.7, Source: "heuristic"})
+		i = end
+	}
+}
+
+func extractSeasonShowTagAttrsAndRemoveFromTokens(tokens []model.Token, out *[]model.Attribute) {
+	if out == nil {
+		return
+	}
+	for i := 0; i < len(tokens); i++ {
+		if tokens[i].Removed {
+			continue
+		}
+		if !isInBracket(tokens, i) {
+			continue
+		}
+		t := strings.TrimSpace(tokens[i].Text)
+		if t == "" {
+			continue
+		}
+		if !yearMonthShowTagPattern.MatchString(t) {
+			continue
+		}
+		tokens[i].Removed = true
+		*out = append(*out, model.Attribute{Type: model.AttrNote, Normalized: t, TokenStart: i, TokenEnd: i + 1, Confidence: 0.7, Source: "heuristic"})
+	}
+}
+
+var yearMonthShowTagPattern = regexp.MustCompile(`^(?:\d{4}年)?\d{1,2}月番$`)

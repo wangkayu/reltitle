@@ -705,3 +705,91 @@ var (
 	reDetectSeasonRangeByKeyword2  = regexp.MustCompile(`^\d{1,2}$`)
 	reParseSmallSeasonNumberToken1 = regexp.MustCompile(`^\d{1,2}$`)
 )
+
+func normalizeSeasonMarkerValue(text string) string {
+	s := strings.TrimSpace(text)
+	if s == "" {
+		return ""
+	}
+	if v := parseSmallSeasonNumberToken(s); v != "" {
+		return normalizeNonZeroNumberString(v)
+	}
+	if v := seasonTokenValue(s); v != "" {
+		return normalizeNonZeroNumberString(v)
+	}
+	if m := seasonNotePattern.FindStringSubmatch(s); len(m) == 2 {
+		return normalizeNonZeroNumberString(m[1])
+	}
+	return ""
+}
+
+func normalizeSeasonRangeMarkerValue(text string) string {
+	s := strings.TrimSpace(text)
+	if s == "" {
+		return ""
+	}
+	if m := seasonRangeCompactNotePattern.FindStringSubmatch(s); len(m) == 3 {
+		a := normalizeNonZeroNumberString(m[1])
+		b := normalizeNonZeroNumberString(m[2])
+		if a != "" && b != "" {
+			return "S" + a + "-S" + b
+		}
+		return ""
+	}
+	if m := seasonRangeNotePattern.FindStringSubmatch(s); len(m) == 3 {
+		a := normalizeNonZeroNumberString(m[1])
+		b := normalizeNonZeroNumberString(m[2])
+		if a != "" && b != "" {
+			return "S" + a + "-S" + b
+		}
+		return ""
+	}
+	return ""
+}
+
+func normalizeNonZeroNumberString(text string) string {
+	s := strings.TrimLeft(strings.TrimSpace(text), "0")
+	if s == "" {
+		return "0"
+	}
+	return s
+}
+
+func extractExplicitSeasonNumber(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return ""
+	}
+	if m := reExtractExplicitSeasonNumber1.FindStringSubmatch(s); len(m) == 2 {
+		v := strings.TrimLeft(m[1], "0")
+		if v == "" {
+			v = m[1]
+		}
+		return v
+	}
+	if m := reExtractExplicitSeasonNumber2.FindStringSubmatch(s); len(m) == 2 {
+		v := strings.TrimLeft(m[1], "0")
+		if v == "" {
+			v = m[1]
+		}
+		return v
+	}
+	if m := reExtractExplicitSeasonNumber3.FindStringSubmatch(s); len(m) == 2 {
+		if v := parseSmallSeasonNumberToken(m[1]); v != "" {
+			return v
+		}
+	}
+	return ""
+}
+
+var reExtractExplicitSeasonNumber3 = regexp.MustCompile(`^第?([一二三四五六七八九十0-9]{1,3})季$`)
+
+var reExtractExplicitSeasonNumber1 = regexp.MustCompile(`(?i)\bS(\d{1,2})\b`)
+
+var seasonRangeNotePattern = regexp.MustCompile(`(?i)^season\s*0*(\d{1,2})\s*[-~]\s*0*(\d{1,2})$`)
+
+var seasonNotePattern = regexp.MustCompile(`(?i)^season\s*0*(\d{1,2})$`)
+
+var seasonRangeCompactNotePattern = regexp.MustCompile(`(?i)^s0*(\d{1,2})\s*[-~]\s*s?0*(\d{1,2})$`)
+
+var reExtractExplicitSeasonNumber2 = regexp.MustCompile(`(?i)\bSeason\s*(\d{1,2})\b`)

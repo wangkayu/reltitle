@@ -22,6 +22,10 @@ type EPAxis string
 // constants for the full set.
 type ContentKind string
 
+// AudioSource names the pipeline stage that produced an AudioTrack. See the
+// AudioSource* constants for the full set.
+type AudioSource string
+
 // Attribute is one recognized piece of a release title: a typed, normalized
 // value with the token span it came from, a heuristic confidence, and the
 // pipeline stage that produced it (Source, e.g. "lexicon", "canonical",
@@ -132,13 +136,13 @@ type AudioSlot struct {
 // AudioTrack describes one audio track: language, codec, channel layout and
 // object audio (e.g. ATMOS), with the token span and producing stage.
 type AudioTrack struct {
-	Language   string `json:"language,omitempty"`
-	Codec      string `json:"codec,omitempty"`
-	Channels   string `json:"channels,omitempty"`
-	Object     string `json:"object,omitempty"` // ATMOS etc
-	TokenStart int    `json:"token_start,omitempty"`
-	TokenEnd   int    `json:"token_end,omitempty"`
-	Source     string `json:"source,omitempty"` // tech_audio_slot/etc
+	Language   string      `json:"language,omitempty"`
+	Codec      string      `json:"codec,omitempty"`
+	Channels   string      `json:"channels,omitempty"`
+	Object     string      `json:"object,omitempty"` // ATMOS etc
+	TokenStart int         `json:"token_start,omitempty"`
+	TokenEnd   int         `json:"token_end,omitempty"`
+	Source     AudioSource `json:"source,omitempty"` // tech_audio_slot | audio_slot_reconcile
 }
 
 const (
@@ -232,6 +236,18 @@ const (
 	ContentKindSpecial ContentKind = "SPECIAL"
 	ContentKindUnknown ContentKind = "UNKNOWN"
 )
+
+const (
+	AudioSourceTechAudioSlot      AudioSource = "tech_audio_slot"
+	AudioSourceAudioSlotReconcile AudioSource = "audio_slot_reconcile"
+)
+
+// Canonical returns the normalized form of s: trimmed and lowercased. Source
+// values are lowercase snake_case by convention; compare with Canonical
+// against the AudioSource* constants.
+func (s AudioSource) Canonical() AudioSource {
+	return AudioSource(strings.ToLower(strings.TrimSpace(string(s))))
+}
 
 // Canonical returns the normalized form of c: trimmed and uppercased. Values
 // may arrive lowercase or padded from defensive normalization paths or config;

@@ -405,7 +405,7 @@ func (e *audioSlotExtract) emitFromSegment(start int, end int, conf float64) ([]
 				trStart = pendingObjStart
 			}
 			for c := 0; c < cnt; c++ {
-				tracks = append(tracks, model.AudioTrack{Language: curLang, Codec: codec, Channels: ch, Object: obj, TokenStart: trStart, TokenEnd: j, Source: "tech_audio_slot"})
+				tracks = append(tracks, model.AudioTrack{Language: curLang, Codec: codec, Channels: ch, Object: obj, TokenStart: trStart, TokenEnd: j, Source: model.AudioSourceTechAudioSlot})
 			}
 			e.addAttr(model.AttrAudioCodec, codec, i, j, conf)
 			if ch != "" {
@@ -462,7 +462,7 @@ func (e *audioSlotExtract) emitFromSegment(start int, end int, conf float64) ([]
 			trStart = pendingObjStart
 		}
 
-		tr := model.AudioTrack{Language: curLang, Codec: codec, Channels: ch, Object: obj, TokenStart: trStart, TokenEnd: j, Source: "tech_audio_slot"}
+		tr := model.AudioTrack{Language: curLang, Codec: codec, Channels: ch, Object: obj, TokenStart: trStart, TokenEnd: j, Source: model.AudioSourceTechAudioSlot}
 		tracks = append(tracks, tr)
 		e.addAttr(model.AttrAudioCodec, codec, i, j, conf)
 		if ch != "" {

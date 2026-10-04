@@ -137,7 +137,7 @@ func reconcileAudioSlotWithAttributes(slot *model.AudioSlot, attrs []model.Attri
 			Codec:      a.Normalized,
 			TokenStart: a.TokenStart,
 			TokenEnd:   a.TokenEnd,
-			Source:     "audio_slot_reconcile",
+			Source:     model.AudioSourceAudioSlotReconcile,
 		})
 	}
 	if len(out) == 0 {

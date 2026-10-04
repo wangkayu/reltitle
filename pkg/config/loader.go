@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
-	"path/filepath"
 
 	"gopkg.in/yaml.v3"
 )
@@ -17,6 +17,16 @@ import (
 // typo cannot silently disable a rule. Every problem found is reported, not just
 // the first one.
 func LoadAll(baseDir string) (*Config, error) {
+	return loadAll(os.DirFS(baseDir), fmt.Sprintf("directory %q", baseDir))
+}
+
+// LoadAllFS is LoadAll over an arbitrary file system, e.g. the embedded default
+// configuration in the top-level configs package.
+func LoadAllFS(fsys fs.FS) (*Config, error) {
+	return loadAll(fsys, "embedded config")
+}
+
+func loadAll(fsys fs.FS, source string) (*Config, error) {
 	cfg := &Config{}
 	files := []struct {
 		name string
@@ -39,22 +49,22 @@ func LoadAll(baseDir string) (*Config, error) {
 
 	var errs []error
 	for _, f := range files {
-		if err := loadYAMLFile(filepath.Join(baseDir, f.name), f.out); err != nil {
+		if err := loadYAMLFile(fsys, f.name, f.out); err != nil {
 			errs = append(errs, fmt.Errorf("%s: %w", f.name, err))
 		}
 	}
 	if len(errs) > 0 {
-		return nil, fmt.Errorf("directory %q: %w", baseDir, errors.Join(errs...))
+		return nil, fmt.Errorf("%s: %w", source, errors.Join(errs...))
 	}
 
 	if err := cfg.Validate(); err != nil {
-		return nil, fmt.Errorf("directory %q: invalid config: %w", baseDir, err)
+		return nil, fmt.Errorf("%s: invalid config: %w", source, err)
 	}
 	return cfg, nil
 }
 
-func loadYAMLFile(path string, out any) error {
-	data, err := os.ReadFile(path)
+func loadYAMLFile(fsys fs.FS, name string, out any) error {
+	data, err := fs.ReadFile(fsys, name)
 	if err != nil {
 		return err
 	}

@@ -66,21 +66,6 @@ type InferenceRulesConfig struct {
 	UpdatedAt            string                     `yaml:"updated_at" json:"updated_at"`
 	Description          string                     `yaml:"description" json:"description"`
 	ContentTypeInference []ContentTypeInferenceRule `yaml:"content_type_inference" json:"content_type_inference"`
-
-	// Reference-only sections: kept in inference_rules.yaml as design notes for humans.
-	// They are declared so strict decoding accepts them, but the parser never reads them.
-	ContentsDemotion    any `yaml:"contents_demotion" json:"-"`
-	SPKindInference     any `yaml:"sp_kind_inference" json:"-"`
-	EpisodeInference    any `yaml:"episode_inference" json:"-"`
-	TitleInference      any `yaml:"title_inference" json:"-"`
-	AliasesInference    any `yaml:"aliases_inference" json:"-"`
-	AliasFiltering      any `yaml:"alias_filtering" json:"-"`
-	LanguageDetection   any `yaml:"language_detection" json:"-"`
-	TemplateFamilyRules any `yaml:"template_family_rules" json:"-"`
-	GroupSpecificRules  any `yaml:"group_specific_rules" json:"-"`
-	SuccessMetrics      any `yaml:"success_metrics" json:"-"`
-	CleaningStrategy    any `yaml:"cleaning_strategy" json:"-"`
-	TitleAreaDetection  any `yaml:"title_area_detection" json:"-"`
 }
 
 type ContentTypeInferenceRule struct {

@@ -98,9 +98,19 @@ func (p *Parser) applyTitleKnowledge(rawTitle string, title string, aliases []st
 			mergedAliases := mergeAliases(presentAliases, aliases)
 			filteredAliases := mergedAliases[:0]
 			canonicalKey := aliasSemanticKey(canonicalTitle)
+			presentKeys := make(map[string]bool, len(presentAliases))
+			for _, a := range presentAliases {
+				presentKeys[aliasSemanticKey(a)] = true
+			}
 			for _, alias := range mergedAliases {
 				aliasKey := aliasSemanticKey(alias)
 				if aliasKey != "" && strings.Contains(canonicalKey, aliasKey) {
+					continue
+				}
+				// A fragment of a known alias that is present in the raw title ("Ranma 1" and
+				// "Ranma" of "Ranma 1/2") is what splitting the title at its own slash leaves
+				// behind, not a real alias.
+				if aliasKey != "" && !presentKeys[aliasKey] && isFragmentOfKnownKey(aliasKey, presentKeys) {
 					continue
 				}
 				filteredAliases = append(filteredAliases, alias)
@@ -109,4 +119,14 @@ func (p *Parser) applyTitleKnowledge(rawTitle string, title string, aliases []st
 		}
 	}
 	return title, aliases
+}
+
+// isFragmentOfKnownKey reports whether key is a strict part of one of the known keys.
+func isFragmentOfKnownKey(key string, known map[string]bool) bool {
+	for k := range known {
+		if k != key && strings.Contains(k, key) {
+			return true
+		}
+	}
+	return false
 }

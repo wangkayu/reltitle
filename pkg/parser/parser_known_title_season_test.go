@@ -86,7 +86,7 @@ func TestParserProtectedSlashIsNotAnAliasDelimiter(t *testing.T) {
 	if got := canonicalTitle(res); got != "乱马1/2" {
 		t.Errorf("title=%q want 乱马1/2", got)
 	}
-	want := []string{"Ranma 1-2", "Ranma 1"}
+	want := []string{"Ranma 1-2"}
 	got := attrValues(res, model.AttrTitleAlias)
 	if len(got) != len(want) {
 		t.Fatalf("aliases=%q want %q", got, want)
@@ -116,5 +116,45 @@ func TestParserBilingualSlashStillSplitsAliases(t *testing.T) {
 	}
 	if got := attrValues(res, model.AttrTitleAlias); len(got) != 1 || got[0] != "Blue Box" {
 		t.Errorf("aliases=%q want [Blue Box]", got)
+	}
+}
+
+// Splitting a title at its own slash ("Ranma 1/2" -> "Ranma 1", "Ranma") leaves fragments.
+// When a dictionary entry matches, fragments of the known aliases present in the title are
+// not aliases. The known alias itself is kept.
+func TestParserKnownTitleDropsSlashFragmentAliases(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+	tests := []struct {
+		raw     string
+		title   string
+		aliases []string
+	}{
+		{"[G] 乱马1/2 / Ranma 1/2 - 05 [1080P]", "乱马1/2", []string{"Ranma 1/2"}},
+		{"[ToonsHub] 乱马1/2 第三季 / Ranma 1/2 (2024) Season 3 - 01 [1080P][MKV]", "乱马1/2", []string{"Ranma 1/2"}},
+		{"[G] Ranma 1/2 - 01 [1080P]", "Ranma 1/2", nil},
+		{"[G] 乱马1/2 - 05 [1080P]", "乱马1/2", nil},
+	}
+	for _, tc := range tests {
+		res, err := p.Parse(tc.raw)
+		if err != nil {
+			t.Fatalf("parse %q: %v", tc.raw, err)
+		}
+		if got := canonicalTitle(res); got != tc.title {
+			t.Errorf("%q: title=%q want %q", tc.raw, got, tc.title)
+		}
+		got := attrValues(res, model.AttrTitleAlias)
+		if len(got) != len(tc.aliases) {
+			t.Errorf("%q: aliases=%q want %q", tc.raw, got, tc.aliases)
+			continue
+		}
+		for i := range got {
+			if got[i] != tc.aliases[i] {
+				t.Errorf("%q: aliases=%q want %q", tc.raw, got, tc.aliases)
+			}
+		}
 	}
 }

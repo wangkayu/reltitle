@@ -778,308 +778,368 @@ func (p *Parser) Parse(rawTitle string) (*model.ParseResult, error) {
 	for _, np := range parsePasses {
 		np.Pass(tokens, &attrs, ctx)
 	}
-	attrs = pruneGroupSpanTechArtifacts(attrs, groupSpan)
-	// PackKind may be refined/overridden by parse passes (e.g. contents markers like TV+OAD).
-	packKind = strings.TrimSpace(ctx.PackKind)
-	if hasAttrNormalized(attrs, model.AttrNote, "TV_PACK") {
-		packKind = "TV_PACK"
+
+	st := &parseState{
+		attrs:            attrs,
+		ctx:              ctx,
+		group:            group,
+		groupSpan:        groupSpan,
+		originalRawTitle: originalRawTitle,
+		packKind:         packKind,
+		rawTitle:         rawTitle,
+		seasonRange:      seasonRange,
+		tailParenBlock:   tailParenBlock,
+		tokens:           tokens,
+		version:          version,
 	}
-	season := ctx.Season
-	seasonIdx := ctx.SeasonIdx
-	seasonRange = ctx.SeasonRange
-	spKind := ctx.SPKind
-	movieIndex := ctx.MovieIndex
-	movieIndexIdx := ctx.MovieIndexIdx
-	movieIndexRange := ctx.MovieIndexRange
-	hasMovieKeyword := ctx.HasMovieKeyword
-	episodeRange := ctx.EpisodeRange
-	episodeRangeIdx := ctx.EpisodeRangeIdx
-	episodeList := ctx.EpisodeList
-	episode := ctx.Episode
-	episodeIdx := ctx.EpisodeIdx
-	epslot := ctx.EPSlot
+	p.absorbPassResults(st)
+	p.resolveTitleAndAliases(st)
+	p.detectTailGroups(st)
+	p.inferContext(st)
+	p.matchInitialTemplate(st)
+	p.reclassifyAfterAdjudication(st)
+	p.cleanTitleAndAliases(st)
+	p.applyGroupRoute(st)
+	p.canonicalizeAttributes(st)
+	p.finalizeEpisodeSignals(st)
+	p.consumeTokens(st)
+
+	epSemantics := buildCanonicalEPSemantics(st.originalRawTitle, st.tokens, st.epslot, st.season, st.seasonRange, st.episode, st.episodeList, st.episodeRange, st.spKind)
+	if isUnknownOutput(st.contentKind, st.templateID) {
+		epSemantics = nil
+	}
+
+	res := &model.ParseResult{
+		RawTitle:           st.originalRawTitle,
+		ContentKind:        st.contentKind,
+		ContentConfidence:  st.contentConf,
+		TemplateID:         st.templateID,
+		TemplateConfidence: st.templateConf,
+		EPSemantics:        epSemantics,
+		AudioSlot:          st.ctx.AudioSlot,
+		Attributes:         st.attrs,
+		Tokens:             st.tokens,
+	}
+
+	return res, nil
+}
+
+func (p *Parser) absorbPassResults(st *parseState) {
+	st.attrs = pruneGroupSpanTechArtifacts(st.attrs, st.groupSpan)
+	// PackKind may be refined/overridden by parse passes (e.g. contents markers like TV+OAD).
+	st.packKind = strings.TrimSpace(st.ctx.PackKind)
+	if hasAttrNormalized(st.attrs, model.AttrNote, "TV_PACK") {
+		st.packKind = "TV_PACK"
+	}
+	st.season = st.ctx.Season
+	st.seasonIdx = st.ctx.SeasonIdx
+	st.seasonRange = st.ctx.SeasonRange
+	st.spKind = st.ctx.SPKind
+	st.movieIndex = st.ctx.MovieIndex
+	st.movieIndexIdx = st.ctx.MovieIndexIdx
+	st.movieIndexRange = st.ctx.MovieIndexRange
+	st.hasMovieKeyword = st.ctx.HasMovieKeyword
+	st.episodeRange = st.ctx.EpisodeRange
+	st.episodeRangeIdx = st.ctx.EpisodeRangeIdx
+	st.episodeList = st.ctx.EpisodeList
+	st.episode = st.ctx.Episode
+	st.episodeIdx = st.ctx.EpisodeIdx
+	st.epslot = st.ctx.EPSlot
+}
+
+func (p *Parser) resolveTitleAndAliases(st *parseState) {
 
 	seasonCutIdx := -1
 	// Only cut title at plain Sxx season tokens that are part of the main title stream.
 	// Do NOT cut at "Season" tokens which are often inside parentheses (we remove the whole paren block instead).
-	if seasonIdx >= 0 && seasonIdx < len(tokens) {
-		if !isInBracket(tokens, seasonIdx) && !isInParen(tokens, seasonIdx) {
-			if seasonOnlyPattern.MatchString(tokens[seasonIdx].Text) || seasonEmbeddedPattern.MatchString(tokens[seasonIdx].Text) {
-				seasonCutIdx = seasonIdx
+	if st.seasonIdx >= 0 && st.seasonIdx < len(st.tokens) {
+		if !isInBracket(st.tokens, st.seasonIdx) && !isInParen(st.tokens, st.seasonIdx) {
+			if seasonOnlyPattern.MatchString(st.tokens[st.seasonIdx].Text) || seasonEmbeddedPattern.MatchString(st.tokens[st.seasonIdx].Text) {
+				seasonCutIdx = st.seasonIdx
 			}
 		}
 	}
 
-	if shouldDemoteEpisodeToMovieIndex(rawTitle, episode, episodeRange, season, seasonRange, packKind, hasMovieKeyword, movieIndex, movieIndexRange) {
-		if strings.TrimSpace(movieIndex) == "" {
-			movieIndex = strings.TrimSpace(episode)
-			movieIndexIdx = episodeIdx
+	if shouldDemoteEpisodeToMovieIndex(st.rawTitle, st.episode, st.episodeRange, st.season, st.seasonRange, st.packKind, st.hasMovieKeyword, st.movieIndex, st.movieIndexRange) {
+		if strings.TrimSpace(st.movieIndex) == "" {
+			st.movieIndex = strings.TrimSpace(st.episode)
+			st.movieIndexIdx = st.episodeIdx
 		}
-		episode = ""
-		episodeIdx = -1
-		epslot = nil
+		st.episode = ""
+		st.episodeIdx = -1
+		st.epslot = nil
 	}
 
-	_, titleEnd0 := p.inferTitleTokenSpan(tokens, episodeIdx, episodeRangeIdx, seasonCutIdx)
-	parenAliases := p.extractParenAliasesAndRemoveFromTitle(tokens, titleEnd0, episodeIdx, episodeRangeIdx, &attrs)
+	_, titleEnd0 := p.inferTitleTokenSpan(st.tokens, st.episodeIdx, st.episodeRangeIdx, seasonCutIdx)
+	parenAliases := p.extractParenAliasesAndRemoveFromTitle(st.tokens, titleEnd0, st.episodeIdx, st.episodeRangeIdx, &st.attrs)
 
-	title := p.extractTitle(tokens, episodeIdx, episodeRangeIdx, seasonCutIdx)
-	originalTitleSpan := strings.TrimSpace(title)
-	if strings.TrimSpace(season) == "" {
+	st.title = p.extractTitle(st.tokens, st.episodeIdx, st.episodeRangeIdx, seasonCutIdx)
+	originalTitleSpan := strings.TrimSpace(st.title)
+	if strings.TrimSpace(st.season) == "" {
 		if s := extractExplicitSeasonNumber(originalTitleSpan); s != "" {
-			season = s
-		} else if s, idx := detectSeasonKeywordAny(tokens); s != "" {
-			season = s
-			seasonIdx = idx
+			st.season = s
+		} else if s, idx := detectSeasonKeywordAny(st.tokens); s != "" {
+			st.season = s
+			st.seasonIdx = idx
 		}
 	}
-	title, aliases := inferTitleAndAliasesFromTitleCanonical(title, p.isValidAliasToken)
-	title, aliases = restorePartSuffixFromOriginalTitle(originalTitleSpan, title, aliases)
-	titleStart, titleEnd := p.inferTitleTokenSpan(tokens, episodeIdx, episodeRangeIdx, seasonCutIdx)
-	pipeScanStart := titleStartAfterLeadingEmptyBracketBlocks(tokens)
-	if len(groupSpan) == 2 && groupSpan[1] > pipeScanStart {
-		pipeScanStart = groupSpan[1]
+	st.title, st.aliases = inferTitleAndAliasesFromTitleCanonical(st.title, p.isValidAliasToken)
+	st.title, st.aliases = restorePartSuffixFromOriginalTitle(originalTitleSpan, st.title, st.aliases)
+	st.titleStart, st.titleEnd = p.inferTitleTokenSpan(st.tokens, st.episodeIdx, st.episodeRangeIdx, seasonCutIdx)
+	pipeScanStart := titleStartAfterLeadingEmptyBracketBlocks(st.tokens)
+	if len(st.groupSpan) == 2 && st.groupSpan[1] > pipeScanStart {
+		pipeScanStart = st.groupSpan[1]
 	}
-	pipeScanEnd := len(tokens)
-	if episodeRangeIdx >= 0 && episodeRangeIdx < pipeScanEnd {
-		pipeScanEnd = episodeRangeIdx
+	pipeScanEnd := len(st.tokens)
+	if st.episodeRangeIdx >= 0 && st.episodeRangeIdx < pipeScanEnd {
+		pipeScanEnd = st.episodeRangeIdx
 	}
-	if episodeIdx >= 0 && episodeIdx < pipeScanEnd {
-		pipeScanEnd = episodeIdx
+	if st.episodeIdx >= 0 && st.episodeIdx < pipeScanEnd {
+		pipeScanEnd = st.episodeIdx
 	}
 	if seasonCutIdx >= 0 && seasonCutIdx < pipeScanEnd {
 		pipeScanEnd = seasonCutIdx
 	}
-	if techStart, ok := firstTechTokenIndexFromAttrs(attrs); ok && techStart >= 0 && techStart < pipeScanEnd {
+	if techStart, ok := firstTechTokenIndexFromAttrs(st.attrs); ok && techStart >= 0 && techStart < pipeScanEnd {
 		// Do not let early pre-title tech/meta tokens (e.g. slot2 platform markers in bracket)
 		// block alias-chain extraction in the main title span.
-		if titleStart < 0 || techStart > titleStart {
+		if st.titleStart < 0 || techStart > st.titleStart {
 			pipeScanEnd = techStart
 		}
 	}
-	if pipeTitle, pipeAliases, ok := p.extractPreEpisodePipeAliasesAndConsume(tokens, pipeScanStart, pipeScanEnd); ok {
+	if pipeTitle, pipeAliases, ok := p.extractPreEpisodePipeAliasesAndConsume(st.tokens, pipeScanStart, pipeScanEnd); ok {
 		if strings.TrimSpace(pipeTitle) != "" {
-			title = pipeTitle
+			st.title = pipeTitle
 		}
-		aliases = mergeAliases(pipeAliases, aliases)
+		st.aliases = mergeAliases(pipeAliases, st.aliases)
 	}
-	aliases = mergeAliases(ctx.ForcedAliases, aliases)
-	if strings.TrimSpace(title) == "" {
+	st.aliases = mergeAliases(st.ctx.ForcedAliases, st.aliases)
+	if strings.TrimSpace(st.title) == "" {
 		scanStart := 0
-		if len(groupSpan) == 2 && groupSpan[1] > scanStart {
-			scanStart = groupSpan[1]
+		if len(st.groupSpan) == 2 && st.groupSpan[1] > scanStart {
+			scanStart = st.groupSpan[1]
 		}
-		if fbTitle, fbAliases, fbStart, fbEnd := p.inferBracketTitleFallback(tokens, scanStart, episodeIdx, episodeRangeIdx); strings.TrimSpace(fbTitle) != "" {
-			title = fbTitle
-			aliases = mergeAliases(aliases, fbAliases)
-			titleStart = fbStart
-			titleEnd = fbEnd
+		if fbTitle, fbAliases, fbStart, fbEnd := p.inferBracketTitleFallback(st.tokens, scanStart, st.episodeIdx, st.episodeRangeIdx); strings.TrimSpace(fbTitle) != "" {
+			st.title = fbTitle
+			st.aliases = mergeAliases(st.aliases, fbAliases)
+			st.titleStart = fbStart
+			st.titleEnd = fbEnd
 		}
 	}
-	if strings.TrimSpace(ctx.ForcedTitle) != "" {
-		ft := ctx.ForcedTitle
+	if strings.TrimSpace(st.ctx.ForcedTitle) != "" {
+		ft := st.ctx.ForcedTitle
 		// If forced title contains strong delimiters (e.g. from bracket title extraction),
 		// still infer main title + aliases deterministically.
 		if strings.ContainsAny(ft, "/／|｜;；\\") {
 			ftMain, ftAliases := inferTitleAndAliasesFromTitleCanonical(ft, p.isValidAliasToken)
 			if strings.TrimSpace(ftMain) != "" {
-				title = ftMain
-				aliases = mergeAliases(aliases, ftAliases)
+				st.title = ftMain
+				st.aliases = mergeAliases(st.aliases, ftAliases)
 			} else {
-				title = ft
+				st.title = ft
 			}
 		} else {
-			title = ft
+			st.title = ft
 		}
-		if ctx.ForcedTitleStart >= 0 && ctx.ForcedTitleEnd > ctx.ForcedTitleStart {
-			titleStart = ctx.ForcedTitleStart
-			titleEnd = ctx.ForcedTitleEnd
+		if st.ctx.ForcedTitleStart >= 0 && st.ctx.ForcedTitleEnd > st.ctx.ForcedTitleStart {
+			st.titleStart = st.ctx.ForcedTitleStart
+			st.titleEnd = st.ctx.ForcedTitleEnd
 		}
 	}
-	title = trimMovieDashEpisodeTailFromTitle(rawTitle, title, episode, movieIndex)
-	if titleStart >= 0 && titleEnd > titleStart {
-		techStart, hasTechStart := firstTechTokenIndexFromAttrs(attrs)
+	st.title = trimMovieDashEpisodeTailFromTitle(st.rawTitle, st.title, st.episode, st.movieIndex)
+	if st.titleStart >= 0 && st.titleEnd > st.titleStart {
+		techStart, hasTechStart := firstTechTokenIndexFromAttrs(st.attrs)
 		if hasTechStart {
 			if techStart < 0 {
 				techStart = 0
 			}
-			if techStart > len(tokens) {
-				techStart = len(tokens)
+			if techStart > len(st.tokens) {
+				techStart = len(st.tokens)
 			}
-			if techStart > titleStart && titleEnd > techStart {
-				titleEnd = techStart
+			if techStart > st.titleStart && st.titleEnd > techStart {
+				st.titleEnd = techStart
 			}
 		}
 	}
-	if titleStart >= 0 && titleEnd > titleStart {
-		attrs = append(attrs, model.Attribute{Type: model.AttrTitle, Normalized: title, TokenStart: titleStart, TokenEnd: titleEnd, Confidence: 0.7, Source: "heuristic"})
-		aliases = mergeAliases(aliases, p.inferAliasesFromAdjacentBrackets(tokens, titleEnd, episodeIdx, episodeRangeIdx))
-		aliases = mergeAliases(aliases, p.inferTitleGapSingleSlashAlias(tokens, title, titleEnd, episodeIdx, episodeRangeIdx))
-		aliases = mergeAliases(aliases, p.inferTitleGapDashAlias(tokens, title, titleEnd, episodeIdx, episodeRangeIdx))
-		aliases = mergeAliases(aliases, p.inferTitleGapBilingualRunAlias(tokens, title, titleEnd, episodeIdx, episodeRangeIdx))
-		title, aliases = p.promoteInlineBracketContinuationIntoTitle(tokens, title, aliases, titleEnd, episodeIdx, episodeRangeIdx, attrs)
+	if st.titleStart >= 0 && st.titleEnd > st.titleStart {
+		st.attrs = append(st.attrs, model.Attribute{Type: model.AttrTitle, Normalized: st.title, TokenStart: st.titleStart, TokenEnd: st.titleEnd, Confidence: 0.7, Source: "heuristic"})
+		st.aliases = mergeAliases(st.aliases, p.inferAliasesFromAdjacentBrackets(st.tokens, st.titleEnd, st.episodeIdx, st.episodeRangeIdx))
+		st.aliases = mergeAliases(st.aliases, p.inferTitleGapSingleSlashAlias(st.tokens, st.title, st.titleEnd, st.episodeIdx, st.episodeRangeIdx))
+		st.aliases = mergeAliases(st.aliases, p.inferTitleGapDashAlias(st.tokens, st.title, st.titleEnd, st.episodeIdx, st.episodeRangeIdx))
+		st.aliases = mergeAliases(st.aliases, p.inferTitleGapBilingualRunAlias(st.tokens, st.title, st.titleEnd, st.episodeIdx, st.episodeRangeIdx))
+		st.title, st.aliases = p.promoteInlineBracketContinuationIntoTitle(st.tokens, st.title, st.aliases, st.titleEnd, st.episodeIdx, st.episodeRangeIdx, st.attrs)
 	}
-	aliases = mergeAliases(aliases, parenAliases)
-	aliases = mergeAliases(aliases, inferPostEpisodeSearchHintAliasesFromParens(tokens, episodeIdx, episodeRangeIdx, &attrs))
-	if strings.TrimSpace(ctx.EpisodeVersion) != "" {
+	st.aliases = mergeAliases(st.aliases, parenAliases)
+	st.aliases = mergeAliases(st.aliases, inferPostEpisodeSearchHintAliasesFromParens(st.tokens, st.episodeIdx, st.episodeRangeIdx, &st.attrs))
+	if strings.TrimSpace(st.ctx.EpisodeVersion) != "" {
 		// Align with V1: use generic AttrVersion.
-		norm := strings.TrimSpace(ctx.EpisodeVersion)
+		norm := strings.TrimSpace(st.ctx.EpisodeVersion)
 		if !strings.HasPrefix(strings.ToLower(norm), "v") {
 			norm = "v" + norm
 		}
-		if ctx.EpisodeVersionIdx >= 0 {
-			attrs = append(attrs, model.Attribute{Type: model.AttrVersion, Normalized: norm, TokenStart: ctx.EpisodeVersionIdx, TokenEnd: ctx.EpisodeVersionIdx + 1, Confidence: 0.7, Source: "episode_version"})
+		if st.ctx.EpisodeVersionIdx >= 0 {
+			st.attrs = append(st.attrs, model.Attribute{Type: model.AttrVersion, Normalized: norm, TokenStart: st.ctx.EpisodeVersionIdx, TokenEnd: st.ctx.EpisodeVersionIdx + 1, Confidence: 0.7, Source: "episode_version"})
 		} else {
-			attrs = append(attrs, model.Attribute{Type: model.AttrVersion, Normalized: norm, Confidence: 0.65, Source: "episode_version"})
+			st.attrs = append(st.attrs, model.Attribute{Type: model.AttrVersion, Normalized: norm, Confidence: 0.65, Source: "episode_version"})
 		}
-		if version == "" {
-			version = norm
+		if st.version == "" {
+			st.version = norm
 		}
 	}
-	if movieIndex != "" {
-		st := movieIndexIdx
-		if st < 0 {
-			st = -1
+	if st.movieIndex != "" {
+		start := st.movieIndexIdx
+		if start < 0 {
+			start = -1
 		}
-		ed := st
+		ed := start
 		if ed >= 0 {
-			ed = st + 1
+			ed = start + 1
 		}
-		attrs = append(attrs, model.Attribute{Type: model.AttrMovieIndex, Normalized: movieIndex, TokenStart: st, TokenEnd: ed, Confidence: 0.7, Source: "heuristic"})
+		st.attrs = append(st.attrs, model.Attribute{Type: model.AttrMovieIndex, Normalized: st.movieIndex, TokenStart: start, TokenEnd: ed, Confidence: 0.7, Source: "heuristic"})
 	}
+}
 
-	if group == "" {
-		epAnchor := episodeIdx
-		if episodeRangeIdx > epAnchor {
-			epAnchor = episodeRangeIdx
+func (p *Parser) detectTailGroups(st *parseState) {
+
+	if st.group == "" {
+		epAnchor := st.episodeIdx
+		if st.episodeRangeIdx > epAnchor {
+			epAnchor = st.episodeRangeIdx
 		}
-		if seasonIdx > epAnchor {
-			epAnchor = seasonIdx
+		if st.seasonIdx > epAnchor {
+			epAnchor = st.seasonIdx
 		}
-		tg, tgIdx := detectTailGroup(tokens)
+		tg, tgIdx := detectTailGroup(st.tokens)
 		if tg != "" && epAnchor >= 0 && tgIdx >= 0 && tgIdx <= epAnchor {
-			if tg2, tgIdx2 := detectTailGroupAfter(tokens, epAnchor); tg2 != "" {
+			if tg2, tgIdx2 := detectTailGroupAfter(st.tokens, epAnchor); tg2 != "" {
 				tg, tgIdx = tg2, tgIdx2
 			} else {
 				tg, tgIdx = "", -1
 			}
 		}
 		if tg != "" {
-			group = normalizeGroupText(tg)
-			attrs = append(attrs, model.Attribute{Type: model.AttrGroup, Normalized: group, TokenStart: tgIdx, TokenEnd: tgIdx + 1, Confidence: 0.7, Source: "heuristic"})
+			st.group = normalizeGroupText(tg)
+			st.attrs = append(st.attrs, model.Attribute{Type: model.AttrGroup, Normalized: st.group, TokenStart: tgIdx, TokenEnd: tgIdx + 1, Confidence: 0.7, Source: "heuristic"})
 		}
 	}
-	if group == "" {
-		if tg := p.detectTailGroupFromRawTitle(rawTitle); tg != "" {
-			group = normalizeGroupText(tg)
-			attrs = append(attrs, model.Attribute{Type: model.AttrGroup, Normalized: group, TokenStart: -1, TokenEnd: -1, Confidence: 0.65, Source: "heuristic_raw"})
-			attrs = append(attrs, model.Attribute{Type: model.AttrTailGroup, Normalized: group, TokenStart: -1, TokenEnd: -1, Confidence: 0.65, Source: "heuristic_raw"})
+	if st.group == "" {
+		if tg := p.detectTailGroupFromRawTitle(st.rawTitle); tg != "" {
+			st.group = normalizeGroupText(tg)
+			st.attrs = append(st.attrs, model.Attribute{Type: model.AttrGroup, Normalized: st.group, TokenStart: -1, TokenEnd: -1, Confidence: 0.65, Source: "heuristic_raw"})
+			st.attrs = append(st.attrs, model.Attribute{Type: model.AttrTailGroup, Normalized: st.group, TokenStart: -1, TokenEnd: -1, Confidence: 0.65, Source: "heuristic_raw"})
 		}
 	}
-	epAnchor := episodeIdx
-	if episodeRangeIdx > epAnchor {
-		epAnchor = episodeRangeIdx
+	epAnchor := st.episodeIdx
+	if st.episodeRangeIdx > epAnchor {
+		epAnchor = st.episodeRangeIdx
 	}
-	if seasonIdx > epAnchor {
-		epAnchor = seasonIdx
+	if st.seasonIdx > epAnchor {
+		epAnchor = st.seasonIdx
 	}
-	tg, tgIdx := detectTailGroup(tokens)
+	tg, tgIdx := detectTailGroup(st.tokens)
 	if tg != "" && epAnchor >= 0 && tgIdx >= 0 && tgIdx <= epAnchor {
-		if tg2, tgIdx2 := detectTailGroupAfter(tokens, epAnchor); tg2 != "" {
+		if tg2, tgIdx2 := detectTailGroupAfter(st.tokens, epAnchor); tg2 != "" {
 			tg, tgIdx = tg2, tgIdx2
 		} else {
 			tg, tgIdx = "", -1
 		}
 	}
 	if tg != "" {
-		attrs = append(attrs, model.Attribute{Type: model.AttrTailGroup, Normalized: normalizeGroupText(tg), TokenStart: tgIdx, TokenEnd: tgIdx + 1, Confidence: 0.7, Source: "heuristic"})
+		st.attrs = append(st.attrs, model.Attribute{Type: model.AttrTailGroup, Normalized: normalizeGroupText(tg), TokenStart: tgIdx, TokenEnd: tgIdx + 1, Confidence: 0.7, Source: "heuristic"})
 	}
+}
 
-	hasTech := hasTechAttr(attrs)
-	hasYear := false
-	for _, a := range attrs {
+func (p *Parser) inferContext(st *parseState) {
+
+	st.hasTech = hasTechAttr(st.attrs)
+	st.hasYear = false
+	for _, a := range st.attrs {
 		if a.Type == model.AttrYear {
 			if strings.TrimSpace(a.Normalized) != "" {
-				hasYear = true
+				st.hasYear = true
 				break
 			}
 		}
 	}
-	if hasTech {
-		aliases = mergeAliases(aliases, p.inferTailAliasesFromPipes(tokens, attrs, group))
-		aliases = mergeAliases(aliases, p.inferTailAliasesFromParens(tokens, &attrs, episodeIdx, episodeRangeIdx, seasonIdx))
+	if st.hasTech {
+		st.aliases = mergeAliases(st.aliases, p.inferTailAliasesFromPipes(st.tokens, st.attrs, st.group))
+		st.aliases = mergeAliases(st.aliases, p.inferTailAliasesFromParens(st.tokens, &st.attrs, st.episodeIdx, st.episodeRangeIdx, st.seasonIdx))
 	}
-	if len(aliases) > 0 {
+	if len(st.aliases) > 0 {
 		var contentMarkers []string
-		aliases, contentMarkers = extractContentsFromAliases(aliases)
+		st.aliases, contentMarkers = extractContentsFromAliases(st.aliases)
 		if len(contentMarkers) > 0 {
-			emitContentsAttrs(&attrs, contentMarkers, "alias_contents_marker")
+			emitContentsAttrs(&st.attrs, contentMarkers, "alias_contents_marker")
 		}
 	}
-	if rawMarkers := extractContentsFromRawParens(rawTitle); len(rawMarkers) > 0 {
-		emitContentsAttrs(&attrs, rawMarkers, "raw_paren_contents_marker")
+	if rawMarkers := extractContentsFromRawParens(st.rawTitle); len(rawMarkers) > 0 {
+		emitContentsAttrs(&st.attrs, rawMarkers, "raw_paren_contents_marker")
 	}
-	attrs = appendEmbeddedJapaneseDubAttrs(attrs, rawTitle)
-	attrs = appendEmbeddedChineseDubAttrs(attrs, rawTitle)
-	attrs = appendEmbeddedEnglishSubAttrs(attrs, rawTitle)
-	attrs = dropContentsAttrsInsideTitleSpan(attrs, titleStart, titleEnd)
-	if strings.TrimSpace(spKind) == "" {
-		spKind = inferSPKindFromContentsAttrs(attrs)
+	st.attrs = appendEmbeddedJapaneseDubAttrs(st.attrs, st.rawTitle)
+	st.attrs = appendEmbeddedChineseDubAttrs(st.attrs, st.rawTitle)
+	st.attrs = appendEmbeddedEnglishSubAttrs(st.attrs, st.rawTitle)
+	st.attrs = dropContentsAttrsInsideTitleSpan(st.attrs, st.titleStart, st.titleEnd)
+	if strings.TrimSpace(st.spKind) == "" {
+		st.spKind = inferSPKindFromContentsAttrs(st.attrs)
 	}
-	if strings.TrimSpace(packKind) == "" {
-		packKind = inferPackKindFromContentsAttrs(packKind, attrs)
+	if strings.TrimSpace(st.packKind) == "" {
+		st.packKind = inferPackKindFromContentsAttrs(st.packKind, st.attrs)
 	}
-	if strings.TrimSpace(packKind) == "" {
-		if strings.TrimSpace(episode) == "" && strings.TrimSpace(episodeRange) == "" {
-			if reParse1.MatchString(rawTitle) {
-				packKind = "bd"
+	if strings.TrimSpace(st.packKind) == "" {
+		if strings.TrimSpace(st.episode) == "" && strings.TrimSpace(st.episodeRange) == "" {
+			if reParse1.MatchString(st.rawTitle) {
+				st.packKind = "bd"
 			}
 		}
 	}
-	if !hasMovieKeyword && hasMovieKeywordInRawTitle(rawTitle) {
-		hasMovieKeyword = true
+	if !st.hasMovieKeyword && hasMovieKeywordInRawTitle(st.rawTitle) {
+		st.hasMovieKeyword = true
 	}
-	if shouldDropEpisodeRangeForMovieRange(rawTitle, movieIndexRange, episode, episodeRange) {
-		episode = ""
-		episodeIdx = -1
-		episodeList = ""
-		episodeRange = ""
-		episodeRangeIdx = -1
-		epslot = nil
+	if shouldDropEpisodeRangeForMovieRange(st.rawTitle, st.movieIndexRange, st.episode, st.episodeRange) {
+		st.episode = ""
+		st.episodeIdx = -1
+		st.episodeList = ""
+		st.episodeRange = ""
+		st.episodeRangeIdx = -1
+		st.epslot = nil
 	}
-	movieRouteHardExcluded := hasMovieRouteHardExclusion(rawTitle, attrs, episodeRange, season, seasonRange, packKind)
-	movieContentSignal := hasMovieContentSignal(attrs, hasMovieKeyword, movieIndex, spKind)
-	epRoute := computeEpRoute(tokens, episode, episodeList, episodeRange, season, seasonRange, spKind, movieIndex, hasMovieKeyword, movieRouteHardExcluded)
-	contentKind, _ := inferContentKind(p.cfg, episode, episodeRange, season, seasonRange, packKind, spKind, movieIndex, movieIndexRange, hasTech, hasMovieKeyword, hasYear, movieRouteHardExcluded, movieContentSignal)
-	if ep2, mi2, epIdx2, miIdx2, changed := normalizeMovieEpisodeSignals(rawTitle, contentKind, episode, episodeRange, season, seasonRange, packKind, hasMovieKeyword, movieIndex, movieIndexRange, episodeIdx, movieIndexIdx); changed {
-		episode, movieIndex, episodeIdx, movieIndexIdx = ep2, mi2, epIdx2, miIdx2
-		title = trimMovieDashEpisodeTailFromTitle(rawTitle, title, episode, movieIndex)
-		epslot = nil
-		movieRouteHardExcluded = hasMovieRouteHardExclusion(rawTitle, attrs, episodeRange, season, seasonRange, packKind)
-		movieContentSignal = hasMovieContentSignal(attrs, hasMovieKeyword, movieIndex, spKind)
-		epRoute = computeEpRoute(tokens, episode, episodeList, episodeRange, season, seasonRange, spKind, movieIndex, hasMovieKeyword, movieRouteHardExcluded)
-		contentKind, _ = inferContentKind(p.cfg, episode, episodeRange, season, seasonRange, packKind, spKind, movieIndex, movieIndexRange, hasTech, hasMovieKeyword, hasYear, movieRouteHardExcluded, movieContentSignal)
+}
+
+func (p *Parser) matchInitialTemplate(st *parseState) {
+	st.movieRouteHardExcluded = hasMovieRouteHardExclusion(st.rawTitle, st.attrs, st.episodeRange, st.season, st.seasonRange, st.packKind)
+	st.movieContentSignal = hasMovieContentSignal(st.attrs, st.hasMovieKeyword, st.movieIndex, st.spKind)
+	st.epRoute = computeEpRoute(st.tokens, st.episode, st.episodeList, st.episodeRange, st.season, st.seasonRange, st.spKind, st.movieIndex, st.hasMovieKeyword, st.movieRouteHardExcluded)
+	st.contentKind, _ = inferContentKind(p.cfg, st.episode, st.episodeRange, st.season, st.seasonRange, st.packKind, st.spKind, st.movieIndex, st.movieIndexRange, st.hasTech, st.hasMovieKeyword, st.hasYear, st.movieRouteHardExcluded, st.movieContentSignal)
+	if ep2, mi2, epIdx2, miIdx2, changed := normalizeMovieEpisodeSignals(st.rawTitle, st.contentKind, st.episode, st.episodeRange, st.season, st.seasonRange, st.packKind, st.hasMovieKeyword, st.movieIndex, st.movieIndexRange, st.episodeIdx, st.movieIndexIdx); changed {
+		st.episode, st.movieIndex, st.episodeIdx, st.movieIndexIdx = ep2, mi2, epIdx2, miIdx2
+		st.title = trimMovieDashEpisodeTailFromTitle(st.rawTitle, st.title, st.episode, st.movieIndex)
+		st.epslot = nil
+		st.movieRouteHardExcluded = hasMovieRouteHardExclusion(st.rawTitle, st.attrs, st.episodeRange, st.season, st.seasonRange, st.packKind)
+		st.movieContentSignal = hasMovieContentSignal(st.attrs, st.hasMovieKeyword, st.movieIndex, st.spKind)
+		st.epRoute = computeEpRoute(st.tokens, st.episode, st.episodeList, st.episodeRange, st.season, st.seasonRange, st.spKind, st.movieIndex, st.hasMovieKeyword, st.movieRouteHardExcluded)
+		st.contentKind, _ = inferContentKind(p.cfg, st.episode, st.episodeRange, st.season, st.seasonRange, st.packKind, st.spKind, st.movieIndex, st.movieIndexRange, st.hasTech, st.hasMovieKeyword, st.hasYear, st.movieRouteHardExcluded, st.movieContentSignal)
 	}
-	templateID, _, _ := matchTemplate(p.cfg, epRoute, contentKind, group, episode, episodeRange, season, packKind, spKind, movieIndex, hasTech, hasMovieKeyword, attrs, tokens)
-	attrs, group, episode, episodeIdx, episodeRange, episodeRangeIdx, season, seasonIdx, signalEvents := applyTemplateSignalAdjudication(
+	st.templateID, _, _ = matchTemplate(p.cfg, st.epRoute, st.contentKind, st.group, st.episode, st.episodeRange, st.season, st.packKind, st.spKind, st.movieIndex, st.hasTech, st.hasMovieKeyword, st.attrs, st.tokens)
+	var signalEvents []string
+	st.attrs, st.group, st.episode, st.episodeIdx, st.episodeRange, st.episodeRangeIdx, st.season, st.seasonIdx, signalEvents = applyTemplateSignalAdjudication(
 		p.cfg,
-		templateID,
-		tokens,
-		attrs,
-		group,
-		episode,
-		episodeIdx,
-		episodeRange,
-		episodeRangeIdx,
-		season,
-		seasonIdx,
+		st.templateID,
+		st.tokens,
+		st.attrs,
+		st.group,
+		st.episode,
+		st.episodeIdx,
+		st.episodeRange,
+		st.episodeRangeIdx,
+		st.season,
+		st.seasonIdx,
 	)
 	if os.Getenv("TITLEPARSER_TEMPLATE_SIGNAL_TRACE") == "1" {
 		for _, ev := range signalEvents {
 			if strings.TrimSpace(ev) == "" {
 				continue
 			}
-			attrs = append(attrs, model.Attribute{
+			st.attrs = append(st.attrs, model.Attribute{
 				Type:       model.AttrNote,
 				Normalized: "template_signal:" + ev,
 				TokenStart: -1,
@@ -1089,93 +1149,103 @@ func (p *Parser) Parse(rawTitle string) (*model.ParseResult, error) {
 			})
 		}
 	}
-	movieRouteHardExcluded = hasMovieRouteHardExclusion(rawTitle, attrs, episodeRange, season, seasonRange, packKind)
-	movieContentSignal = hasMovieContentSignal(attrs, hasMovieKeyword, movieIndex, spKind)
-	epRoute = computeEpRoute(tokens, episode, episodeList, episodeRange, season, seasonRange, spKind, movieIndex, hasMovieKeyword, movieRouteHardExcluded)
-	contentKind, contentConf := inferContentKind(p.cfg, episode, episodeRange, season, seasonRange, packKind, spKind, movieIndex, movieIndexRange, hasTech, hasMovieKeyword, hasYear, movieRouteHardExcluded, movieContentSignal)
-	if shouldDropEpisodeRangeForMovieRange(rawTitle, movieIndexRange, episode, episodeRange) {
-		episode = ""
-		episodeIdx = -1
-		episodeList = ""
-		episodeRange = ""
-		episodeRangeIdx = -1
-		epslot = nil
-		movieRouteHardExcluded = hasMovieRouteHardExclusion(rawTitle, attrs, episodeRange, season, seasonRange, packKind)
-		movieContentSignal = hasMovieContentSignal(attrs, hasMovieKeyword, movieIndex, spKind)
-		epRoute = computeEpRoute(tokens, episode, episodeList, episodeRange, season, seasonRange, spKind, movieIndex, hasMovieKeyword, movieRouteHardExcluded)
-		contentKind, contentConf = inferContentKind(p.cfg, episode, episodeRange, season, seasonRange, packKind, spKind, movieIndex, movieIndexRange, hasTech, hasMovieKeyword, hasYear, movieRouteHardExcluded, movieContentSignal)
+}
+
+func (p *Parser) reclassifyAfterAdjudication(st *parseState) {
+	st.movieRouteHardExcluded = hasMovieRouteHardExclusion(st.rawTitle, st.attrs, st.episodeRange, st.season, st.seasonRange, st.packKind)
+	st.movieContentSignal = hasMovieContentSignal(st.attrs, st.hasMovieKeyword, st.movieIndex, st.spKind)
+	st.epRoute = computeEpRoute(st.tokens, st.episode, st.episodeList, st.episodeRange, st.season, st.seasonRange, st.spKind, st.movieIndex, st.hasMovieKeyword, st.movieRouteHardExcluded)
+	st.contentKind, st.contentConf = inferContentKind(p.cfg, st.episode, st.episodeRange, st.season, st.seasonRange, st.packKind, st.spKind, st.movieIndex, st.movieIndexRange, st.hasTech, st.hasMovieKeyword, st.hasYear, st.movieRouteHardExcluded, st.movieContentSignal)
+	if shouldDropEpisodeRangeForMovieRange(st.rawTitle, st.movieIndexRange, st.episode, st.episodeRange) {
+		st.episode = ""
+		st.episodeIdx = -1
+		st.episodeList = ""
+		st.episodeRange = ""
+		st.episodeRangeIdx = -1
+		st.epslot = nil
+		st.movieRouteHardExcluded = hasMovieRouteHardExclusion(st.rawTitle, st.attrs, st.episodeRange, st.season, st.seasonRange, st.packKind)
+		st.movieContentSignal = hasMovieContentSignal(st.attrs, st.hasMovieKeyword, st.movieIndex, st.spKind)
+		st.epRoute = computeEpRoute(st.tokens, st.episode, st.episodeList, st.episodeRange, st.season, st.seasonRange, st.spKind, st.movieIndex, st.hasMovieKeyword, st.movieRouteHardExcluded)
+		st.contentKind, st.contentConf = inferContentKind(p.cfg, st.episode, st.episodeRange, st.season, st.seasonRange, st.packKind, st.spKind, st.movieIndex, st.movieIndexRange, st.hasTech, st.hasMovieKeyword, st.hasYear, st.movieRouteHardExcluded, st.movieContentSignal)
 	}
-	if ep2, mi2, epIdx2, _, changed := normalizeMovieEpisodeSignals(rawTitle, contentKind, episode, episodeRange, season, seasonRange, packKind, hasMovieKeyword, movieIndex, movieIndexRange, episodeIdx, movieIndexIdx); changed {
-		episode, movieIndex, episodeIdx = ep2, mi2, epIdx2
-		title = trimMovieDashEpisodeTailFromTitle(rawTitle, title, episode, movieIndex)
-		epslot = nil
-		movieRouteHardExcluded = hasMovieRouteHardExclusion(rawTitle, attrs, episodeRange, season, seasonRange, packKind)
-		movieContentSignal = hasMovieContentSignal(attrs, hasMovieKeyword, movieIndex, spKind)
-		epRoute = computeEpRoute(tokens, episode, episodeList, episodeRange, season, seasonRange, spKind, movieIndex, hasMovieKeyword, movieRouteHardExcluded)
-		contentKind, contentConf = inferContentKind(p.cfg, episode, episodeRange, season, seasonRange, packKind, spKind, movieIndex, movieIndexRange, hasTech, hasMovieKeyword, hasYear, movieRouteHardExcluded, movieContentSignal)
+	if ep2, mi2, epIdx2, _, changed := normalizeMovieEpisodeSignals(st.rawTitle, st.contentKind, st.episode, st.episodeRange, st.season, st.seasonRange, st.packKind, st.hasMovieKeyword, st.movieIndex, st.movieIndexRange, st.episodeIdx, st.movieIndexIdx); changed {
+		st.episode, st.movieIndex, st.episodeIdx = ep2, mi2, epIdx2
+		st.title = trimMovieDashEpisodeTailFromTitle(st.rawTitle, st.title, st.episode, st.movieIndex)
+		st.epslot = nil
+		st.movieRouteHardExcluded = hasMovieRouteHardExclusion(st.rawTitle, st.attrs, st.episodeRange, st.season, st.seasonRange, st.packKind)
+		st.movieContentSignal = hasMovieContentSignal(st.attrs, st.hasMovieKeyword, st.movieIndex, st.spKind)
+		st.epRoute = computeEpRoute(st.tokens, st.episode, st.episodeList, st.episodeRange, st.season, st.seasonRange, st.spKind, st.movieIndex, st.hasMovieKeyword, st.movieRouteHardExcluded)
+		st.contentKind, st.contentConf = inferContentKind(p.cfg, st.episode, st.episodeRange, st.season, st.seasonRange, st.packKind, st.spKind, st.movieIndex, st.movieIndexRange, st.hasTech, st.hasMovieKeyword, st.hasYear, st.movieRouteHardExcluded, st.movieContentSignal)
 	}
-	templateID, templateConf, routeID := matchTemplate(p.cfg, epRoute, contentKind, group, episode, episodeRange, season, packKind, spKind, movieIndex, hasTech, hasMovieKeyword, attrs, tokens)
-	contentKind = normalizeContentKindByTemplateID(contentKind, templateID)
-	if strings.HasPrefix(routeID, "streaming_release_") {
-		p.applyStreamingReleaseRouteV1(tailParenBlock, &aliases, &attrs)
+	st.templateID, st.templateConf, st.routeID = matchTemplate(p.cfg, st.epRoute, st.contentKind, st.group, st.episode, st.episodeRange, st.season, st.packKind, st.spKind, st.movieIndex, st.hasTech, st.hasMovieKeyword, st.attrs, st.tokens)
+	st.contentKind = normalizeContentKindByTemplateID(st.contentKind, st.templateID)
+	if strings.HasPrefix(st.routeID, "streaming_release_") {
+		p.applyStreamingReleaseRouteV1(st.tailParenBlock, &st.aliases, &st.attrs)
 	}
-	title = trimMovieRangeStartTailFromTitle(rawTitle, title, movieIndexRange, episode, episodeRange)
-	origTitle := title
-	title = sanitizePrimaryTitleForOutput(title)
-	title = trimTitleTailByPackKind(title, packKind)
-	title = trimAliasTailBySPKind(title, spKind)
-	aliases = p.sanitizeAliasesForOutput(aliases, title, episode, season, spKind)
-	title, aliases = p.rebalanceGenericPrimaryTitleFromAliases(title, aliases)
-	if bridgedTitle, bridgedAliases, ok := applyBracketUnderscoreAliasBridge(rawTitle, title, aliases); ok {
-		title, aliases = bridgedTitle, bridgedAliases
+}
+
+func (p *Parser) cleanTitleAndAliases(st *parseState) {
+	st.title = trimMovieRangeStartTailFromTitle(st.rawTitle, st.title, st.movieIndexRange, st.episode, st.episodeRange)
+	origTitle := st.title
+	st.title = sanitizePrimaryTitleForOutput(st.title)
+	st.title = trimTitleTailByPackKind(st.title, st.packKind)
+	st.title = trimAliasTailBySPKind(st.title, st.spKind)
+	st.aliases = p.sanitizeAliasesForOutput(st.aliases, st.title, st.episode, st.season, st.spKind)
+	st.title, st.aliases = p.rebalanceGenericPrimaryTitleFromAliases(st.title, st.aliases)
+	if bridgedTitle, bridgedAliases, ok := applyBracketUnderscoreAliasBridge(st.rawTitle, st.title, st.aliases); ok {
+		st.title, st.aliases = bridgedTitle, bridgedAliases
 	}
-	if strings.TrimSpace(title) != "" && aliasSemanticKey(title) != aliasSemanticKey(origTitle) {
-		attrs = upsertTitleAttribute(attrs, title, "title_cleanup")
+	if strings.TrimSpace(st.title) != "" && aliasSemanticKey(st.title) != aliasSemanticKey(origTitle) {
+		st.attrs = upsertTitleAttribute(st.attrs, st.title, "title_cleanup")
 	}
-	group, title, aliases, templateID, contentKind, routeID, overrideApplied := p.applyGroupRouteOverride(rawTitle, group, episodeRange, title, aliases, templateID, contentKind, routeID)
-	title = trimTitleTailByGroup(title, group)
-	for _, a := range attrs {
+}
+
+func (p *Parser) applyGroupRoute(st *parseState) {
+	var overrideApplied bool
+	st.group, st.title, st.aliases, st.templateID, st.contentKind, st.routeID, overrideApplied = p.applyGroupRouteOverride(st.rawTitle, st.group, st.episodeRange, st.title, st.aliases, st.templateID, st.contentKind, st.routeID)
+	st.title = trimTitleTailByGroup(st.title, st.group)
+	for _, a := range st.attrs {
 		if a.Type != model.AttrTailGroup {
 			continue
 		}
 		if strings.TrimSpace(a.Normalized) == "" {
 			continue
 		}
-		title = trimTitleTailByGroup(title, a.Normalized)
+		st.title = trimTitleTailByGroup(st.title, a.Normalized)
 	}
-	title = trimAliasTailBySPKind(title, spKind)
-	if overrideApplied && strings.HasPrefix(routeID, "group_epseg_") {
-		if ep, sp, epTitle, ok := extractEpisodeLikeFromThirdBracketDetailed(rawTitle); ok {
-			episode = ep
+	st.title = trimAliasTailBySPKind(st.title, st.spKind)
+	if overrideApplied && strings.HasPrefix(st.routeID, "group_epseg_") {
+		if ep, sp, epTitle, ok := extractEpisodeLikeFromThirdBracketDetailed(st.rawTitle); ok {
+			st.episode = ep
 			if strings.TrimSpace(sp) != "" {
-				spKind = sp
+				st.spKind = sp
 			}
-			isMarukoRoute := strings.EqualFold(strings.TrimSpace(routeID), "group_epseg_maruko_v1")
-			aliases = pruneEpisodeLikeAliases(aliases)
+			isMarukoRoute := strings.EqualFold(strings.TrimSpace(st.routeID), "group_epseg_maruko_v1")
+			st.aliases = pruneEpisodeLikeAliases(st.aliases)
 			overrideAxis := "ABS"
-			if strings.TrimSpace(season) != "" {
+			if strings.TrimSpace(st.season) != "" {
 				overrideAxis = "SE"
 			}
 			primary := &model.EPEntity{
 				Kind:       "EP",
 				Axis:       overrideAxis,
-				Episode:    episode,
-				SPKind:     spKind,
+				Episode:    st.episode,
+				SPKind:     st.spKind,
 				TokenStart: -1,
 				TokenEnd:   -1,
 				Source:     "group_route_override",
 			}
 			if isMarukoRoute {
-				epslot = &model.EPSlot{
+				st.epslot = &model.EPSlot{
 					Primary:    primary,
 					Candidates: []model.EPEntity{*primary},
 				}
 				tailTitle := strings.TrimSpace(epTitle)
 				if tailTitle == "" {
-					tailTitle = strings.TrimSpace(extractTailBetweenThirdAndFourthBracket(rawTitle))
+					tailTitle = strings.TrimSpace(extractTailBetweenThirdAndFourthBracket(st.rawTitle))
 				}
 				if tailTitle != "" {
-					attrs = append(attrs, model.Attribute{
+					st.attrs = append(st.attrs, model.Attribute{
 						Type:       model.AttrNote,
 						Normalized: tailTitle,
 						TokenStart: -1,
@@ -1184,8 +1254,8 @@ func (p *Parser) Parse(rawTitle string) (*model.ParseResult, error) {
 						Source:     "group_route_override",
 					})
 				}
-				if dm := bracketDatePattern.FindStringSubmatch(rawTitle); len(dm) > 1 && strings.TrimSpace(dm[1]) != "" {
-					attrs = append(attrs, model.Attribute{
+				if dm := bracketDatePattern.FindStringSubmatch(st.rawTitle); len(dm) > 1 && strings.TrimSpace(dm[1]) != "" {
+					st.attrs = append(st.attrs, model.Attribute{
 						Type:       model.AttrNote,
 						Normalized: strings.TrimSpace(dm[1]),
 						TokenStart: -1,
@@ -1194,33 +1264,33 @@ func (p *Parser) Parse(rawTitle string) (*model.ParseResult, error) {
 						Source:     "group_route_override",
 					})
 				}
-			} else if epslot == nil || epslot.Primary == nil || strings.TrimSpace(epslot.Primary.Episode) == "" {
-				epslot = &model.EPSlot{
+			} else if st.epslot == nil || st.epslot.Primary == nil || strings.TrimSpace(st.epslot.Primary.Episode) == "" {
+				st.epslot = &model.EPSlot{
 					Primary:    primary,
 					Candidates: []model.EPEntity{*primary},
 				}
 			}
-			movieRouteHardExcluded = hasMovieRouteHardExclusion(rawTitle, attrs, episodeRange, season, seasonRange, packKind)
-			movieContentSignal = hasMovieContentSignal(attrs, hasMovieKeyword, movieIndex, spKind)
-			epRoute = computeEpRoute(tokens, episode, episodeList, episodeRange, season, seasonRange, spKind, movieIndex, hasMovieKeyword, movieRouteHardExcluded)
-			contentKind, contentConf = inferContentKind(p.cfg, episode, episodeRange, season, seasonRange, packKind, spKind, movieIndex, movieIndexRange, hasTech, hasMovieKeyword, hasYear, movieRouteHardExcluded, movieContentSignal)
-			if tid, tconf, _ := matchTemplate(p.cfg, epRoute, contentKind, group, episode, episodeRange, season, packKind, spKind, movieIndex, hasTech, hasMovieKeyword, attrs, tokens); strings.TrimSpace(tid) != "" && tid != "TF_UNKNOWN_DEFAULT" {
-				templateID = tid
-				templateConf = tconf
+			st.movieRouteHardExcluded = hasMovieRouteHardExclusion(st.rawTitle, st.attrs, st.episodeRange, st.season, st.seasonRange, st.packKind)
+			st.movieContentSignal = hasMovieContentSignal(st.attrs, st.hasMovieKeyword, st.movieIndex, st.spKind)
+			st.epRoute = computeEpRoute(st.tokens, st.episode, st.episodeList, st.episodeRange, st.season, st.seasonRange, st.spKind, st.movieIndex, st.hasMovieKeyword, st.movieRouteHardExcluded)
+			st.contentKind, st.contentConf = inferContentKind(p.cfg, st.episode, st.episodeRange, st.season, st.seasonRange, st.packKind, st.spKind, st.movieIndex, st.movieIndexRange, st.hasTech, st.hasMovieKeyword, st.hasYear, st.movieRouteHardExcluded, st.movieContentSignal)
+			if tid, tconf, _ := matchTemplate(p.cfg, st.epRoute, st.contentKind, st.group, st.episode, st.episodeRange, st.season, st.packKind, st.spKind, st.movieIndex, st.hasTech, st.hasMovieKeyword, st.attrs, st.tokens); strings.TrimSpace(tid) != "" && tid != "TF_UNKNOWN_DEFAULT" {
+				st.templateID = tid
+				st.templateConf = tconf
 			}
 		}
 	}
-	if overrideApplied && strings.EqualFold(strings.TrimSpace(routeID), "group_aptx4869_conan_bracket_ep_v1") {
-		if forcedTitle, ep, epTitle, ok := extractAPTX4869ConanEpisodeTitleRoute(rawTitle); ok {
-			title = forcedTitle
-			episode = ep
-			episodeIdx = -1
-			episodeList = ""
-			episodeRange = ""
-			episodeRangeIdx = -1
-			aliases = pruneEpisodeLikeAliases(aliases)
+	if overrideApplied && strings.EqualFold(strings.TrimSpace(st.routeID), "group_aptx4869_conan_bracket_ep_v1") {
+		if forcedTitle, ep, epTitle, ok := extractAPTX4869ConanEpisodeTitleRoute(st.rawTitle); ok {
+			st.title = forcedTitle
+			st.episode = ep
+			st.episodeIdx = -1
+			st.episodeList = ""
+			st.episodeRange = ""
+			st.episodeRangeIdx = -1
+			st.aliases = pruneEpisodeLikeAliases(st.aliases)
 			if strings.TrimSpace(epTitle) != "" {
-				attrs = append(attrs, model.Attribute{
+				st.attrs = append(st.attrs, model.Attribute{
 					Type:       model.AttrNote,
 					Normalized: strings.TrimSpace(epTitle),
 					TokenStart: -1,
@@ -1232,110 +1302,100 @@ func (p *Parser) Parse(rawTitle string) (*model.ParseResult, error) {
 			primary := &model.EPEntity{
 				Kind:       "EP",
 				Axis:       "ABS",
-				Episode:    episode,
+				Episode:    st.episode,
 				TokenStart: -1,
 				TokenEnd:   -1,
 				Source:     "group_route_override",
 			}
-			epslot = &model.EPSlot{
+			st.epslot = &model.EPSlot{
 				Primary:    primary,
 				Candidates: []model.EPEntity{*primary},
 			}
-			movieRouteHardExcluded = hasMovieRouteHardExclusion(rawTitle, attrs, episodeRange, season, seasonRange, packKind)
-			movieContentSignal = hasMovieContentSignal(attrs, hasMovieKeyword, movieIndex, spKind)
-			epRoute = computeEpRoute(tokens, episode, episodeList, episodeRange, season, seasonRange, spKind, movieIndex, hasMovieKeyword, movieRouteHardExcluded)
-			contentKind, contentConf = inferContentKind(p.cfg, episode, episodeRange, season, seasonRange, packKind, spKind, movieIndex, movieIndexRange, hasTech, hasMovieKeyword, hasYear, movieRouteHardExcluded, movieContentSignal)
-			if tid, tconf, _ := matchTemplate(p.cfg, epRoute, contentKind, group, episode, episodeRange, season, packKind, spKind, movieIndex, hasTech, hasMovieKeyword, attrs, tokens); strings.TrimSpace(tid) != "" && tid != "TF_UNKNOWN_DEFAULT" {
-				templateID = tid
-				templateConf = tconf
+			st.movieRouteHardExcluded = hasMovieRouteHardExclusion(st.rawTitle, st.attrs, st.episodeRange, st.season, st.seasonRange, st.packKind)
+			st.movieContentSignal = hasMovieContentSignal(st.attrs, st.hasMovieKeyword, st.movieIndex, st.spKind)
+			st.epRoute = computeEpRoute(st.tokens, st.episode, st.episodeList, st.episodeRange, st.season, st.seasonRange, st.spKind, st.movieIndex, st.hasMovieKeyword, st.movieRouteHardExcluded)
+			st.contentKind, st.contentConf = inferContentKind(p.cfg, st.episode, st.episodeRange, st.season, st.seasonRange, st.packKind, st.spKind, st.movieIndex, st.movieIndexRange, st.hasTech, st.hasMovieKeyword, st.hasYear, st.movieRouteHardExcluded, st.movieContentSignal)
+			if tid, tconf, _ := matchTemplate(p.cfg, st.epRoute, st.contentKind, st.group, st.episode, st.episodeRange, st.season, st.packKind, st.spKind, st.movieIndex, st.hasTech, st.hasMovieKeyword, st.attrs, st.tokens); strings.TrimSpace(tid) != "" && tid != "TF_UNKNOWN_DEFAULT" {
+				st.templateID = tid
+				st.templateConf = tconf
 			}
 		}
 	}
 	if overrideApplied {
-		contentKind = normalizeContentKindByTemplateID(contentKind, templateID)
-		title, aliases = applyGroupTitleAliasSpecialization(rawTitle, routeID, title, aliases)
+		st.contentKind = normalizeContentKindByTemplateID(st.contentKind, st.templateID)
+		st.title, st.aliases = applyGroupTitleAliasSpecialization(st.rawTitle, st.routeID, st.title, st.aliases)
 	}
 	if overrideApplied {
-		if strings.TrimSpace(title) != "" {
-			attrs = upsertTitleAttribute(attrs, title, "group_route_override")
+		if strings.TrimSpace(st.title) != "" {
+			st.attrs = upsertTitleAttribute(st.attrs, st.title, "group_route_override")
 		}
-		attrs = upsertGroupAttribute(attrs, group, "group_route_override")
+		st.attrs = upsertGroupAttribute(st.attrs, st.group, "group_route_override")
 	}
+}
+
+func (p *Parser) canonicalizeAttributes(st *parseState) {
 	// Group-route overrides may inject raw alias candidates; run final alias/title cleanup once more.
-	aliases = p.sanitizeAliasesForOutput(aliases, title, episode, season, spKind)
-	title, aliases = rebalanceSingleSlashSeasonBridgePrimaryFromRaw(rawTitle, title, aliases)
-	title, aliases = p.rebalanceGenericPrimaryTitleFromAliases(title, aliases)
-	title, aliases = p.applyTitleKnowledge(rawTitle, title, aliases)
-	packProfile := p.inferPackProfile(contentKind, packKind, season, seasonRange, attrs)
-	attrs = upsertTitleAttribute(attrs, title, "canonical")
-	attrs = upsertGroupAttribute(attrs, group, "canonical")
-	attrs = upsertScalarAttribute(attrs, model.AttrVersion, version, "canonical")
-	attrs = upsertScalarAttribute(attrs, model.AttrPackKind, packKind, "canonical")
-	attrs = upsertScalarAttribute(attrs, model.AttrPackProfile, packProfile, "canonical")
-	attrs = upsertScalarAttribute(attrs, model.AttrMovieIndex, movieIndex, "canonical")
-	attrs = upsertScalarAttribute(attrs, model.AttrMovieIndexRange, movieIndexRange, "canonical")
-	attrs = appendTitleAliasAttributes(attrs, aliases, title, "canonical")
-	attrs = p.promoteNoteAttributes(attrs)
-	attrs = dropRedundantNoteAttributes(attrs, season, seasonRange)
-	p.normalizePlatformAttrs(attrs)
-	p.normalizeSourceTypeAttrs(attrs)
-	p.normalizeAudioAttrs(attrs)
-	attrs = p.normalizeSubtitleAttrs(attrs, tokens)
-	attrs = p.enrichBatchSourceTypeFromPackKind(attrs, contentKind)
-	attrs = dedupeAttributes(attrs)
-	attrs = collapseOverlappingSpecificAudioCodecs(attrs)
-	ctx.AudioSlot = reconcileAudioSlotWithAttributes(ctx.AudioSlot, attrs)
-	normalizeAudioSlotLanguages(ctx.AudioSlot)
-	epslot = syncEPSlotWithCanonicalSignals(epslot, season, episode, episodeRange, episodeList, spKind, episodeIdx, episodeRangeIdx, ctx.EpisodeListIdx)
-	epslot = adjudicateEPSlotPrimaryAxis(epslot, tokens, season)
-	epslot = pruneBatchEPSlotForConservativeOutput(epslot, contentKind, episode, episodeRange, spKind)
-	if shouldPreferSPPrimaryForSpecial(contentKind, spKind, epslot) {
-		episode = ""
-		episodeIdx = -1
-		episodeList = ""
-		ctx.EpisodeListIdx = -1
-		episodeRange = ""
-		episodeRangeIdx = -1
-		epslot = forceSPPrimaryFromSPKind(epslot, season, spKind)
-	}
-	contentKind, episode, episodeList, episodeRange, epslot = pruneCanonicalEpisodeSignalsForOutput(rawTitle, contentKind, packKind, season, episode, episodeList, episodeRange, spKind, movieIndex, movieIndexRange, epslot)
-	if isUnknownOutput(contentKind, templateID) {
-		attrs = pruneUnknownCoreAttributes(attrs)
-		epslot = nil
-		ctx.AudioSlot = nil
-	}
-	consumeTokensByTechAttrSpans(tokens, attrs)
-	consumeTokensByEPSlotPrimarySpan(tokens, epslot)
-	finalTitle := finalTitleValueFromAttributes(attrs, title)
-	finalAliases := finalTitleAliasValuesFromAttributes(attrs)
-	p.consumeTitleGapSeasonBridgeMarkers(tokens, titleEnd, episodeIdx, episodeRangeIdx, attrs)
-	p.consumeTitleGapLatinAliasRuns(tokens, finalTitle, finalAliases, titleEnd, episodeIdx, episodeRangeIdx, attrs)
-	p.consumeTitleGapAliasSemanticTokens(tokens, finalAliases, titleEnd, episodeIdx, episodeRangeIdx, attrs)
-	p.consumeTitleGapBatchTVMarkers(tokens, titleEnd, episodeIdx, episodeRangeIdx, attrs)
-	p.consumeAliasChainTokensByFinalAliases(tokens, groupSpan, finalTitle, finalAliases, episodeIdx, episodeRangeIdx, seasonIdx, attrs)
-	p.consumeGroupSpecificTitleChainDelimiters(tokens, groupSpan, group, episodeIdx, episodeRangeIdx, attrs)
-	consumeTailGroupTokensByCanonicalGroup(tokens, group)
-	removeBracketsAroundFullyConsumedBlocks(tokens)
-	attrs = stripLegacyEPAttributes(attrs)
+	st.aliases = p.sanitizeAliasesForOutput(st.aliases, st.title, st.episode, st.season, st.spKind)
+	st.title, st.aliases = rebalanceSingleSlashSeasonBridgePrimaryFromRaw(st.rawTitle, st.title, st.aliases)
+	st.title, st.aliases = p.rebalanceGenericPrimaryTitleFromAliases(st.title, st.aliases)
+	st.title, st.aliases = p.applyTitleKnowledge(st.rawTitle, st.title, st.aliases)
+	packProfile := p.inferPackProfile(st.contentKind, st.packKind, st.season, st.seasonRange, st.attrs)
+	st.attrs = upsertTitleAttribute(st.attrs, st.title, "canonical")
+	st.attrs = upsertGroupAttribute(st.attrs, st.group, "canonical")
+	st.attrs = upsertScalarAttribute(st.attrs, model.AttrVersion, st.version, "canonical")
+	st.attrs = upsertScalarAttribute(st.attrs, model.AttrPackKind, st.packKind, "canonical")
+	st.attrs = upsertScalarAttribute(st.attrs, model.AttrPackProfile, packProfile, "canonical")
+	st.attrs = upsertScalarAttribute(st.attrs, model.AttrMovieIndex, st.movieIndex, "canonical")
+	st.attrs = upsertScalarAttribute(st.attrs, model.AttrMovieIndexRange, st.movieIndexRange, "canonical")
+	st.attrs = appendTitleAliasAttributes(st.attrs, st.aliases, st.title, "canonical")
+	st.attrs = p.promoteNoteAttributes(st.attrs)
+	st.attrs = dropRedundantNoteAttributes(st.attrs, st.season, st.seasonRange)
+	p.normalizePlatformAttrs(st.attrs)
+	p.normalizeSourceTypeAttrs(st.attrs)
+	p.normalizeAudioAttrs(st.attrs)
+	st.attrs = p.normalizeSubtitleAttrs(st.attrs, st.tokens)
+	st.attrs = p.enrichBatchSourceTypeFromPackKind(st.attrs, st.contentKind)
+	st.attrs = dedupeAttributes(st.attrs)
+	st.attrs = collapseOverlappingSpecificAudioCodecs(st.attrs)
+	st.ctx.AudioSlot = reconcileAudioSlotWithAttributes(st.ctx.AudioSlot, st.attrs)
+	normalizeAudioSlotLanguages(st.ctx.AudioSlot)
+}
 
-	epSemantics := buildCanonicalEPSemantics(originalRawTitle, tokens, epslot, season, seasonRange, episode, episodeList, episodeRange, spKind)
-	if isUnknownOutput(contentKind, templateID) {
-		epSemantics = nil
+func (p *Parser) finalizeEpisodeSignals(st *parseState) {
+	st.epslot = syncEPSlotWithCanonicalSignals(st.epslot, st.season, st.episode, st.episodeRange, st.episodeList, st.spKind, st.episodeIdx, st.episodeRangeIdx, st.ctx.EpisodeListIdx)
+	st.epslot = adjudicateEPSlotPrimaryAxis(st.epslot, st.tokens, st.season)
+	st.epslot = pruneBatchEPSlotForConservativeOutput(st.epslot, st.contentKind, st.episode, st.episodeRange, st.spKind)
+	if shouldPreferSPPrimaryForSpecial(st.contentKind, st.spKind, st.epslot) {
+		st.episode = ""
+		st.episodeIdx = -1
+		st.episodeList = ""
+		st.ctx.EpisodeListIdx = -1
+		st.episodeRange = ""
+		st.episodeRangeIdx = -1
+		st.epslot = forceSPPrimaryFromSPKind(st.epslot, st.season, st.spKind)
 	}
-
-	res := &model.ParseResult{
-		RawTitle:           originalRawTitle,
-		ContentKind:        contentKind,
-		ContentConfidence:  contentConf,
-		TemplateID:         templateID,
-		TemplateConfidence: templateConf,
-		EPSemantics:        epSemantics,
-		AudioSlot:          ctx.AudioSlot,
-		Attributes:         attrs,
-		Tokens:             tokens,
+	st.contentKind, st.episode, st.episodeList, st.episodeRange, st.epslot = pruneCanonicalEpisodeSignalsForOutput(st.rawTitle, st.contentKind, st.packKind, st.season, st.episode, st.episodeList, st.episodeRange, st.spKind, st.movieIndex, st.movieIndexRange, st.epslot)
+	if isUnknownOutput(st.contentKind, st.templateID) {
+		st.attrs = pruneUnknownCoreAttributes(st.attrs)
+		st.epslot = nil
+		st.ctx.AudioSlot = nil
 	}
+}
 
-	return res, nil
+func (p *Parser) consumeTokens(st *parseState) {
+	consumeTokensByTechAttrSpans(st.tokens, st.attrs)
+	consumeTokensByEPSlotPrimarySpan(st.tokens, st.epslot)
+	finalTitle := finalTitleValueFromAttributes(st.attrs, st.title)
+	finalAliases := finalTitleAliasValuesFromAttributes(st.attrs)
+	p.consumeTitleGapSeasonBridgeMarkers(st.tokens, st.titleEnd, st.episodeIdx, st.episodeRangeIdx, st.attrs)
+	p.consumeTitleGapLatinAliasRuns(st.tokens, finalTitle, finalAliases, st.titleEnd, st.episodeIdx, st.episodeRangeIdx, st.attrs)
+	p.consumeTitleGapAliasSemanticTokens(st.tokens, finalAliases, st.titleEnd, st.episodeIdx, st.episodeRangeIdx, st.attrs)
+	p.consumeTitleGapBatchTVMarkers(st.tokens, st.titleEnd, st.episodeIdx, st.episodeRangeIdx, st.attrs)
+	p.consumeAliasChainTokensByFinalAliases(st.tokens, st.groupSpan, finalTitle, finalAliases, st.episodeIdx, st.episodeRangeIdx, st.seasonIdx, st.attrs)
+	p.consumeGroupSpecificTitleChainDelimiters(st.tokens, st.groupSpan, st.group, st.episodeIdx, st.episodeRangeIdx, st.attrs)
+	consumeTailGroupTokensByCanonicalGroup(st.tokens, st.group)
+	removeBracketsAroundFullyConsumedBlocks(st.tokens)
+	st.attrs = stripLegacyEPAttributes(st.attrs)
 }
 
 // Regular expressions hoisted out of function bodies so they are compiled once at init.

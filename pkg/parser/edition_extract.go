@@ -9,6 +9,8 @@ import (
 	"github.com/wangkayu/reltitle/pkg/tokenize"
 )
 
+var sxxExxVersionPattern = regexp.MustCompile(`(?i)^s\d{1,2}e\d{1,4}v(\d+)$`)
+
 func extractVersionAttrsAndRemoveFromTokens(tokens []model.Token, out *[]model.Attribute) string {
 	if out == nil || len(tokens) == 0 {
 		return ""
@@ -20,7 +22,12 @@ func extractVersionAttrsAndRemoveFromTokens(tokens []model.Token, out *[]model.A
 		}
 		// Standalone [v2] / (v2) style. Tokenizer usually makes it a single token "v2".
 		text := strings.TrimSpace(tokens[i].Text)
-		m := standaloneVersionPattern.FindStringSubmatch(text)
+		m := standaloneVersionPattern.FindStringSubmatch(strings.TrimRight(text, ","))
+		compactEpisodeVersion := false
+		if len(m) != 2 {
+			m = sxxExxVersionPattern.FindStringSubmatch(text)
+			compactEpisodeVersion = len(m) == 2
+		}
 		if len(m) != 2 {
 			continue
 		}
@@ -31,7 +38,7 @@ func extractVersionAttrsAndRemoveFromTokens(tokens []model.Token, out *[]model.A
 		norm := "v" + v
 		*out = append(*out, model.Attribute{Type: model.AttrVersion, Normalized: norm, TokenStart: i, TokenEnd: i + 1, Confidence: 0.7, Source: model.AttrSourceVersionToken})
 		// Only remove when it is clearly meta (most common inside brackets/parens).
-		if isInBracket(tokens, i) || isInParen(tokens, i) {
+		if !compactEpisodeVersion && (isInBracket(tokens, i) || isInParen(tokens, i)) {
 			tokens[i].Removed = true
 		}
 		if best == "" {

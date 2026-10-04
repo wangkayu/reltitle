@@ -324,6 +324,9 @@ func (e *audioSlotExtract) emitFromSegment(start int, end int, conf float64) ([]
 			break
 		}
 		t := strings.TrimSpace(tokens[i].Text)
+		if isInBracket(tokens, i) {
+			t = strings.TrimRight(t, ",")
+		}
 		if tokens[i].Removed {
 			// Many tech/audio tokens are removed early by lexicon or other passes.
 			// We still want to extract structured audio tracks, but only from tokens that
@@ -350,6 +353,18 @@ func (e *audioSlotExtract) emitFromSegment(start int, end int, conf float64) ([]
 			continue
 		}
 
+		if isToonsHubCN(tokens) {
+			subtitleToken := false
+			for _, attr := range *e.attrs {
+				if attr.Source == model.AttrSourceTechSubs && attr.TokenStart <= i && i < attr.TokenEnd {
+					subtitleToken = true
+					break
+				}
+			}
+			if subtitleToken {
+				continue
+			}
+		}
 		if l := e.canonLang(t); l != "" {
 			curLang = l
 			curLangStart = i

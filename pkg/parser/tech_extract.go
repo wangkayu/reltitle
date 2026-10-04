@@ -4,6 +4,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/wangkayu/reltitle/pkg/model"
 )
@@ -708,8 +709,19 @@ func extractCRCAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Att
 		}
 		low := strings.ToLower(raw)
 		if !strings.ContainsAny(low, "abcdef") {
-			// Avoid consuming plain numeric dates like 20260103.
-			continue
+			isolatedTailBlock := i > 0 && i+1 < len(tokens) && tokens[i-1].Text == "[" && tokens[i+1].Text == "]" && hasTechAttr(*attrs)
+			if isolatedTailBlock {
+				for j := i + 2; j < len(tokens); j++ {
+					if tokens[j].Text != "." && !reFileExtSuffix.MatchString("."+tokens[j].Text) {
+						isolatedTailBlock = false
+						break
+					}
+				}
+			}
+			_, dateErr := time.Parse("20060102", raw)
+			if !isolatedTailBlock || dateErr == nil || looksLikeDateOrTimeText(raw) {
+				continue
+			}
 		}
 		if !isInBracket(tokens, i) && !isInParen(tokens, i) {
 			continue
@@ -986,8 +998,37 @@ func consumeTokensByEPSlotPrimarySpan(tokens []model.Token, epslot *model.EPSlot
 	if end > len(tokens) {
 		end = len(tokens)
 	}
+	if epslot.Primary.Kind == model.EPKindRange && end == start+1 {
+		if start+2 < len(tokens) && tokens[start+1].Text == "-" && !tokens[start+2].Protected {
+			left := sxxExxPattern.FindStringSubmatch(tokens[start].Text)
+			right := strings.TrimPrefix(strings.ToUpper(tokens[start+2].Text), "E")
+			if len(left) == 3 && episodeOfTotalPattern.MatchString(right) &&
+				normalizeEpisodeRangeText(left[2]+"-"+right) == normalizeEpisodeRangeText(epslot.Primary.EpisodeRange) {
+				end = start + 3
+				epslot.Primary.TokenEnd = end
+			}
+		}
+		for candidateEnd := start + 2; candidateEnd <= len(tokens) && candidateEnd <= start+5; candidateEnd++ {
+			if tokens[candidateEnd-1].Protected {
+				break
+			}
+			var text strings.Builder
+			for j := start; j < candidateEnd; j++ {
+				text.WriteString(tokens[j].Text)
+			}
+			if normalizeEpisodeRangeText(text.String()) == normalizeEpisodeRangeText(epslot.Primary.EpisodeRange) {
+				end = candidateEnd
+				epslot.Primary.TokenEnd = end
+				break
+			}
+		}
+	}
 	for i := start; i < end; i++ {
 		tokens[i].Removed = true
+	}
+	if start > 0 && tokens[start-1].Text == "-" && !tokens[start-1].Protected &&
+		(epslot.Primary.Kind == model.EPKindEP || epslot.Primary.Kind == model.EPKindRange) {
+		tokens[start-1].Removed = true
 	}
 }
 

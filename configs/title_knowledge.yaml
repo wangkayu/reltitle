@@ -56,3 +56,18 @@ entries:
       - "らんま1/2"
     raw_must_contain_all:
       - "Ranma 1/2"
+  - id: nine_rulers_crown
+    enabled: true
+    canonical_title: "9-nine- Ruler's Crown"
+    aliases:
+      - "9: Ruler's Crown"
+    raw_must_contain_all:
+      - "9-nine- Ruler's Crown"
+  - id: fate_grand_order_ritsuka
+    enabled: true
+    canonical_title: "Fate Grand Order You've Lost Ritsuka Fujimaru"
+    aliases:
+      - "Fate/Grand Order 藤丸立香はわからない"
+      - "Fate/Grand Order: Fujimaru Ritsuka wa Wakaranai"
+    raw_must_contain_all:
+      - "Fate Grand Order You've Lost Ritsuka Fujimaru"

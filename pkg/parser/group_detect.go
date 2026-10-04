@@ -47,7 +47,9 @@ func (p *Parser) inferAliasesFromAdjacentBrackets(tokens []model.Token, titleEnd
 			continue
 		}
 		parts := make([]string, 0, end-i)
+		allRemoved := true
 		for k := i + 1; k < end; k++ {
+			allRemoved = allRemoved && tokens[k].Removed
 			t := strings.TrimSpace(tokens[k].Text)
 			if t == "" {
 				continue
@@ -55,7 +57,7 @@ func (p *Parser) inferAliasesFromAdjacentBrackets(tokens []model.Token, titleEnd
 			parts = append(parts, t)
 		}
 		inner := strings.TrimSpace(strings.Join(parts, " "))
-		if inner == "" {
+		if inner == "" || allRemoved && (open == "[" || open == "【") {
 			i = end
 			continue
 		}

@@ -60,7 +60,18 @@ func applyLexiconClause(tokens []model.Token, lower []string, brDepth []int, par
 		}
 		ok := true
 		for j := 0; j < len(pl); j++ {
-			if lower[i+j] != pl[j] {
+			expected := pl[j]
+			actual := lower[i+j]
+			if isInBracket(tokens, i+j) && strings.HasSuffix(actual, ",") {
+				for _, em := range emits {
+					if em.Type == "video_codec" || em.Type == "audio_codec" || em.Type == "source_type" || em.Type == "bit_depth" || em.Type == "edition" || em.Type == "content_rating" {
+						actual = strings.TrimRight(actual, ",")
+						expected = strings.TrimRight(expected, ",")
+						break
+					}
+				}
+			}
+			if actual != expected {
 				ok = false
 				break
 			}

@@ -52,6 +52,12 @@ canonical:
     - HULU
     - DISNEY_NOW
     - CATCHPLAY_PLUS
+    - OCEANVEIL
+    - NHK_ONE
+    - TWITTER
+    - VIU
+    - WETV
+    - VIKI
 
   sub_flag:
     - hard
@@ -76,6 +82,12 @@ canonical:
     - DEU
     - ITA
     - POR
+    - ARA
+    - IND
+    - THA
+    - POL
+    - MSA
+    - VIE
 
   audio_flag:
     - DUB

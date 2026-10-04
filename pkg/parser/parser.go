@@ -697,6 +697,9 @@ func (p *Parser) Parse(rawTitle string) (*model.ParseResult, error) {
 	extractEditionAttrsAndRemoveFromTokens(tokens, &attrs, shouldUseUnderscoreEditionRoute(rawTitle))
 	extractSearchHintIndexAttrsAndRemoveFromTokens(tokens, &attrs)
 	extractSeasonShowTagAttrsAndRemoveFromTokens(tokens, &attrs)
+	if isToonsHubCN(tokens) {
+		extractTechSubsSemanticsAndRemoveFromTokens(tokens, &attrs)
+	}
 	p.applyLexicon(tokens, &attrs)
 	p.extractStableTechSpanComboAttrsAndRemoveFromTokens(tokens, &attrs)
 	p.extractLooseCodecBitDepthAttrsAndRemoveFromTokens(tokens, &attrs)
@@ -881,6 +884,17 @@ func (p *Parser) resolveTitleAndAliases(st *parseState) {
 		if !isInBracket(st.tokens, st.seasonIdx) && !isInParen(st.tokens, st.seasonIdx) {
 			if seasonOnlyPattern.MatchString(st.tokens[st.seasonIdx].Text) || seasonEmbeddedPattern.MatchString(st.tokens[st.seasonIdx].Text) {
 				seasonCutIdx = st.seasonIdx
+			}
+		}
+	}
+	if st.season != "" && st.episode == "" && st.episodeRange == "" {
+		for i, token := range st.tokens {
+			if token.Protected || isInBracket(st.tokens, i) || isInParen(st.tokens, i) {
+				continue
+			}
+			if m := seasonOnlyPattern.FindStringSubmatch(token.Text); len(m) == 2 && strings.TrimLeft(m[1], "0") == st.season {
+				seasonCutIdx = i
+				break
 			}
 		}
 	}

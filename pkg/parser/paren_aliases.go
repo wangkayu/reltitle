@@ -272,6 +272,7 @@ func splitAliasCandidatesFromParenContent(content string) ([]string, bool, strin
 		return nil, searchHint, hintKeyword
 	}
 	allowComma := searchHint || reStreamMetaFlag.MatchString(content)
+	preserveTitleCommas := !allowComma && strings.ContainsAny(content, ";；")
 	norm := strings.NewReplacer(
 		"｜", "|",
 		"／", "/",
@@ -279,6 +280,9 @@ func splitAliasCandidatesFromParenContent(content string) ([]string, bool, strin
 		"，", ",",
 		"、", ",",
 	).Replace(content)
+	if preserveTitleCommas {
+		norm = strings.NewReplacer("｜", "|", "／", "/", "；", ";").Replace(content)
+	}
 	if !allowComma && strings.Contains(norm, ",") {
 		commaParts := strings.Split(norm, ",")
 		validAliasParts := 0
@@ -295,7 +299,7 @@ func splitAliasCandidatesFromParenContent(content string) ([]string, bool, strin
 				validAliasParts++
 			}
 		}
-		if validAliasParts >= 2 {
+		if validAliasParts >= 2 && !strings.Contains(norm, ";") {
 			allowComma = true
 		}
 	}

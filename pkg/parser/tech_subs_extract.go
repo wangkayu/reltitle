@@ -12,6 +12,7 @@ import (
 // methods below were closures of the original monolithic function; behavior
 // is unchanged.
 type techSubsSemanticsExtract struct {
+	toonshubCN     bool
 	tokens         []model.Token
 	attrs          *[]model.Attribute
 	techStart      int
@@ -78,6 +79,14 @@ func (e *techSubsSemanticsExtract) isSubsMarkerToken(s string) bool {
 // language groups) from the token range [start, end), appends the
 // corresponding attributes, marks the range removed on success, and reports
 // whether anything was emitted.
+var subtitleListCodes = map[string]string{
+	"chs": "SC", "sc": "SC", "cht": "TC", "tc": "TC",
+	"ja": "JPN", "jp": "JPN", "jpn": "JPN", "en": "ENG", "eng": "ENG",
+	"ko": "KOR", "kor": "KOR", "es": "SPA", "pt": "POR", "fr": "FRA",
+	"de": "DEU", "it": "ITA", "ru": "RUS", "ar": "ARA", "id": "IND",
+	"th": "THA", "pl": "POL", "my": "MSA", "vi": "VIE", "ca": "CAT",
+}
+
 func (e *techSubsSemanticsExtract) emitFromSegment(start int, end int, conf float64) bool {
 	tokens := e.tokens
 	if start < 0 {
@@ -96,6 +105,21 @@ func (e *techSubsSemanticsExtract) emitFromSegment(start int, end int, conf floa
 	}
 
 	cutStart := start
+	if isBracketOrParenBlock && (tokens[start].Text == "[" || tokens[start].Text == "【") {
+		for k := start + 1; k < end; k++ {
+			text := strings.ToLower(strings.Trim(tokens[k].Text, ","))
+			if text == "sub" || text == "subs" || text == "subbed" || text == "subtitle" || text == "subtitles" || text == "hardsub" || text == "softsub" {
+				cutStart = k
+				if k > start+1 {
+					prev := strings.ToLower(tokens[k-1].Text)
+					if prev == "hard" || prev == "soft" {
+						cutStart--
+					}
+				}
+				break
+			}
+		}
+	}
 	if !isBracketOrParenBlock {
 		for k := start; k < end; k++ {
 			if tokens[k].Removed {
@@ -169,6 +193,26 @@ func (e *techSubsSemanticsExtract) emitFromSegment(start int, end int, conf floa
 	if strings.Contains(noSpaceLower, "ass") || strings.Contains(noSpaceLower, "srt") || strings.Contains(noSpaceLower, "pgs") || strings.Contains(noSpaceLower, "sup") || strings.Contains(noSpaceLower, "vobsub") {
 		isSubsLike = true
 	}
+	listText := strings.Trim(noSpaceLower, "[]【】()（）")
+	if e.toonshubCN && listText == "multi" {
+		e.addAttr(model.AttrSubLang, "MULTI", cutStart, end, conf)
+		e.addAttr(model.AttrSubFlag, "soft", cutStart, end, conf)
+		for k := cutStart; k < end; k++ {
+			tokens[k].Removed = true
+		}
+		return true
+	}
+	if e.toonshubCN {
+		codes := strings.Split(listText, "&")
+		allLanguages := len(codes) > 0
+		for _, code := range codes {
+			if subtitleListCodes[code] == "" {
+				allLanguages = false
+				break
+			}
+		}
+		isSubsLike = isSubsLike || allLanguages
+	}
 	if !isSubsLike {
 		if isBracketOrParenBlock {
 			trimmed := strings.TrimSpace(noSpace)
@@ -207,6 +251,22 @@ func (e *techSubsSemanticsExtract) emitFromSegment(start int, end int, conf floa
 	}
 
 	langs := map[string]bool{}
+	languageList := strings.Contains(noSpaceLower, "&")
+	if cutStart > start {
+		for k := cutStart; k < end; k++ {
+			code := strings.ToLower(strings.Trim(tokens[k].Text, ","))
+			if canonical := subtitleListCodes[code]; canonical != "" && code != "ca" {
+				e.addLang(langs, canonical)
+			}
+		}
+	}
+	if languageList || e.toonshubCN {
+		for _, code := range strings.Split(listText, "&") {
+			if canonical := subtitleListCodes[code]; canonical != "" && (code != "ca" || e.toonshubCN) {
+				e.addLang(langs, canonical)
+			}
+		}
+	}
 	if strings.Contains(noSpace, "简繁") || strings.Contains(noSpace, "簡繁") || strings.Contains(noSpace, "繁简") || strings.Contains(noSpace, "繁簡") {
 		e.addLang(langs, "SC")
 		e.addLang(langs, "TC")
@@ -296,19 +356,31 @@ func (e *techSubsSemanticsExtract) emitFromSegment(start int, end int, conf floa
 	// "SUB" 在场景标题里大多表示 "有字幕"(例如 Sub_Esp)，不是字幕封装格式。
 	// 强收敛模式下不再使用 sub_flag 表示“有字幕”，只输出 hard/soft/ex。
 
+	bilibili := false
+	for _, attr := range *e.attrs {
+		if attr.Type == model.AttrPlatform && attr.Normalized == "BILIBILI" {
+			bilibili = true
+			break
+		}
+	}
+	for _, token := range tokens {
+		switch strings.ToLower(token.Text) {
+		case "bsite", "bstation", "bilibili", "bili":
+			bilibili = true
+		}
+	}
+	explicitJapaneseBilingual := strings.Contains(noSpace, "简日") || strings.Contains(noSpace, "簡日") || strings.Contains(noSpace, "繁日") || strings.Contains(noSpace, "简繁日") || strings.Contains(noSpace, "簡繁日") || strings.Contains(noSpace, "繁簡日")
+	platformJapaneseBilingual := bilibili && len(langs) == 2 && langs["JPN"] && (langs["SC"] || langs["TC"])
+	independentLanguageList := len(langs) >= 2 && !explicitJapaneseBilingual && !platformJapaneseBilingual
+	if independentLanguageList && flag == "" {
+		flag = "soft"
+	}
 	groups := map[string]bool{}
-	if langs["JPN"] && langs["SC"] {
+	if !independentLanguageList && langs["JPN"] && langs["SC"] {
 		groups["JPSC"] = true
 	}
-	if langs["JPN"] && langs["TC"] {
+	if !independentLanguageList && langs["JPN"] && langs["TC"] {
 		groups["JPTC"] = true
-	}
-	sawBilingual := strings.Contains(noSpace, "双语") || strings.Contains(noSpace, "雙語") || strings.Contains(noSpaceLower, "bilingual")
-	if sawBilingual && langs["SC"] && langs["ENG"] {
-		groups["SC+ENG"] = true
-	}
-	if sawBilingual && langs["TC"] && langs["ENG"] {
-		groups["TC+ENG"] = true
 	}
 	if rawLike {
 		langs = map[string]bool{"RAW": true}
@@ -322,7 +394,7 @@ func (e *techSubsSemanticsExtract) emitFromSegment(start int, end int, conf floa
 		emitted = true
 	}
 
-	langOrder := []string{"RAW", "SC", "TC", "JPN", "ENG", "KOR", "SPA", "CAT"}
+	langOrder := []string{"RAW", "SC", "TC", "JPN", "ENG", "KOR", "SPA", "CAT", "FRA", "DEU", "ITA", "POR", "RUS", "ARA", "IND", "THA", "POL", "MSA", "VIE"}
 	for _, l := range langOrder {
 		if langs[l] {
 			e.addAttr(model.AttrSubLang, l, cutStart, end, conf)

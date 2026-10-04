@@ -428,7 +428,7 @@ func (p *Parser) normalizeSubtitleAttrs(attrs []model.Attribute, tokens []model.
 		delete(langSet, "MULTI")
 	}
 
-	langOrder := []string{"RAW", "MULTI", "ZH", "SC", "TC", "JPSC", "JPTC", "JPN", "ENG", "KOR", "FRA", "SPA", "CAT", "RUS", "DEU", "ITA", "POR"}
+	langOrder := []string{"RAW", "MULTI", "ZH", "SC", "TC", "JPSC", "JPTC", "JPN", "ENG", "KOR", "FRA", "SPA", "CAT", "RUS", "DEU", "ITA", "POR", "ARA", "IND", "THA", "POL", "MSA", "VIE"}
 	for _, v := range langOrder {
 		if !langSet[v] {
 			continue

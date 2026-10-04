@@ -379,7 +379,7 @@ func extractSeasonRangeAndRemoveFromTokens(tokens []model.Token) string {
 		if tokens[i].Removed || tokens[i+1].Removed || tokens[i+2].Removed {
 			continue
 		}
-		if !isInBracket(tokens, i) && !isInParen(tokens, i) {
+		if tokens[i].Protected || tokens[i+1].Protected || tokens[i+2].Protected {
 			continue
 		}
 		l := strings.TrimSpace(tokens[i].Text)

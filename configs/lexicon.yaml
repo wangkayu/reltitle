@@ -8798,6 +8798,169 @@ entries:
         remove: true
         confidence: 0.75
 
+  - id: audio_dual_bracket_tail
+    scope: bracket
+    tokens: ["dual", "]"]
+    emit:
+      - type: audio_flag
+        normalized: "DUAL_AUDIO"
+        token_index: 0
+    remove: true
+    confidence: 0.7
+
+  - id: audio_eac3_comma
+    scope: bracket
+    tokens: ["eac3,"]
+    emit:
+      - type: audio_codec
+        normalized: "EAC3"
+        token_index: -1
+    remove: true
+    confidence: 0.75
+
+  - id: audio_aac_comma
+    scope: bracket
+    tokens: ["aac,"]
+    emit:
+      - type: audio_codec
+        normalized: "AAC"
+        token_index: -1
+    remove: true
+    confidence: 0.75
+
+  - id: platform_iq_short
+    scope: bracket
+    tokens: ["iq"]
+    emit:
+      - type: platform
+        normalized: "IQIYI"
+        token_index: -1
+    remove: true
+    confidence: 0.8
+
+  - id: platform_nhk_one
+    scope: bracket
+    tokens: ["nhk1"]
+    emit:
+      - type: platform
+        normalized: "NHK_ONE"
+        token_index: -1
+    remove: true
+    confidence: 0.8
+
+  - id: platform_twitter
+    scope: bracket
+    tokens: ["twtr"]
+    emit:
+      - type: platform
+        normalized: "TWITTER"
+        token_index: -1
+    remove: true
+    confidence: 0.8
+
+  - id: platform_viu
+    scope: bracket
+    tokens: ["viu"]
+    emit:
+      - type: platform
+        normalized: "VIU"
+        token_index: -1
+    remove: true
+    confidence: 0.8
+
+  - id: platform_wetv
+    scope: bracket
+    tokens: ["wetv"]
+    emit:
+      - type: platform
+        normalized: "WETV"
+        token_index: -1
+    remove: true
+    confidence: 0.8
+
+  - id: platform_viki
+    scope: bracket
+    tokens: ["viki"]
+    emit:
+      - type: platform
+        normalized: "VIKI"
+        token_index: -1
+    remove: true
+    confidence: 0.8
+
+  - id: platform_ov
+    scope: bracket
+    tokens: ["ov"]
+    emit:
+      - type: platform
+        normalized: "OCEANVEIL"
+        token_index: -1
+    remove: true
+    confidence: 0.75
+
+  - id: platform_oceanveil
+    tokens: ["oveil"]
+    emit:
+      - type: platform
+        normalized: "OCEANVEIL"
+        token_index: -1
+    remove: true
+    confidence: 0.8
+
+  - id: audio_dual_short
+    scope: bracket
+    any_of:
+      - tokens: ["d", "-", "aud"]
+        emit:
+          - type: audio_flag
+            normalized: "DUAL_AUDIO"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["d", "-", "aud,"]
+        emit:
+          - type: audio_flag
+            normalized: "DUAL_AUDIO"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+
+  - id: audio_multi_short
+    scope: bracket
+    any_of:
+      - tokens: ["m", "-", "aud"]
+        emit:
+          - type: audio_flag
+            normalized: "MULTI_AUDIO"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["m", "-", "aud,"]
+        emit:
+          - type: audio_flag
+            normalized: "MULTI_AUDIO"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+
+  - id: platform_bsite
+    tokens: ["bsite"]
+    emit:
+      - type: platform
+        normalized: "BILIBILI"
+        token_index: -1
+    remove: true
+    confidence: 0.75
+
+  - id: audio_dual_bracket
+    tokens: ["[", "dual", "]"]
+    emit:
+      - type: audio_flag
+        normalized: "DUAL_AUDIO"
+        token_index: -1
+    remove: true
+    confidence: 0.7
+
   - id: platform_bstation
     tokens: ["bstation"]
     emit:

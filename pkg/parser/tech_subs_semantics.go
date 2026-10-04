@@ -60,11 +60,26 @@ func containsASCIIWordLike(s string, markers ...string) bool {
 // plain token segments for subtitle semantics, emits subtitle attributes, and
 // removes the consumed tokens. The extraction machinery (segment scanning,
 // flag/language/format detection) lives in tech_subs_extract.go.
+func isToonsHubCN(tokens []model.Token) bool {
+	if len(tokens) < 3 || tokens[0].Text != "[" || !strings.EqualFold(tokens[1].Text, "ToonsHub") || tokens[2].Text != "]" {
+		return false
+	}
+	for i := 3; i < len(tokens); i++ {
+		if tokens[i].Text == "[" {
+			break
+		}
+		if hasCJK(tokens[i].Text) {
+			return true
+		}
+	}
+	return false
+}
+
 func extractTechSubsSemanticsAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Attribute) {
 	if len(tokens) == 0 || attrs == nil {
 		return
 	}
-	e := &techSubsSemanticsExtract{tokens: tokens, attrs: attrs, headGroupStart: -1, headGroupEnd: -1}
+	e := &techSubsSemanticsExtract{toonshubCN: isToonsHubCN(tokens), tokens: tokens, attrs: attrs, headGroupStart: -1, headGroupEnd: -1}
 	e.techStart, e.hasTechStart = firstTechTokenIndexFromAttrs(*attrs)
 	if !e.hasTechStart {
 		e.techStart = 0

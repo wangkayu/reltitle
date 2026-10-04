@@ -28,7 +28,6 @@ func LoadAll(baseDir string) (*Config, error) {
 		{"grouplist.yaml", &cfg.GroupList},
 		{"dict_canonical_values.yaml", &cfg.DictCanonicalValues},
 		{"dict_token_synonyms.yaml", &cfg.DictTokenSynonyms},
-		{"dict_token_slot_candidates.yaml", &cfg.DictTokenSlotCandidates},
 		{"dict_alias_noise_words.yaml", &cfg.DictAliasNoiseWords},
 		{"dict_note_promotion.yaml", &cfg.DictNotePromotion},
 		{"group_route_overrides.yaml", &cfg.GroupRoute},

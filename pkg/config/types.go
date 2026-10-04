@@ -11,11 +11,10 @@ type Config struct {
 	PackProfileRules   PackProfileRulesConfig   `json:"pack_profile_rules,omitempty"`
 	TitleKnowledge     TitleKnowledgeConfig     `json:"title_knowledge,omitempty"`
 
-	DictCanonicalValues     DictCanonicalValuesConfig     `json:"dict_canonical_values,omitempty"`
-	DictTokenSynonyms       DictTokenSynonymsConfig       `json:"dict_token_synonyms,omitempty"`
-	DictTokenSlotCandidates DictTokenSlotCandidatesConfig `json:"dict_token_slot_candidates,omitempty"`
-	DictAliasNoiseWords     DictAliasNoiseWordsConfig     `json:"dict_alias_noise_words,omitempty"`
-	DictNotePromotion       DictNotePromotionConfig       `json:"dict_note_promotion,omitempty"`
+	DictCanonicalValues DictCanonicalValuesConfig `json:"dict_canonical_values,omitempty"`
+	DictTokenSynonyms   DictTokenSynonymsConfig   `json:"dict_token_synonyms,omitempty"`
+	DictAliasNoiseWords DictAliasNoiseWordsConfig `json:"dict_alias_noise_words,omitempty"`
+	DictNotePromotion   DictNotePromotionConfig   `json:"dict_note_promotion,omitempty"`
 }
 
 type TitleKnowledgeConfig struct {
@@ -177,26 +176,6 @@ type TokenSynonymTarget struct {
 	Type                string `yaml:"type" json:"type"`
 	Normalized          string `yaml:"normalized" json:"normalized"`
 	NormalizedFromToken bool   `yaml:"normalized_from_token" json:"normalized_from_token"`
-}
-
-type DictTokenSlotCandidatesConfig struct {
-	Version     string               `yaml:"version" json:"version"`
-	UpdatedAt   string               `yaml:"updated_at" json:"updated_at"`
-	Description string               `yaml:"description" json:"description"`
-	Defaults    map[string]any       `yaml:"defaults" json:"defaults"`
-	Candidates  []TokenSlotCandidate `yaml:"candidates" json:"candidates"`
-}
-
-type TokenSlotCandidate struct {
-	Token          string                   `yaml:"token" json:"token"`
-	SlotCandidates []TokenSlotCandidateItem `yaml:"slot_candidates" json:"slot_candidates"`
-}
-
-type TokenSlotCandidateItem struct {
-	Slot       string         `yaml:"slot" json:"slot"`
-	Normalized string         `yaml:"normalized" json:"normalized"`
-	Priority   int            `yaml:"priority" json:"priority"`
-	When       map[string]any `yaml:"when" json:"when"`
 }
 
 type DictAliasNoiseWordsConfig struct {

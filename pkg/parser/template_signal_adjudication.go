@@ -462,6 +462,9 @@ func weakEpisodeCandidate(tokens []model.Token, episodeIdx int, titleStart int, 
 
 func findStrongBracketEpisodeAnchor(tokens []model.Token, currentIdx int) (string, string, int, bool) {
 	for i := currentIdx + 1; i < len(tokens); i++ {
+		if tokens[i].Removed {
+			continue
+		}
 		if !isInBracket(tokens, i) {
 			continue
 		}

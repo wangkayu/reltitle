@@ -428,6 +428,5 @@ Some Show S01 1080p WEB-DL H264 AAC
 [Group] Some Show [TV01-25Fin][BDRip 1080p]
 [Group] Some Show [TV 01 - 101Fin][BDRip 1080p]
 [Group] Some Show [TV 01 - 26][BDRip 1080p]
-# NOTE: currently episode=12 (the .5 is dropped); passDetectEpisodeRangeAndEpisode's comment says ABS:12.5 is intended
 [Group] Some Show [总集篇01_12.5][1080p]
 [Group] Some Show [总集篇02_13][1080p]

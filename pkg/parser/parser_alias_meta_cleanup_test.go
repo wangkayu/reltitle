@@ -7,7 +7,7 @@ import (
 	"reltitle/pkg/config"
 )
 
-func TestParserV25GateRegression_AliasMetaCleanup(t *testing.T) {
+func TestAliasMetaCleanupRegression(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {
 		t.Fatalf("load config: %v", err)

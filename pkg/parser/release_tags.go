@@ -64,7 +64,7 @@ func extractStrictCustomReleaseTagAttrsAndRemoveFromTokens(tokens []model.Token,
 		} else {
 			continue
 		}
-		*out = append(*out, model.Attribute{Type: model.AttrEdition, Normalized: "CUSTOM", TokenStart: i, TokenEnd: i + 1, Confidence: 0.6, Source: "custom_tag"})
+		*out = append(*out, model.Attribute{Type: model.AttrEdition, Normalized: "CUSTOM", TokenStart: i, TokenEnd: i + 1, Confidence: 0.6, Source: model.AttrSourceCustomTag})
 		tokens[i].Removed = true
 		// If surrounded by parentheses, remove them too.
 		if i-1 >= 0 {
@@ -130,7 +130,7 @@ func extractGuardedDVDRIPReleaseTagAttrsAndRemoveFromTokens(tokens []model.Token
 		if !strings.EqualFold(txt, "DVDRIP") {
 			continue
 		}
-		*out = append(*out, model.Attribute{Type: model.AttrSourceType, Normalized: "DVDRip", TokenStart: i, TokenEnd: i + 1, Confidence: 0.7, Source: "dvdrip_tag"})
+		*out = append(*out, model.Attribute{Type: model.AttrSourceType, Normalized: "DVDRip", TokenStart: i, TokenEnd: i + 1, Confidence: 0.7, Source: model.AttrSourceDVDRipTag})
 		tokens[i].Removed = true
 	}
 }

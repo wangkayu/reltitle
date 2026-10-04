@@ -485,7 +485,7 @@ func inferPostEpisodeSearchHintAliasesFromParens(tokens []model.Token, episodeId
 		if attrs != nil {
 			hk := strings.TrimSpace(hintKeyword)
 			if hk != "" {
-				*attrs = append(*attrs, model.Attribute{Type: model.AttrNote, Normalized: hk, Confidence: 0.6, Source: "hint_keyword"})
+				*attrs = append(*attrs, model.Attribute{Type: model.AttrNote, Normalized: hk, Confidence: 0.6, Source: model.AttrSourceHintKeyword})
 			}
 		}
 		for _, c := range cands {
@@ -493,7 +493,7 @@ func inferPostEpisodeSearchHintAliasesFromParens(tokens []model.Token, episodeId
 			if c == "" {
 				continue
 			}
-			appendSearchHintAttribute(attrs, c, "ep_tail_search_hint")
+			appendSearchHintAttribute(attrs, c, model.AttrSourceEPTailSearchHint)
 		}
 		i = closeIdx
 	}

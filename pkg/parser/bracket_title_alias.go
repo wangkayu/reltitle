@@ -410,7 +410,7 @@ func findBracketSearchHintAliases(tokens []model.Token, attrs *[]model.Attribute
 					if isHint {
 						hk := strings.TrimSpace(hintKeyword)
 						if hk != "" {
-							*attrs = append(*attrs, model.Attribute{Type: model.AttrNote, Normalized: hk, Confidence: 0.6, Source: "hint_keyword"})
+							*attrs = append(*attrs, model.Attribute{Type: model.AttrNote, Normalized: hk, Confidence: 0.6, Source: model.AttrSourceHintKeyword})
 						}
 						for _, a := range cands {
 							a = cleanAliasToken(a)
@@ -486,7 +486,7 @@ func findBracketSearchHintAliases(tokens []model.Token, attrs *[]model.Attribute
 			if isHint {
 				hk := strings.TrimSpace(hintKeyword)
 				if hk != "" {
-					*attrs = append(*attrs, model.Attribute{Type: model.AttrNote, Normalized: hk, Confidence: 0.6, Source: "hint_keyword"})
+					*attrs = append(*attrs, model.Attribute{Type: model.AttrNote, Normalized: hk, Confidence: 0.6, Source: model.AttrSourceHintKeyword})
 				}
 				for _, a := range cands {
 					a = cleanAliasToken(a)
@@ -592,7 +592,7 @@ func scanBracketTitleBlocks(tokens []model.Token, attrs *[]model.Attribute, star
 				TokenStart: i + 1,
 				TokenEnd:   end,
 				Confidence: 0.72,
-				Source:     "bracket_inline_movie_index",
+				Source:     model.AttrSourceBracketInlineMovieIndex,
 			})
 		}
 		if mr, ok := parseBracketInlineMovieIndexRange(innerRaw); ok {
@@ -602,7 +602,7 @@ func scanBracketTitleBlocks(tokens []model.Token, attrs *[]model.Attribute, star
 				TokenStart: i + 1,
 				TokenEnd:   end,
 				Confidence: 0.72,
-				Source:     "bracket_inline_movie_index_range",
+				Source:     model.AttrSourceBracketInlineMovieIndexRange,
 			})
 		}
 		if looksLikeLeadingTitleMeta(inner) {
@@ -636,7 +636,7 @@ func scanBracketTitleBlocks(tokens []model.Token, attrs *[]model.Attribute, star
 					TokenStart: i + 1,
 					TokenEnd:   end,
 					Confidence: 0.8,
-					Source:     "bracket_m_index",
+					Source:     model.AttrSourceBracketMIndex,
 				})
 				for k := i; k <= end && k >= 0 && k < len(tokens); k++ {
 					tokens[k].Removed = true
@@ -674,7 +674,7 @@ func scanBracketTitleBlocks(tokens []model.Token, attrs *[]model.Attribute, star
 				TokenStart: i + 1,
 				TokenEnd:   end,
 				Confidence: 0.72,
-				Source:     "bracket_movie_context_index",
+				Source:     model.AttrSourceBracketMovieContextIndex,
 			})
 			for k := i; k <= end && k >= 0 && k < len(tokens); k++ {
 				tokens[k].Removed = true
@@ -726,7 +726,7 @@ func selectBracketMainAndAliases(tokens []model.Token, attrs *[]model.Attribute,
 		return "", searchHintAliases, -1, -1
 	}
 	if s := extractExplicitSeasonNumber(blocks[mainIdx].inner); s != "" {
-		*attrs = append(*attrs, model.Attribute{Type: model.AttrNote, Normalized: "S" + s, TokenStart: -1, TokenEnd: -1, Confidence: 0.65, Source: "main_title_season"})
+		*attrs = append(*attrs, model.Attribute{Type: model.AttrNote, Normalized: "S" + s, TokenStart: -1, TokenEnd: -1, Confidence: 0.65, Source: model.AttrSourceMainTitleSeason})
 	}
 	aliases := make([]string, 0, len(blocks))
 	seen := map[string]bool{}
@@ -737,7 +737,7 @@ func selectBracketMainAndAliases(tokens []model.Token, attrs *[]model.Attribute,
 		}
 		// Extract season from the raw alias block before cleanAliasToken/stripExplicitSeasonSuffix drops it.
 		if s := extractExplicitSeasonNumber(blocks[i].inner); s != "" {
-			*attrs = append(*attrs, model.Attribute{Type: model.AttrNote, Normalized: "S" + s, TokenStart: -1, TokenEnd: -1, Confidence: 0.65, Source: "alias_season"})
+			*attrs = append(*attrs, model.Attribute{Type: model.AttrNote, Normalized: "S" + s, TokenStart: -1, TokenEnd: -1, Confidence: 0.65, Source: model.AttrSourceAliasSeason})
 		}
 		a := cleanAliasToken(blocks[i].inner)
 		if stripped := stripExplicitSeasonSuffix(a); stripped != "" {

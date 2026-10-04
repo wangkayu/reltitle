@@ -31,17 +31,21 @@ type AudioSource string
 // EPSource* constants for the full set.
 type EPSource string
 
+// AttrSource names the pipeline stage that produced an Attribute. See the
+// AttrSource* constants for the full set.
+type AttrSource string
+
 // Attribute is one recognized piece of a release title: a typed, normalized
 // value with the token span it came from, a heuristic confidence, and the
 // pipeline stage that produced it (Source, e.g. "lexicon", "canonical",
 // "heuristic"). TokenStart/TokenEnd are -1 when no span applies.
 type Attribute struct {
-	Type       AttrType `json:"type"`
-	Normalized string   `json:"normalized,omitempty"`
-	TokenStart int      `json:"token_start,omitempty"`
-	TokenEnd   int      `json:"token_end,omitempty"`
-	Confidence float64  `json:"confidence,omitempty"`
-	Source     string   `json:"source,omitempty"`
+	Type       AttrType   `json:"type"`
+	Normalized string     `json:"normalized,omitempty"`
+	TokenStart int        `json:"token_start,omitempty"`
+	TokenEnd   int        `json:"token_end,omitempty"`
+	Confidence float64    `json:"confidence,omitempty"`
+	Source     AttrSource `json:"source,omitempty"`
 }
 
 // Token is one lexical piece of the raw title produced by tokenize.Tokenize.
@@ -287,6 +291,95 @@ const (
 // against the EPSource* constants.
 func (s EPSource) Canonical() EPSource {
 	return EPSource(strings.ToLower(strings.TrimSpace(string(s))))
+}
+
+const (
+	AttrSourceLexicon                        AttrSource = "lexicon"
+	AttrSourceCanonical                      AttrSource = "canonical"
+	AttrSourceHeuristic                      AttrSource = "heuristic"
+	AttrSourceHeuristicRaw                   AttrSource = "heuristic_raw"
+	AttrSourceHeuristicMultiAudio            AttrSource = "heuristic_multi_audio"
+	AttrSourceEditionToken                   AttrSource = "edition_token"
+	AttrSourceVersionToken                   AttrSource = "version_token"
+	AttrSourceYearToken                      AttrSource = "year_token"
+	AttrSourceCRCToken                       AttrSource = "crc_token"
+	AttrSourceTechComboSpan                  AttrSource = "tech_combo_span"
+	AttrSourceTechComboToken                 AttrSource = "tech_combo_token"
+	AttrSourceTechAudioSlot                  AttrSource = "tech_audio_slot"
+	AttrSourceTechSubs                       AttrSource = "tech_subs"
+	AttrSourceHintKeyword                    AttrSource = "hint_keyword"
+	AttrSourceRawAudioMeta                   AttrSource = "raw_audio_meta"
+	AttrSourceRawSubMeta                     AttrSource = "raw_sub_meta"
+	AttrSourceGroupRouteOverride             AttrSource = "group_route_override"
+	AttrSourceGroupSubsX2                    AttrSource = "group_subs_x2"
+	AttrSourceNotePromoteDict                AttrSource = "note_promote_dict"
+	AttrSourceNotePromoteContext             AttrSource = "note_promote_context"
+	AttrSourceTemplateSignalTrace            AttrSource = "template_signal_trace"
+	AttrSourceTemplateSignalTechBeforeEP     AttrSource = "template_signal_tech_before_ep"
+	AttrSourceTemplateFloatInfer             AttrSource = "template_float_infer"
+	AttrSourceRouteStreamingReleaseV1        AttrSource = "route_streaming_release_v1"
+	AttrSourceSpecialIndex                   AttrSource = "special_index"
+	AttrSourceSpecialSummary                 AttrSource = "special_summary"
+	AttrSourcePackExtras                     AttrSource = "pack_extras"
+	AttrSourcePackSub                        AttrSource = "pack_sub"
+	AttrSourcePackAudio                      AttrSource = "pack_audio"
+	AttrSourcePackContents                   AttrSource = "pack_contents"
+	AttrSourcePackPlusContents               AttrSource = "pack_plus_contents"
+	AttrSourcePackNote                       AttrSource = "pack_note"
+	AttrSourcePackKindFallback               AttrSource = "pack_kind_fallback"
+	AttrSourceSubtitleNormalize              AttrSource = "subtitle_normalize"
+	AttrSourceTVRangeFin                     AttrSource = "tv_range_fin"
+	AttrSourceSPKind                         AttrSource = "sp_kind"
+	AttrSourceSeasonKeyword                  AttrSource = "season_keyword"
+	AttrSourceSxxExx                         AttrSource = "sxxexx"
+	AttrSourceEpisode                        AttrSource = "episode"
+	AttrSourceEpisodeRange                   AttrSource = "episode_range"
+	AttrSourceEpisodeList                    AttrSource = "episode_list"
+	AttrSourceEpisodeEndflag                 AttrSource = "episode_endflag"
+	AttrSourceEpisodeVersion                 AttrSource = "episode_version"
+	AttrSourceEPDigitToken                   AttrSource = "ep_digit_token"
+	AttrSourceRangeToken                     AttrSource = "range_token"
+	AttrSourceTaggedEP                       AttrSource = "tagged_ep"
+	AttrSourceTaggedRange                    AttrSource = "tagged_range"
+	AttrSourceMainTitleSeason                AttrSource = "main_title_season"
+	AttrSourceAliasSeason                    AttrSource = "alias_season"
+	AttrSourceResolutionWxH                  AttrSource = "resolution_wxh"
+	AttrSourceCodecDashed                    AttrSource = "codec_dashed"
+	AttrSourceAudioCodecStandalone           AttrSource = "audio_codec_standalone"
+	AttrSourceBitDepthLoose                  AttrSource = "bit_depth_loose"
+	AttrSourceSourceStandalone               AttrSource = "source_standalone"
+	AttrSourceRegionRestriction              AttrSource = "region_restriction"
+	AttrSourceTailMeta                       AttrSource = "tail_meta"
+	AttrSourceDVDRipTag                      AttrSource = "dvdrip_tag"
+	AttrSourceCustomTag                      AttrSource = "custom_tag"
+	AttrSourceBracketMIndex                  AttrSource = "bracket_m_index"
+	AttrSourceBracketMovieContextIndex       AttrSource = "bracket_movie_context_index"
+	AttrSourceBracketInlineMovieIndex        AttrSource = "bracket_inline_movie_index"
+	AttrSourceBracketInlineMovieIndexRange   AttrSource = "bracket_inline_movie_index_range"
+	AttrSourceTemplateSignal                 AttrSource = "template_signal"
+	AttrSourceTagCode                        AttrSource = "tag_code"
+	AttrSourceTagCodeAudioLang               AttrSource = "tag_code_audio_lang"
+	AttrSourceParenContentsMarker            AttrSource = "paren_contents_marker"
+	AttrSourceParenSearchHint                AttrSource = "paren_search_hint"
+	AttrSourceTailParenSearchHint            AttrSource = "tail_paren_search_hint"
+	AttrSourceEPTailSearchHint               AttrSource = "ep_tail_search_hint"
+	AttrSourceAliasMetaDemote                AttrSource = "alias_meta_demote"
+	AttrSourceAliasContentsMarker            AttrSource = "alias_contents_marker"
+	AttrSourceRawParenContentsMarker         AttrSource = "raw_paren_contents_marker"
+	AttrSourceTitleCleanup                   AttrSource = "title_cleanup"
+	AttrSourceGroupSlot2Platform             AttrSource = "group_slot2_platform"
+	AttrSourceGroupSlot2PlatformInferUnknown AttrSource = "group_slot2_platform_infer_unknown"
+	AttrSourceEpisodeRangePackSuffix         AttrSource = "episode_range_pack_suffix"
+	AttrSourceEpisodeRangePackSuffixEmbedded AttrSource = "episode_range_pack_suffix_embedded"
+	AttrSourceEpisodeRangePackSuffixCount    AttrSource = "episode_range_pack_suffix_count"
+	AttrSourceEpisodeRangePackSuffixSplit    AttrSource = "episode_range_pack_suffix_split"
+)
+
+// Canonical returns the normalized form of s: trimmed and lowercased. Source
+// values are lowercase snake_case by convention; compare with Canonical
+// against the AttrSource* constants.
+func (s AttrSource) Canonical() AttrSource {
+	return AttrSource(strings.ToLower(strings.TrimSpace(string(s))))
 }
 
 // Canonical returns the normalized form of c: trimmed and uppercased. Values

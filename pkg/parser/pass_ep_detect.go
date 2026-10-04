@@ -293,7 +293,7 @@ func passDetectEpisodeRangeAndEpisode(tokens []model.Token, attrs *[]model.Attri
 								tokens[i+1].Removed = true
 								tokens[i+2].Removed = true
 								if len(mm) >= 3 && strings.TrimSpace(mm[2]) != "" {
-									*attrs = append(*attrs, model.Attribute{Type: model.AttrNote, Normalized: "FIN", TokenStart: i, TokenEnd: i + 1, Confidence: 0.7, Source: "tv_range_fin"})
+									*attrs = append(*attrs, model.Attribute{Type: model.AttrNote, Normalized: "FIN", TokenStart: i, TokenEnd: i + 1, Confidence: 0.7, Source: model.AttrSourceTVRangeFin})
 								}
 								continue
 							}
@@ -326,7 +326,7 @@ func passDetectEpisodeRangeAndEpisode(tokens []model.Token, attrs *[]model.Attri
 								tokens[i+2].Removed = true
 								tokens[i+3].Removed = true
 								if len(mm) >= 3 && strings.TrimSpace(mm[2]) != "" {
-									*attrs = append(*attrs, model.Attribute{Type: model.AttrNote, Normalized: "FIN", TokenStart: i, TokenEnd: i + 1, Confidence: 0.7, Source: "tv_range_fin"})
+									*attrs = append(*attrs, model.Attribute{Type: model.AttrNote, Normalized: "FIN", TokenStart: i, TokenEnd: i + 1, Confidence: 0.7, Source: model.AttrSourceTVRangeFin})
 								}
 								continue
 							}
@@ -361,8 +361,8 @@ func passDetectEpisodeRangeAndEpisode(tokens []model.Token, attrs *[]model.Attri
 				flag := strings.TrimSpace(m[1])
 				idx := strings.TrimSpace(m[2])
 				if strings.TrimSpace(idx) != "" {
-					*attrs = append(*attrs, model.Attribute{Type: model.AttrSpecialFlag, Normalized: flag, TokenStart: i, TokenEnd: i + 1, Confidence: 0.85, Source: "special_summary"})
-					*attrs = append(*attrs, model.Attribute{Type: model.AttrSpecialIndex, Normalized: idx, TokenStart: i, TokenEnd: i + 1, Confidence: 0.85, Source: "special_summary"})
+					*attrs = append(*attrs, model.Attribute{Type: model.AttrSpecialFlag, Normalized: flag, TokenStart: i, TokenEnd: i + 1, Confidence: 0.85, Source: model.AttrSourceSpecialSummary})
+					*attrs = append(*attrs, model.Attribute{Type: model.AttrSpecialIndex, Normalized: idx, TokenStart: i, TokenEnd: i + 1, Confidence: 0.85, Source: model.AttrSourceSpecialSummary})
 				}
 				tokens[i].Text = "ABS:" + ep
 				taggedEpisode = ep
@@ -441,7 +441,7 @@ func passDetectEpisodeRangeAndEpisode(tokens []model.Token, attrs *[]model.Attri
 					TokenStart: ctx.EpisodeIdx,
 					TokenEnd:   ctx.EpisodeIdx + 1,
 					Confidence: 0.75,
-					Source:     "episode_endflag",
+					Source:     model.AttrSourceEpisodeEndflag,
 				})
 			}
 		}
@@ -489,8 +489,8 @@ func passDetectEpisodeRangeAndEpisode(tokens []model.Token, attrs *[]model.Attri
 					idx = m[2]
 				}
 				if idx != "" && idx != "0" {
-					*attrs = append(*attrs, model.Attribute{Type: model.AttrSpecialFlag, Normalized: kind, TokenStart: i, TokenEnd: i + 1, Confidence: 0.8, Source: "special_index"})
-					*attrs = append(*attrs, model.Attribute{Type: model.AttrSpecialIndex, Normalized: idx, TokenStart: i, TokenEnd: i + 1, Confidence: 0.8, Source: "special_index"})
+					*attrs = append(*attrs, model.Attribute{Type: model.AttrSpecialFlag, Normalized: kind, TokenStart: i, TokenEnd: i + 1, Confidence: 0.8, Source: model.AttrSourceSpecialIndex})
+					*attrs = append(*attrs, model.Attribute{Type: model.AttrSpecialIndex, Normalized: idx, TokenStart: i, TokenEnd: i + 1, Confidence: 0.8, Source: model.AttrSourceSpecialIndex})
 					tokens[i].Removed = true
 					// Remove adjacent '+' if present.
 					if i-1 >= 0 {
@@ -510,8 +510,8 @@ func passDetectEpisodeRangeAndEpisode(tokens []model.Token, attrs *[]model.Attri
 					idx = m[3]
 				}
 				if idx != "" && idx != "0" {
-					*attrs = append(*attrs, model.Attribute{Type: model.AttrSpecialFlag, Normalized: kind, TokenStart: i, TokenEnd: i + 1, Confidence: 0.8, Source: "special_index"})
-					*attrs = append(*attrs, model.Attribute{Type: model.AttrSpecialIndex, Normalized: idx, TokenStart: i, TokenEnd: i + 1, Confidence: 0.8, Source: "special_index"})
+					*attrs = append(*attrs, model.Attribute{Type: model.AttrSpecialFlag, Normalized: kind, TokenStart: i, TokenEnd: i + 1, Confidence: 0.8, Source: model.AttrSourceSpecialIndex})
+					*attrs = append(*attrs, model.Attribute{Type: model.AttrSpecialIndex, Normalized: idx, TokenStart: i, TokenEnd: i + 1, Confidence: 0.8, Source: model.AttrSourceSpecialIndex})
 					tokens[i].Removed = true
 				}
 				continue
@@ -533,7 +533,7 @@ func normalizeEpisodeRangeTVPackSuffix(tokens []model.Token, attrs *[]model.Attr
 	if rangeIdx < 0 || rangeIdx >= len(tokens) {
 		return ""
 	}
-	appendPackAttrs := func(packKind, note string, tokenStart, tokenEnd int, source string) {
+	appendPackAttrs := func(packKind, note string, tokenStart, tokenEnd int, source model.AttrSource) {
 		if attrs == nil {
 			return
 		}
@@ -573,14 +573,14 @@ func normalizeEpisodeRangeTVPackSuffix(tokens []model.Token, attrs *[]model.Attr
 	if m := episodeRangePackEmbeddedPattern.FindStringSubmatch(text); len(m) == 4 {
 		if pk, note := packKindFromSuffix(m[3]); pk != "" {
 			tokens[rangeIdx].Removed = true
-			appendPackAttrs(pk, note, rangeIdx, rangeIdx+1, "episode_range_pack_suffix_embedded")
+			appendPackAttrs(pk, note, rangeIdx, rangeIdx+1, model.AttrSourceEpisodeRangePackSuffixEmbedded)
 			return pk
 		}
 	}
 	if m := episodeCountPackSuffixPattern.FindStringSubmatch(text); len(m) == 3 {
 		if pk, note := packKindFromSuffix(m[2]); pk != "" {
 			tokens[rangeIdx].Removed = true
-			appendPackAttrs(pk, note, rangeIdx, rangeIdx+1, "episode_range_pack_suffix_count")
+			appendPackAttrs(pk, note, rangeIdx, rangeIdx+1, model.AttrSourceEpisodeRangePackSuffixCount)
 			return pk
 		}
 	}
@@ -607,7 +607,7 @@ func normalizeEpisodeRangeTVPackSuffix(tokens []model.Token, attrs *[]model.Attr
 		if episodeOfTotalPattern.MatchString(right) && rangeIdx+3 < len(tokens) {
 			if pk, note := packKindFromSuffix(strings.TrimSpace(tokens[rangeIdx+3].Text)); pk != "" {
 				tokens[rangeIdx+3].Removed = true
-				appendPackAttrs(pk, note, rangeIdx+3, rangeIdx+4, "episode_range_pack_suffix_split")
+				appendPackAttrs(pk, note, rangeIdx+3, rangeIdx+4, model.AttrSourceEpisodeRangePackSuffixSplit)
 				return pk
 			}
 		}
@@ -623,7 +623,7 @@ func normalizeEpisodeRangeTVPackSuffix(tokens []model.Token, attrs *[]model.Attr
 	}
 	tokens[rangeIdx+2].Text = n
 	tokens[rangeIdx+2].Removed = true
-	appendPackAttrs(pk, note, rangeIdx+2, rangeIdx+3, "episode_range_pack_suffix")
+	appendPackAttrs(pk, note, rangeIdx+2, rangeIdx+3, model.AttrSourceEpisodeRangePackSuffix)
 	return pk
 }
 

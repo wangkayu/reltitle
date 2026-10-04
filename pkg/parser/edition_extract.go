@@ -29,7 +29,7 @@ func extractVersionAttrsAndRemoveFromTokens(tokens []model.Token, out *[]model.A
 			v = m[1]
 		}
 		norm := "v" + v
-		*out = append(*out, model.Attribute{Type: model.AttrVersion, Normalized: norm, TokenStart: i, TokenEnd: i + 1, Confidence: 0.7, Source: "version_token"})
+		*out = append(*out, model.Attribute{Type: model.AttrVersion, Normalized: norm, TokenStart: i, TokenEnd: i + 1, Confidence: 0.7, Source: model.AttrSourceVersionToken})
 		// Only remove when it is clearly meta (most common inside brackets/parens).
 		if isInBracket(tokens, i) || isInParen(tokens, i) {
 			tokens[i].Removed = true
@@ -174,7 +174,7 @@ func extractCompositeVersionEditionAttrsAndRemoveFromTokens(tokens []model.Token
 				TokenStart: i,
 				TokenEnd:   end + 1,
 				Confidence: 0.74,
-				Source:     "edition_token",
+				Source:     model.AttrSourceEditionToken,
 			})
 		}
 		for k := i; k <= end; k++ {
@@ -261,7 +261,7 @@ func extractRestoreEditionAttrsAndRemoveFromTokens(tokens []model.Token, out *[]
 			TokenStart: i,
 			TokenEnd:   end + 1,
 			Confidence: 0.74,
-			Source:     "edition_token",
+			Source:     model.AttrSourceEditionToken,
 		})
 		for k := i; k <= end; k++ {
 			tokens[k].Removed = true
@@ -281,7 +281,7 @@ func extractWebVersionEditionAttrsAndRemoveFromTokens(tokens []model.Token, out 
 			TokenStart: start,
 			TokenEnd:   end,
 			Confidence: 0.72,
-			Source:     "edition_token",
+			Source:     model.AttrSourceEditionToken,
 		})
 	}
 	for i := 0; i < len(tokens); i++ {
@@ -407,7 +407,7 @@ func extractAudioCommentaryEditionAttrsAndRemoveFromTokens(tokens []model.Token,
 			TokenStart: i,
 			TokenEnd:   k + 1,
 			Confidence: 0.75,
-			Source:     "edition_token",
+			Source:     model.AttrSourceEditionToken,
 		})
 
 		for idx := start; idx <= end; idx++ {
@@ -449,7 +449,7 @@ func extractEncodeVerEditionAttrsAndRemoveFromTokens(tokens []model.Token, out *
 			TokenStart: i,
 			TokenEnd:   end + 1,
 			Confidence: 0.7,
-			Source:     "edition_token",
+			Source:     model.AttrSourceEditionToken,
 		})
 		for idx := i; idx <= end; idx++ {
 			tokens[idx].Removed = true
@@ -489,7 +489,7 @@ func extractUncensoredEditionAttrsAndRemoveFromTokens(tokens []model.Token, out 
 			TokenStart: i,
 			TokenEnd:   end + 1,
 			Confidence: 0.72,
-			Source:     "edition_token",
+			Source:     model.AttrSourceEditionToken,
 		})
 		for k := i; k <= end; k++ {
 			tokens[k].Removed = true
@@ -529,7 +529,7 @@ func extractUncutEditionAttrsAndRemoveFromTokens(tokens []model.Token, out *[]mo
 			TokenStart: i,
 			TokenEnd:   end + 1,
 			Confidence: 0.72,
-			Source:     "edition_token",
+			Source:     model.AttrSourceEditionToken,
 		})
 		for k := i; k <= end; k++ {
 			tokens[k].Removed = true
@@ -565,7 +565,7 @@ func extractDirectorsCutEditionAttrsAndRemoveFromTokens(tokens []model.Token, ou
 			TokenStart: i,
 			TokenEnd:   j + 1,
 			Confidence: 0.72,
-			Source:     "edition_token",
+			Source:     model.AttrSourceEditionToken,
 		})
 		tokens[i].Removed = true
 		tokens[j].Removed = true
@@ -596,7 +596,7 @@ func extractExtendedCutEditionAttrsAndRemoveFromTokens(tokens []model.Token, out
 			TokenStart: i,
 			TokenEnd:   j + 1,
 			Confidence: 0.72,
-			Source:     "edition_token",
+			Source:     model.AttrSourceEditionToken,
 		})
 		tokens[i].Removed = true
 		tokens[j].Removed = true
@@ -636,7 +636,7 @@ func extractRemasteredEditionAttrsAndRemoveFromTokens(tokens []model.Token, out 
 			TokenStart: i,
 			TokenEnd:   end + 1,
 			Confidence: 0.72,
-			Source:     "edition_token",
+			Source:     model.AttrSourceEditionToken,
 		})
 		for k := i; k <= end; k++ {
 			tokens[k].Removed = true

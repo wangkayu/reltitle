@@ -50,7 +50,7 @@ func (p *Parser) extractParenAliasesAndRemoveFromTitle(tokens []model.Token, tit
 		cands, isSearchHint, hintKeyword := splitAliasCandidatesFromParenContent(inner)
 		if !isSearchHint {
 			if markers := extractParenContentMarkers(inner); len(markers) > 0 {
-				emitContentsAttrs(attrs, markers, "paren_contents_marker")
+				emitContentsAttrs(attrs, markers, model.AttrSourceParenContentsMarker)
 				for k := openIdx; k <= closeIdx; k++ {
 					tokens[k].Removed = true
 				}
@@ -85,7 +85,7 @@ func (p *Parser) extractParenAliasesAndRemoveFromTitle(tokens []model.Token, tit
 		if isSearchHint && attrs != nil {
 			hk := strings.TrimSpace(hintKeyword)
 			if hk != "" {
-				*attrs = append(*attrs, model.Attribute{Type: model.AttrNote, Normalized: hk, Confidence: 0.6, Source: "hint_keyword"})
+				*attrs = append(*attrs, model.Attribute{Type: model.AttrNote, Normalized: hk, Confidence: 0.6, Source: model.AttrSourceHintKeyword})
 			}
 		}
 		for _, c := range cands {
@@ -94,7 +94,7 @@ func (p *Parser) extractParenAliasesAndRemoveFromTitle(tokens []model.Token, tit
 				continue
 			}
 			if isSearchHint || isLikelySearchHintText(c) {
-				appendSearchHintAttribute(attrs, c, "paren_search_hint")
+				appendSearchHintAttribute(attrs, c, model.AttrSourceParenSearchHint)
 				continue
 			}
 			if !p.isValidAliasToken(c) {
@@ -109,7 +109,7 @@ func (p *Parser) extractParenAliasesAndRemoveFromTitle(tokens []model.Token, tit
 			if reTailMetaToken.MatchString(c) || isAliasMetaSemanticOnly(c) {
 				classifyAndEmitTailMetaNote(c, attrs)
 				if markers := extractParenContentMarkers(c); len(markers) > 0 {
-					emitContentsAttrs(attrs, markers, "alias_meta_demote")
+					emitContentsAttrs(attrs, markers, model.AttrSourceAliasMetaDemote)
 				}
 				continue
 			}
@@ -193,7 +193,7 @@ func (p *Parser) inferTailAliasesFromParens(tokens []model.Token, attrs *[]model
 		cands, isSearchHint, hintKeyword := splitAliasCandidatesFromParenContent(inner)
 		if !isSearchHint {
 			if markers := extractParenContentMarkers(inner); len(markers) > 0 {
-				emitContentsAttrs(attrs, markers, "paren_contents_marker")
+				emitContentsAttrs(attrs, markers, model.AttrSourceParenContentsMarker)
 				i = closeIdx
 				continue
 			}
@@ -205,7 +205,7 @@ func (p *Parser) inferTailAliasesFromParens(tokens []model.Token, attrs *[]model
 		if isSearchHint {
 			hk := strings.TrimSpace(hintKeyword)
 			if hk != "" {
-				*attrs = append(*attrs, model.Attribute{Type: model.AttrNote, Normalized: hk, Confidence: 0.6, Source: "hint_keyword"})
+				*attrs = append(*attrs, model.Attribute{Type: model.AttrNote, Normalized: hk, Confidence: 0.6, Source: model.AttrSourceHintKeyword})
 			}
 		}
 		for _, c := range cands {
@@ -214,7 +214,7 @@ func (p *Parser) inferTailAliasesFromParens(tokens []model.Token, attrs *[]model
 				continue
 			}
 			if isSearchHint || isLikelySearchHintText(c) {
-				appendSearchHintAttribute(attrs, c, "tail_paren_search_hint")
+				appendSearchHintAttribute(attrs, c, model.AttrSourceTailParenSearchHint)
 				continue
 			}
 			if !p.isValidAliasToken(c) {
@@ -233,7 +233,7 @@ func (p *Parser) inferTailAliasesFromParens(tokens []model.Token, attrs *[]model
 			if reTailMetaToken.MatchString(c) || isAliasMetaSemanticOnly(c) {
 				classifyAndEmitTailMetaNote(c, attrs)
 				if markers := extractParenContentMarkers(c); len(markers) > 0 {
-					emitContentsAttrs(attrs, markers, "alias_meta_demote")
+					emitContentsAttrs(attrs, markers, model.AttrSourceAliasMetaDemote)
 				}
 				continue
 			}
@@ -340,7 +340,7 @@ func splitAliasCandidatesFromParenContent(content string) ([]string, bool, strin
 	return out, searchHint, hintKeyword
 }
 
-func appendSearchHintAttribute(attrs *[]model.Attribute, value string, source string) {
+func appendSearchHintAttribute(attrs *[]model.Attribute, value string, source model.AttrSource) {
 	if attrs == nil {
 		return
 	}
@@ -548,7 +548,7 @@ func normalizeParenContentMarkerToken(s string) (string, bool) {
 	}
 }
 
-func emitContentsAttrs(attrs *[]model.Attribute, values []string, source string) {
+func emitContentsAttrs(attrs *[]model.Attribute, values []string, source model.AttrSource) {
 	if attrs == nil || len(values) == 0 {
 		return
 	}

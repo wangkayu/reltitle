@@ -130,5 +130,5 @@ func newEPSlot(primary *model.EPEntity) *model.EPSlot {
 
 // groupRouteNote is a note attribute produced while applying a group route override.
 func groupRouteNote(text string) model.Attribute {
-	return model.Attribute{Type: model.AttrNote, Normalized: text, TokenStart: -1, TokenEnd: -1, Confidence: 0.7, Source: "group_route_override"}
+	return model.Attribute{Type: model.AttrNote, Normalized: text, TokenStart: -1, TokenEnd: -1, Confidence: 0.7, Source: model.AttrSourceGroupRouteOverride}
 }

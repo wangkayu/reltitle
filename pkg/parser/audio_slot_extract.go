@@ -207,7 +207,7 @@ func (e *audioSlotExtract) isRelatedCodec(existingCodec, newCodec string) bool {
 func (e *audioSlotExtract) hasLexiconExtractedRelatedCodec(tokenIdx int, codec string) bool {
 	attrs := e.attrs
 	for _, attr := range *attrs {
-		if attr.Type == model.AttrAudioCodec && attr.Source == "lexicon" {
+		if attr.Type == model.AttrAudioCodec && attr.Source == model.AttrSourceLexicon {
 			// Check if the lexicon attribute's token range overlaps with nearby removed tokens.
 			// Lexicon may mark multiple tokens as removed but emit with a narrower token range.
 			// We check if the current token is within a reasonable distance (±2 tokens) of the lexicon emit.
@@ -227,7 +227,7 @@ func (e *audioSlotExtract) addAttr(t model.AttrType, val string, start int, end 
 	if val == "" {
 		return
 	}
-	*attrs = append(*attrs, model.Attribute{Type: t, Normalized: val, TokenStart: start, TokenEnd: end, Confidence: conf, Source: "tech_audio_slot"})
+	*attrs = append(*attrs, model.Attribute{Type: t, Normalized: val, TokenStart: start, TokenEnd: end, Confidence: conf, Source: model.AttrSourceTechAudioSlot})
 }
 
 // emitFromSegment extracts audio tracks from the token range [start, end),

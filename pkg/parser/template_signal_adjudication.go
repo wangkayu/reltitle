@@ -55,7 +55,7 @@ func applyTemplateSignalAdjudication(
 				groupStart = tgIdx
 				groupEnd = tgIdx + 1
 				hasGroupSpan = true
-				attrs = attrsWithSingleGroup(attrs, group, groupStart, groupEnd, "template_signal")
+				attrs = attrsWithSingleGroup(attrs, group, groupStart, groupEnd, model.AttrSourceTemplateSignal)
 				events = append(events, "group_relocated_from_title_span")
 			} else {
 				group = ""
@@ -72,7 +72,7 @@ func applyTemplateSignalAdjudication(
 			groupStart = tgIdx
 			groupEnd = tgIdx + 1
 			hasGroupSpan = true
-			attrs = attrsWithSingleGroup(attrs, group, groupStart, groupEnd, "template_signal")
+			attrs = attrsWithSingleGroup(attrs, group, groupStart, groupEnd, model.AttrSourceTemplateSignal)
 			events = append(events, "group_relocated_after_ep")
 		} else {
 			group = ""
@@ -90,7 +90,7 @@ func applyTemplateSignalAdjudication(
 				groupStart = tgIdx
 				groupEnd = tgIdx + 1
 				hasGroupSpan = true
-				attrs = attrsWithSingleGroup(attrs, group, groupStart, groupEnd, "template_signal")
+				attrs = attrsWithSingleGroup(attrs, group, groupStart, groupEnd, model.AttrSourceTemplateSignal)
 				events = append(events, "tail_group_relocated_after_title")
 			} else {
 				group = ""
@@ -175,7 +175,7 @@ func applyTechStartsAfterEPStrict(
 		}
 		origType := attrs[i].Type
 		attrs[i].Type = model.AttrNote
-		attrs[i].Source = "template_signal_tech_before_ep"
+		attrs[i].Source = model.AttrSourceTemplateSignalTechBeforeEP
 		if attrs[i].Confidence > 0.6 {
 			attrs[i].Confidence = 0.6
 		}
@@ -215,7 +215,7 @@ func applyTechStartsAfterEPStrict(
 			TokenStart: i,
 			TokenEnd:   i + 1,
 			Confidence: 0.62,
-			Source:     "template_float_infer",
+			Source:     model.AttrSourceTemplateFloatInfer,
 		})
 		hasType[typ] = true
 		covered[i] = true
@@ -384,7 +384,7 @@ func bestTailGroupAfterAnchor(attrs []model.Attribute, anchor int) (string, int,
 	return best, bestIdx, true
 }
 
-func attrsWithSingleGroup(attrs []model.Attribute, group string, tokenStart int, tokenEnd int, source string) []model.Attribute {
+func attrsWithSingleGroup(attrs []model.Attribute, group string, tokenStart int, tokenEnd int, source model.AttrSource) []model.Attribute {
 	group = strings.TrimSpace(group)
 	out := make([]model.Attribute, 0, len(attrs)+1)
 	for _, a := range attrs {

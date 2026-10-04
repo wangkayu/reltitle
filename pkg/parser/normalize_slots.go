@@ -108,7 +108,7 @@ func extractPackSeasonExtrasAndRemoveFromTokens(tokens []model.Token, out *[]mod
 					continue
 				}
 				if norm, ok := isExtraMarker(tokens[n].Text); ok {
-					*out = append(*out, model.Attribute{Type: model.AttrContents, Normalized: norm, TokenStart: k, TokenEnd: n + 1, Confidence: 0.85, Source: "pack_extras"})
+					*out = append(*out, model.Attribute{Type: model.AttrContents, Normalized: norm, TokenStart: k, TokenEnd: n + 1, Confidence: 0.85, Source: model.AttrSourcePackExtras})
 					tokens[k].Removed = true
 					tokens[n].Removed = true
 					k = n
@@ -124,7 +124,7 @@ func extractPackSeasonExtrasAndRemoveFromTokens(tokens []model.Token, out *[]mod
 						tokens[k-1].Removed = true
 					}
 				}
-				*out = append(*out, model.Attribute{Type: model.AttrContents, Normalized: norm, TokenStart: k, TokenEnd: k + 1, Confidence: 0.85, Source: "pack_extras"})
+				*out = append(*out, model.Attribute{Type: model.AttrContents, Normalized: norm, TokenStart: k, TokenEnd: k + 1, Confidence: 0.85, Source: model.AttrSourcePackExtras})
 				tokens[k].Removed = true
 				continue
 			}
@@ -175,7 +175,7 @@ func extractPackSeasonExtrasAndRemoveFromTokens(tokens []model.Token, out *[]mod
 				continue
 			}
 			if norm, ok := isExtraMarker(tokens[n].Text); ok {
-				*out = append(*out, model.Attribute{Type: model.AttrContents, Normalized: norm, TokenStart: k, TokenEnd: n + 1, Confidence: 0.85, Source: "pack_extras"})
+				*out = append(*out, model.Attribute{Type: model.AttrContents, Normalized: norm, TokenStart: k, TokenEnd: n + 1, Confidence: 0.85, Source: model.AttrSourcePackExtras})
 				tokens[k].Removed = true
 				tokens[n].Removed = true
 				k = n
@@ -218,7 +218,7 @@ func classifyAndEmitTailMetaNote(part string, attrs *[]model.Attribute) bool {
 	if note == "" {
 		return false
 	}
-	*attrs = append(*attrs, model.Attribute{Type: model.AttrNote, Normalized: note, Confidence: 0.6, Source: "tail_meta"})
+	*attrs = append(*attrs, model.Attribute{Type: model.AttrNote, Normalized: note, Confidence: 0.6, Source: model.AttrSourceTailMeta})
 	return true
 }
 
@@ -439,7 +439,7 @@ func (p *Parser) normalizeSubtitleAttrs(attrs []model.Attribute, tokens []model.
 			TokenStart: -1,
 			TokenEnd:   -1,
 			Confidence: 0.8,
-			Source:     "subtitle_normalize",
+			Source:     model.AttrSourceSubtitleNormalize,
 		})
 	}
 	groupOrder := []string{"JPSC", "JPTC", "SC+ENG", "TC+ENG"}
@@ -453,7 +453,7 @@ func (p *Parser) normalizeSubtitleAttrs(attrs []model.Attribute, tokens []model.
 			TokenStart: -1,
 			TokenEnd:   -1,
 			Confidence: 0.75,
-			Source:     "subtitle_normalize",
+			Source:     model.AttrSourceSubtitleNormalize,
 		})
 	}
 	flagOrder := []string{"hard", "soft", "ex"}
@@ -467,7 +467,7 @@ func (p *Parser) normalizeSubtitleAttrs(attrs []model.Attribute, tokens []model.
 			TokenStart: -1,
 			TokenEnd:   -1,
 			Confidence: 0.8,
-			Source:     "subtitle_normalize",
+			Source:     model.AttrSourceSubtitleNormalize,
 		})
 	}
 	return out
@@ -506,7 +506,7 @@ func (p *Parser) enrichBatchSourceTypeFromPackKind(attrs []model.Attribute, cont
 		TokenStart: -1,
 		TokenEnd:   -1,
 		Confidence: 0.65,
-		Source:     "pack_kind_fallback",
+		Source:     model.AttrSourcePackKindFallback,
 	})
 	return out
 }
@@ -869,28 +869,28 @@ func classifyAndEmitStreamMeta(part string, attrs *[]model.Attribute) {
 	up := strings.ToUpper(p)
 	if strings.Contains(up, "SUB") {
 		if strings.Contains(up, "MULTI") || strings.Contains(up, "BILINGUAL") {
-			*attrs = append(*attrs, model.Attribute{Type: model.AttrSubLang, Normalized: "MULTI", Confidence: 0.6, Source: "route_streaming_release_v1"})
+			*attrs = append(*attrs, model.Attribute{Type: model.AttrSubLang, Normalized: "MULTI", Confidence: 0.6, Source: model.AttrSourceRouteStreamingReleaseV1})
 		}
-		*attrs = append(*attrs, model.Attribute{Type: model.AttrSubFlag, Normalized: "soft", Confidence: 0.6, Source: "route_streaming_release_v1"})
+		*attrs = append(*attrs, model.Attribute{Type: model.AttrSubFlag, Normalized: "soft", Confidence: 0.6, Source: model.AttrSourceRouteStreamingReleaseV1})
 	}
 	if strings.Contains(up, "DUB") {
 		if strings.Contains(up, "ENGLISH") {
-			*attrs = append(*attrs, model.Attribute{Type: model.AttrAudioFlag, Normalized: "ENGLISH_DUB", Confidence: 0.6, Source: "route_streaming_release_v1"})
+			*attrs = append(*attrs, model.Attribute{Type: model.AttrAudioFlag, Normalized: "ENGLISH_DUB", Confidence: 0.6, Source: model.AttrSourceRouteStreamingReleaseV1})
 		} else {
-			*attrs = append(*attrs, model.Attribute{Type: model.AttrAudioFlag, Normalized: "DUB", Confidence: 0.6, Source: "route_streaming_release_v1"})
+			*attrs = append(*attrs, model.Attribute{Type: model.AttrAudioFlag, Normalized: "DUB", Confidence: 0.6, Source: model.AttrSourceRouteStreamingReleaseV1})
 		}
 		return
 	}
 	if strings.Contains(up, "AUDIO") {
 		if strings.Contains(up, "DUAL") {
-			*attrs = append(*attrs, model.Attribute{Type: model.AttrAudioFlag, Normalized: "DUAL_AUDIO", Confidence: 0.6, Source: "route_streaming_release_v1"})
+			*attrs = append(*attrs, model.Attribute{Type: model.AttrAudioFlag, Normalized: "DUAL_AUDIO", Confidence: 0.6, Source: model.AttrSourceRouteStreamingReleaseV1})
 			return
 		}
 		if strings.Contains(up, "MULTI") {
-			*attrs = append(*attrs, model.Attribute{Type: model.AttrAudioFlag, Normalized: "MULTI_AUDIO", Confidence: 0.6, Source: "route_streaming_release_v1"})
+			*attrs = append(*attrs, model.Attribute{Type: model.AttrAudioFlag, Normalized: "MULTI_AUDIO", Confidence: 0.6, Source: model.AttrSourceRouteStreamingReleaseV1})
 			return
 		}
-		*attrs = append(*attrs, model.Attribute{Type: model.AttrAudioFlag, Normalized: "AUDIO", Confidence: 0.6, Source: "route_streaming_release_v1"})
+		*attrs = append(*attrs, model.Attribute{Type: model.AttrAudioFlag, Normalized: "AUDIO", Confidence: 0.6, Source: model.AttrSourceRouteStreamingReleaseV1})
 	}
 }
 
@@ -1172,7 +1172,7 @@ func extractPlatformRegionAttrsAndRemoveFromTokens(tokens []model.Token, out *[]
 			TokenStart: tokenStart,
 			TokenEnd:   tokenEnd,
 			Confidence: 0.8,
-			Source:     "region_restriction",
+			Source:     model.AttrSourceRegionRestriction,
 		})
 		if cleaned == "" {
 			tokens[i].Removed = true

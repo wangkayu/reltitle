@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func upsertTitleAttribute(attrs []model.Attribute, title string, source string) []model.Attribute {
+func upsertTitleAttribute(attrs []model.Attribute, title string, source model.AttrSource) []model.Attribute {
 	title = strings.TrimSpace(title)
 	if title == "" {
 		return attrs
@@ -18,7 +18,7 @@ func upsertTitleAttribute(attrs []model.Attribute, title string, source string) 
 			continue
 		}
 		out[i].Normalized = title
-		if strings.TrimSpace(source) != "" {
+		if strings.TrimSpace(string(source)) != "" {
 			out[i].Source = source
 		}
 		if out[i].Confidence <= 0 {
@@ -39,7 +39,7 @@ func upsertTitleAttribute(attrs []model.Attribute, title string, source string) 
 	return out
 }
 
-func upsertScalarAttribute(attrs []model.Attribute, t model.AttrType, value string, source string) []model.Attribute {
+func upsertScalarAttribute(attrs []model.Attribute, t model.AttrType, value string, source model.AttrSource) []model.Attribute {
 	value = strings.TrimSpace(value)
 	if value == "" {
 		return attrs
@@ -52,7 +52,7 @@ func upsertScalarAttribute(attrs []model.Attribute, t model.AttrType, value stri
 			continue
 		}
 		out[i].Normalized = value
-		if strings.TrimSpace(source) != "" {
+		if strings.TrimSpace(string(source)) != "" {
 			out[i].Source = source
 		}
 		if out[i].Confidence <= 0 {
@@ -87,7 +87,7 @@ func removeAttributeType(attrs []model.Attribute, t model.AttrType) []model.Attr
 	return out
 }
 
-func upsertGroupAttribute(attrs []model.Attribute, group string, source string) []model.Attribute {
+func upsertGroupAttribute(attrs []model.Attribute, group string, source model.AttrSource) []model.Attribute {
 	group = strings.TrimSpace(group)
 	if group == "" {
 		return attrs
@@ -100,7 +100,7 @@ func upsertGroupAttribute(attrs []model.Attribute, group string, source string) 
 			continue
 		}
 		out[i].Normalized = group
-		if strings.TrimSpace(source) != "" {
+		if strings.TrimSpace(string(source)) != "" {
 			out[i].Source = source
 		}
 		if out[i].Confidence <= 0 {
@@ -121,7 +121,7 @@ func upsertGroupAttribute(attrs []model.Attribute, group string, source string) 
 	return out
 }
 
-func appendTitleAliasAttributes(attrs []model.Attribute, aliases []string, title string, source string) []model.Attribute {
+func appendTitleAliasAttributes(attrs []model.Attribute, aliases []string, title string, source model.AttrSource) []model.Attribute {
 	if len(aliases) == 0 {
 		return attrs
 	}

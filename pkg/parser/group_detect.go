@@ -333,7 +333,7 @@ func promoteFrenchMultiNoteToAudioFlag(attrs []model.Attribute) {
 		if attrs[i].Confidence < 0.65 {
 			attrs[i].Confidence = 0.65
 		}
-		attrs[i].Source = "heuristic_multi_audio"
+		attrs[i].Source = model.AttrSourceHeuristicMultiAudio
 	}
 }
 

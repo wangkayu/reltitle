@@ -622,7 +622,7 @@ func extractSearchHintIndexAttrsAndRemoveFromTokens(tokens []model.Token, out *[
 		for k := i; k <= end; k++ {
 			tokens[k].Removed = true
 		}
-		*out = append(*out, model.Attribute{Type: model.AttrNote, Normalized: "检索用", TokenStart: i, TokenEnd: end + 1, Confidence: 0.7, Source: "heuristic"})
+		*out = append(*out, model.Attribute{Type: model.AttrNote, Normalized: "检索用", TokenStart: i, TokenEnd: end + 1, Confidence: 0.7, Source: model.AttrSourceHeuristic})
 		i = end
 	}
 }
@@ -646,7 +646,7 @@ func extractSeasonShowTagAttrsAndRemoveFromTokens(tokens []model.Token, out *[]m
 			continue
 		}
 		tokens[i].Removed = true
-		*out = append(*out, model.Attribute{Type: model.AttrNote, Normalized: t, TokenStart: i, TokenEnd: i + 1, Confidence: 0.7, Source: "heuristic"})
+		*out = append(*out, model.Attribute{Type: model.AttrNote, Normalized: t, TokenStart: i, TokenEnd: i + 1, Confidence: 0.7, Source: model.AttrSourceHeuristic})
 	}
 }
 

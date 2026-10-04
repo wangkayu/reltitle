@@ -27,7 +27,7 @@ func passGroupSubsX2Override(tokens []model.Token, attrs *[]model.Attribute, ctx
 		if val == "" {
 			return
 		}
-		*attrs = append(*attrs, model.Attribute{Type: t, Normalized: val, TokenStart: start, TokenEnd: end, Confidence: conf, Source: "group_subs_x2"})
+		*attrs = append(*attrs, model.Attribute{Type: t, Normalized: val, TokenStart: start, TokenEnd: end, Confidence: conf, Source: model.AttrSourceGroupSubsX2})
 	}
 
 	for i := 0; i < len(tokens); i++ {

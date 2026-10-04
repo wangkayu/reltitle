@@ -37,7 +37,7 @@ func (p *Parser) promoteNoteAttributes(attrs []model.Attribute) []model.Attribut
 					attrs[i].Normalized = strings.TrimSpace(rule.normalized)
 				}
 				if attrs[i].Source == "" {
-					attrs[i].Source = "note_promote_dict"
+					attrs[i].Source = model.AttrSourceNotePromoteDict
 				}
 				break
 			}
@@ -66,7 +66,7 @@ func (p *Parser) promoteNoteAttributes(attrs []model.Attribute) []model.Attribut
 			attrs[i].Type = model.AttrSubLang
 			attrs[i].Normalized = "SPA"
 			if attrs[i].Source == "" {
-				attrs[i].Source = "note_promote_context"
+				attrs[i].Source = model.AttrSourceNotePromoteContext
 			}
 		}
 	}
@@ -92,7 +92,7 @@ func (p *Parser) promoteNoteAttributes(attrs []model.Attribute) []model.Attribut
 			TokenStart: ref.TokenStart,
 			TokenEnd:   ref.TokenEnd,
 			Confidence: ref.Confidence,
-			Source:     "note_promote_context",
+			Source:     model.AttrSourceNotePromoteContext,
 		})
 	}
 	for i := range attrs {

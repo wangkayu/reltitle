@@ -420,7 +420,7 @@ func selectGroupFromAttrs(attrs []model.Attribute) (string, [2]int, bool) {
 			continue
 		}
 		score := 0
-		if strings.EqualFold(strings.TrimSpace(a.Source), "lexicon") {
+		if a.Source.Canonical() == model.AttrSourceLexicon {
 			score += 100
 		}
 		if a.Confidence > 0 {
@@ -761,7 +761,7 @@ func (p *Parser) Parse(rawTitle string) (*model.ParseResult, error) {
 		// Apply normal normalization
 		group = normalizeGroupText(group)
 		if !hasGroupAttr(attrs, group) {
-			attrs = append(attrs, model.Attribute{Type: model.AttrGroup, Normalized: group, TokenStart: groupSpan[0], TokenEnd: groupSpan[1], Confidence: 0.9, Source: "heuristic"})
+			attrs = append(attrs, model.Attribute{Type: model.AttrGroup, Normalized: group, TokenStart: groupSpan[0], TokenEnd: groupSpan[1], Confidence: 0.9, Source: model.AttrSourceHeuristic})
 		}
 		if groupSpan[0] >= 0 && groupSpan[1] > groupSpan[0] {
 			for i := groupSpan[0]; i < groupSpan[1] && i < len(tokens); i++ {
@@ -772,13 +772,13 @@ func (p *Parser) Parse(rawTitle string) (*model.ParseResult, error) {
 	if group == "" {
 		if g := extractInlineStarGroup(tokens); g != "" {
 			group = normalizeGroupText(g)
-			attrs = append(attrs, model.Attribute{Type: model.AttrGroup, Normalized: group, TokenStart: 0, TokenEnd: 1, Confidence: 0.7, Source: "heuristic"})
+			attrs = append(attrs, model.Attribute{Type: model.AttrGroup, Normalized: group, TokenStart: 0, TokenEnd: 1, Confidence: 0.7, Source: model.AttrSourceHeuristic})
 		}
 	}
 	if group == "" {
 		if g, gIdx := detectTechPrefixedGroup(tokens); g != "" {
 			group = normalizeGroupText(g)
-			attrs = append(attrs, model.Attribute{Type: model.AttrGroup, Normalized: group, TokenStart: gIdx, TokenEnd: gIdx + 1, Confidence: 0.7, Source: "heuristic"})
+			attrs = append(attrs, model.Attribute{Type: model.AttrGroup, Normalized: group, TokenStart: gIdx, TokenEnd: gIdx + 1, Confidence: 0.7, Source: model.AttrSourceHeuristic})
 		}
 	}
 	attrs = pruneGroupSpanTechArtifacts(attrs, groupSpan)
@@ -987,7 +987,7 @@ func (p *Parser) resolveTitleAndAliases(st *parseState) {
 		}
 	}
 	if st.titleStart >= 0 && st.titleEnd > st.titleStart {
-		st.attrs = append(st.attrs, model.Attribute{Type: model.AttrTitle, Normalized: st.title, TokenStart: st.titleStart, TokenEnd: st.titleEnd, Confidence: 0.7, Source: "heuristic"})
+		st.attrs = append(st.attrs, model.Attribute{Type: model.AttrTitle, Normalized: st.title, TokenStart: st.titleStart, TokenEnd: st.titleEnd, Confidence: 0.7, Source: model.AttrSourceHeuristic})
 		st.aliases = mergeAliases(st.aliases, p.inferAliasesFromAdjacentBrackets(st.tokens, st.titleEnd, st.episodeIdx, st.episodeRangeIdx))
 		st.aliases = mergeAliases(st.aliases, p.inferTitleGapSingleSlashAlias(st.tokens, st.title, st.titleEnd, st.episodeIdx, st.episodeRangeIdx))
 		st.aliases = mergeAliases(st.aliases, p.inferTitleGapDashAlias(st.tokens, st.title, st.titleEnd, st.episodeIdx, st.episodeRangeIdx))
@@ -1003,9 +1003,9 @@ func (p *Parser) resolveTitleAndAliases(st *parseState) {
 			norm = "v" + norm
 		}
 		if st.ctx.EpisodeVersionIdx >= 0 {
-			st.attrs = append(st.attrs, model.Attribute{Type: model.AttrVersion, Normalized: norm, TokenStart: st.ctx.EpisodeVersionIdx, TokenEnd: st.ctx.EpisodeVersionIdx + 1, Confidence: 0.7, Source: "episode_version"})
+			st.attrs = append(st.attrs, model.Attribute{Type: model.AttrVersion, Normalized: norm, TokenStart: st.ctx.EpisodeVersionIdx, TokenEnd: st.ctx.EpisodeVersionIdx + 1, Confidence: 0.7, Source: model.AttrSourceEpisodeVersion})
 		} else {
-			st.attrs = append(st.attrs, model.Attribute{Type: model.AttrVersion, Normalized: norm, Confidence: 0.65, Source: "episode_version"})
+			st.attrs = append(st.attrs, model.Attribute{Type: model.AttrVersion, Normalized: norm, Confidence: 0.65, Source: model.AttrSourceEpisodeVersion})
 		}
 		if st.version == "" {
 			st.version = norm
@@ -1020,7 +1020,7 @@ func (p *Parser) resolveTitleAndAliases(st *parseState) {
 		if ed >= 0 {
 			ed = start + 1
 		}
-		st.attrs = append(st.attrs, model.Attribute{Type: model.AttrMovieIndex, Normalized: st.movieIndex, TokenStart: start, TokenEnd: ed, Confidence: 0.7, Source: "heuristic"})
+		st.attrs = append(st.attrs, model.Attribute{Type: model.AttrMovieIndex, Normalized: st.movieIndex, TokenStart: start, TokenEnd: ed, Confidence: 0.7, Source: model.AttrSourceHeuristic})
 	}
 }
 
@@ -1030,17 +1030,17 @@ func (p *Parser) detectTailGroups(st *parseState) {
 	tg, tgIdx := detectTailGroupForAnchor(st.tokens, st.episodeAnchor())
 	if st.group == "" && tg != "" {
 		st.group = normalizeGroupText(tg)
-		st.attrs = append(st.attrs, model.Attribute{Type: model.AttrGroup, Normalized: st.group, TokenStart: tgIdx, TokenEnd: tgIdx + 1, Confidence: 0.7, Source: "heuristic"})
+		st.attrs = append(st.attrs, model.Attribute{Type: model.AttrGroup, Normalized: st.group, TokenStart: tgIdx, TokenEnd: tgIdx + 1, Confidence: 0.7, Source: model.AttrSourceHeuristic})
 	}
 	if st.group == "" {
 		if rawTail := p.detectTailGroupFromRawTitle(st.rawTitle); rawTail != "" {
 			st.group = normalizeGroupText(rawTail)
-			st.attrs = append(st.attrs, model.Attribute{Type: model.AttrGroup, Normalized: st.group, TokenStart: -1, TokenEnd: -1, Confidence: 0.65, Source: "heuristic_raw"})
-			st.attrs = append(st.attrs, model.Attribute{Type: model.AttrTailGroup, Normalized: st.group, TokenStart: -1, TokenEnd: -1, Confidence: 0.65, Source: "heuristic_raw"})
+			st.attrs = append(st.attrs, model.Attribute{Type: model.AttrGroup, Normalized: st.group, TokenStart: -1, TokenEnd: -1, Confidence: 0.65, Source: model.AttrSourceHeuristicRaw})
+			st.attrs = append(st.attrs, model.Attribute{Type: model.AttrTailGroup, Normalized: st.group, TokenStart: -1, TokenEnd: -1, Confidence: 0.65, Source: model.AttrSourceHeuristicRaw})
 		}
 	}
 	if tg != "" {
-		st.attrs = append(st.attrs, model.Attribute{Type: model.AttrTailGroup, Normalized: normalizeGroupText(tg), TokenStart: tgIdx, TokenEnd: tgIdx + 1, Confidence: 0.7, Source: "heuristic"})
+		st.attrs = append(st.attrs, model.Attribute{Type: model.AttrTailGroup, Normalized: normalizeGroupText(tg), TokenStart: tgIdx, TokenEnd: tgIdx + 1, Confidence: 0.7, Source: model.AttrSourceHeuristic})
 	}
 }
 
@@ -1066,11 +1066,11 @@ func (p *Parser) inferContext(st *parseState) {
 		var contentMarkers []string
 		st.aliases, contentMarkers = extractContentsFromAliases(st.aliases)
 		if len(contentMarkers) > 0 {
-			emitContentsAttrs(&st.attrs, contentMarkers, "alias_contents_marker")
+			emitContentsAttrs(&st.attrs, contentMarkers, model.AttrSourceAliasContentsMarker)
 		}
 	}
 	if rawMarkers := extractContentsFromRawParens(st.rawTitle); len(rawMarkers) > 0 {
-		emitContentsAttrs(&st.attrs, rawMarkers, "raw_paren_contents_marker")
+		emitContentsAttrs(&st.attrs, rawMarkers, model.AttrSourceRawParenContentsMarker)
 	}
 	st.attrs = appendEmbeddedJapaneseDubAttrs(st.attrs, st.rawTitle)
 	st.attrs = appendEmbeddedChineseDubAttrs(st.attrs, st.rawTitle)
@@ -1128,7 +1128,7 @@ func (p *Parser) matchInitialTemplate(st *parseState) {
 				TokenStart: -1,
 				TokenEnd:   -1,
 				Confidence: 0.6,
-				Source:     "template_signal_trace",
+				Source:     model.AttrSourceTemplateSignalTrace,
 			})
 		}
 	}
@@ -1163,7 +1163,7 @@ func (p *Parser) cleanTitleAndAliases(st *parseState) {
 		st.title, st.aliases = bridgedTitle, bridgedAliases
 	}
 	if strings.TrimSpace(st.title) != "" && aliasSemanticKey(st.title) != aliasSemanticKey(origTitle) {
-		st.attrs = upsertTitleAttribute(st.attrs, st.title, "title_cleanup")
+		st.attrs = upsertTitleAttribute(st.attrs, st.title, model.AttrSourceTitleCleanup)
 	}
 }
 
@@ -1193,9 +1193,9 @@ func (p *Parser) applyGroupRoute(st *parseState) {
 		st.contentKind = normalizeContentKindByTemplateID(st.contentKind, st.templateID)
 		st.title, st.aliases = applyGroupTitleAliasSpecialization(st.rawTitle, st.routeID, st.title, st.aliases)
 		if strings.TrimSpace(st.title) != "" {
-			st.attrs = upsertTitleAttribute(st.attrs, st.title, "group_route_override")
+			st.attrs = upsertTitleAttribute(st.attrs, st.title, model.AttrSourceGroupRouteOverride)
 		}
-		st.attrs = upsertGroupAttribute(st.attrs, st.group, "group_route_override")
+		st.attrs = upsertGroupAttribute(st.attrs, st.group, model.AttrSourceGroupRouteOverride)
 	}
 }
 
@@ -1282,14 +1282,14 @@ func (p *Parser) canonicalizeAttributes(st *parseState) {
 	st.title, st.aliases = p.rebalanceGenericPrimaryTitleFromAliases(st.title, st.aliases)
 	st.title, st.aliases = p.applyTitleKnowledge(st.rawTitle, st.title, st.aliases)
 	packProfile := p.inferPackProfile(st.contentKind, st.packKind, st.season, st.seasonRange, st.attrs)
-	st.attrs = upsertTitleAttribute(st.attrs, st.title, "canonical")
-	st.attrs = upsertGroupAttribute(st.attrs, st.group, "canonical")
-	st.attrs = upsertScalarAttribute(st.attrs, model.AttrVersion, st.version, "canonical")
-	st.attrs = upsertScalarAttribute(st.attrs, model.AttrPackKind, st.packKind, "canonical")
-	st.attrs = upsertScalarAttribute(st.attrs, model.AttrPackProfile, packProfile, "canonical")
-	st.attrs = upsertScalarAttribute(st.attrs, model.AttrMovieIndex, st.movieIndex, "canonical")
-	st.attrs = upsertScalarAttribute(st.attrs, model.AttrMovieIndexRange, st.movieIndexRange, "canonical")
-	st.attrs = appendTitleAliasAttributes(st.attrs, st.aliases, st.title, "canonical")
+	st.attrs = upsertTitleAttribute(st.attrs, st.title, model.AttrSourceCanonical)
+	st.attrs = upsertGroupAttribute(st.attrs, st.group, model.AttrSourceCanonical)
+	st.attrs = upsertScalarAttribute(st.attrs, model.AttrVersion, st.version, model.AttrSourceCanonical)
+	st.attrs = upsertScalarAttribute(st.attrs, model.AttrPackKind, st.packKind, model.AttrSourceCanonical)
+	st.attrs = upsertScalarAttribute(st.attrs, model.AttrPackProfile, packProfile, model.AttrSourceCanonical)
+	st.attrs = upsertScalarAttribute(st.attrs, model.AttrMovieIndex, st.movieIndex, model.AttrSourceCanonical)
+	st.attrs = upsertScalarAttribute(st.attrs, model.AttrMovieIndexRange, st.movieIndexRange, model.AttrSourceCanonical)
+	st.attrs = appendTitleAliasAttributes(st.attrs, st.aliases, st.title, model.AttrSourceCanonical)
 	st.attrs = p.promoteNoteAttributes(st.attrs)
 	st.attrs = dropRedundantNoteAttributes(st.attrs, st.season, st.seasonRange)
 	p.normalizePlatformAttrs(st.attrs)

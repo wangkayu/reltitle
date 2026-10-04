@@ -52,7 +52,7 @@ func extractWxHResolutionAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[
 		if norm == "" {
 			norm = strconv.Itoa(w) + "x" + strconv.Itoa(h)
 		}
-		*attrs = append(*attrs, model.Attribute{Type: model.AttrResolution, Normalized: norm, TokenStart: i, TokenEnd: i + 1, Confidence: 0.75, Source: "resolution_wxh"})
+		*attrs = append(*attrs, model.Attribute{Type: model.AttrResolution, Normalized: norm, TokenStart: i, TokenEnd: i + 1, Confidence: 0.75, Source: model.AttrSourceResolutionWxH})
 		tokens[i].Removed = true
 	}
 }
@@ -223,49 +223,49 @@ func (p *Parser) inferStableTechTokenAttrs(raw string, idx int) ([]model.Attribu
 		low := strings.ToLower(pp)
 
 		if m := stableTechResolutionPattern.FindStringSubmatch(low); len(m) == 2 {
-			out = append(out, model.Attribute{Type: model.AttrResolution, Normalized: m[1] + "p", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
+			out = append(out, model.Attribute{Type: model.AttrResolution, Normalized: m[1] + "p", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: model.AttrSourceTechComboSpan})
 			continue
 		}
 
 		if mm := stableTechBitDepthPattern.FindStringSubmatch(low); len(mm) == 2 {
-			out = append(out, model.Attribute{Type: model.AttrBitDepth, Normalized: mm[1] + "bit", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.74, Source: "tech_combo_span"})
+			out = append(out, model.Attribute{Type: model.AttrBitDepth, Normalized: mm[1] + "bit", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.74, Source: model.AttrSourceTechComboSpan})
 			continue
 		}
 		if mm := stableTechCodecBitDepthPattern.FindStringSubmatch(low); len(mm) == 3 {
 			if norm, ok := p.normalizeVideoCodecToken(mm[1]); ok {
 				out = append(out,
-					model.Attribute{Type: model.AttrVideoCodec, Normalized: norm, TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"},
-					model.Attribute{Type: model.AttrBitDepth, Normalized: mm[2] + "bit", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.74, Source: "tech_combo_span"},
+					model.Attribute{Type: model.AttrVideoCodec, Normalized: norm, TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: model.AttrSourceTechComboSpan},
+					model.Attribute{Type: model.AttrBitDepth, Normalized: mm[2] + "bit", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.74, Source: model.AttrSourceTechComboSpan},
 				)
 				continue
 			}
 		}
 		if low == "remux" {
-			out = append(out, model.Attribute{Type: model.AttrType("remux"), Normalized: "REMUX", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.74, Source: "tech_combo_span"})
+			out = append(out, model.Attribute{Type: model.AttrType("remux"), Normalized: "REMUX", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.74, Source: model.AttrSourceTechComboSpan})
 			continue
 		}
 		if norm, ok := p.sourceTypeCanonical[low]; ok && strings.TrimSpace(norm) != "" {
-			out = append(out, model.Attribute{Type: model.AttrSourceType, Normalized: norm, TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
+			out = append(out, model.Attribute{Type: model.AttrSourceType, Normalized: norm, TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: model.AttrSourceTechComboSpan})
 			continue
 		}
 		if norm, ok := p.platformCanonical[low]; ok && strings.TrimSpace(norm) != "" {
-			out = append(out, model.Attribute{Type: model.AttrPlatform, Normalized: norm, TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.74, Source: "tech_combo_span"})
+			out = append(out, model.Attribute{Type: model.AttrPlatform, Normalized: norm, TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.74, Source: model.AttrSourceTechComboSpan})
 			continue
 		}
 		if norm, ok := p.normalizeVideoCodecToken(low); ok {
-			out = append(out, model.Attribute{Type: model.AttrVideoCodec, Normalized: norm, TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
+			out = append(out, model.Attribute{Type: model.AttrVideoCodec, Normalized: norm, TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: model.AttrSourceTechComboSpan})
 			continue
 		}
 		if norm, ok := p.normalizeAudioCodecToken(low); ok {
-			out = append(out, model.Attribute{Type: model.AttrAudioCodec, Normalized: norm, TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: "tech_combo_span"})
+			out = append(out, model.Attribute{Type: model.AttrAudioCodec, Normalized: norm, TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: model.AttrSourceTechComboSpan})
 			continue
 		}
 		if norm, ok := p.normalizeContainerToken(low); ok {
-			out = append(out, model.Attribute{Type: model.AttrContainer, Normalized: norm, TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.74, Source: "tech_combo_span"})
+			out = append(out, model.Attribute{Type: model.AttrContainer, Normalized: norm, TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.74, Source: model.AttrSourceTechComboSpan})
 			continue
 		}
 		if norm, ok := p.normalizeAudioFlagToken(low); ok {
-			out = append(out, model.Attribute{Type: model.AttrAudioFlag, Normalized: norm, TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.7, Source: "tech_combo_span"})
+			out = append(out, model.Attribute{Type: model.AttrAudioFlag, Normalized: norm, TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.7, Source: model.AttrSourceTechComboSpan})
 			continue
 		}
 	}
@@ -314,7 +314,7 @@ func extractLooseBitDepthAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[
 			TokenStart: i,
 			TokenEnd:   i + 1,
 			Confidence: 0.72,
-			Source:     "bit_depth_loose",
+			Source:     model.AttrSourceBitDepthLoose,
 		})
 		seen[key] = struct{}{}
 		tokens[i].Removed = true
@@ -369,7 +369,7 @@ func (p *Parser) extractLooseCodecBitDepthAttrsAndRemoveFromTokens(tokens []mode
 				TokenStart: i,
 				TokenEnd:   i + 1,
 				Confidence: 0.74,
-				Source:     "tech_combo_token",
+				Source:     model.AttrSourceTechComboToken,
 			})
 			seenVideo[strings.ToLower(vcodec)] = struct{}{}
 		}
@@ -380,7 +380,7 @@ func (p *Parser) extractLooseCodecBitDepthAttrsAndRemoveFromTokens(tokens []mode
 				TokenStart: i,
 				TokenEnd:   i + 1,
 				Confidence: 0.72,
-				Source:     "tech_combo_token",
+				Source:     model.AttrSourceTechComboToken,
 			})
 			seenBit[strings.ToLower(bit)] = struct{}{}
 		}
@@ -548,7 +548,7 @@ func extractDashedAudioCodecAttrsAndRemoveFromTokens(tokens []model.Token, attrs
 					TokenStart: i,
 					TokenEnd:   i + 5,
 					Confidence: 0.74,
-					Source:     "codec_dashed",
+					Source:     model.AttrSourceCodecDashed,
 				})
 			}
 			for k := i; k <= i+4; k++ {
@@ -569,7 +569,7 @@ func extractDashedAudioCodecAttrsAndRemoveFromTokens(tokens []model.Token, attrs
 					TokenStart: i,
 					TokenEnd:   i + 3,
 					Confidence: 0.74,
-					Source:     "codec_dashed",
+					Source:     model.AttrSourceCodecDashed,
 				})
 			}
 			for k := i; k <= i+2; k++ {
@@ -617,7 +617,7 @@ func (p *Parser) extractMaProfileAudioCodecAttrsAndRemoveFromTokens(tokens []mod
 			TokenStart: i,
 			TokenEnd:   i + 1,
 			Confidence: 0.72,
-			Source:     "tech_combo_token",
+			Source:     model.AttrSourceTechComboToken,
 		})
 		if !hasAudioCodecAttrNorm(*attrs, codecNorm) {
 			*attrs = append(*attrs, model.Attribute{
@@ -626,7 +626,7 @@ func (p *Parser) extractMaProfileAudioCodecAttrsAndRemoveFromTokens(tokens []mod
 				TokenStart: i + 2,
 				TokenEnd:   i + 3,
 				Confidence: 0.72,
-				Source:     "tech_combo_token",
+				Source:     model.AttrSourceTechComboToken,
 			})
 		}
 		tokens[i].Removed = true
@@ -674,7 +674,7 @@ func (p *Parser) extractStandaloneMaProfileBitDepthAttrsAndRemoveFromTokens(toke
 				TokenStart: i,
 				TokenEnd:   i + 1,
 				Confidence: 0.72,
-				Source:     "tech_combo_token",
+				Source:     model.AttrSourceTechComboToken,
 			})
 			seenBit[strings.ToLower(norm)] = struct{}{}
 		}
@@ -725,7 +725,7 @@ func extractCRCAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Att
 				TokenStart: i,
 				TokenEnd:   i + 1,
 				Confidence: 0.82,
-				Source:     "crc_token",
+				Source:     model.AttrSourceCRCToken,
 			})
 			seen[norm] = struct{}{}
 		}
@@ -879,7 +879,7 @@ func (p *Parser) extractStandaloneSourceTypeAttrsAndRemoveFromTokens(tokens []mo
 				TokenStart: i,
 				TokenEnd:   spanEnd,
 				Confidence: 0.72,
-				Source:     "source_standalone",
+				Source:     model.AttrSourceSourceStandalone,
 			})
 			hasSource = true
 		}
@@ -930,7 +930,7 @@ func (p *Parser) extractStandaloneAudioCodecAttrsAndRemoveFromTokens(tokens []mo
 			TokenStart: i,
 			TokenEnd:   spanEnd,
 			Confidence: 0.72,
-			Source:     "audio_codec_standalone",
+			Source:     model.AttrSourceAudioCodecStandalone,
 		})
 		for k := i; k < spanEnd && k < len(tokens); k++ {
 			tokens[k].Removed = true
@@ -1003,7 +1003,7 @@ func extractYearAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[]model.At
 		if !yearPattern.MatchString(y) {
 			continue
 		}
-		*attrs = append(*attrs, model.Attribute{Type: model.AttrYear, Normalized: y, TokenStart: i, TokenEnd: i + 1, Confidence: 0.7, Source: "year_token"})
+		*attrs = append(*attrs, model.Attribute{Type: model.AttrYear, Normalized: y, TokenStart: i, TokenEnd: i + 1, Confidence: 0.7, Source: model.AttrSourceYearToken})
 
 		remove := hasTech || isInBracket(tokens, i)
 		if !remove {

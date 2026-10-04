@@ -17,7 +17,7 @@ func passGroupSlot2PlatformInfer(tokens []model.Token, attrs *[]model.Attribute,
 	if groupLower == "" {
 		return
 	}
-	addAttr := func(t model.AttrType, val string, conf float64, src string) {
+	addAttr := func(t model.AttrType, val string, conf float64, src model.AttrSource) {
 		val = strings.TrimSpace(val)
 		if val == "" {
 			return
@@ -47,18 +47,18 @@ func passGroupSlot2PlatformInfer(tokens []model.Token, attrs *[]model.Attribute,
 			if !containsAnyKeyword(slotLower, w.containsAny) {
 				continue
 			}
-			addAttr(model.AttrPlatform, w.normalized, 0.9, "group_slot2_platform")
+			addAttr(model.AttrPlatform, w.normalized, 0.9, model.AttrSourceGroupSlot2Platform)
 			if hasYue {
-				addAttr(model.AttrAudioLang, r.emitAudioLang, 0.9, "group_slot2_platform")
+				addAttr(model.AttrAudioLang, r.emitAudioLang, 0.9, model.AttrSourceGroupSlot2Platform)
 			}
 			return
 		}
 
 		if hasYue {
-			addAttr(model.AttrAudioLang, r.emitAudioLang, 0.85, "group_slot2_platform")
+			addAttr(model.AttrAudioLang, r.emitAudioLang, 0.85, model.AttrSourceGroupSlot2Platform)
 		}
 		if containsAnyKeyword(slotLower, r.distributorKeywords) {
-			addAttr(model.AttrNote, r.noteOnDistributor, 0.75, "group_slot2_platform")
+			addAttr(model.AttrNote, r.noteOnDistributor, 0.75, model.AttrSourceGroupSlot2Platform)
 			return
 		}
 		if !hasYue {
@@ -83,7 +83,7 @@ func passGroupSlot2PlatformInfer(tokens []model.Token, attrs *[]model.Attribute,
 		if compact == "" {
 			return
 		}
-		addAttr(model.AttrPlatform, strings.ToUpper(compact), r.unknownPlatformConfidence, "group_slot2_platform_infer_unknown")
+		addAttr(model.AttrPlatform, strings.ToUpper(compact), r.unknownPlatformConfidence, model.AttrSourceGroupSlot2PlatformInferUnknown)
 		return
 	}
 }

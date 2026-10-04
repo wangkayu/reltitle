@@ -330,7 +330,7 @@ func appendEmbeddedJapaneseDubAttrs(attrs []model.Attribute, rawTitle string) []
 			TokenStart: -1,
 			TokenEnd:   -1,
 			Confidence: 0.65,
-			Source:     "raw_audio_meta",
+			Source:     model.AttrSourceRawAudioMeta,
 		})
 	}
 	if !hasDub {
@@ -340,7 +340,7 @@ func appendEmbeddedJapaneseDubAttrs(attrs []model.Attribute, rawTitle string) []
 			TokenStart: -1,
 			TokenEnd:   -1,
 			Confidence: 0.65,
-			Source:     "raw_audio_meta",
+			Source:     model.AttrSourceRawAudioMeta,
 		})
 	}
 	return attrs
@@ -375,7 +375,7 @@ func appendEmbeddedChineseDubAttrs(attrs []model.Attribute, rawTitle string) []m
 			TokenStart: -1,
 			TokenEnd:   -1,
 			Confidence: 0.65,
-			Source:     "raw_audio_meta",
+			Source:     model.AttrSourceRawAudioMeta,
 		})
 	}
 	if !hasDub {
@@ -385,7 +385,7 @@ func appendEmbeddedChineseDubAttrs(attrs []model.Attribute, rawTitle string) []m
 			TokenStart: -1,
 			TokenEnd:   -1,
 			Confidence: 0.65,
-			Source:     "raw_audio_meta",
+			Source:     model.AttrSourceRawAudioMeta,
 		})
 	}
 	return attrs
@@ -420,7 +420,7 @@ func appendEmbeddedEnglishSubAttrs(attrs []model.Attribute, rawTitle string) []m
 			TokenStart: -1,
 			TokenEnd:   -1,
 			Confidence: 0.65,
-			Source:     "raw_sub_meta",
+			Source:     model.AttrSourceRawSubMeta,
 		})
 	}
 	if !hasSubFlag {
@@ -430,7 +430,7 @@ func appendEmbeddedEnglishSubAttrs(attrs []model.Attribute, rawTitle string) []m
 			TokenStart: -1,
 			TokenEnd:   -1,
 			Confidence: 0.65,
-			Source:     "raw_sub_meta",
+			Source:     model.AttrSourceRawSubMeta,
 		})
 	}
 	return attrs

@@ -42,7 +42,7 @@ func extractPackPlusContentsAndRemoveFromTokens(tokens []model.Token) []model.At
 	}
 	attrs := make([]model.Attribute, 0, 4)
 	add := func(norm string, start int, end int) {
-		attrs = append(attrs, model.Attribute{Type: model.AttrContents, Normalized: norm, TokenStart: start, TokenEnd: end, Confidence: 0.85, Source: "pack_plus_contents"})
+		attrs = append(attrs, model.Attribute{Type: model.AttrContents, Normalized: norm, TokenStart: start, TokenEnd: end, Confidence: 0.85, Source: model.AttrSourcePackPlusContents})
 	}
 
 	for i := 0; i < len(tokens); i++ {
@@ -169,28 +169,28 @@ func extractPackAudioSubMetaAndRemoveFromTokens(tokens []model.Token) []model.At
 			return
 		}
 		norm := "AUDIO_" + strings.Join(langCodes, "+")
-		attrs = append(attrs, model.Attribute{Type: model.AttrAudioFlag, Normalized: norm, TokenStart: start, TokenEnd: end, Confidence: conf, Source: "pack_audio"})
+		attrs = append(attrs, model.Attribute{Type: model.AttrAudioFlag, Normalized: norm, TokenStart: start, TokenEnd: end, Confidence: conf, Source: model.AttrSourcePackAudio})
 	}
 	addSubFlag := func(flag string, start int, end int, conf float64) {
 		flag = strings.TrimSpace(flag)
 		if flag == "" {
 			return
 		}
-		attrs = append(attrs, model.Attribute{Type: model.AttrSubFlag, Normalized: flag, TokenStart: start, TokenEnd: end, Confidence: conf, Source: "pack_sub"})
+		attrs = append(attrs, model.Attribute{Type: model.AttrSubFlag, Normalized: flag, TokenStart: start, TokenEnd: end, Confidence: conf, Source: model.AttrSourcePackSub})
 	}
 	addSubLang := func(code string, start int, end int, conf float64) {
 		code = strings.TrimSpace(code)
 		if code == "" {
 			return
 		}
-		attrs = append(attrs, model.Attribute{Type: model.AttrSubLang, Normalized: code, TokenStart: start, TokenEnd: end, Confidence: conf, Source: "pack_sub"})
+		attrs = append(attrs, model.Attribute{Type: model.AttrSubLang, Normalized: code, TokenStart: start, TokenEnd: end, Confidence: conf, Source: model.AttrSourcePackSub})
 	}
 	addNote := func(note string, start int, end int, conf float64) {
 		note = strings.TrimSpace(note)
 		if note == "" {
 			return
 		}
-		attrs = append(attrs, model.Attribute{Type: model.AttrNote, Normalized: note, TokenStart: start, TokenEnd: end, Confidence: conf, Source: "pack_note"})
+		attrs = append(attrs, model.Attribute{Type: model.AttrNote, Normalized: note, TokenStart: start, TokenEnd: end, Confidence: conf, Source: model.AttrSourcePackNote})
 	}
 
 	normLangCodes := func(codes []string) []string {
@@ -517,7 +517,7 @@ func extractPackContentsAndRemoveFromTokens(tokens []model.Token) []model.Attrib
 		if inner == "" {
 			return
 		}
-		items = append(items, model.Attribute{Type: model.AttrContents, Normalized: inner, TokenStart: a, TokenEnd: b, Confidence: 0.7, Source: "pack_contents"})
+		items = append(items, model.Attribute{Type: model.AttrContents, Normalized: inner, TokenStart: a, TokenEnd: b, Confidence: 0.7, Source: model.AttrSourcePackContents})
 	}
 
 	for i := colonIdx + 1; i < semiIdx; i++ {

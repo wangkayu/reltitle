@@ -26,7 +26,7 @@ func (e *techSubsSemanticsExtract) addAttr(t model.AttrType, val string, start i
 	if val == "" {
 		return
 	}
-	*attrs = append(*attrs, model.Attribute{Type: t, Normalized: val, TokenStart: start, TokenEnd: end, Confidence: conf, Source: "tech_subs"})
+	*attrs = append(*attrs, model.Attribute{Type: t, Normalized: val, TokenStart: start, TokenEnd: end, Confidence: conf, Source: model.AttrSourceTechSubs})
 }
 
 func (e *techSubsSemanticsExtract) addLang(set map[string]bool, code string) {

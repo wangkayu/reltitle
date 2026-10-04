@@ -13,7 +13,7 @@ func passExtractTagCodeAudioLang(tokens []model.Token, attrs *[]model.Attribute,
 	g := strings.ToLower(strings.TrimSpace(ctx.Group))
 	allowErai := g != "" && strings.Contains(g, "erai")
 
-	addAttr := func(t model.AttrType, val string, start int, end int, conf float64, source string) {
+	addAttr := func(t model.AttrType, val string, start int, end int, conf float64, source model.AttrSource) {
 		val = strings.TrimSpace(val)
 		if val == "" {
 			return
@@ -39,14 +39,14 @@ func passExtractTagCodeAudioLang(tokens []model.Token, attrs *[]model.Attribute,
 			continue
 		}
 
-		addAttr(model.AttrNote, "tag_code:"+up, i, closeIdx+1, 0.7, "tag_code")
+		addAttr(model.AttrNote, "tag_code:"+up, i, closeIdx+1, 0.7, model.AttrSourceTagCode)
 
 		if allowErai {
 			if up == "CA" {
-				addAttr(model.AttrAudioLang, "YUE", i, closeIdx+1, 0.75, "tag_code_audio_lang")
+				addAttr(model.AttrAudioLang, "YUE", i, closeIdx+1, 0.75, model.AttrSourceTagCodeAudioLang)
 			}
 			if up == "JA" {
-				addAttr(model.AttrAudioLang, "JPN", i, closeIdx+1, 0.75, "tag_code_audio_lang")
+				addAttr(model.AttrAudioLang, "JPN", i, closeIdx+1, 0.75, model.AttrSourceTagCodeAudioLang)
 			}
 		}
 

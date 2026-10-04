@@ -79,7 +79,7 @@ func applyLexiconClause(tokens []model.Token, lower []string, brDepth []int, par
 			}
 			abs := start + idx
 			if abs >= start && abs < end {
-				*out = append(*out, model.Attribute{Type: model.AttrType(em.Type), Normalized: em.Normalized, TokenStart: abs, TokenEnd: abs + 1, Confidence: conf, Source: "lexicon"})
+				*out = append(*out, model.Attribute{Type: model.AttrType(em.Type), Normalized: em.Normalized, TokenStart: abs, TokenEnd: abs + 1, Confidence: conf, Source: model.AttrSourceLexicon})
 			}
 		}
 

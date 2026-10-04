@@ -111,7 +111,7 @@ func TestGoldenCorpus(t *testing.T) {
 	}
 }
 
-func readGoldenCorpus(t *testing.T) []string {
+func readGoldenCorpus(t testing.TB) []string {
 	t.Helper()
 	f, err := os.Open(goldenCorpusPath)
 	if err != nil {

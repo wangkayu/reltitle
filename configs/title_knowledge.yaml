@@ -38,3 +38,21 @@ entries:
       - "ナナブンノニジュウニ"
     raw_must_contain_all:
       - "22／7"
+  # Ranma 1/2: "1/2" is part of the title, easily mistaken for an episode range.
+  - id: ranma_one_half_zh
+    enabled: true
+    canonical_title: "乱马1/2"
+    aliases:
+      - "Ranma 1/2"
+      - "Ranma 1-2"
+      - "らんま1/2"
+    raw_must_contain_all:
+      - "乱马1/2"
+  - id: ranma_one_half_en
+    enabled: true
+    canonical_title: "Ranma 1/2"
+    aliases:
+      - "乱马1/2"
+      - "らんま1/2"
+    raw_must_contain_all:
+      - "Ranma 1/2"

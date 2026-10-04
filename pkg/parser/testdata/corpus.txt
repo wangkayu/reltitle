@@ -430,3 +430,29 @@ Some Show S01 1080p WEB-DL H264 AAC
 [Group] Some Show [TV 01 - 26][BDRip 1080p]
 [Group] Some Show [总集篇01_12.5][1080p]
 [Group] Some Show [总集篇02_13][1080p]
+#
+# --- real titles from the AniBT RSS feed (2026-10-04) ---
+[黒ネズミたち] 青之蘆葦 第二季 / Ao Ashi Season 2 - 01 (CR 1920x1080 AVC AAC MKV)
+[Nix-Raws] 相反的你和我 第二季 / 相反的你和我 第二季 / 正反対な君と僕 第2期 / Seihantai na Kimi to Boku S01E25 [CR WEB-DL 1080p AVC AAC][简繁内封]
+【豌豆字幕組】[關於我轉生變成史萊姆這檔事 第四季 / Tensei Shitara Slime Datta Ken S4][01-24(73-96)][繁體][1080P][MP4]
+[北宇治字幕组] 再见，菈菈 / 再见，拉拉 / 再見，菈菈 / Sayonara Lara [12][WebRip][HEVC_AAC][简繁日内封]
+[7³ACG] Tougen Anki S01 | 01-24 [简繁字幕] BDrip 1080p x265 OPUS 2.0
+[Gecko] Koupen-chan - S01E79 (コウペンちゃん; Koupen Chan) [ABEMA.WEB-DL 1080P AVC, AAC][718E7332]
+[ToonsHub] 药屋少女的呢喃 第三季 / The Apothecary Diaries Season 3 - 01v2 [CR][1080P][CHT&JP&EN&KO][MKV]
+[银色子弹字幕组][名侦探柯南][第1215集 茜色的千秋乐（前乐）][WEBRIP][简繁日多语MKV][PGS][1080P]
+[LoliHouse] 野生的大魔王出现了！ / 野生的最终BOSS出现了！ / Yasei no Last Boss ga Arawareta! - 14 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕]
+[LoliHouse] 碧蓝航线 微速前进 二 / Azur Lane - Bisoku Zenshin! S2 [01-12 合集][WebRip 1080p HEVC-10bit AAC][简繁内封字幕][Fin]
+[Nix-Raws] 野生的大魔王出现了！ / 野生的大魔王出現了！ / 野生のラスボスが現れた！ / Yasei no Last Boss ga Arawareta S02E02 [CR WEB-DL 1080p AVC AAC][简繁内封]
+[黒ネズミたち] 魔法姊妹露露特莉莉 [特別篇] / Mahou no Shimai Lulutto Lilly [Special] - 01 (Baha 1920x1080 AVC AAC MP4)
+[Nix-Raws] 小书痴的下克上：为了成为图书管理员不择手段！领主的养女 / Honzuki no Gekokujou S04E24 [CR WEB-DL 1080p AVC AAC][简繁内封]
+[CicakRumah] PANDOROBO - S01E01 (パンどろぼう; Pan Dorobou) [NHK1.WEB-DL 1080P AVC, AAC, M-SUB][34CCE357]
+[Nix-Raws] 拉拉熊 / 拉拉熊 / リラックマ / Rilakkuma Goyururi Yume no Tabi S01E26 [CR WEB-DL 1080p AVC AAC][简繁内封]
+# NOTE: the stray 』 stays in the title (corner-bracket quotes are deliberately left alone)
+[LoliHouse] 『你们先走我断后』，于是10年后我成为了传说 / Koko wa Ore ni Makasete Saki ni Ike to Itte kara 10-nen ga Tattara Densetsu ni Natteita. [01-12 合集][WebRip 1080p HEVC-10bit AAC][简繁内封字幕][Fin]
+# 1/2 is part of the title (title_knowledge.yaml: ranma_one_half_*). Known remaining errors for these two forms:
+# - '第二季 - 05' directly after the protected '1/2' loses the episode (the protected '2' makes '- 05' look like part of the title)
+# - 'Ranma 1-2 (2024) Season 3 - 01' picks episode 3 instead of 1
+[ToonsHub] 乱马1/2 第三季 / Ranma 1-2 (2024) Season 3 - 01 [1080P][DUAL][CHS&CHT&JP&EN&KO][MKV]
+[G] 乱马1/2 第二季 - 05 [1080P]
+[G] Ranma 1/2 - 01 [1080P]
+[G] 乱马1/2 - 05 [1080P]

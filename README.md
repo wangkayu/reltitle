@@ -5,7 +5,8 @@ The CLI prints the complete parse result as JSON.
 
 ## Usage
 
-Requires Go 1.22 or newer and the `configs/` directory.
+Requires Go 1.22 or newer. The default configuration is embedded in the
+binary, so no external files are needed:
 
 ```bash
 go run ./cmd/reltitle -title "[LoliHouse] Sample Title - 03 [1080p]"
@@ -17,7 +18,12 @@ The title can also be supplied as a positional argument or through standard inpu
 echo "[LoliHouse] Sample Title - 03 [1080p]" | go run ./cmd/reltitle
 ```
 
-Use a different configuration directory with `-config`.
+To run against a modified copy of the configuration instead of the embedded
+one, point `-config` at its directory:
+
+```bash
+./reltitle -config ./configs -title "[LoliHouse] Sample Title - 03 [1080p]"
+```
 
 ## Build
 

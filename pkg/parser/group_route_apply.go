@@ -60,6 +60,13 @@ func (p *Parser) applyGroupRouteOverride(
 				continue
 			}
 		}
+		if r.forceRouteID == "group_wgjd_overall_range_v1" {
+			start, end := splitNormalizedRangeBounds(episodeRange)
+			primary := &model.EPReference{Kind: model.EPKindRange, Axis: model.EPAxisSE, RangeStart: start, RangeEnd: end}
+			if _, ok := detectOverallBracketAlternate(rawTitle, primary); !ok {
+				continue
+			}
+		}
 		outGroup := group
 		outTitle := title
 		outAliases := aliases

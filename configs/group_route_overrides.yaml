@@ -20,6 +20,18 @@ overrides:
       force_content_kind: "BATCH"
       force_route_id: "onepace_range_release"
 
+  - id: "wgjd_overall_range_batch"
+    enabled: true
+    priority: 96
+    match:
+      group_in: ["晚街与灯", "晚街與燈"]
+      raw_must_contain_any: ["总第", "總第"]
+      require_episode_range: true
+    output:
+      force_template_id: "TF_BATCH_RANGE_WGJD_OVERALL_01"
+      force_content_kind: "BATCH"
+      force_route_id: "group_wgjd_overall_range_v1"
+
   - id: "fate_strange_fake_ep_wgjd"
     enabled: true
     priority: 95

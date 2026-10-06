@@ -1305,6 +1305,26 @@ func (p *Parser) canonicalizeAttributes(st *parseState) {
 	st.title, st.aliases = rebalanceSingleSlashSeasonBridgePrimaryFromRaw(st.rawTitle, st.title, st.aliases)
 	st.title, st.aliases = p.rebalanceGenericPrimaryTitleFromAliases(st.title, st.aliases)
 	st.title, st.aliases = p.applyTitleKnowledge(st.rawTitle, st.title, st.aliases)
+	prefixStart := st.groupSpan[1]
+	if prefixStart < 0 || prefixStart >= len(st.tokens) {
+		prefixStart = 0
+	}
+	prefixEnd := len(st.tokens)
+	if st.tokens[prefixStart].Text == "[" || st.tokens[prefixStart].Text == "【" {
+		for i := prefixStart + 1; i < len(st.tokens); i++ {
+			if st.tokens[i].Text == "]" || st.tokens[i].Text == "】" {
+				prefixEnd = i + 1
+				break
+			}
+		}
+	} else {
+		for _, idx := range []int{st.episodeIdx, st.episodeRangeIdx} {
+			if idx >= prefixStart && idx < prefixEnd {
+				prefixEnd = idx
+			}
+		}
+	}
+	st.title, st.aliases = restoreRepeatedTitlePrefix(st.tokens, prefixStart, prefixEnd, st.title, st.aliases)
 	packProfile := p.inferPackProfile(st.contentKind, st.packKind, st.season, st.seasonRange, st.attrs)
 	st.attrs = upsertTitleAttribute(st.attrs, st.title, model.AttrSourceCanonical)
 	st.attrs = upsertGroupAttribute(st.attrs, st.group, model.AttrSourceCanonical)

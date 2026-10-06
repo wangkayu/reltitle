@@ -168,6 +168,9 @@ func collectAlternateEPReferences(rawTitle string, tokens []model.Token, primary
 		out = append(out, ref)
 	}
 
+	if alt, ok := detectOverallBracketAlternate(rawTitle, primary); ok {
+		add(alt)
+	}
 	if alt, ok := detectParenAbsoluteEpisodeAlternate(tokens, primary); ok {
 		add(alt)
 	}

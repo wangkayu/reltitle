@@ -171,7 +171,7 @@ func (p *Parser) extractTitle(tokens []model.Token, episodeIdx int, episodeRange
 				break
 			}
 		}
-		if tokens[i].Text == "[" {
+		if tokens[i].Text == "[" && !tokens[i].Protected {
 			end = i
 			break
 		}
@@ -221,6 +221,9 @@ func (p *Parser) extractTitle(tokens []model.Token, episodeIdx int, episodeRange
 			continue
 		}
 		if t == "[" || t == "]" || t == "【" || t == "】" {
+			if tokens[i].Protected {
+				parts = append(parts, t)
+			}
 			continue
 		}
 		if t == "(" || t == ")" || t == "（" || t == "）" {
@@ -303,7 +306,23 @@ func (p *Parser) extractTitle(tokens []model.Token, episodeIdx int, episodeRange
 		parts = append(parts, t)
 	}
 
-	out := compactWideBracketSpaces(strings.TrimSpace(strings.Join(parts, " ")))
+	// Protected square brackets are title punctuation, not release blocks.
+	for i := range parts {
+		if parts[i] == "[" || parts[i] == "【" {
+			if i+1 < len(parts) {
+				parts[i+1] = parts[i] + parts[i+1]
+				parts[i] = ""
+			}
+		} else if parts[i] == "]" || parts[i] == "】" {
+			if i > 0 {
+				parts[i-1] += parts[i]
+				parts[i] = ""
+			}
+		}
+	}
+	joined := strings.Join(parts, " ")
+	joined = strings.Join(strings.Fields(joined), " ")
+	out := compactWideBracketSpaces(joined)
 	out = normalizeParenSpacing(out)
 	out = normalizeTitleMain(out)
 	return out

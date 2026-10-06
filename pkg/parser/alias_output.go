@@ -700,7 +700,10 @@ func cleanTitleToken(s string) string {
 	if s == "" {
 		return ""
 	}
-	if titleAdjunctPattern.MatchString(s) {
+	// Strip wrapping brackets as pairs; a final ] may close an internal title marker.
+	if strings.Contains(s, "[") && !strings.HasPrefix(s, "[") {
+		s = strings.Trim(s, "{}【】『』「」")
+	} else if titleAdjunctPattern.MatchString(s) {
 		// Corner quotes can enclose the attached work name rather than the whole title.
 		s = strings.Trim(s, "[]{}【】")
 		s = normalizeTitleAdjunct(s)

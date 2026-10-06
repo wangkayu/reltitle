@@ -103,7 +103,7 @@ func (p *Parser) inferTitleTokenSpan(tokens []model.Token, episodeIdx int, episo
 			}
 		}
 		if seenTitle {
-			if tokens[i].Text == "[" || tokens[i].Text == "【" {
+			if (tokens[i].Text == "[" || tokens[i].Text == "【") && !tokens[i].Protected {
 				end = i
 				break
 			}

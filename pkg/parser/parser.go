@@ -909,6 +909,16 @@ func (p *Parser) resolveTitleAndAliases(st *parseState) {
 		st.epslot = nil
 	}
 
+	// Use the episode/season anchors to bound the candidate title slot before
+	// generic bracket cutoffs run. Repeated brackets across aliases belong to it.
+	titleSlotEnd := len(st.tokens)
+	for _, idx := range []int{st.episodeIdx, st.episodeRangeIdx, seasonCutIdx} {
+		if idx >= 0 && idx < titleSlotEnd {
+			titleSlotEnd = idx
+		}
+	}
+	protectRepeatedTitleBrackets(st.tokens, titleStartAfterLeadingEmptyBracketBlocks(st.tokens), titleSlotEnd)
+
 	_, titleEnd0 := p.inferTitleTokenSpan(st.tokens, st.episodeIdx, st.episodeRangeIdx, seasonCutIdx)
 	parenAliases := p.extractParenAliasesAndRemoveFromTitle(st.tokens, titleEnd0, st.episodeIdx, st.episodeRangeIdx, &st.attrs)
 

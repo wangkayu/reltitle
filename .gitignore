@@ -20,3 +20,6 @@ coverage.out
 
 # Local test outputs
 /test_results/
+
+# Internal development documentation (kept locally)
+/docs/

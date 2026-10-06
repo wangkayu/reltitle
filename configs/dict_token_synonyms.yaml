@@ -114,6 +114,13 @@ rules:
       normalized: AMZN
     priority: 100
 
+  - id: platform_ma
+    raw_tokens: ["ma", "movies anywhere"]
+    emit:
+      type: platform
+      normalized: MA
+    priority: 100
+
   - id: platform_abema
     raw_tokens: ["abema"]
     emit:

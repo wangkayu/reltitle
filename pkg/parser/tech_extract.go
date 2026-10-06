@@ -969,6 +969,7 @@ func consumeTokensByTechAttrSpans(tokens []model.Token, attrs []model.Attribute)
 	if len(tokens) == 0 || len(attrs) == 0 {
 		return
 	}
+	technical := make([]bool, len(tokens))
 	for _, a := range attrs {
 		if !isTechTokenConsumeAttrType(a.Type) {
 			continue
@@ -981,6 +982,12 @@ func consumeTokensByTechAttrSpans(tokens []model.Token, attrs []model.Attribute)
 			end = len(tokens)
 		}
 		for i := a.TokenStart; i < end; i++ {
+			tokens[i].Removed = true
+			technical[i] = true
+		}
+	}
+	for i := 1; i+1 < len(tokens); i++ {
+		if tokens[i].Text == "-" && !tokens[i].Protected && isInBracket(tokens, i) && technical[i-1] && technical[i+1] {
 			tokens[i].Removed = true
 		}
 	}

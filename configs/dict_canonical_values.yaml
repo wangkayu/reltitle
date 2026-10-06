@@ -29,6 +29,7 @@ canonical:
     - ABEMA
     - UNEXT
     - AMZN
+    - MA # Movies Anywhere; DTS-HD MA is an audio codec marker
     - BILIBILI
     - AT-X
     - BS11

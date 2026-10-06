@@ -3314,6 +3314,36 @@ entries:
         remove: true
         confidence: 0.65
 
+  - id: platform_ma_dotted_webdl_dual
+    tokens: ["ma", ".", "web", "-", "dl", ".", "dual"]
+    emit:
+      - type: platform
+        normalized: "MA"
+        token_index: 0
+      - type: source_type
+        normalized: "WEB-DL"
+        token_index: 4
+      - type: audio_flag
+        normalized: "DUAL"
+        token_index: 6
+    remove: true
+    confidence: 0.9
+
+  - id: platform_ma_webdl_dual
+    tokens: ["ma", "web", "-", "dl", "dual"]
+    emit:
+      - type: platform
+        normalized: "MA"
+        token_index: 0
+      - type: source_type
+        normalized: "WEB-DL"
+        token_index: 3
+      - type: audio_flag
+        normalized: "DUAL"
+        token_index: 4
+    remove: true
+    confidence: 0.9
+
   - id: audio_flag_dual_plain_webdl
     scope: plain
     any_of:
@@ -6645,6 +6675,112 @@ entries:
     remove: true
     confidence: 0.6
 
+  # MA = Movies Anywhere when paired with a WEB source; never match bare MA
+  # (DTS-HD MA means Master Audio). Reference:
+  # https://gitea.korves.net/tkorves/database/commit/cdef0421466b435943ced0159bb6ac397976615d
+  - id: platform_ma_web
+    any_of:
+      - tokens: ["ma", ".", "web", "-", "dl"]
+        emit:
+          - type: platform
+            normalized: "MA"
+            token_index: 0
+          - type: source_type
+            normalized: "WEB-DL"
+            token_index: 4
+        remove: true
+        confidence: 0.9
+      - tokens: ["ma", ".", "webrip"]
+        emit:
+          - type: platform
+            normalized: "MA"
+            token_index: 0
+          - type: source_type
+            normalized: "WEBRip"
+            token_index: 2
+        remove: true
+        confidence: 0.9
+      - tokens: ["ma", "web", "-", "dl"]
+        emit:
+          - type: platform
+            normalized: "MA"
+            token_index: 0
+          - type: source_type
+            normalized: "WEB-DL"
+            token_index: 3
+        remove: true
+        confidence: 0.9
+      - tokens: ["ma", "web", "dl"]
+        emit:
+          - type: platform
+            normalized: "MA"
+            token_index: 0
+          - type: source_type
+            normalized: "WEB-DL"
+            token_index: 2
+        remove: true
+        confidence: 0.9
+      - tokens: ["ma", "web-dl"]
+        emit:
+          - type: platform
+            normalized: "MA"
+            token_index: 0
+          - type: source_type
+            normalized: "WEB-DL"
+            token_index: 1
+        remove: true
+        confidence: 0.9
+      - tokens: ["ma", "webdl"]
+        emit:
+          - type: platform
+            normalized: "MA"
+            token_index: 0
+          - type: source_type
+            normalized: "WEB-DL"
+            token_index: 1
+        remove: true
+        confidence: 0.9
+      - tokens: ["ma", "webrip"]
+        emit:
+          - type: platform
+            normalized: "MA"
+            token_index: 0
+          - type: source_type
+            normalized: "WEBRip"
+            token_index: 1
+        remove: true
+        confidence: 0.9
+      - tokens: ["ma", "web", "rip"]
+        emit:
+          - type: platform
+            normalized: "MA"
+            token_index: 0
+          - type: source_type
+            normalized: "WEBRip"
+            token_index: 2
+        remove: true
+        confidence: 0.9
+      - tokens: ["ma", "web", "-", "rip"]
+        emit:
+          - type: platform
+            normalized: "MA"
+            token_index: 0
+          - type: source_type
+            normalized: "WEBRip"
+            token_index: 3
+        remove: true
+        confidence: 0.9
+      - tokens: ["ma", "web-rip"]
+        emit:
+          - type: platform
+            normalized: "MA"
+            token_index: 0
+          - type: source_type
+            normalized: "WEBRip"
+            token_index: 1
+        remove: true
+        confidence: 0.9
+
   - id: source_type_webrip
     any_of:
       - tokens: ["webrip"]
@@ -8008,6 +8144,15 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.8
+
+  - id: platform_movies_anywhere
+    tokens: ["movies", "anywhere"]
+    emit:
+      - type: platform
+        normalized: "MA"
+        token_index: 0
+    remove: true
+    confidence: 0.9
 
   - id: platform_amazon
     any_of:

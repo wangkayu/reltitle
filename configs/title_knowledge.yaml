@@ -48,6 +48,27 @@ entries:
       - "らんま1/2"
     raw_must_contain_all:
       - "乱马1/2"
+  - id: ranma_one_half_zh_spaced
+    enabled: true
+    canonical_title: "乱马1/2"
+    aliases:
+      - "乱马 1/2"
+      - "Ranma ½"
+      - "Ranma 1/2"
+      - "Ranma 1-2"
+      - "らんま1/2"
+    raw_must_contain_all:
+      - "乱马 1/2"
+  - id: ranma_one_half_zh_traditional_spaced
+    enabled: true
+    canonical_title: "乱马1/2"
+    aliases:
+      - "亂馬 1/2"
+      - "Ranma ½"
+      - "Ranma 1/2"
+      - "らんま1/2"
+    raw_must_contain_all:
+      - "亂馬 1/2"
   - id: ranma_one_half_en
     enabled: true
     canonical_title: "Ranma 1/2"

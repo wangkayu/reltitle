@@ -3184,6 +3184,23 @@ entries:
         remove: true
         confidence: 0.7
 
+  - id: content_rating_uncensored_regulation_removed
+    any_of:
+      - tokens: ["規制解除版"]
+        emit:
+          - type: content_rating
+            normalized: "UNCENSORED"
+            token_index: -1
+        remove: true
+        confidence: 0.9
+      - tokens: ["规制解除版"]
+        emit:
+          - type: content_rating
+            normalized: "UNCENSORED"
+            token_index: -1
+        remove: true
+        confidence: 0.9
+
   - id: content_rating_uncensored_cn
     any_of:
       - tokens: ["无修正"]

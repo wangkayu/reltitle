@@ -1048,6 +1048,15 @@ func extractYearAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[]model.At
 			continue
 		}
 		y := strings.TrimSpace(tokens[i].Text)
+		// An explicit remake/version year is metadata even without a tech tail.
+		if strings.HasSuffix(y, "年版") {
+			year := strings.TrimSuffix(y, "年版")
+			if yearPattern.MatchString(year) {
+				*attrs = append(*attrs, model.Attribute{Type: model.AttrYear, Normalized: year, TokenStart: i, TokenEnd: i + 1, Confidence: 0.9, Source: model.AttrSourceYearToken})
+				tokens[i].Removed = true
+				continue
+			}
+		}
 		if !yearPattern.MatchString(y) {
 			continue
 		}

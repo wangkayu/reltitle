@@ -67,6 +67,11 @@ func (p *Parser) applyGroupRouteOverride(
 				continue
 			}
 		}
+		if r.forceRouteID == "group_baidong_underscore_alias_v1" {
+			if _, _, ok := applyBracketUnderscoreAliasBridge(rawTitle, title, nil); !ok {
+				continue
+			}
+		}
 		outGroup := group
 		outTitle := title
 		outAliases := aliases
@@ -154,12 +159,18 @@ func applyGroupTitleAliasSpecialization(rawTitle string, routeID string, title s
 		return applyFateStrangeFakeTitleAliasSpecialization(rawTitle, title, aliases)
 	case "group_underscore_delim_v1":
 		return applyUnderscoreDelimiterTitleAliasSpecialization(rawTitle, title, aliases)
+	case "group_baidong_underscore_alias_v1":
+		if main, alts, ok := applyBracketUnderscoreAliasBridge(rawTitle, title, nil); ok {
+			return main, alts
+		}
+		return title, aliases
 	default:
 		return title, aliases
 	}
 }
 
 func applyBracketUnderscoreAliasBridge(rawTitle string, title string, aliases []string) (string, []string, bool) {
+	rawTitle = strings.NewReplacer("【", "[", "】", "]").Replace(rawTitle)
 	if strings.TrimSpace(rawTitle) == "" {
 		return title, aliases, false
 	}

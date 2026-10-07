@@ -114,6 +114,13 @@ rules:
       normalized: AMZN
     priority: 100
 
+  - id: platform_mewatch
+    raw_tokens: ["mw", "mewatch"]
+    emit:
+      type: platform
+      normalized: MW
+    priority: 100
+
   - id: platform_ma
     raw_tokens: ["ma", "movies anywhere"]
     emit:

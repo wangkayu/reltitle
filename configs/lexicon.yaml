@@ -6541,23 +6541,31 @@ entries:
           - type: sub_flag
             normalized: "MULTI_SUBS"
             token_index: -1
+          - type: sub_flag
+            normalized: "soft"
+            token_index: -1
         remove: true
-        confidence: 0.75
+        confidence: 0.8
       - tokens: ["m-sub"]
         emit:
           - type: sub_flag
             normalized: "MULTI_SUBS"
             token_index: -1
+          - type: sub_flag
+            normalized: "soft"
+            token_index: -1
         remove: true
-        confidence: 0.75
+        confidence: 0.8
       - tokens: ["m_sub"]
         emit:
           - type: sub_flag
             normalized: "MULTI_SUBS"
             token_index: -1
+          - type: sub_flag
+            normalized: "soft"
+            token_index: -1
         remove: true
-        confidence: 0.75
-
+        confidence: 0.8
   - id: sub_meta_subs_word
     any_of:
       - scope: bracket
@@ -8170,6 +8178,23 @@ entries:
         token_index: 0
     remove: true
     confidence: 0.9
+
+  - id: platform_mewatch
+    any_of:
+      - tokens: ["mw"]
+        emit:
+          - type: platform
+            normalized: "MW"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - tokens: ["mewatch"]
+        emit:
+          - type: platform
+            normalized: "MW"
+            token_index: -1
+        remove: true
+        confidence: 0.9
 
   - id: platform_amazon
     any_of:

@@ -30,6 +30,7 @@ canonical:
     - UNEXT
     - AMZN
     - MA # Movies Anywhere; DTS-HD MA is an audio codec marker
+    - MW # meWATCH
     - BILIBILI
     - AT-X
     - BS11

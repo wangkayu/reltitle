@@ -131,6 +131,8 @@ func TestGeckoExplicitMetadata(t *testing.T) {
 		{"[CicakRumah] False Memory (2020) [v2, BSITE.WEB-DL 1080P HEVC, AAC D-AUD, D-SUB]", model.AttrVersion, "v2"},
 		{"[CicakRumah] False Memory (2020) [BSITE.WEB-DL 1080P AAC D-AUD, D-SUB]", model.AttrAudioFlag, "DUAL_AUDIO"},
 		{"[Gecko] Show - S01E01 [1080P AAC M-AUD, M-SUB]", model.AttrAudioFlag, "MULTI_AUDIO"},
+		{"[Gecko] Show - S01E01 [CTHP.WEB-DL 1080p AVC AAC M-SUB]", model.AttrSubFlag, "soft"},
+		{"[Gecko] Show - S01E01 [CTHP.WEB-DL 1080p AVC AAC D-SUB]", model.AttrSubFlag, "soft"},
 	} {
 		t.Run(tc.raw, func(t *testing.T) {
 			res, err := p.Parse(tc.raw)

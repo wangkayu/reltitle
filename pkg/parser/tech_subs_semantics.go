@@ -75,6 +75,45 @@ func isToonsHubCN(tokens []model.Token) bool {
 	return false
 }
 
+// langCodePart reports whether part is a known subtitle language code.
+func langCodePart(part string) bool {
+	switch part {
+	case "chs", "cht", "gb", "big5", "sc", "tc", "zh",
+		"jp", "jpn", "eng", "kor", "esp", "por", "fre", "rus":
+		return true
+	}
+	return false
+}
+
+// underscoreJoinedLangCombo reports whether s is exactly two language codes
+// joined by an underscore, e.g. "chs_jp", "gb_jpn". Like the lexicon's
+// code-combo entries (GB&JP, CHS&CHT), it is just two subtitle languages in
+// compact notation: split into independent sub_langs, no group, no sub_flag.
+func underscoreJoinedLangCombo(s string) bool {
+	parts := strings.Split(strings.TrimSpace(s), "_")
+	if len(parts) != 2 {
+		return false
+	}
+	return langCodePart(strings.TrimSpace(strings.ToLower(parts[0]))) && langCodePart(strings.TrimSpace(strings.ToLower(parts[1])))
+}
+
+// ampersandJoinedLangEnumeration reports whether s is two or more language
+// codes joined by "&", e.g. "chs&jp", "chs&cht&eng". Same convention as the
+// underscore combos: a pure language enumeration carries no enclosure
+// evidence, so it must not infer sub_flag soft.
+func ampersandJoinedLangEnumeration(s string) bool {
+	parts := strings.Split(strings.TrimSpace(s), "&")
+	if len(parts) < 2 {
+		return false
+	}
+	for _, p := range parts {
+		if !langCodePart(strings.TrimSpace(strings.ToLower(p))) {
+			return false
+		}
+	}
+	return true
+}
+
 func extractTechSubsSemanticsAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Attribute) {
 	if len(tokens) == 0 || attrs == nil {
 		return

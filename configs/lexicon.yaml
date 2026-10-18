@@ -5628,59 +5628,6 @@ entries:
         remove: true
         confidence: 0.7
       - scope: bracket
-        tokens: ["BIG5"]
-        emit:
-          - type: sub_lang
-            normalized: "TC"
-            token_index: 0
-        remove: true
-        confidence: 0.75
-
-      - scope: bracket
-        tokens: ["GB"]
-        emit:
-          - type: sub_lang
-            normalized: "SC"
-            token_index: 0
-        remove: true
-        confidence: 0.65
-
-      - scope: bracket
-        tokens: ["GB&JP"]
-        emit:
-          - type: sub_lang
-            normalized: "SC"
-            token_index: 0
-          - type: sub_lang
-            normalized: "JPN"
-            token_index: 0
-        remove: true
-        confidence: 0.7
-
-      - scope: bracket
-        tokens: ["CHS&CHT"]
-        emit:
-          - type: sub_lang
-            normalized: "SC"
-            token_index: 0
-          - type: sub_lang
-            normalized: "TC"
-            token_index: 0
-        remove: true
-        confidence: 0.7
-
-      - scope: bracket
-        tokens: ["GB_BIG5"]
-        emit:
-          - type: sub_lang
-            normalized: "SC"
-            token_index: 0
-          - type: sub_lang
-            normalized: "TC"
-            token_index: 0
-        remove: true
-        confidence: 0.7
-      - scope: bracket
         tokens: ["JP"]
         emit:
           - type: sub_lang
@@ -5696,17 +5643,6 @@ entries:
             token_index: 0
         remove: true
         confidence: 0.7
-      - scope: bracket
-        tokens: ["BIG5&JP"]
-        emit:
-          - type: sub_lang
-            normalized: "TC"
-            token_index: 0
-          - type: sub_lang
-            normalized: "JPN"
-            token_index: 0
-        remove: true
-        confidence: 0.75
 
   - id: sub_lang_cn_bracketed_words
     any_of:

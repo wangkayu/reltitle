@@ -204,6 +204,21 @@ func (e *audioSlotExtract) isRelatedCodec(existingCodec, newCodec string) bool {
 	return false
 }
 
+// tokenClaimedBySubtitle reports whether token i is covered by an attribute
+// emitted by the subtitle side (sub_lang / sub_flag / sub_lang_group /
+// sub_format), regardless of which pass produced it.
+func (e *audioSlotExtract) tokenClaimedBySubtitle(i int) bool {
+	for _, attr := range *e.attrs {
+		switch attr.Type {
+		case model.AttrSubLang, model.AttrSubFlag, model.AttrSubLangGroup, model.AttrSubFormat:
+			if attr.TokenStart <= i && i < attr.TokenEnd {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func (e *audioSlotExtract) hasLexiconExtractedRelatedCodec(tokenIdx int, codec string) bool {
 	attrs := e.attrs
 	for _, attr := range *attrs {
@@ -366,6 +381,11 @@ func (e *audioSlotExtract) emitFromSegment(start int, end int, conf float64) ([]
 			}
 		}
 		if l := e.canonLang(t); l != "" {
+			// 语言码已被字幕侧认领（removed 且被 sub_* 属性区间覆盖），且本段
+			// 没有任何编解码/配音证据时，不把它当作音轨语言（如 [CHS_JP]、[GB_JP]）。
+			if tokens[i].Removed && !containsAudioCodecOrDub && e.tokenClaimedBySubtitle(i) {
+				continue
+			}
 			curLang = l
 			curLangStart = i
 			e.addAttr(model.AttrAudioLang, l, i, i+1, conf)

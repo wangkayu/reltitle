@@ -66,6 +66,11 @@ func (e *techSubsSemanticsExtract) isSubsMarkerToken(s string) bool {
 	if strings.Contains(low, "chs") || strings.Contains(low, "cht") || strings.Contains(low, "jpn") || strings.Contains(low, "jp") || strings.Contains(low, "eng") || strings.Contains(low, "kor") {
 		return true
 	}
+	// GB/Big5 是明确的简/繁文字编码标记，语义等同于 CHS/CHT；
+	// 用词边界匹配避免 rgb、5GB 之类的误报。
+	if containsASCIIWordLike(low, "gb", "big5") {
+		return true
+	}
 	if strings.Contains(low, "ass") || strings.Contains(low, "srt") || strings.Contains(low, "pgs") || strings.Contains(low, "sup") || strings.Contains(low, "vobsub") {
 		return true
 	}
@@ -80,7 +85,7 @@ func (e *techSubsSemanticsExtract) isSubsMarkerToken(s string) bool {
 // corresponding attributes, marks the range removed on success, and reports
 // whether anything was emitted.
 var subtitleListCodes = map[string]string{
-	"chs": "SC", "sc": "SC", "cht": "TC", "tc": "TC",
+	"chs": "SC", "sc": "SC", "gb": "SC", "cht": "TC", "tc": "TC", "big5": "TC",
 	"ja": "JPN", "jp": "JPN", "jpn": "JPN", "en": "ENG", "eng": "ENG",
 	"ko": "KOR", "kor": "KOR", "es": "SPA", "pt": "POR", "fr": "FRA",
 	"de": "DEU", "it": "ITA", "ru": "RUS", "ar": "ARA", "id": "IND",
@@ -188,6 +193,10 @@ func (e *techSubsSemanticsExtract) emitFromSegment(start int, end int, conf floa
 		isSubsLike = true
 	}
 	if strings.Contains(noSpaceLower, "chs") || strings.Contains(noSpaceLower, "cht") || strings.Contains(noSpaceLower, "jpn") {
+		isSubsLike = true
+	}
+	// GB/Big5 是明确的简/繁编码标记，等同 CHS/CHT；词边界匹配防误报。
+	if containsASCIIWordLike(noSpaceLower, "gb", "big5") {
 		isSubsLike = true
 	}
 	if strings.Contains(noSpaceLower, "ass") || strings.Contains(noSpaceLower, "srt") || strings.Contains(noSpaceLower, "pgs") || strings.Contains(noSpaceLower, "sup") || strings.Contains(noSpaceLower, "vobsub") {
@@ -370,9 +379,13 @@ func (e *techSubsSemanticsExtract) emitFromSegment(start int, end int, conf floa
 		}
 	}
 	explicitJapaneseBilingual := strings.Contains(noSpace, "简日") || strings.Contains(noSpace, "簡日") || strings.Contains(noSpace, "繁日") || strings.Contains(noSpace, "简繁日") || strings.Contains(noSpace, "簡繁日") || strings.Contains(noSpace, "繁簡日")
+	// CHS_JP / GB_JPN 下划线组合与 CHS&JP / CHS&CHT&ENG & 连接列表都只是语言
+	// 枚举，与 GB&JP 等代码组合词条一致：拆成独立 sub_lang，不组队、不推 soft。
+	trimmedLower := strings.Trim(noSpaceLower, "[]【】()（）")
+	langEnumerationOnly := underscoreJoinedLangCombo(trimmedLower) || ampersandJoinedLangEnumeration(trimmedLower)
 	platformJapaneseBilingual := bilibili && len(langs) == 2 && langs["JPN"] && (langs["SC"] || langs["TC"])
 	independentLanguageList := len(langs) >= 2 && !explicitJapaneseBilingual && !platformJapaneseBilingual
-	if independentLanguageList && flag == "" {
+	if independentLanguageList && flag == "" && !langEnumerationOnly {
 		flag = "soft"
 	}
 	groups := map[string]bool{}

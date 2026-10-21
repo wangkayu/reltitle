@@ -938,9 +938,88 @@ func isStandaloneNumericBracketBlock(tokens []model.Token, idx int) bool {
 			found = true
 			continue
 		}
-		return false
+		return isDualEpisodeBracketBlockLead(tokens, idx, openIdx, closeIdx)
 	}
 	return found
+}
+
+// isUnderscoreDualEpisodeBracket reports whether the bracket block between
+// openIdx and closeIdx is exactly "N_M" read as a season episode and its
+// overall episode (see isUnderscoreDualEpisodePair).
+func isUnderscoreDualEpisodeBracket(tokens []model.Token, openIdx, closeIdx int) bool {
+	inner := make([]string, 0, 3)
+	for j := openIdx + 1; j < closeIdx && j < len(tokens); j++ {
+		if t := strings.TrimSpace(tokens[j].Text); t != "" {
+			inner = append(inner, t)
+		}
+	}
+	return len(inner) == 3 && inner[1] == "_" && isUnderscoreDualEpisodePair(tokens, inner[0], inner[2])
+}
+
+// isUnderscoreDualEpisodePair accepts "N_M" as season episode N and overall
+// episode M only with structural evidence: an explicit season above 1 and an
+// overall episode past the season episode ("S3 ... [03_51]"). Without it the
+// pair could be a range such as "[01_12]", so it is not read as one.
+func isUnderscoreDualEpisodePair(tokens []model.Token, lead, overall string) bool {
+	if !episodeOfTotalPattern.MatchString(lead) || !episodeOfTotalPattern.MatchString(overall) {
+		return false
+	}
+	season, err := strconv.Atoi(explicitSeasonNumberInTokens(tokens))
+	if err != nil || season <= 1 {
+		return false
+	}
+	l, _ := strconv.Atoi(lead)
+	o, _ := strconv.Atoi(overall)
+	return o > l
+}
+
+// explicitSeasonNumberInTokens returns the first explicit season marker value
+// ("S3", "S3E..", "第三季") in the token stream, or "".
+func explicitSeasonNumberInTokens(tokens []model.Token) string {
+	for _, tk := range tokens {
+		txt := strings.TrimSpace(tk.Text)
+		if m := seasonOnlyPattern.FindStringSubmatch(txt); len(m) == 2 {
+			return strings.TrimLeft(m[1], "0")
+		}
+		if m := seasonEmbeddedPattern.FindStringSubmatch(txt); len(m) == 2 {
+			return strings.TrimLeft(m[1], "0")
+		}
+		if m := seasonCJKPattern.FindStringSubmatch(txt); len(m) == 2 {
+			if v := parseSmallSeasonNumberToken(m[1]); v != "" {
+				return v
+			}
+		}
+	}
+	return ""
+}
+
+// isDualEpisodeBracketBlockLead reports whether idx is the leading number of a
+// bracket block that holds nothing but a season episode and its overall
+// episode, e.g. "[03(51)]" or "[03_51]". The lead is an episode even when it
+// echoes the season number.
+func isDualEpisodeBracketBlockLead(tokens []model.Token, idx, openIdx, closeIdx int) bool {
+	inner := make([]string, 0, 4)
+	leadPos := -1
+	for j := openIdx + 1; j < closeIdx; j++ {
+		t := strings.TrimSpace(tokens[j].Text)
+		if t == "" {
+			continue
+		}
+		if j == idx {
+			leadPos = len(inner)
+		}
+		inner = append(inner, t)
+	}
+	if leadPos != 0 || !episodeOfTotalPattern.MatchString(inner[0]) {
+		return false
+	}
+	switch len(inner) {
+	case 3:
+		return inner[1] == "_" && isUnderscoreDualEpisodePair(tokens, inner[0], inner[2])
+	case 4:
+		return (inner[1] == "(" && inner[3] == ")" || inner[1] == "（" && inner[3] == "）") && episodeOfTotalPattern.MatchString(inner[2])
+	}
+	return false
 }
 
 func looksLikeVolumeContextNumberToken(tokens []model.Token, idx int) bool {

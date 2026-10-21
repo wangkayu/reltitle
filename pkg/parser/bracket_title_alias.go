@@ -613,7 +613,7 @@ func scanBracketTitleBlocks(tokens []model.Token, attrs *[]model.Attribute, star
 			i = end
 			continue
 		}
-		if bracketContainsEpisodeMarker(inner) || bracketContainsEpisodeMarker(innerRaw) {
+		if bracketContainsEpisodeMarker(inner) || bracketContainsEpisodeMarker(innerRaw) || isUnderscoreDualEpisodeBracket(tokens, i, end) {
 			// Keep this block in tokens for episode detection. Do not consume it
 			// into title/alias candidates.
 			i = end

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/wangkayu/reltitle/pkg/config"
+	"github.com/wangkayu/reltitle/pkg/model"
 )
 
 func TestParserDualEpisode_SeasonEpisodeWithParenAbsolute(t *testing.T) {
@@ -167,5 +168,82 @@ func TestParserDualEpisode_SummaryEpisodeWithCatalogSxxExxAlternate(t *testing.T
 	}
 	if aliases := canonicalAliases(res); len(aliases) != 2 || aliases[0] != "游乐场少女的异文化交流" || aliases[1] != "Game Center Shoujo to Ibunka Kouryuu" {
 		t.Fatalf("aliases=%v want cleaned aliases", aliases)
+	}
+}
+
+func TestParserDualEpisode_SeasonEchoLeadWithParenOverall(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+	res, err := p.Parse("【豌豆字幕组】[药屋少女的呢喃（药师少女的独语）/ Kusuriya no Hitorigoto S3][03(51)][简体][1080P][MP4]")
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != model.ContentKindTVEP {
+		t.Fatalf("content_kind=%q want=TV_EP", got)
+	}
+	if got := canonicalSeason(res); got != "3" {
+		t.Fatalf("season=%q want=3", got)
+	}
+	if got := canonicalEpisode(res); got != "3" {
+		t.Fatalf("episode=%q want=3", got)
+	}
+	alts := canonicalEPAlternates(res)
+	if len(alts) != 1 || alts[0].Episode != "51" || alts[0].Relation != "overall" {
+		t.Fatalf("alternates=%+v want one overall 51", alts)
+	}
+}
+
+func TestParserDualEpisode_UnderscoreOverallInFileName(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+	res, err := p.Parse("[BeanSub][Kusuriya no Hitorigoto S3][03_51][CHS][1080P][x264_AAC].mp4")
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	if got := res.ContentKind; got != model.ContentKindTVEP {
+		t.Fatalf("content_kind=%q want=TV_EP", got)
+	}
+	if got := canonicalSeason(res); got != "3" {
+		t.Fatalf("season=%q want=3", got)
+	}
+	if got := canonicalEpisode(res); got != "3" {
+		t.Fatalf("episode=%q want=3", got)
+	}
+	alts := canonicalEPAlternates(res)
+	if len(alts) != 1 || alts[0].Episode != "51" || alts[0].Relation != "overall" {
+		t.Fatalf("alternates=%+v want one overall 51", alts)
+	}
+	if got := canonicalTitle(res); got != "Kusuriya no Hitorigoto" {
+		t.Fatalf("title=%q want=Kusuriya no Hitorigoto", got)
+	}
+}
+
+func TestParserDualEpisode_UnderscoreNeedsSeasonEvidence(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+	for _, raw := range []string{
+		"[BeanSub][Kusuriya no Hitorigoto][04_52][CHS][1080P].mp4",
+		"[Group][Title S1][01_12][1080P].mp4",
+		"[Group][Title S3][12_01][1080P].mp4",
+	} {
+		res, err := p.Parse(raw)
+		if err != nil {
+			t.Fatalf("%s: parse failed: %v", raw, err)
+		}
+		if alts := canonicalEPAlternates(res); len(alts) != 0 {
+			t.Fatalf("%s: alternates=%+v want none", raw, alts)
+		}
+		if got := canonicalEpisode(res); got != "" {
+			t.Fatalf("%s: episode=%q want none", raw, got)
+		}
 	}
 }

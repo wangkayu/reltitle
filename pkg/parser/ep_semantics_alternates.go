@@ -218,7 +218,10 @@ func detectParenAbsoluteEpisodeAlternate(tokens []model.Token, primary *model.EP
 	open := strings.TrimSpace(tokens[primary.TokenEnd].Text)
 	inner := strings.TrimSpace(tokens[primary.TokenEnd+1].Text)
 	close := strings.TrimSpace(tokens[primary.TokenEnd+2].Text)
-	if (open != "(" && open != "（") || (close != ")" && close != "）") {
+	paren := (open == "(" || open == "（") && (close == ")" || close == "）")
+	// "[03_51]": the underscore form carries the overall episode without parens.
+	underscore := open == "_" && (close == "]" || close == "】") && isStandaloneNumericBracketBlock(tokens, primary.TokenStart)
+	if !paren && !underscore {
 		return model.EPReference{}, false
 	}
 	if !episodeOfTotalPattern.MatchString(inner) && !reDetectParenAbsoluteEpisodeAlternate1.MatchString(inner) {

@@ -290,6 +290,7 @@ const (
 	AttrSourceVersionToken                   AttrSource = "version_token"
 	AttrSourceYearToken                      AttrSource = "year_token"
 	AttrSourceCRCToken                       AttrSource = "crc_token"
+	AttrSourceFileExtension                  AttrSource = "file_extension"
 	AttrSourceTechComboSpan                  AttrSource = "tech_combo_span"
 	AttrSourceTechComboToken                 AttrSource = "tech_combo_token"
 	AttrSourceTechAudioSlot                  AttrSource = "tech_audio_slot"

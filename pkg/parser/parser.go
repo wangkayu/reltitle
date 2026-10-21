@@ -701,6 +701,7 @@ func (p *Parser) Parse(rawTitle string) (*model.ParseResult, error) {
 		extractTechSubsSemanticsAndRemoveFromTokens(tokens, &attrs)
 	}
 	p.applyLexicon(tokens, &attrs)
+	markFileExtensionContainer(rawTitle, tokens, &attrs)
 	p.extractStableTechSpanComboAttrsAndRemoveFromTokens(tokens, &attrs)
 	p.extractLooseCodecBitDepthAttrsAndRemoveFromTokens(tokens, &attrs)
 	extractDashedAudioCodecAttrsAndRemoveFromTokens(tokens, &attrs)
@@ -1341,6 +1342,7 @@ func (p *Parser) canonicalizeAttributes(st *parseState) {
 	p.normalizeAudioAttrs(st.attrs)
 	st.attrs = p.normalizeSubtitleAttrs(st.attrs, st.tokens)
 	st.attrs = p.enrichBatchSourceTypeFromPackKind(st.attrs, st.contentKind)
+	st.attrs = reconcileFileExtensionContainer(st.attrs)
 	st.attrs = dedupeAttributes(st.attrs)
 	st.attrs = collapseOverlappingSpecificAudioCodecs(st.attrs)
 	st.ctx.AudioSlot = reconcileAudioSlotWithAttributes(st.ctx.AudioSlot, st.attrs)
@@ -1360,6 +1362,14 @@ func (p *Parser) finalizeEpisodeSignals(st *parseState) {
 		st.episodeRange = ""
 		st.episodeRangeIdx = -1
 		st.epslot = forceSPPrimaryFromSPKind(st.epslot, st.season, st.spKind)
+	}
+	// A single video file is not a season pack: a file that names a season
+	// but no episode, range or list of its own is unknown. A file that spans
+	// a range (one recording of "241-248") keeps its batch classification.
+	if st.contentKind.Canonical() == model.ContentKindBatch && hasFileExtensionContainer(st.attrs) &&
+		st.season != "" && st.episode == "" && st.episodeRange == "" && st.episodeList == "" {
+		st.contentKind = model.ContentKindUnknown
+		st.templateID = "TF_UNKNOWN_DEFAULT"
 	}
 	st.contentKind, st.episode, st.episodeList, st.episodeRange, st.epslot = pruneCanonicalEpisodeSignalsForOutput(st.rawTitle, st.contentKind, st.packKind, st.season, st.episode, st.episodeList, st.episodeRange, st.spKind, st.movieIndex, st.movieIndexRange, st.epslot)
 	if isUnknownOutput(st.contentKind, st.templateID) {

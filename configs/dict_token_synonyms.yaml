@@ -212,6 +212,13 @@ rules:
       normalized: VIUTV
     priority: 100
 
+  - id: platform_ivi
+    raw_tokens: ["ivi"]
+    emit:
+      type: platform
+      normalized: IVI
+    priority: 100
+
   - id: platform_catchplay
     raw_tokens: ["catchplay+", "catchplay", "cthp"]
     emit:

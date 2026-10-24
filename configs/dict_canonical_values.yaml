@@ -60,6 +60,7 @@ canonical:
     - VIU
     - WETV
     - VIKI
+    - IVI
 
   sub_flag:
     - hard

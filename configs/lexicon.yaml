@@ -9001,6 +9001,24 @@ entries:
     remove: true
     confidence: 0.8
 
+  - id: platform_ivi
+    any_of:
+      - tokens: ["ivi"]
+        emit:
+          - type: platform
+            normalized: "IVI"
+            token_index: -1
+        remove: true
+        confidence: 0.8
+      - scope: bracket
+        tokens: ["ivi"]
+        emit:
+          - type: platform
+            normalized: "IVI"
+            token_index: -1
+        remove: true
+        confidence: 0.78
+
   - id: platform_viki
     scope: bracket
     tokens: ["viki"]

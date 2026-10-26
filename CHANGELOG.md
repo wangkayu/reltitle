@@ -15,6 +15,8 @@ adapt. `1.0.0` will be declared once the output shape is stable.
 
 ## [Unreleased]
 
+## [0.0.2] - 2026-10-26
+
 ### Fixed
 
 - The bracketed composite subtitle codes `JPSC` and `JPTC` are now recognized

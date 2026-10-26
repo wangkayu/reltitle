@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  vet-and-test:
+    name: go vet and go test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Install the Go toolchain declared in go.mod
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: go vet
+        run: go vet ./...
+
+      # go test ./... also runs pkg/parser's golden corpus test
+      # (TestGoldenCorpus), which pins the parse output of the real titles in
+      # pkg/parser/testdata.
+      - name: go test
+        run: go test ./...

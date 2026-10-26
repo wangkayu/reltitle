@@ -5612,6 +5612,22 @@ entries:
         remove: true
         confidence: 0.75
       - scope: bracket
+        tokens: ["JPSC"]
+        emit:
+          - type: sub_lang
+            normalized: "JPSC"
+            token_index: 0
+        remove: true
+        confidence: 0.75
+      - scope: bracket
+        tokens: ["JPTC"]
+        emit:
+          - type: sub_lang
+            normalized: "JPTC"
+            token_index: 0
+        remove: true
+        confidence: 0.75
+      - scope: bracket
         tokens: ["SC"]
         emit:
           - type: sub_lang

@@ -15,6 +15,13 @@ adapt. `1.0.0` will be declared once the output shape is stable.
 
 ## [Unreleased]
 
+### Fixed
+
+- The bracketed composite subtitle codes `JPSC` and `JPTC` are now recognized
+  as `sub_lang` input tokens. Before, they were only produced as normalized
+  output values, so a title or filename tag such as `[JPSC]` yielded no
+  subtitle language.
+
 ## [0.0.1] - 2026-10-26
 
 First published version.

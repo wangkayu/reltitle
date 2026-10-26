@@ -42,3 +42,13 @@ CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o reltitle ./cmd/reltitle
 ```bash
 go test ./...
 ```
+
+## Versioning / Releases
+
+Releases are tagged `vMAJOR.MINOR.PATCH` and documented in
+[CHANGELOG.md](CHANGELOG.md). Because reltitle is used as a library, the version
+number describes the compatibility of its output: a patch release (`0.0.x`) adds
+dictionary entries or fixes parsing defects without changing the output shape, so
+consumers need no code change, while a minor release (`0.x.0`) changes the output
+shape — a field or an attribute dimension is added, renamed, or removed — and may
+require consumers to adapt. `1.0.0` follows once the output shape is stable.

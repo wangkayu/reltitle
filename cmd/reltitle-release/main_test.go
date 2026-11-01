@@ -274,17 +274,12 @@ func TestChannelCarriesTheBilingualNotes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"修复无修版识别", "新增常驻解析服务"}
-	if document.Notes == nil || len(document.Notes.ZhCN) != len(want) {
-		t.Fatalf("notes = %+v", document.Notes)
+	want := "- 修复无修版识别\n- 新增常驻解析服务"
+	if document.Notes == nil || document.Notes.ZhCN != want {
+		t.Fatalf("zh-CN notes = %+v, want %q", document.Notes, want)
 	}
-	for index, bullet := range want {
-		if document.Notes.ZhCN[index] != bullet {
-			t.Fatalf("zh-CN bullet %d = %q, want %q", index, document.Notes.ZhCN[index], bullet)
-		}
-	}
-	if len(document.Notes.EN) != 2 {
-		t.Fatalf("en notes = %v", document.Notes.EN)
+	if document.Notes.EN != "- Recognize the uncensored marker\n- Add the long-lived parse server" {
+		t.Fatalf("en notes = %q", document.Notes.EN)
 	}
 	if code, stderr := runRelease(t, "verify", "--manifest", manifestPath); code != 0 {
 		t.Fatalf("verify exit %d: %s", code, stderr)
@@ -377,14 +372,14 @@ func TestVerifyRefusesNotesOutsideTheVersionShape(t *testing.T) {
 		t.Fatalf("a stable manifest without notes exited %d: %s", code, stderr)
 	}
 	annotated := rewrite(testPath, func(document map[string]any) {
-		document["notes"] = map[string]any{"zh_cn": []string{"x"}, "en": []string{"y"}}
+		document["notes"] = map[string]any{"zh-CN": "- x", "en": "- y"}
 	})
 	code, stderr = runRelease(t, "verify", "--manifest", annotated)
 	if code == 0 || !strings.Contains(stderr, "carries release notes") {
 		t.Fatalf("a test build with notes exited %d: %s", code, stderr)
 	}
 	empty := rewrite(stablePath, func(document map[string]any) {
-		document["notes"] = map[string]any{"zh_cn": []string{}, "en": []string{}}
+		document["notes"] = map[string]any{"zh-CN": " ", "en": ""}
 	})
 	if code, _ := runRelease(t, "verify", "--manifest", empty); code == 0 {
 		t.Fatal("a manifest with empty notes verified")

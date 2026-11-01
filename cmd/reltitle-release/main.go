@@ -62,12 +62,14 @@ type manifest struct {
 	Signature string `json:"signature,omitempty"`
 }
 
-// notes is the release's own summary, one bullet list per language. It is part
-// of the manifest rather than a separate document so it cannot describe a
-// different release than the one the digest covers.
+// notes is the release's own summary, one markdown bullet list per language.
+// It is part of the manifest rather than a separate document so it cannot
+// describe a different release than the one the digest covers. The keys match
+// the consumer's app-release notes (`zh-CN`/`en`, markdown text), so one
+// renderer draws both the application and the component update panels.
 type notes struct {
-	ZhCN []string `json:"zh_cn"`
-	EN   []string `json:"en"`
+	ZhCN string `json:"zh-CN"`
+	EN   string `json:"en"`
 }
 
 // artifact is one platform's download: a path relative to the channel's
@@ -340,11 +342,15 @@ const (
 	maxNotesPerLanguage = 5
 	// maxNoteLength bounds one bullet, in characters.
 	maxNoteLength = 200
+	// maxNotesTextBytes bounds one language's published text, in bytes.
+	maxNotesTextBytes = 4 << 10
 )
 
 // readNotes parses a release notes file. The layout is deliberately narrow —
 // `## zh-CN` then `## en`, each followed by "- " bullets — so a mangled file
 // fails the release instead of publishing an empty summary for one language.
+// The bullets are published verbatim as markdown text, keeping the consumer's
+// renderer dumb: it draws whatever string it reads.
 func readNotes(path string) (notes, error) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
@@ -353,7 +359,8 @@ func readNotes(path string) (notes, error) {
 	if len(raw) > maxNotesBytes {
 		return notes{}, fmt.Errorf("release notes %s exceed %d bytes", path, maxNotesBytes)
 	}
-	var parsed notes
+	parsed := notes{}
+	var zh, en []string
 	section, seen := "", map[string]bool{}
 	for index, line := range strings.Split(string(raw), "\n") {
 		line = strings.TrimSpace(line)
@@ -380,11 +387,10 @@ func readNotes(path string) (notes, error) {
 		if section == "" {
 			return notes{}, fmt.Errorf("release notes line %d: the file must open with a \"## zh-CN\" section", index+1)
 		}
-		bullet, ok := strings.CutPrefix(line, "- ")
-		if !ok {
+		if _, ok := strings.CutPrefix(line, "- "); !ok {
 			return notes{}, fmt.Errorf("release notes line %d: %q is not a \"- \" bullet", index+1, line)
 		}
-		bullet = strings.TrimSpace(bullet)
+		bullet := strings.TrimSpace(strings.TrimPrefix(line, "- "))
 		if bullet == "" {
 			return notes{}, fmt.Errorf("release notes line %d: the bullet is empty", index+1)
 		}
@@ -392,11 +398,16 @@ func readNotes(path string) (notes, error) {
 			return notes{}, fmt.Errorf("release notes line %d: the bullet exceeds %d characters", index+1, maxNoteLength)
 		}
 		if section == "zh-CN" {
-			parsed.ZhCN = append(parsed.ZhCN, bullet)
+			zh = append(zh, "- "+bullet)
 		} else {
-			parsed.EN = append(parsed.EN, bullet)
+			en = append(en, "- "+bullet)
 		}
 	}
+	if len(zh) > maxNotesPerLanguage || len(en) > maxNotesPerLanguage {
+		return notes{}, fmt.Errorf("release notes allow at most %d bullets per language", maxNotesPerLanguage)
+	}
+	parsed.ZhCN = strings.Join(zh, "\n")
+	parsed.EN = strings.Join(en, "\n")
 	if err := parsed.validate(); err != nil {
 		return notes{}, err
 	}
@@ -404,11 +415,11 @@ func readNotes(path string) (notes, error) {
 }
 
 func (n notes) validate() error {
-	if len(n.ZhCN) == 0 || len(n.EN) == 0 {
+	if strings.TrimSpace(n.ZhCN) == "" || strings.TrimSpace(n.EN) == "" {
 		return errors.New("release notes need a zh-CN and an en section, each with at least one bullet")
 	}
-	if len(n.ZhCN) > maxNotesPerLanguage || len(n.EN) > maxNotesPerLanguage {
-		return fmt.Errorf("release notes allow at most %d bullets per language", maxNotesPerLanguage)
+	if len(n.ZhCN) > maxNotesTextBytes || len(n.EN) > maxNotesTextBytes {
+		return fmt.Errorf("release notes allow at most %d bytes per language", maxNotesTextBytes)
 	}
 	return nil
 }

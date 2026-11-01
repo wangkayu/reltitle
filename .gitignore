@@ -23,3 +23,12 @@ coverage.out
 
 # Internal development documentation (kept locally)
 /docs/
+
+# Development environment: specs, tasks and agent entry files live in the
+# private reltitle-dev repository, cloned at .trellis/ and linked into place by
+# .trellis/link-overlay.sh. This repository tracks code only.
+/.trellis/
+/CLAUDE.md
+/AGENTS.md
+/.claude/
+/.agents/skills/trellis-*

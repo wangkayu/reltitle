@@ -15,6 +15,15 @@ adapt. `1.0.0` will be declared once the output shape is stable.
 
 ## [Unreleased]
 
+### Fixed
+
+- The Fujimoto Tatsuki 17-26 title knowledge now also triggers on the western
+  name order `Tatsuki Fujimoto 17-26`. Releases such as
+  `[7³ACG] 藤本树 17-26/Tatsuki Fujimoto 17-26 S01 | 01-08 [简繁字幕] BDrip 1080p AV1`
+  previously read the title suffix `17-26` as a season/episode pair
+  (`S17E26`); the title span is now protected and `01-08` is parsed as the
+  collection's episode range.
+
 ## [0.0.2] - 2026-10-26
 
 ### Fixed

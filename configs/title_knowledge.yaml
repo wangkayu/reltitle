@@ -17,8 +17,9 @@ entries:
     raw_must_contain_all:
       - "17-26"
       - "Fujimoto Tatsuki"
-  # Western name order, seen in 7³ACG releases:
-  # [7³ACG] 藤本树 17-26/Tatsuki Fujimoto 17-26 S01 | 01-08 [...]
+  # Western name order: the romanized title follows the original one, so the
+  # trailing "17-26" belongs to the title and is not a season/episode pair.
+  # [SomeGroup] 藤本树 17-26/Tatsuki Fujimoto 17-26 S01 | 01-08 [...]
   - id: fujimoto_tatsuki_17_26_western_order
     enabled: true
     canonical_title: "藤本树 17-26"

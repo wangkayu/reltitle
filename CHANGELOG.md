@@ -35,11 +35,6 @@ adapt. `1.0.0` will be declared once the output shape is stable.
   as one fast-forward commit. The manifest can be signed with an Ed25519 key
   (`keygen`, `--key-file`/`--key-env`), but the published channel is unsigned:
   a consumer trusts the repository it reads over HTTPS, not a key file.
-- A stable manifest carries `notes` — the release's own summary as one bullet
-  list per language (`zh_cn`, `en`), read from `release-notes/<version>.md` with
-  `channel --notes`. The field rides in the document the digest covers, so a
-  consumer shows what an update changes without a second request. `verify`
-  requires it for a plain `X.Y.Z` and refuses it on a test build.
 
 ### Fixed
 

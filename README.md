@@ -46,7 +46,11 @@ go test ./...
 ## Versioning / Releases
 
 Releases are tagged `vMAJOR.MINOR.PATCH` and documented in
-[CHANGELOG.md](CHANGELOG.md). Because reltitle is used as a library, the version
+[CHANGELOG.md](CHANGELOG.md). Each release also carries a short bilingual
+summary in `release-notes/<version>.md`: it becomes the `notes` field of the
+published channel manifest (so a consumer shows what an update changes) and the
+body of the release page. A stable release must have one; a test build, cut from
+`main`, has none. Because reltitle is used as a library, the version
 number describes the compatibility of its output: a patch release (`0.0.x`) adds
 dictionary entries or fixes parsing defects without changing the output shape, so
 consumers need no code change, while a minor release (`0.x.0`) changes the output

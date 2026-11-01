@@ -35,6 +35,11 @@ adapt. `1.0.0` will be declared once the output shape is stable.
   as one fast-forward commit. The manifest can be signed with an Ed25519 key
   (`keygen`, `--key-file`/`--key-env`), but the published channel is unsigned:
   a consumer trusts the repository it reads over HTTPS, not a key file.
+- A stable manifest carries `notes` — the release's own summary as one bullet
+  list per language (`zh_cn`, `en`), read from `release-notes/<version>.md` with
+  `channel --notes`. The field rides in the document the digest covers, so a
+  consumer shows what an update changes without a second request. `verify`
+  requires it for a plain `X.Y.Z` and refuses it on a test build.
 
 ### Fixed
 
@@ -43,11 +48,10 @@ adapt. `1.0.0` will be declared once the output shape is stable.
   value `无修正` and `Uncensored` already produced. A consumer filtering on
   `content_rating` therefore sees both spellings alike.
 - The Fujimoto Tatsuki 17-26 title knowledge now also triggers on the western
-  name order `Tatsuki Fujimoto 17-26`. Releases such as
-  `[7³ACG] 藤本树 17-26/Tatsuki Fujimoto 17-26 S01 | 01-08 [简繁字幕] BDrip 1080p AV1`
-  previously read the title suffix `17-26` as a season/episode pair
-  (`S17E26`); the title span is now protected and `01-08` is parsed as the
-  collection's episode range.
+  name order `Tatsuki Fujimoto 17-26`. A release whose title suffix reads
+  `Tatsuki Fujimoto 17-26 S01 | 01-08` previously had `17-26` read as a
+  season/episode pair (`S17E26`); the title span is now protected and `01-08`
+  is parsed as the collection's episode range.
 
 ## [0.0.2] - 2026-10-26
 

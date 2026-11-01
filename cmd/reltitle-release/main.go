@@ -7,9 +7,15 @@
 //	reltitle-release keygen    --private key.txt [--public-out pub.txt]
 //	reltitle-release channel   --version 0.0.3 --sequence 3
 //	                           --artifact linux/amd64=dist/reltitle-linux-amd64 ...
-//	                           --key-file key.txt|--key-env NAME --out branch/
-//	reltitle-release verify    --manifest channel.json --public-key pub.txt
+//	                           --notes release-notes/0.0.3.md
+//	                           [--key-file key.txt|--key-env NAME] --out branch/
+//	reltitle-release verify    --manifest channel.json [--public-key pub.txt]
 //	reltitle-release next-sequence [--manifest channel.json]
+//
+// A stable release (a plain X.Y.Z) carries its own bilingual summary in the
+// manifest, so the consumer can show what an update changes without fetching
+// anything else. A test build (a version with a prerelease suffix) carries
+// none: it is a build of whatever main holds, not a described release.
 package main
 
 import (
@@ -27,6 +33,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 const (
@@ -45,6 +52,7 @@ type manifest struct {
 	Version       string              `json:"version"`
 	Sequence      int64               `json:"sequence"`
 	PublishedAt   string              `json:"published_at"`
+	Notes         *notes              `json:"notes,omitempty"`
 	Artifacts     map[string]artifact `json:"artifacts"`
 	ReleaseURL    string              `json:"release_url,omitempty"`
 	// Signature is optional: a channel published without a signing key omits
@@ -52,6 +60,14 @@ type manifest struct {
 	// accepts an unsigned document. When a key is used, the field carries the
 	// Ed25519 signature over the document without it.
 	Signature string `json:"signature,omitempty"`
+}
+
+// notes is the release's own summary, one bullet list per language. It is part
+// of the manifest rather than a separate document so it cannot describe a
+// different release than the one the digest covers.
+type notes struct {
+	ZhCN []string `json:"zh_cn"`
+	EN   []string `json:"en"`
 }
 
 // artifact is one platform's download: a path relative to the channel's
@@ -135,6 +151,7 @@ func channel(args []string, stderr io.Writer) error {
 	sequence := fs.Int64("sequence", 0, "publication counter for this channel")
 	publishedAt := fs.String("published-at", "", "RFC3339 timestamp; defaults to now")
 	releaseURL := fs.String("release-url", "", "human-facing release page")
+	notesPath := fs.String("notes", "", "release notes file; required for a stable version, refused for a test build")
 	keyFile := fs.String("key-file", "", "file holding the base64 secret seed")
 	keyEnv := fs.String("key-env", "", "environment variable holding the base64 secret seed")
 	out := fs.String("out", "", "staged branch root; the manifest lands in <out>/lines/<line>/channel.json")
@@ -159,6 +176,19 @@ func channel(args []string, stderr io.Writer) error {
 	if len(artifacts) == 0 {
 		return errors.New("channel needs at least one --artifact")
 	}
+	var releaseNotes *notes
+	switch stable := isStableVersion(*version); {
+	case *notesPath == "" && stable:
+		return fmt.Errorf("stable version %s needs --notes", strings.TrimPrefix(*version, "v"))
+	case *notesPath != "" && !stable:
+		return fmt.Errorf("%s is a test build and carries no --notes", *version)
+	case *notesPath != "":
+		parsed, err := readNotes(*notesPath)
+		if err != nil {
+			return err
+		}
+		releaseNotes = &parsed
+	}
 	var key []byte
 	if *keyFile != "" || *keyEnv != "" {
 		loaded, err := loadKey(*keyFile, *keyEnv)
@@ -179,6 +209,7 @@ func channel(args []string, stderr io.Writer) error {
 		Version:       strings.TrimPrefix(*version, "v"),
 		Sequence:      *sequence,
 		PublishedAt:   stamp,
+		Notes:         releaseNotes,
 		Artifacts:     map[string]artifact{},
 		ReleaseURL:    *releaseURL,
 	}
@@ -235,6 +266,9 @@ func verify(args []string, stderr io.Writer) error {
 	}
 	document, err := readManifest(*manifestPath)
 	if err != nil {
+		return err
+	}
+	if err := checkNotes(document); err != nil {
 		return err
 	}
 	if *publicKeyPath != "" || document.Signature != "" {
@@ -295,6 +329,127 @@ func readManifest(path string) (manifest, error) {
 		return document, errors.New("manifest is missing version, line or artifacts")
 	}
 	return document, nil
+}
+
+const (
+	// maxNotesBytes bounds the notes file: a release summary is a handful of
+	// sentences, so a file larger than this is a mistake, not a summary.
+	maxNotesBytes = 8 << 10
+	// maxNotesPerLanguage bounds each list, so the consumer can render a
+	// release without a scroller.
+	maxNotesPerLanguage = 5
+	// maxNoteLength bounds one bullet, in characters.
+	maxNoteLength = 200
+)
+
+// readNotes parses a release notes file. The layout is deliberately narrow —
+// `## zh-CN` then `## en`, each followed by "- " bullets — so a mangled file
+// fails the release instead of publishing an empty summary for one language.
+func readNotes(path string) (notes, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return notes{}, err
+	}
+	if len(raw) > maxNotesBytes {
+		return notes{}, fmt.Errorf("release notes %s exceed %d bytes", path, maxNotesBytes)
+	}
+	var parsed notes
+	section, seen := "", map[string]bool{}
+	for index, line := range strings.Split(string(raw), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		if heading, ok := strings.CutPrefix(line, "## "); ok {
+			name := strings.TrimSpace(heading)
+			switch name {
+			case "zh-CN", "en":
+			default:
+				return notes{}, fmt.Errorf("release notes line %d: section %q is not zh-CN or en", index+1, name)
+			}
+			if seen[name] {
+				return notes{}, fmt.Errorf("release notes line %d: section %q repeats", index+1, name)
+			}
+			if name == "zh-CN" && seen["en"] {
+				return notes{}, errors.New("release notes must list zh-CN before en")
+			}
+			seen[name] = true
+			section = name
+			continue
+		}
+		if section == "" {
+			return notes{}, fmt.Errorf("release notes line %d: the file must open with a \"## zh-CN\" section", index+1)
+		}
+		bullet, ok := strings.CutPrefix(line, "- ")
+		if !ok {
+			return notes{}, fmt.Errorf("release notes line %d: %q is not a \"- \" bullet", index+1, line)
+		}
+		bullet = strings.TrimSpace(bullet)
+		if bullet == "" {
+			return notes{}, fmt.Errorf("release notes line %d: the bullet is empty", index+1)
+		}
+		if utf8.RuneCountInString(bullet) > maxNoteLength {
+			return notes{}, fmt.Errorf("release notes line %d: the bullet exceeds %d characters", index+1, maxNoteLength)
+		}
+		if section == "zh-CN" {
+			parsed.ZhCN = append(parsed.ZhCN, bullet)
+		} else {
+			parsed.EN = append(parsed.EN, bullet)
+		}
+	}
+	if err := parsed.validate(); err != nil {
+		return notes{}, err
+	}
+	return parsed, nil
+}
+
+func (n notes) validate() error {
+	if len(n.ZhCN) == 0 || len(n.EN) == 0 {
+		return errors.New("release notes need a zh-CN and an en section, each with at least one bullet")
+	}
+	if len(n.ZhCN) > maxNotesPerLanguage || len(n.EN) > maxNotesPerLanguage {
+		return fmt.Errorf("release notes allow at most %d bullets per language", maxNotesPerLanguage)
+	}
+	return nil
+}
+
+// checkNotes proves the document carries the notes its version shape promises:
+// a stable release describes itself, a test build carries nothing.
+func checkNotes(document manifest) error {
+	if isStableVersion(document.Version) {
+		if document.Notes == nil {
+			return fmt.Errorf("stable version %s carries no release notes", document.Version)
+		}
+		return document.Notes.validate()
+	}
+	if document.Notes != nil {
+		return fmt.Errorf("test build %s carries release notes", document.Version)
+	}
+	return nil
+}
+
+// isStableVersion reports whether a version is a plain X.Y.Z with no
+// prerelease or build suffix.
+func isStableVersion(version string) bool {
+	version = strings.TrimPrefix(strings.TrimSpace(version), "v")
+	if version == "" || strings.ContainsAny(version, "-+") {
+		return false
+	}
+	parts := strings.Split(version, ".")
+	if len(parts) != 3 {
+		return false
+	}
+	for _, part := range parts {
+		if part == "" {
+			return false
+		}
+		for _, char := range part {
+			if char < '0' || char > '9' {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func loadKey(keyFile, keyEnv string) (ed25519.PrivateKey, error) {

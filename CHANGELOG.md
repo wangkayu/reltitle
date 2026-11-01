@@ -15,6 +15,39 @@ adapt. `1.0.0` will be declared once the output shape is stable.
 
 ## [Unreleased]
 
+## [0.0.3] - 2026-11-01
+
+### Added
+
+- `reltitle serve` runs a line protocol on stdin/stdout (`{"id","op","title"}` in,
+  one JSON response per line out) for a long-lived consumer: `hello` reports the
+  protocol (`rt-serve-1`), the build's version and line, and the dictionary
+  digest; `vocabulary` lists every attribute dimension's canonical values; `parse`
+  returns the same `ParseResult` the one-shot CLI prints. A bad request is
+  answered with an error and the process stays up.
+- `-version` prints the build's version, injected at build time with
+  `-ldflags "-X main.version=<X.Y.Z>"`.
+- `pkg/config.BundleDigest` computes the `lexicon:sha256:…` digest of a YAML
+  bundle, so a consumer and a separately built binary can prove they read the
+  same dictionary.
+- `cmd/reltitle-release` writes the channel manifest (`rt-channel-1`) and stages
+  the branch a release publishes; `scripts/publish-channel.sh` writes that branch
+  as one fast-forward commit. The manifest can be signed with an Ed25519 key
+  (`keygen`, `--key-file`/`--key-env`), but the published channel is unsigned:
+  a consumer trusts the repository it reads over HTTPS, not a key file.
+
+### Fixed
+
+- `无修版` / `無修版` / `完全无修版` / `完全無修版` and `[Uncensored Ver.]` now
+  emit `content_rating=UNCENSORED` instead of only a version note, matching the
+  value `无修正` and `Uncensored` already produced. A consumer filtering on
+  `content_rating` therefore sees both spellings alike.
+- The Fujimoto Tatsuki 17-26 title knowledge now also triggers on the western
+  name order `Tatsuki Fujimoto 17-26`. A release whose title suffix reads
+  `Tatsuki Fujimoto 17-26 S01 | 01-08` previously had `17-26` read as a
+  season/episode pair (`S17E26`); the title span is now protected and `01-08`
+  is parsed as the collection's episode range.
+
 ## [0.0.2] - 2026-10-26
 
 ### Fixed

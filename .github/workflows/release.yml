@@ -5,6 +5,12 @@ on:
     tags:
       - 'v*'
 
+# Tag runs use their own concurrency group and never cancel each other, so two
+# releases cannot interleave their channel writes.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   verify:
     name: go vet and go test
@@ -28,7 +34,7 @@ jobs:
         run: go test ./...
 
   release:
-    name: create the GitHub release
+    name: build and publish the stable channel
     needs: verify
     runs-on: ubuntu-latest
     permissions:
@@ -36,21 +42,108 @@ jobs:
     steps:
       - name: Check out the repository
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
-      - name: Extract the CHANGELOG section for this tag
+      - name: Install the Go toolchain declared in go.mod
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Check the tag names a plain release version
         run: |
           set -euo pipefail
-          notes_file="$(mktemp)"
-          scripts/changelog-section.sh "$GITHUB_REF_NAME" > "$notes_file"
-          printf 'NOTES_FILE=%s\n' "$notes_file" >> "$GITHUB_ENV"
-          printf -- '--- release notes for %s ---\n' "$GITHUB_REF_NAME"
-          cat "$notes_file"
+          if ! printf '%s' "$GITHUB_REF_NAME" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "tag $GITHUB_REF_NAME is not vX.Y.Z" >&2
+            exit 1
+          fi
+          version="${GITHUB_REF_NAME#v}"
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          IFS=. read -r major minor _patch <<< "$version"
+          echo "LINE=$major.$minor" >> "$GITHUB_ENV"
+
+      - name: Check the CHANGELOG has this release
+        run: scripts/changelog-section.sh "$GITHUB_REF_NAME" >/dev/null
+
+      # The notes file is the release's own summary: it becomes the manifest's
+      # bilingual `notes` field (so the consumer can show what an update
+      # changes) and the body of the release page. The CHANGELOG stays the
+      # per-change technical history.
+      - name: Read the release notes
+        run: |
+          set -euo pipefail
+          notes="release-notes/$VERSION.md"
+          if [ ! -f "$notes" ]; then
+            echo "release-notes/$VERSION.md is missing" >&2
+            exit 1
+          fi
+          printf 'RELEASE_NOTES=%s\n' "$notes" >> "$GITHUB_ENV"
+          cat "$notes"
+
+      - name: Build both architectures
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          for arch in amd64 arm64; do
+            CGO_ENABLED=0 GOOS=linux GOARCH="$arch" go build \
+              -trimpath -buildvcs=false \
+              -ldflags "-s -w -X main.version=$VERSION" \
+              -o "dist/reltitle-linux-$arch" ./cmd/reltitle
+          done
+          ./dist/reltitle-linux-amd64 -version
+
+      - name: Build the stable channel
+        run: |
+          set -euo pipefail
+          previous="$(mktemp)"
+          args=()
+          if git fetch --depth=1 origin update-channel >/dev/null 2>&1 &&
+             git show "FETCH_HEAD:lines/$LINE/channel.json" > "$previous"; then
+            published="$(jq -r '.version' "$previous")"
+            if [ -n "$published" ] && [ "$published" != "null" ]; then
+              newest="$(printf '%s\n%s\n' "$published" "$VERSION" | sort -V | tail -n1)"
+              if [ "$newest" != "$VERSION" ] || [ "$published" = "$VERSION" ]; then
+                echo "version $VERSION does not advance the published $published" >&2
+                exit 1
+              fi
+            fi
+            args=(--manifest "$previous")
+          fi
+          sequence="$(go run ./cmd/reltitle-release next-sequence "${args[@]}")"
+          go run ./cmd/reltitle-release channel \
+            --line "$LINE" \
+            --version "$VERSION" \
+            --sequence "$sequence" \
+            --release-url "https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}" \
+            --notes "$RELEASE_NOTES" \
+            --artifact "linux/amd64=dist/reltitle-linux-amd64" \
+            --artifact "linux/arm64=dist/reltitle-linux-arm64" \
+            --out channel
+          go run ./cmd/reltitle-release verify \
+            --manifest "channel/lines/$LINE/channel.json"
+
+      - name: Publish the stable channel
+        run: |
+          set -euo pipefail
+          scripts/publish-channel.sh update-channel channel "$VERSION" \
+            "channel: publish $VERSION"
 
       - name: Create the release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
+          body="$(mktemp)"
+          {
+            cat "$RELEASE_NOTES"
+            printf '\n---\n\n完整改动见 [CHANGELOG.md](%s/%s/blob/%s/CHANGELOG.md)。\n' \
+              "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_REF_NAME"
+            printf 'Every change is listed in the CHANGELOG.md at this tag.\n'
+          } > "$body"
           gh release create "$GITHUB_REF_NAME" \
             --verify-tag \
             --title "$GITHUB_REF_NAME" \
-            --notes-file "$NOTES_FILE"
+            --notes-file "$body" \
+            "dist/reltitle-linux-amd64#reltitle linux amd64" \
+            "dist/reltitle-linux-arm64#reltitle linux arm64"

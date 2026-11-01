@@ -162,7 +162,7 @@ content_type_inference:
     description: "Season Pack: 有Season marker但没有episode number"
     examples:
       - "Clevatess S01 ... 1080p BluRay"
-      - "Onmyoji S01 1080p NF WEB-DL"
+      - "Onmyoji S01 ... 1080p NF WEB-DL"
 
   - name: "season_pack_no_tech"
     priority: 58

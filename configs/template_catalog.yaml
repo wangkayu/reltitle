@@ -13,7 +13,7 @@ tv_episode_templates:
     confidence: 0.99
     description: "StreamingRelease: platform + WEB-DL/WEBRip, 标准TV格式"
     examples:
-      - "[ToonsHub] Kunon the Sorcerer Can See S01E01 1080p CR WEB-DL AAC2.0 H.264 (Majutsushi Kunon wa Mieteiru, Multi-Subs)"
+      - "[SomeGroup] Kunon the Sorcerer Can See S01E01 1080p CR WEB-DL AAC2.0 H.264 (Majutsushi Kunon wa Mieteiru, Multi-Subs)"
     route_id: "streaming_release_v1"
     signals:
       slot_order: ["G", "T", "E", "X"]
@@ -35,7 +35,7 @@ tv_episode_templates:
     confidence: 0.98
     description: "StreamingRelease: platform + WEB-DL/WEBRip, 标准TV格式（无连字符）"
     examples:
-      - "[ANi] Grand Blue Dreaming / GRAND BLUE 碧蓝之海 2 - 07 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
+      - "[Group] Grand Blue Dreaming / GRAND BLUE 碧蓝之海 2 - 07 [1080P][Baha][WEB-DL][AAC AVC][CHT][MP4]"
     route_id: "streaming_release_v1"
     signals:
       slot_order: ["G", "T", "E", "X"]
@@ -57,7 +57,7 @@ tv_episode_templates:
     confidence: 0.97
     description: "StreamingRelease: platform + WEB-DL/WEBRip, 无GROUP的TV格式"
     examples:
-      - "Lets Play S01E12 1080p CR WEB-DL DUAL AAC2.0 H 264-VARYG (Let’s Play: Quest Darake no My Life, Dual-Audio, Multi-Subs)"
+      - "Lets Play S01E12 1080p CR WEB-DL DUAL AAC2.0 H 264-GROUP (Let’s Play: Quest Darake no My Life, Dual-Audio, Multi-Subs)"
     route_id: "streaming_release_v1"
     signals:
       slot_order: ["T", "E", "X"]
@@ -79,7 +79,7 @@ tv_episode_templates:
     confidence: 0.99
     description: "StreamingRelease: platform + WEB-DL/WEBRip, SxxExx 格式"
     examples:
-      - "[ToonsHub] Ao no Miburo S02E03 1080p AMZN WEB-DL DDP2.0 H.264 (Blue Miburo)"
+      - "[SomeGroup] Ao no Miburo S02E03 1080p AMZN WEB-DL DDP2.0 H.264 (Blue Miburo)"
     route_id: "streaming_release_v1"
     signals:
       slot_order: ["G", "T", "SE", "X"]
@@ -102,7 +102,7 @@ tv_episode_templates:
     confidence: 0.98
     description: "StreamingRelease: platform + WEB-DL/WEBRip, 带 tailgroup 的 TV 格式"
     examples:
-      - "Lets Play S01E12 CONTINUE 1080p CR WEB-DL DUAL AAC2.0 H 264-VARYG (Let’s Play: Quest Darake no My Life, Dual-Audio, Multi-Subs)"
+      - "Lets Play S01E12 CONTINUE 1080p CR WEB-DL DUAL AAC2.0 H 264-GROUP (Let’s Play: Quest Darake no My Life, Dual-Audio, Multi-Subs)"
     route_id: "streaming_release_v1"
     signals:
       slot_order: ["T", "E", "X", "G"]
@@ -125,8 +125,8 @@ tv_episode_templates:
     confidence: 0.95
     description: "标准TV格式,带GROUP和连字符"
     examples:
-      - "[LoliHouse] 药屋少女 - 01 [WebRip 1080p HEVC AAC]"
-      - "[Nekomoe kissaten] 葬送的芙莉莲 - 28 [1080p]"
+      - "[Group] 药屋少女 - 01 [WebRip 1080p HEVC AAC]"
+      - "[SomeGroup] 葬送的芙莉莲 - 28 [1080p]"
     pattern:
       - segment_type: "bracket"
         contains: "group"
@@ -152,8 +152,8 @@ tv_episode_templates:
     confidence: 0.9
     description: "标准TV格式,无连字符"
     examples:
-      - "[ANi] 药屋少女 01 [1080P]"
-      - "[Lilith-Raws] 葬送的芙莉莲 28 [Baha]"
+      - "[Group] 药屋少女 01 [1080P]"
+      - "[AnotherGroup] 葬送的芙莉莲 28 [Baha]"
     signals:
       slot_order: ["G", "T", "E", "X"]
       group_position: "head"
@@ -196,8 +196,8 @@ tv_episode_templates:
       title_over_group_default: true
       tech_starts_after_ep: true
     examples:
-      - "Onmyoji - 01 1080p NF WEB-DL x264-HHWEB"
-      - "Kusuriya - E01 720p-SubsPlease"
+      - "Onmyoji - 01 1080p NF WEB-DL x264-GROUP"
+      - "Kusuriya - E01 720p-SubsGroup"
   
   - id: "TF_TV_SXXEXX_01"
     name: "[GROUP] TITLE S01E01 [TECH]"
@@ -224,7 +224,7 @@ tv_episode_templates:
     confidence: 0.85
     description: "SxxExx格式,无TECH"
     examples:
-      - "[DKB] TRIGUN STARGAZE - S02E02"
+      - "[Group] TRIGUN STARGAZE - S02E02"
 
   - id: "TF_TV_SXXEXX_03"
     name: "TITLE S01E01"
@@ -242,8 +242,8 @@ tv_episode_templates:
     confidence: 0.9
     description: "中文集数格式"
     examples:
-      - "[LoliHouse] 药屋少女 第01话 [1080p]"
-      - "[Nekomoe] 葬送的芙莉莲 第28集 [WebRip]"
+      - "[Group] 药屋少女 第01话 [1080p]"
+      - "[SomeGroup] 葬送的芙莉莲 第28集 [WebRip]"
 
   - id: "TF_TV_STANDARD_NO_TECH_01"
     name: "[GROUP] TITLE - EP"
@@ -252,7 +252,7 @@ tv_episode_templates:
     confidence: 0.6
     description: "标准TV格式,无TECH(用于tech未抽取时兜底)"
     examples:
-      - "[SubsPlease] MF Ghost - 27"
+      - "[SubsGroup] MF Ghost - 27"
 
   - id: "TF_TV_NO_GROUP_NO_TECH_01"
     name: "TITLE - EP"
@@ -312,7 +312,7 @@ batch_templates:
     confidence: 0.99
     description: "StreamingRelease: platform + WEB-DL/WEBRip, Season Pack 格式"
     examples:
-      - "SANDA S01 1080p AMZN WEB-DL MULTi DDP2.0 H 264-VARYG (Multi-Audio, Multi-Subs)"
+      - "SANDA S01 1080p AMZN WEB-DL MULTi DDP2.0 H 264-GROUP (Multi-Audio, Multi-Subs)"
     route_id: "streaming_release_v1"
     conditions:
       require:
@@ -326,7 +326,7 @@ batch_templates:
     confidence: 0.98
     description: "StreamingRelease: platform + WEB-DL/WEBRip, 带 GROUP 的 Season Pack 格式"
     examples:
-      - "[ToonsHub] Majutsushi Kunon wa Mieteiru S01 1080p AMZN WEB-DL DDP2.0 H.264"
+      - "[SomeGroup] Majutsushi Kunon wa Mieteiru S01 1080p AMZN WEB-DL DDP2.0 H.264"
     route_id: "streaming_release_v1"
     conditions:
       require:
@@ -368,8 +368,8 @@ batch_templates:
     confidence: 0.99
     description: "Streaming range pack with explicit pack marker"
     examples:
-      - "[Lilith-Raws x WitEx.io] Natsume Yuujinchou Go [01-11+3SP][Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]"
-      - "[Anime Time] One Piece (Egghead Arc) (1086-1155) [1080p][HEVC 10bit][AAC][Eng Sub] [Batch]"
+      - "[Group x AnotherGroup] Natsume Yuujinchou Go [01-11+3SP][Baha][WEB-DL][1080p][AVC AAC][CHT][MP4]"
+      - "[SomeGroup] One Piece (Egghead Arc) (1086-1155) [1080p][HEVC 10bit][AAC][Eng Sub] [Batch]"
     route_id: "streaming_release_v1"
     conditions:
       require:
@@ -402,8 +402,8 @@ batch_templates:
     confidence: 0.95
     description: "Season Pack格式,无GROUP"
     examples:
-      - "Clevatess S01 Majuu no Ou to Akago to Shikabane no Yuusha 1080p BluRay AV1 OPUS 2.0-7³ACG"
-      - "Onmyoji S01 1080p NF WEB-DL x264 DDP 5.1-HHWEB"
+      - "Clevatess S01 Majuu no Ou to Akago to Shikabane no Yuusha 1080p BluRay AV1 OPUS 2.0-GROUP"
+      - "Onmyoji S01 1080p NF WEB-DL x264 DDP 5.1-GROUP"
     key_signals:
       - has_season: true
       - no_episode: true
@@ -416,8 +416,8 @@ batch_templates:
     confidence: 0.95
     description: "Season Pack格式,带GROUP"
     examples:
-      - "[VCB-Studio] Shinka no Mi S01 [Ma10p_1080p]"
-      - "[Lilith-Raws] Anime Title Season 1 [BDRip]"
+      - "[Raws] Shinka no Mi S01 [Ma10p_1080p]"
+      - "[AnotherGroup] Anime Title Season 1 [BDRip]"
 
   - id: "TF_BATCH_RAW_SEASON_01"
     name: "[GROUP] TITLE S01 [TECH] (Raw Media)"
@@ -427,7 +427,7 @@ batch_templates:
     confidence: 0.96
     description: "Raw media season pack (BDMV/DVDISO/BD-BOX family)"
     examples:
-      - "[Moozzi2] Title S2 BD-BOX (BD 1920x1080 x265-10Bit FLAC) - TV + SP"
+      - "[RawGroup] Title S2 BD-BOX (BD 1920x1080 x265-10Bit FLAC) - TV + SP"
     conditions:
       require:
         source_type_in: ["BD", "BluRay", "DVD"]
@@ -468,7 +468,7 @@ batch_templates:
     confidence: 0.6
     description: "Season Pack格式,带GROUP,无TECH(用于tech未抽取时兜底)"
     examples:
-      - "[EMBER] Chanto Suenai Kyuuketsuki-chan (Season 1)"
+      - "[Group] Chanto Suenai Kyuuketsuki-chan (Season 1)"
 
   - id: "TF_BATCH_RIP_MEDIA_01"
     name: "[GROUP] TITLE [BDRip/DVDRip]"
@@ -561,8 +561,8 @@ batch_templates:
     confidence: 0.95
     description: "Episode Range格式,带GROUP"
     examples:
-      - "[VCB-Studio] Shinka no Mi 01-12 [Ma10p_1080p]"
-      - "[Lilith-Raws] 药屋少女 01-24 [BDRip]"
+      - "[Raws] Shinka no Mi 01-12 [Ma10p_1080p]"
+      - "[AnotherGroup] 药屋少女 01-24 [BDRip]"
 
   - id: "TF_BATCH_RANGE_PACK_01"
     name: "[GROUP] TITLE XX-XX [PACK] [TECH]"
@@ -571,8 +571,8 @@ batch_templates:
     confidence: 0.97
     description: "Episode range + pack marker + tech"
     examples:
-      - "[LoliHouse] 2.5-jigen no Ririsa [01-24 合集][WebRip 1080p HEVC-10bit AAC]"
-      - "[Anime Time] One Piece (Egghead Arc) (1086-1155) [Batch][1080p][HEVC 10bit]"
+      - "[Group] 2.5-jigen no Ririsa [01-24 合集][WebRip 1080p HEVC-10bit AAC]"
+      - "[SomeGroup] One Piece (Egghead Arc) (1086-1155) [Batch][1080p][HEVC 10bit]"
 
   - id: "TF_BATCH_RAW_RANGE_PACK_01"
     name: "[GROUP] TITLE XX-XX [PACK] [TECH] (Raw Media)"
@@ -594,8 +594,8 @@ batch_templates:
     confidence: 0.93
     description: "Episode range + pack marker, no strict tech requirement"
     examples:
-      - "[c.c动漫] [虽然是公会的柜台小姐...][01-12][合集][BIG5][720P][MP4]"
-      - "[PMFAN字幕组][宝可梦 钻石&珍珠][000-193+M10-M13][合集]"
+      - "[某字幕组] [虽然是公会的柜台小姐...][01-12][合集][BIG5][720P][MP4]"
+      - "[字幕组A][宝可梦 钻石&珍珠][000-193+M10-M13][合集]"
 
   - id: "TF_BATCH_RANGE_PACK_NOGROUP_01"
     name: "TITLE XX-XX [PACK] [TECH]"
@@ -637,8 +637,8 @@ batch_templates:
     confidence: 0.9
     description: "Episode Range中文格式"
     examples:
-      - "[LoliHouse] 药屋少女 第01-24话 [1080p]"
-      - "[Nekomoe] 葬送的芙莉莲 第01-28集 [BDRip]"
+      - "[Group] 药屋少女 第01-24话 [1080p]"
+      - "[SomeGroup] 葬送的芙莉莲 第01-28集 [BDRip]"
   
   # Complete/全集模板
   - id: "TF_BATCH_COMPLETE_01"
@@ -648,8 +648,8 @@ batch_templates:
     confidence: 0.95
     description: "Complete格式"
     examples:
-      - "[VCB-Studio] Shinka no Mi Complete [Ma10p_1080p]"
-      - "[Lilith-Raws] 药屋少女 Complete [BDRip]"
+      - "[Raws] Shinka no Mi Complete [Ma10p_1080p]"
+      - "[AnotherGroup] 药屋少女 Complete [BDRip]"
 
   - id: "TF_BATCH_RAW_COMPLETE_01"
     name: "[GROUP] TITLE Complete [TECH] (Raw Media)"
@@ -659,7 +659,7 @@ batch_templates:
     confidence: 0.96
     description: "Raw media complete pack (BDMV/DVDISO/BD-BOX family)"
     examples:
-      - "[Moozzi2] Title BD-BOX (BD 1920x1080 x265-10Bit FLAC) - TV + SP"
+      - "[RawGroup] Title BD-BOX (BD 1920x1080 x265-10Bit FLAC) - TV + SP"
     conditions:
       require:
         source_type_in: ["BD", "BluRay", "DVD"]
@@ -671,8 +671,8 @@ batch_templates:
     confidence: 0.95
     description: "全集中文格式"
     examples:
-      - "[LoliHouse] 药屋少女 全集 [1080p]"
-      - "[Nekomoe] 葬送的芙莉莲 全24集 [BDRip]"
+      - "[Group] 药屋少女 全集 [1080p]"
+      - "[SomeGroup] 葬送的芙莉莲 全24集 [BDRip]"
   
   - id: "TF_BATCH_COMPLETE_03"
     name: "[GROUP] TITLE Batch [TECH]"
@@ -681,8 +681,8 @@ batch_templates:
     confidence: 0.9
     description: "Batch格式"
     examples:
-      - "[SubsPlease] Kusuriya Batch [1080p]"
-      - "[Erai-raws] Anime Title Batch [720p]"
+      - "[SubsGroup] Kusuriya Batch [1080p]"
+      - "[Raws] Anime Title Batch [720p]"
 
   - id: "TF_BATCH_COMPLETE_RANGE_01"
     name: "[GROUP] TITLE Complete [RANGE] [TECH]"
@@ -691,8 +691,8 @@ batch_templates:
     confidence: 0.96
     description: "Complete pack with explicit range or range+special segment"
     examples:
-      - "[Amor字幕组][特利迦奥特曼][合集][1-25+特别篇][CHS][1080P]"
-      - "[动漫国&桜都字幕组][Silent Witch][01-13(全集)][1080P][MP4]"
+      - "[字幕组B][特利迦奥特曼][合集][1-25+特别篇][CHS][1080P]"
+      - "[字幕组C&字幕组D][Silent Witch][01-13(全集)][1080P][MP4]"
 
   - id: "TF_BATCH_COMPLETE_RANGE_02"
     name: "[GROUP] TITLE Complete [RANGE]"
@@ -711,9 +711,9 @@ batch_templates:
     confidence: 0.95
     description: "Batch with Contents - Episode Range + Movie/SP"
     examples:
-      - "[VCB-Studio] Shinka no Mi 01-12+Movie+OVA [Ma10p_1080p]"
-      - "[Lilith-Raws] 药屋少女 01-24+SP01-03 [BDRip]"
-      - "[LoliHouse] 葬送的芙莉莲 TV+Movie [1080p]"
+      - "[Raws] Shinka no Mi 01-12+Movie+OVA [Ma10p_1080p]"
+      - "[AnotherGroup] 药屋少女 01-24+SP01-03 [BDRip]"
+      - "[Group] 葬送的芙莉莲 TV+Movie [1080p]"
     contents_handling:
       priority: "episode_range > movie/sp"
       demotion: "movie_flag → contents, special_flag → contents"
@@ -743,8 +743,8 @@ movie_templates:
     confidence: 0.95
     description: "标准Movie格式,带GROUP"
     examples:
-      - "[LoliHouse] 名侦探柯南 Movie 27 百万美元的五棱星 [BDRip 1080p]"
-      - "[Nekomoe] 葬送的芙莉莲 The Movie [1080p]"
+      - "[Group] 名侦探柯南 Movie 27 百万美元的五棱星 [BDRip 1080p]"
+      - "[SomeGroup] 葬送的芙莉莲 The Movie [1080p]"
 
   - id: "TF_MOVIE_PT_TECH_01"
     name: "TITLE [TECH]"
@@ -772,8 +772,8 @@ movie_templates:
     confidence: 0.95
     description: "日文劇場版格式"
     examples:
-      - "[LoliHouse] 名侦探柯南 劇場版27 [BDRip 1080p]"
-      - "[Nekomoe] 葬送的芙莉莲 剧场版 [1080p]"
+      - "[Group] 名侦探柯南 劇場版27 [BDRip 1080p]"
+      - "[SomeGroup] 葬送的芙莉莲 剧场版 [1080p]"
   
   - id: "TF_MOVIE_CHINESE_01"
     name: "[GROUP] TITLE 大电影 [TECH]"
@@ -782,8 +782,8 @@ movie_templates:
     confidence: 0.9
     description: "中文大电影格式"
     examples:
-      - "[LoliHouse] 熊出没 大电影 [1080p]"
-      - "[Nekomoe] 喜羊羊 大電影 [BDRip]"
+      - "[Group] 熊出没 大电影 [1080p]"
+      - "[SomeGroup] 喜羊羊 大電影 [BDRip]"
   
   - id: "TF_MOVIE_INDEX_01"
     name: "[GROUP] TITLE Movie XX [TECH]"
@@ -792,8 +792,8 @@ movie_templates:
     confidence: 0.95
     description: "Movie with Index"
     examples:
-      - "[LoliHouse] 名侦探柯南 Movie 27 百万美元的五棱星 [BDRip]"
-      - "[Nekomoe] 葬送的芙莉莲 Movie 01 [1080p]"
+      - "[Group] 名侦探柯南 Movie 27 百万美元的五棱星 [BDRip]"
+      - "[SomeGroup] 葬送的芙莉莲 Movie 01 [1080p]"
   
   - id: "TF_MOVIE_INDEX_02"
     name: "[GROUP] TITLE 劇場版第X部 [TECH]"
@@ -802,8 +802,8 @@ movie_templates:
     confidence: 0.95
     description: "日文劇場版第X部格式"
     examples:
-      - "[LoliHouse] 名侦探柯南 劇場版第27部 [BDRip]"
-      - "[Nekomoe] 葬送的芙莉莲 剧场版第1部 [1080p]"
+      - "[Group] 名侦探柯南 劇場版第27部 [BDRip]"
+      - "[SomeGroup] 葬送的芙莉莲 剧场版第1部 [1080p]"
 
   - id: "TF_MOVIE_STANDARD_03"
     name: "[GROUP] TITLE Movie"
@@ -830,7 +830,7 @@ movie_templates:
     confidence: 0.9
     description: "日文劇場版格式,无TECH"
     examples:
-      - "[LoliHouse] 名侦探柯南 劇場版"
+      - "[Group] 名侦探柯南 劇場版"
 
   - id: "TF_MOVIE_JAPANESE_03"
     name: "TITLE 劇場版"
@@ -848,7 +848,7 @@ movie_templates:
     confidence: 0.9
     description: "日文劇場版第X部,无TECH"
     examples:
-      - "[LoliHouse] 名侦探柯南 劇場版第27部"
+      - "[Group] 名侦探柯南 劇場版第27部"
 
   - id: "TF_MOVIE_INDEX_04"
     name: "TITLE 劇場版第X部"
@@ -873,8 +873,8 @@ special_templates:
     confidence: 0.95
     description: "标准SP格式"
     examples:
-      - "[LoliHouse] 药屋少女 SP01 [1080p]"
-      - "[Nekomoe] 葬送的芙莉莲 SP02 [BDRip]"
+      - "[Group] 药屋少女 SP01 [1080p]"
+      - "[SomeGroup] 葬送的芙莉莲 SP02 [BDRip]"
   
   - id: "TF_SP_STANDARD_02"
     name: "TITLE SPXX [TECH]"
@@ -895,8 +895,8 @@ special_templates:
     confidence: 0.9
     description: "中文特别篇格式"
     examples:
-      - "[LoliHouse] 药屋少女 特别篇 [1080p]"
-      - "[Nekomoe] 葬送的芙莉莲 特別篇 [BDRip]"
+      - "[Group] 药屋少女 特别篇 [1080p]"
+      - "[SomeGroup] 葬送的芙莉莲 特別篇 [BDRip]"
   
   # OVA模板
   - id: "TF_OVA_STANDARD_01"
@@ -907,8 +907,8 @@ special_templates:
     confidence: 0.95
     description: "标准OVA格式"
     examples:
-      - "[LoliHouse] 药屋少女 OVA01 [1080p]"
-      - "[Nekomoe] 葬送的芙莉莲 OVA02 [BDRip]"
+      - "[Group] 药屋少女 OVA01 [1080p]"
+      - "[SomeGroup] 葬送的芙莉莲 OVA02 [BDRip]"
   
   - id: "TF_OVA_STANDARD_02"
     name: "TITLE OVAXX [TECH]"
@@ -929,8 +929,8 @@ special_templates:
     confidence: 0.85
     description: "OVA合集,没有具体编号"
     examples:
-      - "[VCB-Studio] Shinka no Mi OVA [Ma10p_1080p]"
-      - "[Lilith-Raws] 药屋少女 OVA [BDRip]"
+      - "[Raws] Shinka no Mi OVA [Ma10p_1080p]"
+      - "[AnotherGroup] 药屋少女 OVA [BDRip]"
   
   # OAD模板
   - id: "TF_OAD_STANDARD_01"
@@ -941,8 +941,8 @@ special_templates:
     confidence: 0.95
     description: "标准OAD格式"
     examples:
-      - "[LoliHouse] 药屋少女 OAD01 [1080p]"
-      - "[Nekomoe] 葬送的芙莉莲 OAD [BDRip]"
+      - "[Group] 药屋少女 OAD01 [1080p]"
+      - "[SomeGroup] 葬送的芙莉莲 OAD [BDRip]"
   
   # ONA模板
   - id: "TF_ONA_STANDARD_01"
@@ -953,8 +953,8 @@ special_templates:
     confidence: 0.95
     description: "标准ONA格式"
     examples:
-      - "[LoliHouse] 药屋少女 ONA01 [1080p]"
-      - "[Nekomoe] 葬送的芙莉莲 ONA [WebRip]"
+      - "[Group] 药屋少女 ONA01 [1080p]"
+      - "[SomeGroup] 葬送的芙莉莲 ONA [WebRip]"
   
   # EX模板
   - id: "TF_EX_STANDARD_01"
@@ -965,8 +965,8 @@ special_templates:
     confidence: 0.9
     description: "标准EX格式"
     examples:
-      - "[LoliHouse] 药屋少女 EX01 [1080p]"
-      - "[Nekomoe] 葬送的芙莉莲 Extra [BDRip]"
+      - "[Group] 药屋少女 EX01 [1080p]"
+      - "[SomeGroup] 葬送的芙莉莲 Extra [BDRip]"
 
 # ============================================================================
 # UNKNOWN 最小模板 (1个)
@@ -980,8 +980,8 @@ unknown_templates:
     confidence: 0.55
     description: "未知内容下的最小 G+T(+A) 模板，仅用于无 EP/TECH 锚点场景"
     examples:
-      - "[LoliHouse] 保龄球少女！ / Turkey!"
-      - "[Inka-Subs] Armor Hunter Merowlink (Mellowlink)"
+      - "[Group] 保龄球少女！ / Turkey!"
+      - "[SubsGroup] Armor Hunter Merowlink (Mellowlink)"
     route_id: "unknown_minimal_v1"
     signals:
       slot_order: ["G", "T"]

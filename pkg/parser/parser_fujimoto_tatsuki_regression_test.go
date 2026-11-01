@@ -121,6 +121,41 @@ func TestFujimotoTatsukiJapaneseTitleForm(t *testing.T) {
 	}
 }
 
+// Western name order ("Tatsuki Fujimoto" instead of "Fujimoto Tatsuki"), seen in
+// 7³ACG releases. The knowledge entry must still trigger so "17-26" is protected
+// and "01-08" is read as the collection's real episode span.
+func TestFujimotoTatsukiWesternNameOrderCollection(t *testing.T) {
+	raw := "[7³ACG] 藤本树 17-26/Tatsuki Fujimoto 17-26 S01 | 01-08 [简繁字幕] BDrip 1080p AV1"
+	res, err := loadFujimotoTatsukiParser(t).Parse(raw)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	if got := canonicalTitle(res); got != "藤本树 17-26" {
+		t.Fatalf("title=%q want %q", got, "藤本树 17-26")
+	}
+	if !containsAlias(canonicalAliases(res), "Tatsuki Fujimoto 17-26") {
+		t.Fatalf("missing western-order alias: %v", canonicalAliases(res))
+	}
+	// The title suffix must not be reinterpreted as a season/episode pair.
+	// "S01" anchors the collection on the season/episode axis; the range 1-8
+	// is the real episode span inside it.
+	if got := canonicalEPAxis(res); got != "SE" {
+		t.Fatalf("ep axis=%q want SE", got)
+	}
+	if got := canonicalEpisodeRange(res); got != "1-8" {
+		t.Fatalf("episode range=%q want 1-8", got)
+	}
+	if got := canonicalEPKind(res); got != "RANGE" {
+		t.Fatalf("ep kind=%q want RANGE", got)
+	}
+	if got := canonicalSeason(res); got != "1" {
+		t.Fatalf("season=%q want 1", got)
+	}
+	if got := res.ContentKind; got != "BATCH" {
+		t.Fatalf("content kind=%q want BATCH", got)
+	}
+}
+
 // The title-knowledge entry must not leak: an unrelated title containing "17-26"
 // keeps its regular episode interpretation.
 func TestUnrelatedTitle17_26NotAffectedByKnowledge(t *testing.T) {

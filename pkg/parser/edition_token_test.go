@@ -139,8 +139,11 @@ func TestEditionToken_UncensoredVer(t *testing.T) {
 	if canonicalEpisode(res) != "1" {
 		t.Fatalf("episode=%q want=1", canonicalEpisode(res))
 	}
-	if !hasParseAttrValue(res, model.AttrNote, "UNCENSORED_VER") {
-		t.Fatalf("expected note UNCENSORED_VER")
+	if !hasParseAttrValue(res, model.AttrContentRating, "UNCENSORED") {
+		t.Fatalf("expected content_rating UNCENSORED, got=%v", attrValues(res, model.AttrContentRating))
+	}
+	if hasParseAttrValue(res, model.AttrNote, "UNCENSORED_VER") {
+		t.Fatalf("unexpected note UNCENSORED_VER")
 	}
 }
 
@@ -299,8 +302,11 @@ func TestEditionToken_CompositeTVAndUncensoredHeadBlock(t *testing.T) {
 	if !hasParseAttrValue(res, model.AttrNote, "TV_VERSION") {
 		t.Fatalf("expected note TV_VERSION")
 	}
-	if !hasParseAttrValue(res, model.AttrNote, "UNCENSORED_VERSION") {
-		t.Fatalf("expected note UNCENSORED_VERSION")
+	if !hasParseAttrValue(res, model.AttrContentRating, "UNCENSORED") {
+		t.Fatalf("expected content_rating UNCENSORED, got=%v", attrValues(res, model.AttrContentRating))
+	}
+	if hasParseAttrValue(res, model.AttrNote, "UNCENSORED_VERSION") {
+		t.Fatalf("unexpected note UNCENSORED_VERSION")
 	}
 	if !hasAttrValue(attrValues(res, model.AttrSubLang), "SC") || !hasAttrValue(attrValues(res, model.AttrSubLang), "TC") {
 		t.Fatalf("expected sub_lang SC/TC, got=%v", attrValues(res, model.AttrSubLang))
@@ -332,8 +338,11 @@ func TestEditionToken_CompositeTVAndFullUncensoredHeadBlock(t *testing.T) {
 	if !hasParseAttrValue(res, model.AttrNote, "TV_VERSION") {
 		t.Fatalf("expected note TV_VERSION")
 	}
-	if !hasParseAttrValue(res, model.AttrNote, "UNCENSORED_VERSION") {
-		t.Fatalf("expected note UNCENSORED_VERSION")
+	if !hasParseAttrValue(res, model.AttrContentRating, "UNCENSORED") {
+		t.Fatalf("expected content_rating UNCENSORED, got=%v", attrValues(res, model.AttrContentRating))
+	}
+	if hasParseAttrValue(res, model.AttrNote, "UNCENSORED_VERSION") {
+		t.Fatalf("unexpected note UNCENSORED_VERSION")
 	}
 	if !hasAttrValue(attrValues(res, model.AttrSubLang), "SC") || !hasAttrValue(attrValues(res, model.AttrSubLang), "TC") {
 		t.Fatalf("expected sub_lang SC/TC, got=%v", attrValues(res, model.AttrSubLang))

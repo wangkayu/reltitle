@@ -161,6 +161,17 @@ rules:
       type: content_rating
       normalized: AGE_RESTRICTED
 
+  # 无修版 / 無修版 / 完全无修版 / 完全無修版 and "Uncensored Ver." are the same
+  # fact as 无修正 and Uncensored, which the lexicon already emits as
+  # content_rating. Promote the version notes so consumers reading
+  # content_rating see one value for every spelling.
+  - id: note_to_content_rating_uncensored
+    match:
+      note_values_case_insensitive: ["UNCENSORED_VERSION", "UNCENSORED_VER"]
+    promote_to:
+      type: content_rating
+      normalized: UNCENSORED
+
   - id: note_to_edition_bdmv
     match:
       note_values_case_insensitive: ["BDMV"]

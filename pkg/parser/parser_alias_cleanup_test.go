@@ -3097,9 +3097,11 @@ func TestParserLexicon_SubtitleStyleAndUncensoredMetaTokensAreConsumed(t *testin
 			t.Fatalf("meta token leaked into alias: %v", aliases)
 		}
 	}
+	if !hasAttrValue(attrValues(res, model.AttrContentRating), "UNCENSORED") {
+		t.Fatalf("expected content_rating=UNCENSORED, got=%v", attrValues(res, model.AttrContentRating))
+	}
 	notes := attrValues(res, model.AttrNote)
 	for _, want := range []string{
-		"UNCENSORED_VERSION",
 		"WATERMARK_FREE",
 		"EXTERNAL_SUBS",
 		"STYLIZED_SUBS",

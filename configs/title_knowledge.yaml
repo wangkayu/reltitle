@@ -17,6 +17,20 @@ entries:
     raw_must_contain_all:
       - "17-26"
       - "Fujimoto Tatsuki"
+  # Western name order: the romanized title follows the original one, so the
+  # trailing "17-26" belongs to the title and is not a season/episode pair.
+  # [SomeGroup] 藤本树 17-26/Tatsuki Fujimoto 17-26 S01 | 01-08 [...]
+  - id: fujimoto_tatsuki_17_26_western_order
+    enabled: true
+    canonical_title: "藤本树 17-26"
+    aliases:
+      - "Tatsuki Fujimoto 17-26"
+      - "Fujimoto Tatsuki 17-26"
+      - "藤本樹 17-26"
+      - "藤本タツキ17-26"
+    raw_must_contain_all:
+      - "17-26"
+      - "Tatsuki Fujimoto"
   # 22/7 (Nanabun no Nijuuni): the title itself contains digits and slashes,
   # easily mistaken for season/episode markers.
   - id: nanabun_no_nijuuni

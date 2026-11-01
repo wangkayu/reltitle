@@ -17,6 +17,10 @@ adapt. `1.0.0` will be declared once the output shape is stable.
 
 ### Fixed
 
+- `无修版` / `無修版` / `完全无修版` / `完全無修版` and `[Uncensored Ver.]` now
+  emit `content_rating=UNCENSORED` instead of only a version note, matching the
+  value `无修正` and `Uncensored` already produced. A consumer filtering on
+  `content_rating` therefore sees both spellings alike.
 - The Fujimoto Tatsuki 17-26 title knowledge now also triggers on the western
   name order `Tatsuki Fujimoto 17-26`. Releases such as
   `[7³ACG] 藤本树 17-26/Tatsuki Fujimoto 17-26 S01 | 01-08 [简繁字幕] BDrip 1080p AV1`

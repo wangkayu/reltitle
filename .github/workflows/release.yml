@@ -129,21 +129,17 @@ jobs:
           scripts/publish-channel.sh update-channel channel "$VERSION" \
             "channel: publish $VERSION"
 
+      # The release page carries no description of its own (owner 2026-11-01):
+      # the bilingual notes live in the manifest, and the CHANGELOG stays the
+      # one place a reader goes for what changed.
       - name: Create the release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          body="$(mktemp)"
-          {
-            cat "$RELEASE_NOTES"
-            printf '\n---\n\n完整改动见 [CHANGELOG.md](%s/%s/blob/%s/CHANGELOG.md)。\n' \
-              "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_REF_NAME"
-            printf 'Every change is listed in the CHANGELOG.md at this tag.\n'
-          } > "$body"
           gh release create "$GITHUB_REF_NAME" \
             --verify-tag \
             --title "$GITHUB_REF_NAME" \
-            --notes-file "$body" \
+            --notes "" \
             "dist/reltitle-linux-amd64#reltitle linux amd64" \
             "dist/reltitle-linux-arm64#reltitle linux arm64"

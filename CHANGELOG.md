@@ -15,6 +15,15 @@ adapt. `1.0.0` will be declared once the output shape is stable.
 
 ## [Unreleased]
 
+### Fixed
+
+- A four-digit year is never an episode-range bound. `<title> <year> - <ep>`
+  (`Ranma ½ 2024 - 27`) no longer parses as the range `2024-27`, which left the
+  video with no episode; the trailing episode is reported instead. The guard
+  covers every range-candidate branch, including the one that reuses the year
+  token after year extraction removed it. Real ranges (`1080-1085`,
+  `01 ~ 20`) are unchanged.
+
 ## [0.0.3] - 2026-11-01
 
 ### Added

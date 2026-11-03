@@ -120,6 +120,15 @@ var epPrefixedDigitsPattern = regexp.MustCompile(`(?i)^e(?:p)?(\d{1,4})$`)
 var episodeOfTotalPattern = regexp.MustCompile(`^(\d{1,4})$`)
 var leadingDigitsPattern = regexp.MustCompile(`^(\d{1,4})`)
 
+// yearRangeBound reports a four-digit plausible year. A year is metadata, not
+// an episode-range bound: year–year spans were already ignored, and a
+// year–episode shape (`Show 2024 - 27`) must not become the range 2024-27.
+// Year extraction usually removes the token before range scanning, so this
+// guard also applies where a Removed token stands in as an evaluated bound.
+func yearRangeBound(raw string) bool {
+	return yearPattern.MatchString(strings.TrimSpace(raw))
+}
+
 func isTitlePrefixedDigitRangeInBracket(tokens []model.Token, idx int) bool {
 	if idx < 0 || idx >= len(tokens) {
 		return false
@@ -241,6 +250,9 @@ func detectEpisodeRange(tokens []model.Token) (string, int) {
 			continue
 		}
 		if m := episodeRangePattern.FindStringSubmatch(strings.TrimSpace(tokens[i+1].Text)); len(m) == 3 {
+			if yearRangeBound(m[1]) || yearRangeBound(m[2]) {
+				continue
+			}
 			l := strings.TrimLeft(strings.TrimSpace(m[1]), "0")
 			if l == "" {
 				l = "0"
@@ -252,6 +264,9 @@ func detectEpisodeRange(tokens []model.Token) (string, int) {
 			return l + "-" + r, i + 1
 		}
 		if m := episodeRangeEmbeddedPattern.FindStringSubmatch(strings.TrimSpace(tokens[i+1].Text)); len(m) == 3 {
+			if yearRangeBound(m[1]) || yearRangeBound(m[2]) {
+				continue
+			}
 			l := strings.TrimLeft(strings.TrimSpace(m[1]), "0")
 			if l == "" {
 				l = "0"
@@ -274,6 +289,9 @@ func detectEpisodeRange(tokens []model.Token) (string, int) {
 				}
 			}
 			if episodeOfTotalPattern.MatchString(lraw) && (sep == "-" || sep == "~") && episodeOfTotalPattern.MatchString(rraw) {
+				if yearRangeBound(lraw) || yearRangeBound(rraw) {
+					continue
+				}
 				l := strings.TrimLeft(lraw, "0")
 				if l == "" {
 					l = "0"
@@ -305,6 +323,9 @@ func detectEpisodeRange(tokens []model.Token) (string, int) {
 			continue
 		}
 		if !isEpisodeRangeWordConnector(mid) {
+			continue
+		}
+		if yearRangeBound(lraw) || yearRangeBound(rraw) {
 			continue
 		}
 		l := strings.TrimLeft(lraw, "0")
@@ -350,14 +371,8 @@ func detectEpisodeRange(tokens []model.Token) (string, int) {
 		if r == "" {
 			r = "0"
 		}
-		if len(m[1]) == 4 && len(rawR) == 4 {
-			if y1, err1 := strconv.Atoi(m[1]); err1 == nil {
-				if y2, err2 := strconv.Atoi(rawR); err2 == nil {
-					if y1 >= 1900 && y1 <= 2099 && y2 >= 1900 && y2 <= 2099 {
-						continue
-					}
-				}
-			}
+		if yearRangeBound(m[1]) || yearRangeBound(rawR) {
+			continue
 		}
 		return l + "-" + r, i
 	}
@@ -390,6 +405,11 @@ func detectEpisodeRange(tokens []model.Token) (string, int) {
 			if !episodeOfTotalPattern.MatchString(leftRaw) {
 				continue
 			}
+			// A year consumed by year extraction is not a range left bound;
+			// reusing it would turn "Show 2024 - 27" into the range 2024-27.
+			if yearRangeBound(leftRaw) {
+				continue
+			}
 			if sep != "-" && sep != "~" && !isEpisodeRangeWordConnector(sep) {
 				continue
 			}
@@ -411,6 +431,9 @@ func detectEpisodeRange(tokens []model.Token) (string, int) {
 					continue
 				}
 				if m := reDetectEpisodeRange1.FindStringSubmatch(strings.TrimSpace(txt)); len(m) == 3 {
+					if yearRangeBound(m[1]) || yearRangeBound(m[2]) {
+						continue
+					}
 					l := strings.TrimLeft(m[1], "0")
 					if l == "" {
 						l = "0"
@@ -445,14 +468,8 @@ func detectEpisodeRange(tokens []model.Token) (string, int) {
 			}
 			m := episodeRangePattern.FindStringSubmatch(tokens[i].Text)
 			if len(m) == 3 {
-				if len(m[1]) == 4 && len(m[2]) == 4 {
-					if y1, err1 := strconv.Atoi(m[1]); err1 == nil {
-						if y2, err2 := strconv.Atoi(m[2]); err2 == nil {
-							if y1 >= 1900 && y1 <= 2099 && y2 >= 1900 && y2 <= 2099 {
-								continue
-							}
-						}
-					}
+				if yearRangeBound(m[1]) || yearRangeBound(m[2]) {
+					continue
 				}
 			}
 			return normalizeEpisodeRangeText(tokens[i].Text), i
@@ -461,14 +478,8 @@ func detectEpisodeRange(tokens []model.Token) (string, int) {
 			if hasPartIndexLeadBeforeToken(tokens, i) {
 				continue
 			}
-			if len(m[1]) == 4 && len(m[2]) == 4 {
-				if y1, err1 := strconv.Atoi(m[1]); err1 == nil {
-					if y2, err2 := strconv.Atoi(m[2]); err2 == nil {
-						if y1 >= 1900 && y1 <= 2099 && y2 >= 1900 && y2 <= 2099 {
-							continue
-						}
-					}
-				}
+			if yearRangeBound(m[1]) || yearRangeBound(m[2]) {
+				continue
 			}
 			return normalizeEpisodeRangeText(m[1] + "-" + m[2]), i
 		}
@@ -500,14 +511,8 @@ func detectEpisodeRange(tokens []model.Token) (string, int) {
 							r = "0"
 						}
 						if l != "0" && r != "0" {
-							if len(lraw) == 4 && len(rraw) == 4 {
-								if y1, err1 := strconv.Atoi(lraw); err1 == nil {
-									if y2, err2 := strconv.Atoi(rraw); err2 == nil {
-										if y1 >= 1900 && y1 <= 2099 && y2 >= 1900 && y2 <= 2099 {
-											continue
-										}
-									}
-								}
+							if yearRangeBound(lraw) || yearRangeBound(rraw) {
+								continue
 							}
 							return l + "-" + r, i
 						}
@@ -525,14 +530,8 @@ func detectEpisodeRange(tokens []model.Token) (string, int) {
 					// Keep a year guard to avoid interpreting year spans as episodes.
 					if !inBracket && !inParen {
 						leftRaw := strings.TrimSpace(tokens[i].Text)
-						if len(leftRaw) == 4 && len(rawR) == 4 {
-							if y1, err1 := strconv.Atoi(leftRaw); err1 == nil {
-								if y2, err2 := strconv.Atoi(rawR); err2 == nil {
-									if y1 >= 1900 && y1 <= 2099 && y2 >= 1900 && y2 <= 2099 {
-										continue
-									}
-								}
-							}
+						if yearRangeBound(leftRaw) || yearRangeBound(rawR) {
+							continue
 						}
 						l := strings.TrimLeft(leftRaw, "0")
 						if l == "" {
@@ -556,14 +555,8 @@ func detectEpisodeRange(tokens []model.Token) (string, int) {
 						if r == "" {
 							r = "0"
 						}
-						if len(strings.TrimSpace(tokens[i].Text)) == 4 && len(rawR) == 4 {
-							if y1, err1 := strconv.Atoi(strings.TrimSpace(tokens[i].Text)); err1 == nil {
-								if y2, err2 := strconv.Atoi(rawR); err2 == nil {
-									if y1 >= 1900 && y1 <= 2099 && y2 >= 1900 && y2 <= 2099 {
-										continue
-									}
-								}
-							}
+						if yearRangeBound(strings.TrimSpace(tokens[i].Text)) || yearRangeBound(rawR) {
+							continue
 						}
 						return l + "-" + r, i
 					}
@@ -579,14 +572,8 @@ func detectEpisodeRange(tokens []model.Token) (string, int) {
 						if r == "" {
 							r = "0"
 						}
-						if len(strings.TrimSpace(tokens[i].Text)) == 4 && len(rawR) == 4 {
-							if y1, err1 := strconv.Atoi(strings.TrimSpace(tokens[i].Text)); err1 == nil {
-								if y2, err2 := strconv.Atoi(rawR); err2 == nil {
-									if y1 >= 1900 && y1 <= 2099 && y2 >= 1900 && y2 <= 2099 {
-										continue
-									}
-								}
-							}
+						if yearRangeBound(strings.TrimSpace(tokens[i].Text)) || yearRangeBound(rawR) {
+							continue
 						}
 						return l + "-" + r, i
 					}

@@ -717,6 +717,7 @@ func (p *Parser) Parse(rawTitle string) (*model.ParseResult, error) {
 	p.normalizeSourceTypeAttrs(attrs)
 	convertRegionAttrsToPlatformRegion(attrs)
 	extractWxHResolutionAttrsAndRemoveFromTokens(tokens, &attrs)
+	extractDateAttrsAndRemoveFromTokens(tokens, &attrs)
 	extractYearAttrsAndRemoveFromTokens(tokens, &attrs, hasTechAttr(attrs))
 	removePreYearNoiseNumberTokens(tokens)
 	tailParenBlock := detectTailParenBlock(tokens)

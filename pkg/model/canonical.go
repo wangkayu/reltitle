@@ -116,6 +116,14 @@ func (r *ParseResult) CanonicalVersion() string {
 	return r.firstAttrValue(AttrVersion)
 }
 
+func (r *ParseResult) CanonicalYear() string {
+	return r.firstAttrValue(AttrYear)
+}
+
+func (r *ParseResult) CanonicalDate() string {
+	return r.firstAttrValue(AttrDate)
+}
+
 func (r *ParseResult) CanonicalPackKind() string {
 	return r.firstAttrValue(AttrPackKind)
 }

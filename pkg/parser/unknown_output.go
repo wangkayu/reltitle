@@ -57,6 +57,7 @@ func keepUnknownOutputAttribute(a model.Attribute) bool {
 	switch a.Type {
 	case model.AttrGroup, model.AttrTitle, model.AttrTitleAlias,
 		model.AttrEdition, model.AttrReleaseStatus,
+		model.AttrDate,
 		model.AttrSourceType, model.AttrResolution, model.AttrVideoCodec,
 		model.AttrAudioCodec, model.AttrBitDepth, model.AttrContainer,
 		model.AttrPlatform, model.AttrPlatformRegion, model.AttrOriginRegion,

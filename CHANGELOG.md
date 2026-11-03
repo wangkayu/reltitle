@@ -15,6 +15,14 @@ adapt. `1.0.0` will be declared once the output shape is stable.
 
 ## [Unreleased]
 
+### Added
+
+- A `date` attribute dimension: a calendar date (`2020-04-14`, `2026.03.29`,
+  `2020/04/14`, `2020_04_14`, `2020年4月14日`, `20200414`) is reported
+  normalized as `YYYY-MM-DD` with source `date_token`, and its tokens are
+  claimed. This adds an attribute dimension, so it is a MINOR output change.
+  The date's year is still reported as a `year` attribute.
+
 ### Fixed
 
 - A four-digit year is never an episode-range bound. `<title> <year> - <ep>`
@@ -23,6 +31,9 @@ adapt. `1.0.0` will be declared once the output shape is stable.
   covers every range-candidate branch, including the one that reuses the year
   token after year extraction removed it. Real ranges (`1080-1085`,
   `01 ~ 20`) are unchanged.
+- A bracketed date is no longer read as a leftover month–day range: the year
+  token used to be removed alone, and `[2020-04-14]` became `RANGE 4-14`.
+  With the whole date claimed, `[2020-04-14]` yields no episode or range.
 
 ## [0.0.3] - 2026-11-01
 

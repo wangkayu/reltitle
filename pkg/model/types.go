@@ -55,8 +55,9 @@ type Token struct {
 	Text    string `json:"text"`
 	Removed bool   `json:"removed,omitempty"`
 
-	// Protected marks tokens that belong to a known title span (from title_knowledge.yaml).
-	// Episode/season/range detection must never reinterpret them.
+	// Protected marks tokens that episode/season/range scanning must never
+	// reinterpret: known title spans (from title_knowledge.yaml), structural
+	// title digits, and spans another extractor has claimed (a calendar date).
 	Protected bool `json:"-"`
 }
 
@@ -158,6 +159,7 @@ const (
 	AttrPackProfile     AttrType = "pack_profile"
 	AttrSPKind          AttrType = "sp_kind"
 	AttrYear            AttrType = "year"
+	AttrDate            AttrType = "date"
 	AttrMovieIndex      AttrType = "movie_index"
 	AttrMovieIndexRange AttrType = "movie_index_range"
 	AttrMovieFlag       AttrType = "movie_flag"
@@ -289,6 +291,7 @@ const (
 	AttrSourceEditionToken                   AttrSource = "edition_token"
 	AttrSourceVersionToken                   AttrSource = "version_token"
 	AttrSourceYearToken                      AttrSource = "year_token"
+	AttrSourceDateToken                      AttrSource = "date_token"
 	AttrSourceCRCToken                       AttrSource = "crc_token"
 	AttrSourceFileExtension                  AttrSource = "file_extension"
 	AttrSourceTechComboSpan                  AttrSource = "tech_combo_span"

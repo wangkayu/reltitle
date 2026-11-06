@@ -148,6 +148,35 @@ func TestNextSequenceStartsAtOneWithoutAManifest(t *testing.T) {
 	}
 }
 
+// The counter comes from a document the line already published, written by
+// whatever release tool was current then: v0.0.3 carries `notes` as zh_cn/en
+// bullet lists, a shape this build no longer writes. A strict decode would
+// refuse the very file the next release has to advance.
+func TestNextSequenceReadsAPreviouslyPublishedManifest(t *testing.T) {
+	const published = `{
+  "schema_version": "rt-channel-1",
+  "line": "0.0",
+  "protocol": "rt-serve-1",
+  "version": "0.0.3",
+  "sequence": 7,
+  "published_at": "2026-11-01T08:59:41Z",
+  "notes": {"zh_cn": ["- 旧版说明"], "en": ["- an older note"]},
+  "artifacts": {"linux/amd64": {"path": "0.0.3/reltitle-linux-amd64", "sha256": "00", "size": 1}},
+  "release_url": "https://example.invalid/releases/tag/v0.0.3"
+}`
+	path := filepath.Join(t.TempDir(), "channel.json")
+	if err := os.WriteFile(path, []byte(published), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	code, stdout, stderr := runReleaseOutput(t, "next-sequence", "--manifest", path)
+	if code != 0 {
+		t.Fatalf("exit %d: %s", code, stderr)
+	}
+	if strings.TrimSpace(stdout) != "8" {
+		t.Fatalf("next sequence = %q, want 8", strings.TrimSpace(stdout))
+	}
+}
+
 func TestVerifyRejectsATamperedManifest(t *testing.T) {
 	dir := t.TempDir()
 	private := filepath.Join(dir, "key.txt")

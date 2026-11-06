@@ -13,15 +13,16 @@ no code change. A MINOR release (`0.x.0`) changes the output shape (a field or
 an attribute dimension is added, renamed, or removed), so consumers have to
 adapt. `1.0.0` will be declared once the output shape is stable.
 
-## [Unreleased]
+## [0.0.4] - 2026-11-06
 
 ### Added
 
 - A `date` attribute dimension: a calendar date (`2020-04-14`, `2026.03.29`,
   `2020/04/14`, `2020_04_14`, `2020年4月14日`, `20200414`) is reported
   normalized as `YYYY-MM-DD` with source `date_token`, and its tokens are
-  claimed. This adds an attribute dimension, so it is a MINOR output change.
-  The date's year is still reported as a `year` attribute.
+  claimed. No existing dimension, field or value key changes; a consumer that
+  does not use the new dimension needs no change. The date's year is still
+  reported as a `year` attribute.
 
 ### Fixed
 

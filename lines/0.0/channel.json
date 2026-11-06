@@ -2,20 +2,20 @@
   "schema_version": "rt-channel-1",
   "line": "0.0",
   "protocol": "rt-serve-1",
-  "version": "0.0.4-test.10",
-  "sequence": 8,
-  "published_at": "2026-11-01T13:53:30Z",
+  "version": "0.0.5-test.11",
+  "sequence": 9,
+  "published_at": "2026-11-06T00:25:01Z",
   "artifacts": {
     "linux/amd64": {
-      "path": "0.0.4-test.10/reltitle-linux-amd64",
-      "sha256": "8dc9d375b799fe722f8dcaef9f528b87ac6f16d8442cb63cfea52d4368cd4ff2",
-      "size": 3862680
+      "path": "0.0.5-test.11/reltitle-linux-amd64",
+      "sha256": "e22a98b88f8d3b2c4f16df0439e9cc2e7eed58f062f7121953bf9ef33b6f6f02",
+      "size": 3866776
     },
     "linux/arm64": {
-      "path": "0.0.4-test.10/reltitle-linux-arm64",
-      "sha256": "2c4e76bca77a4a4eb4fd1f99376c77099b9068c13f820a9ea64717fa396baad3",
+      "path": "0.0.5-test.11/reltitle-linux-arm64",
+      "sha256": "628f55eb3278a70e051a20f31a337f8fd2947b2f1aec48b10010849afab515f8",
       "size": 3735704
     }
   },
-  "release_url": "https://github.com/wangkayu/reltitle/commit/f4ff246e3c0143356787170e3e89b70511f93040"
+  "release_url": "https://github.com/wangkayu/reltitle/commit/7affa3cce7eb16c288dd90234f42dae1672333a8"
 }

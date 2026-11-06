@@ -299,15 +299,43 @@ func nextSequence(args []string, stdout, stderr io.Writer) error {
 	next := int64(1)
 	if *manifestPath != "" {
 		if _, err := os.Stat(*manifestPath); err == nil {
-			document, err := readManifest(*manifestPath)
+			published, err := readPublishedSequence(*manifestPath)
 			if err != nil {
 				return err
 			}
-			next = document.Sequence + 1
+			next = published + 1
 		}
 	}
 	fmt.Fprintln(stdout, next)
 	return nil
+}
+
+// readPublishedSequence returns the counter of a document already on a channel
+// branch. Only the counter is read, and unknown fields are tolerated: the
+// document was written by whichever release tool the line was publishing with,
+// so it may carry a shape this build no longer knows (v0.0.3 published `notes`
+// as `zh_cn` bullet lists). verify stays strict about the document this build
+// writes.
+func readPublishedSequence(path string) (int64, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return 0, err
+	}
+	var document struct {
+		SchemaVersion string `json:"schema_version"`
+		Version       string `json:"version"`
+		Sequence      int64  `json:"sequence"`
+	}
+	if err := json.Unmarshal(raw, &document); err != nil {
+		return 0, fmt.Errorf("parse manifest: %w", err)
+	}
+	if document.SchemaVersion != SchemaVersion {
+		return 0, fmt.Errorf("manifest schema %q is not %s", document.SchemaVersion, SchemaVersion)
+	}
+	if document.Version == "" || document.Sequence < 1 {
+		return 0, errors.New("manifest is missing version or sequence")
+	}
+	return document.Sequence, nil
 }
 
 func readManifest(path string) (manifest, error) {

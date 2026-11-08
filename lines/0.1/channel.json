@@ -1,0 +1,25 @@
+{
+  "schema_version": "rt-channel-1",
+  "line": "0.1",
+  "protocol": "rt-serve-1",
+  "version": "0.1.0",
+  "sequence": 1,
+  "published_at": "2026-11-08T06:29:12Z",
+  "notes": {
+    "zh-CN": "- 本次为 MINOR：`content_rating`、分辨率、`version`、`remux` 等取值已归一，按标签配置的筛选规则请在升级后复核。\n- 新增 `revision`（`REPACK`/`RESEED`/`CORRECTED`/`PROPER`）与 `upscaled`（`UPSCALED`/`AI_UPSCALED`/`UPSCALED_4K`）维度；升级到 4K 的写法同时给出 `resolution=2160p`。\n- 同一写法不再串值：`BD`/`BDRip`/`BluRay`、`TS`/`M2TS`、`UHD` 系与光盘版本各自成值；通用 `MPEG` 归 `MPEG2`。\n- 字幕文件名支持语言码（`zh-CN`、`zh-Hans`、`ja`、`track3` 等）与格式（`ass`、`srt`、`vtt` 等）；`[JPSC\u0026JPTC]` 逐个输出；`MULTI` 归字幕语言。\n- 新增识别 `Dual.Audio`/`Dual-Audio`、`杜比全景声`、`1080P60`、`RMVB`、`Deluxe Edition`、`简体字幕`/`繁字`、`DTS:X`、`[HLG]`；修复 Erai `(CA)` 音轨、丸子家族日期重复与 `[848x480][RMVB]` 分辨率丢失。",
+    "en": "- This is a minor release: `content_rating`, resolution, `version` and `remux` values now normalize, so review existing tag rules after upgrading.\n- Adds the `revision` (`REPACK`, `RESEED`, `CORRECTED`, `PROPER`) and `upscaled` (`UPSCALED`, `AI_UPSCALED`, `UPSCALED_4K`) dimensions; an upscale to 4K also reports `resolution=2160p`.\n- Spellings no longer share a value: `BD`, `BDRip` and `BluRay` stand alone, as do `TS`/`M2TS`, `UHD` variants and disc editions; a generic `MPEG` reports `MPEG2`.\n- A subtitle file name reports its language (`zh-CN`, `zh-Hans`, `ja`, `track3`) and format (`ass`, `srt`, `vtt`); `[JPSC\u0026JPTC]` reports each code, and `MULTI` is a subtitle language.\n- Newly recognized: `Dual.Audio`/`Dual-Audio`, `杜比全景声`, `1080P60`, `RMVB`, `Deluxe Edition`, `简体字幕`/`繁字`, `DTS:X` and `[HLG]`; fixes Erai `(CA)`, the Maruko date note and `[848x480][RMVB]`."
+  },
+  "artifacts": {
+    "linux/amd64": {
+      "path": "0.1.0/reltitle-linux-amd64",
+      "sha256": "c8a748d8571e9d5462013b3157b79153a35b13ef53df411a62e785d5b94031e4",
+      "size": 3899544
+    },
+    "linux/arm64": {
+      "path": "0.1.0/reltitle-linux-arm64",
+      "sha256": "d9ea7137dbf8e1682b243fe4d0a5494f8eba41a0d575f62ffbf63fc4fbe69cc6",
+      "size": 3801240
+    }
+  },
+  "release_url": "https://github.com/wangkayu/reltitle/releases/tag/v0.1.0"
+}

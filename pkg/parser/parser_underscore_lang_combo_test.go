@@ -7,9 +7,10 @@ import (
 )
 
 // Underscore-joined language combos such as CHS_JP are a compact notation for
-// two subtitle languages. Like the lexicon's code-combo entries (GB&JP),
-// they split into independent sub_langs with no group and no sub_flag;
-// an explicit enclosure marker (e.g. 简日内嵌) wins when both appear.
+// two subtitle languages. A code list is an enumeration, not the compound
+// Chinese spelling, so it stays split into independent sub_langs with no
+// group and no sub_flag; an explicit enclosure marker (e.g. 简日内嵌) wins
+// when both appear.
 func TestUnderscoreJoinedLangComboDoesNotInferSoft(t *testing.T) {
 	p, err := NewDefault()
 	if err != nil {
@@ -93,7 +94,8 @@ func TestSubClaimedLangCodeNotAudioLang(t *testing.T) {
 }
 
 // Ampersand-joined language lists are language enumerations too (dual/multi
-// language): split into independent sub_langs, no group, no sub_flag.
+// language): split into independent sub_langs, no group, no sub_flag. A list
+// of already-compound codes (JPSC&JPTC) enumerates those values as they are.
 func TestAmpersandJoinedLangListDualLanguage(t *testing.T) {
 	p, err := NewDefault()
 	if err != nil {
@@ -109,6 +111,7 @@ func TestAmpersandJoinedLangListDualLanguage(t *testing.T) {
 		{"[G][Show][01][1080p][GB&JP]", []string{"SC", "JPN"}},
 		{"[G][Show][01][1080p][GB_ENG]", []string{"SC", "ENG"}},
 		{"[G][Show][01][1080p][BIG5&JP]", []string{"TC", "JPN"}},
+		{"[G][Show][01][1080p][JPSC&JPTC]", []string{"JPSC", "JPTC"}},
 	} {
 		t.Run(tc.raw, func(t *testing.T) {
 			res, err := p.Parse(tc.raw)

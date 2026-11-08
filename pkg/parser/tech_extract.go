@@ -227,8 +227,26 @@ func (p *Parser) extractStableTechSpanComboAttrsAndRemoveFromTokens(tokens []mod
 		nonSepCount := 0
 		coreCount := 0
 
+		// DTS-HD Master Audio spans several tokens (DTS-HD MA, DTS HD MA,
+		// DTS-HD.MA); recognize it as one core fact so the trailing MA is not
+		// read as a platform.
+		if seqStart, seqEnd, ok := findDTSHDMASequence(tokens, open+1, close); ok {
+			blockAttrs = append(blockAttrs, model.Attribute{
+				Type:       model.AttrAudioCodec,
+				Normalized: "DTSHDMA",
+				TokenStart: seqStart,
+				TokenEnd:   seqEnd,
+				Confidence: 0.78,
+				Source:     model.AttrSourceTechComboSpan,
+			})
+			coreCount++
+			for k := seqStart; k < seqEnd; k++ {
+				recognized[k] = true
+			}
+		}
+
 		for j := open + 1; j < close; j++ {
-			if tokens[j].Removed {
+			if tokens[j].Removed || recognized[j] {
 				continue
 			}
 			txt := strings.TrimSpace(tokens[j].Text)
@@ -278,6 +296,42 @@ func (p *Parser) extractStableTechSpanComboAttrsAndRemoveFromTokens(tokens []mod
 		}
 		i = close
 	}
+}
+
+// findDTSHDMASequence locates a DTS-HD Master Audio spelling inside the token
+// range [start, end): DTS-HD MA, DTS HD MA, DTS-HD.MA, DTS-HDMA. It returns
+// the span covering the whole codec and reports whether one was found. A
+// plain DTS or DTS-HD without the Master Audio marker is left to the
+// standalone audio extractor.
+func findDTSHDMASequence(tokens []model.Token, start, end int) (int, int, bool) {
+	for i := start; i < end; i++ {
+		if tokens[i].Removed || !strings.EqualFold(strings.TrimSpace(tokens[i].Text), "dts") {
+			continue
+		}
+		j := skipTechDelimiters(tokens, i+1, end)
+		if j >= end || tokens[j].Removed {
+			continue
+		}
+		second := strings.TrimSpace(tokens[j].Text)
+		if strings.EqualFold(second, "hdma") {
+			return i, j + 1, true
+		}
+		if !strings.EqualFold(second, "hd") {
+			continue
+		}
+		j = skipTechDelimiters(tokens, j+1, end)
+		if j < end && !tokens[j].Removed && strings.EqualFold(strings.TrimSpace(tokens[j].Text), "ma") {
+			return i, j + 1, true
+		}
+	}
+	return 0, 0, false
+}
+
+func skipTechDelimiters(tokens []model.Token, j, end int) int {
+	for j < end && !tokens[j].Removed && isTechDelimiterToken(tokens[j].Text) {
+		j++
+	}
+	return j
 }
 
 func isTechDelimiterToken(s string) bool {
@@ -352,16 +406,20 @@ func (p *Parser) inferStableTechTokenAttrs(raw string, idx int) ([]model.Attribu
 			}
 		}
 		if low == "remux" {
-			out = append(out, model.Attribute{Type: model.AttrType("remux"), Normalized: "REMUX", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.74, Source: model.AttrSourceTechComboSpan})
+			out = append(out, model.Attribute{Type: model.AttrSourceType, Normalized: "Remux", TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.74, Source: model.AttrSourceTechComboSpan})
 			continue
 		}
 		if norm, ok := p.sourceTypeCanonical[low]; ok && strings.TrimSpace(norm) != "" {
 			out = append(out, model.Attribute{Type: model.AttrSourceType, Normalized: norm, TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: model.AttrSourceTechComboSpan})
 			continue
 		}
-		if norm, ok := p.platformCanonical[low]; ok && strings.TrimSpace(norm) != "" {
-			out = append(out, model.Attribute{Type: model.AttrPlatform, Normalized: norm, TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.74, Source: model.AttrSourceTechComboSpan})
-			continue
+		// A bare MA inside a tech block is Master Audio; the Movies Anywhere
+		// platform is only ever implied by the lexicon's WEB-DL/WEBRip rules.
+		if low != "ma" {
+			if norm, ok := p.platformCanonical[low]; ok && strings.TrimSpace(norm) != "" {
+				out = append(out, model.Attribute{Type: model.AttrPlatform, Normalized: norm, TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.74, Source: model.AttrSourceTechComboSpan})
+				continue
+			}
 		}
 		if norm, ok := p.normalizeVideoCodecToken(low); ok {
 			out = append(out, model.Attribute{Type: model.AttrVideoCodec, Normalized: norm, TokenStart: idx, TokenEnd: idx + 1, Confidence: 0.76, Source: model.AttrSourceTechComboSpan})
@@ -1040,6 +1098,20 @@ func (p *Parser) extractStandaloneAudioCodecAttrsAndRemoveFromTokens(tokens []mo
 		if norm == "" {
 			continue
 		}
+		if strings.EqualFold(norm, "DTSHD") {
+			if end, ok := dtsMasterAudioSuffix(tokens, spanEnd); ok {
+				norm = "DTSHDMA"
+				spanEnd = end
+			}
+		}
+		// DTS HD MA without hyphens.
+		if strings.EqualFold(norm, "DTS") && i+2 < len(tokens) &&
+			!tokens[i+1].Removed && !tokens[i+2].Removed &&
+			strings.EqualFold(strings.TrimSpace(tokens[i+1].Text), "hd") &&
+			strings.EqualFold(strings.TrimSpace(tokens[i+2].Text), "ma") {
+			norm = "DTSHDMA"
+			spanEnd = i + 3
+		}
 		if !isInBracket(tokens, i) && !isInParen(tokens, i) && !hasNearbyTechContext(tokens, i, 4) && !p.hasNearbyAudioCodecToken(tokens, i, 4) {
 			continue
 		}
@@ -1058,6 +1130,23 @@ func (p *Parser) extractStandaloneAudioCodecAttrsAndRemoveFromTokens(tokens []mo
 			tokens[k].Removed = true
 		}
 	}
+}
+
+// dtsMasterAudioSuffix reports whether the tokens at start continue a DTS-HD
+// codec as Master Audio ("ma" or ".ma") and returns the end of that span.
+func dtsMasterAudioSuffix(tokens []model.Token, start int) (int, bool) {
+	if start < 0 || start >= len(tokens) {
+		return 0, false
+	}
+	if !tokens[start].Removed && strings.EqualFold(strings.TrimSpace(tokens[start].Text), "ma") {
+		return start + 1, true
+	}
+	if start+1 < len(tokens) && !tokens[start].Removed && !tokens[start+1].Removed &&
+		strings.TrimSpace(tokens[start].Text) == "." &&
+		strings.EqualFold(strings.TrimSpace(tokens[start+1].Text), "ma") {
+		return start + 2, true
+	}
+	return 0, false
 }
 
 func isTechTokenConsumeAttrType(t model.AttrType) bool {

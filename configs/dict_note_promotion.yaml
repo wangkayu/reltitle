@@ -28,12 +28,29 @@ rules:
       type: source_type
       normalized: HDTV
 
+  # One rule per spelling so the promoted value is the spelling's own source
+  # type; promoting every form to BDRip left `[BD]` reporting both BD and
+  # BDRip for one token.
   - id: note_to_source_bd
     match:
-      note_values_case_insensitive: ["BD", "BDRIP", "BLURAY", "BLU-RAY"]
+      note_values_case_insensitive: ["BD"]
+    promote_to:
+      type: source_type
+      normalized: BD
+
+  - id: note_to_source_bdrip
+    match:
+      note_values_case_insensitive: ["BDRIP", "BD-RIP"]
     promote_to:
       type: source_type
       normalized: BDRip
+
+  - id: note_to_source_bluray
+    match:
+      note_values_case_insensitive: ["BLURAY", "BLU-RAY"]
+    promote_to:
+      type: source_type
+      normalized: BluRay
 
   - id: note_to_source_dvd
     match:

@@ -204,6 +204,17 @@ func (e *audioSlotExtract) isRelatedCodec(existingCodec, newCodec string) bool {
 	return false
 }
 
+// isDTSXSeparator reports whether s separates "DTS" from its ":X" object
+// marker (DTS:X, DTS-X, DTS.X).
+func isDTSXSeparator(s string) bool {
+	switch strings.TrimSpace(s) {
+	case ":", "-", ".":
+		return true
+	default:
+		return false
+	}
+}
+
 // tokenClaimedBySubtitle reports whether token i is covered by an attribute
 // emitted by the subtitle side (sub_lang / sub_flag / sub_lang_group /
 // sub_format), regardless of which pass produced it.
@@ -461,8 +472,17 @@ func (e *audioSlotExtract) emitFromSegment(start int, end int, conf float64) ([]
 		if codec == "" {
 			continue
 		}
+		// DTS:X is written as DTS:X, DTS-X or DTS.X. The object marker follows
+		// the codec across the separator, so the whole span is one track.
+		dtsx := strings.EqualFold(codec, "DTS") && i+2 < end &&
+			!tokens[i+1].Removed && !tokens[i+2].Removed &&
+			isDTSXSeparator(tokens[i+1].Text) &&
+			strings.EqualFold(strings.TrimSpace(tokens[i+2].Text), "x")
 		ch := strings.TrimSpace(inlineCh)
 		j := i + 1
+		if dtsx {
+			j = i + 3
+		}
 		if ch == "" {
 			if cc, nj := e.parseChannelsFromTokens(j, end); cc != "" {
 				ch = cc
@@ -470,7 +490,10 @@ func (e *audioSlotExtract) emitFromSegment(start int, end int, conf float64) ([]
 			}
 		}
 		obj := ""
-		for k := j; k < end && k < j+3; k++ {
+		if dtsx {
+			obj = "DTSX"
+		}
+		for k := j; obj == "" && k < end && k < j+3; k++ {
 			kk := strings.ToLower(strings.TrimSpace(tokens[k].Text))
 			if strings.Contains(kk, "atmos") {
 				obj = "ATMOS"

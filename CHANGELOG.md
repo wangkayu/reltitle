@@ -36,6 +36,16 @@ adapt. `1.0.0` will be declared once the output shape is stable.
 - A `MULTI`/`MULTISUB` note reports `sub_lang=MULTI`. It used to be promoted to
   `sub_flag=soft`, which also produced `sub_lang=MULTI` through a hint; the
   note no longer adds `sub_flag=soft`.
+- `BD`, `BDRip` and `BluRay` are promoted by their own spelling. `[BD]` reports
+  `BD` only — it used to also report `BDRip` for the same token; `BDRIP`/`BD-RIP`
+  report `BDRip` and `BluRay`/`BLU-RAY` report `BluRay`.
+- `remux` reports `source_type=Remux` instead of a `remux` dimension of its
+  own; `DVD Remux` reports both `Remux` and `DVD`.
+- `REPACK`, `RESEED`, `CORRECTED`/`FIXED` and `PROPER` report `revision`
+  instead of the ad-hoc `repack`, `reseed` and `corrected` dimensions.
+- A code enumeration of subtitle languages reports each listed code as its own
+  `sub_lang`. `[JPSC&JPTC]` used to report nothing and now reports `JPSC` and
+  `JPTC`; a bare `简繁`/`繁简` block is recognized as `SC` and `TC`.
 - `reltitle serve`'s `vocabulary` lists only the dimensions whose values are
   closed and enumerable, and for those lists every value a parse can report:
   the canonical values of a dimension `dict_canonical_values.yaml` defines, and
@@ -58,11 +68,22 @@ adapt. `1.0.0` will be declared once the output shape is stable.
   every promoted value, `MULTI` is a subtitle language, and `TS`/`M2TS`,
   `UHD`/`UHDRIP`/`UHD_BDRIP` and the disc-variant editions each report their
   own value instead of sharing a token-derived one.
+- A `revision` attribute dimension (`REPACK`, `RESEED`, `CORRECTED`, `PROPER`)
+  and an `upscaled` attribute dimension (`UPSCALED`, `AI_UPSCALED`,
+  `UPSCALED_4K`). An upscale-to-4K spelling also reports
+  `resolution=2160p`, and `vocabulary` publishes both dimensions.
+- `[HLG]` reports `hdr=HLG`.
+- `DTS:X`, `DTS-X` and `DTS.X` report `audio_codec=DTS` with
+  `audio_object=DTSX`.
 
 ### Fixed
 
 - `r-rated` now matches as the token sequence `r` `-` `rated`; as a single token
   it never matched.
+- A bracketed `DTS-HD MA` (`DTS-HD.MA`, `DTS HD MA`) reports one
+  `audio_codec=DTSHDMA` fact instead of `DTS` plus a `MA` platform. A bare `MA`
+  in a tech block is no longer the Movies Anywhere platform; that platform is
+  only implied by the lexicon's `WEB-DL`/`WEBRip` spellings.
 - `reltitle serve`'s `vocabulary` reported the lexicon's ad-hoc spellings
   (`1008p`, `1440p`, `1440x1080`, …) beside a canonical dimension's values,
   contradicting the "canonical values" contract a consumer builds options from.

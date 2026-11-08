@@ -2269,8 +2269,8 @@ entries:
     any_of:
       - tokens: ["bdremux"]
         emit:
-          - type: remux
-            normalized: "REMUX"
+          - type: source_type
+            normalized: "Remux"
             token_index: -1
           - type: source_type
             normalized: "BD"
@@ -2279,11 +2279,34 @@ entries:
         confidence: 0.8
       - tokens: ["bd", "remux"]
         emit:
-          - type: remux
-            normalized: "REMUX"
+          - type: source_type
+            normalized: "Remux"
             token_index: 1
           - type: source_type
             normalized: "BD"
+            token_index: 0
+        remove: true
+        confidence: 0.8
+
+  - id: remux_dvdremux
+    any_of:
+      - tokens: ["dvd", "remux"]
+        emit:
+          - type: source_type
+            normalized: "Remux"
+            token_index: 1
+          - type: source_type
+            normalized: "DVD"
+            token_index: 0
+        remove: true
+        confidence: 0.8
+      - tokens: ["dvd", "-", "remux"]
+        emit:
+          - type: source_type
+            normalized: "Remux"
+            token_index: 2
+          - type: source_type
+            normalized: "DVD"
             token_index: 0
         remove: true
         confidence: 0.8
@@ -4693,6 +4716,15 @@ entries:
     emit:
       - type: hdr
         normalized: "HDR10_PLUS"
+        token_index: -1
+    remove: true
+    confidence: 0.7
+
+  - id: hdr_hlg
+    tokens: ["hlg"]
+    emit:
+      - type: hdr
+        normalized: "HLG"
         token_index: -1
     remove: true
     confidence: 0.7
@@ -7177,6 +7209,121 @@ entries:
         remove: true
         confidence: 0.75
 
+  # Upscaled markers. These entries precede resolution_4k because the lexicon
+  # applies entries in file order and the first match consumes the tokens; the
+  # "4K" spellings must claim "4k" before the resolution rule does, and they
+  # emit the resolution they imply along with the marker.
+  - id: upscaled_ai
+    any_of:
+      - tokens: ["ai", "upscale"]
+        emit:
+          - type: upscaled
+            normalized: "AI_UPSCALED"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["ai", "upscaled"]
+        emit:
+          - type: upscaled
+            normalized: "AI_UPSCALED"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["ai", "-", "upscale"]
+        emit:
+          - type: upscaled
+            normalized: "AI_UPSCALED"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["ai-upscale"]
+        emit:
+          - type: upscaled
+            normalized: "AI_UPSCALED"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+
+  - id: upscaled_to_4k
+    any_of:
+      - tokens: ["upscaled", "to", "4k"]
+        emit:
+          - type: upscaled
+            normalized: "UPSCALED_4K"
+            token_index: -1
+          - type: resolution
+            normalized: "2160p"
+            token_index: 2
+        remove: true
+        confidence: 0.8
+      - tokens: ["upscale", "to", "4k"]
+        emit:
+          - type: upscaled
+            normalized: "UPSCALED_4K"
+            token_index: -1
+          - type: resolution
+            normalized: "2160p"
+            token_index: 2
+        remove: true
+        confidence: 0.7
+      - tokens: ["upscaled", "4k"]
+        emit:
+          - type: upscaled
+            normalized: "UPSCALED_4K"
+            token_index: -1
+          - type: resolution
+            normalized: "2160p"
+            token_index: 1
+        remove: true
+        confidence: 0.7
+      - tokens: ["upscale", "4k"]
+        emit:
+          - type: upscaled
+            normalized: "UPSCALED_4K"
+            token_index: -1
+          - type: resolution
+            normalized: "2160p"
+            token_index: 1
+        remove: true
+        confidence: 0.6
+      - tokens: ["upscaled", "-", "4k"]
+        emit:
+          - type: upscaled
+            normalized: "UPSCALED_4K"
+            token_index: -1
+          - type: resolution
+            normalized: "2160p"
+            token_index: 2
+        remove: true
+        confidence: 0.7
+      - tokens: ["upscale", "-", "4k"]
+        emit:
+          - type: upscaled
+            normalized: "UPSCALED_4K"
+            token_index: -1
+          - type: resolution
+            normalized: "2160p"
+            token_index: 2
+        remove: true
+        confidence: 0.6
+
+  - id: upscaled_flag
+    any_of:
+      - tokens: ["upscaled"]
+        emit:
+          - type: upscaled
+            normalized: "UPSCALED"
+            token_index: -1
+        remove: true
+        confidence: 0.7
+      - tokens: ["upscale"]
+        emit:
+          - type: upscaled
+            normalized: "UPSCALED"
+            token_index: -1
+        remove: true
+        confidence: 0.6
+
   - id: resolution_4k
     any_of:
       - scope: bracket
@@ -9392,7 +9539,7 @@ entries:
   - id: revision_repack
     tokens: ["repack"]
     emit:
-      - type: repack
+      - type: revision
         normalized: "REPACK"
         token_index: -1
     remove: true
@@ -9401,7 +9548,7 @@ entries:
   - id: revision_reseed
     tokens: ["reseed"]
     emit:
-      - type: reseed
+      - type: revision
         normalized: "RESEED"
         token_index: -1
     remove: true
@@ -9410,8 +9557,8 @@ entries:
   - id: revision_remux
     tokens: ["remux"]
     emit:
-      - type: remux
-        normalized: "REMUX"
+      - type: source_type
+        normalized: "Remux"
         token_index: -1
     remove: true
     confidence: 0.8
@@ -9420,14 +9567,14 @@ entries:
     any_of:
       - tokens: ["corrected"]
         emit:
-          - type: corrected
+          - type: revision
             normalized: "CORRECTED"
             token_index: -1
         remove: true
         confidence: 0.8
       - tokens: ["fixed"]
         emit:
-          - type: corrected
+          - type: revision
             normalized: "CORRECTED"
             token_index: -1
         remove: true
@@ -9436,7 +9583,7 @@ entries:
   - id: revision_proper
     tokens: ["proper"]
     emit:
-      - type: corrected
+      - type: revision
         normalized: "PROPER"
         token_index: -1
     remove: true
@@ -9446,68 +9593,6 @@ entries:
   # Version (通用版本号) - 新增属性
   # 注意：这是文件/发布的版本，不是 EP 的版本
   # ============================================================
-
-  # ============================================================
-  # Upscaled (升频标志) - 新增属性
-  # ============================================================
-
-  - id: upscaled_flag
-    any_of:
-      - tokens: ["upscaled"]
-        emit:
-          - type: upscaled
-            normalized: "UPSCALED"
-            token_index: -1
-        remove: true
-        confidence: 0.7
-      - tokens: ["upscale"]
-        emit:
-          - type: upscaled
-            normalized: "UPSCALED"
-            token_index: -1
-        remove: true
-        confidence: 0.6
-
-  - id: upscaled_ai
-    any_of:
-      - tokens: ["ai", "upscale"]
-        emit:
-          - type: upscaled
-            normalized: "AI_UPSCALED"
-            token_index: -1
-        remove: true
-        confidence: 0.7
-      - tokens: ["ai", "upscaled"]
-        emit:
-          - type: upscaled
-            normalized: "AI_UPSCALED"
-            token_index: -1
-        remove: true
-        confidence: 0.7
-      - tokens: ["ai-upscale"]
-        emit:
-          - type: upscaled
-            normalized: "AI_UPSCALED"
-            token_index: -1
-        remove: true
-        confidence: 0.7
-
-  - id: upscaled_to_4k
-    any_of:
-      - tokens: ["upscaled", "to", "4k"]
-        emit:
-          - type: upscaled
-            normalized: "UPSCALED_4K"
-            token_index: -1
-        remove: true
-        confidence: 0.8
-      - tokens: ["upscale", "to", "4k"]
-        emit:
-          - type: upscaled
-            normalized: "UPSCALED_4K"
-            token_index: -1
-        remove: true
-        confidence: 0.7
 
   # ============================================================================
   # Content Rating (内容分级/限制标记)

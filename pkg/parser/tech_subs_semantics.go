@@ -78,7 +78,7 @@ func isToonsHubCN(tokens []model.Token) bool {
 // langCodePart reports whether part is a known subtitle language code.
 func langCodePart(part string) bool {
 	switch part {
-	case "chs", "cht", "gb", "big5", "sc", "tc", "zh",
+	case "chs", "cht", "gb", "big5", "sc", "tc", "zh", "jpsc", "jptc",
 		"jp", "jpn", "eng", "kor", "esp", "por", "fre", "rus":
 		return true
 	}

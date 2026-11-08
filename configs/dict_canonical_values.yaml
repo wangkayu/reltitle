@@ -212,6 +212,20 @@ canonical:
     - RESTORE_4K_2K_EDITION
     - CUSTOM
 
+  revision:
+    # Release revision markers (REPACK after a bad release, PROPER, …).
+    - REPACK
+    - RESEED
+    - CORRECTED
+    - PROPER
+
+  upscaled:
+    # Upscale markers: a regular upscale, an AI-assisted one, or specifically
+    # an upscale to 4K.
+    - UPSCALED
+    - AI_UPSCALED
+    - UPSCALED_4K
+
   note_whitelist:
     # 仅保留在 note 的业务备注（示例）
     - 招募翻译

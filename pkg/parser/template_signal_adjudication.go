@@ -260,8 +260,12 @@ func inferPostEPTechToken(
 	if norm, ok := codecMapLookup(audioCodecMap, low, false); ok {
 		return model.AttrAudioCodec, norm, true
 	}
-	if norm, ok := platformMap[low]; ok {
-		return model.AttrPlatform, norm, true
+	// A bare MA in the tech section is Master Audio; the Movies Anywhere
+	// platform is only ever implied by the lexicon's WEB-DL/WEBRip rules.
+	if low != "ma" {
+		if norm, ok := platformMap[low]; ok {
+			return model.AttrPlatform, norm, true
+		}
 	}
 	return "", "", false
 }

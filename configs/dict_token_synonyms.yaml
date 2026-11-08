@@ -121,8 +121,12 @@ rules:
       normalized: MW
     priority: 100
 
+  # Bare "ma" is not a platform token: next to DTS it is Master Audio, and a
+  # release that only says "MA" gives no evidence of Movies Anywhere. The
+  # lexicon's context rules (platform_ma_web, platform_ma_webdl_dual) match MA
+  # only beside WEB-DL/WEBRip.
   - id: platform_ma
-    raw_tokens: ["ma", "movies anywhere"]
+    raw_tokens: ["movies anywhere"]
     emit:
       type: platform
       normalized: MA

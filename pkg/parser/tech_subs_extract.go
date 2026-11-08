@@ -86,6 +86,7 @@ func (e *techSubsSemanticsExtract) isSubsMarkerToken(s string) bool {
 // whether anything was emitted.
 var subtitleListCodes = map[string]string{
 	"chs": "SC", "sc": "SC", "gb": "SC", "cht": "TC", "tc": "TC", "big5": "TC",
+	"jpsc": "JPSC", "jptc": "JPTC",
 	"ja": "JPN", "jp": "JPN", "jpn": "JPN", "en": "ENG", "eng": "ENG",
 	"ko": "KOR", "kor": "KOR", "es": "SPA", "pt": "POR", "fr": "FRA",
 	"de": "DEU", "it": "ITA", "ru": "RUS", "ar": "ARA", "id": "IND",
@@ -192,7 +193,12 @@ func (e *techSubsSemanticsExtract) emitFromSegment(start int, end int, conf floa
 	if hasSplitSCTCMarker(noSpace) {
 		isSubsLike = true
 	}
-	if strings.Contains(noSpaceLower, "chs") || strings.Contains(noSpaceLower, "cht") || strings.Contains(noSpaceLower, "jpn") {
+	// A bare 简繁/繁简 block names the two Chinese scripts and nothing else.
+	if strings.Contains(noSpace, "简繁") || strings.Contains(noSpace, "簡繁") || strings.Contains(noSpace, "繁简") || strings.Contains(noSpace, "繁簡") {
+		isSubsLike = true
+	}
+	if strings.Contains(noSpaceLower, "chs") || strings.Contains(noSpaceLower, "cht") || strings.Contains(noSpaceLower, "jpn") ||
+		strings.Contains(noSpaceLower, "jpsc") || strings.Contains(noSpaceLower, "jptc") {
 		isSubsLike = true
 	}
 	// GB/Big5 是明确的简/繁编码标记，等同 CHS/CHT；词边界匹配防误报。
@@ -407,7 +413,7 @@ func (e *techSubsSemanticsExtract) emitFromSegment(start int, end int, conf floa
 		emitted = true
 	}
 
-	langOrder := []string{"RAW", "SC", "TC", "JPN", "ENG", "KOR", "SPA", "CAT", "FRA", "DEU", "ITA", "POR", "RUS", "ARA", "IND", "THA", "POL", "MSA", "VIE"}
+	langOrder := []string{"RAW", "SC", "TC", "JPSC", "JPTC", "JPN", "ENG", "KOR", "SPA", "CAT", "FRA", "DEU", "ITA", "POR", "RUS", "ARA", "IND", "THA", "POL", "MSA", "VIE"}
 	for _, l := range langOrder {
 		if langs[l] {
 			e.addAttr(model.AttrSubLang, l, cutStart, end, conf)

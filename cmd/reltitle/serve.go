@@ -211,6 +211,8 @@ var vocabularyDimensions = map[model.AttrType]bool{
 	model.AttrAudioFlag:      true,
 	model.AttrAudioLang:      true,
 	model.AttrEdition:        true,
+	model.AttrRevision:       true,
+	model.AttrUpscaled:       true,
 }
 
 // vocabularyOf lists the canonical values of every published attribute

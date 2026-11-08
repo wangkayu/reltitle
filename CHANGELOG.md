@@ -15,6 +15,8 @@ adapt. `1.0.0` will be declared once the output shape is stable.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-08
+
 ### Changed
 
 - `content_rating` reports one value per fact: `UNCENSORED`, `CENSORED` and

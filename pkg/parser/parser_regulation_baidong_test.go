@@ -17,7 +17,7 @@ func TestParserRegulationRemovedVersion(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if firstAttrValue(res, model.AttrContentRating) != "UNCENSORED" || canonicalEpisode(res) != "1" || firstAttrValue(res, model.AttrVersion) != "v2" {
+		if firstAttrValue(res, model.AttrContentRating) != "UNCENSORED" || canonicalEpisode(res) != "1" || firstAttrValue(res, model.AttrVersion) != "V2" {
 			t.Fatalf("result=%+v", res)
 		}
 		for _, a := range res.Attributes {

@@ -126,9 +126,9 @@ func TestGeckoExplicitMetadata(t *testing.T) {
 		{"[geckyzz] I Shall Never Return (1994) [OVEIL.WEB-DL 1080P AVC, AAC, HARD SUB (EN)][2F00EA91]", model.AttrAudioCodec, "AAC"},
 		{"[geckyzz] Marika's Love Meter Malfunction - S01 [UNCENSORED, OVEIL.WEB-DL 1080P AVC, AAC, HARD SUB (EN)][BATCH]", model.AttrAudioCodec, "AAC"},
 		{"[geckyzz] Perfect Addiction - S01E10 [OVEIL.WEB-DL 1080P AVC, AAC, HARD SUB (EN)][F92E6DD6]", model.AttrPlatform, "OCEANVEIL"},
-		{"[CicakRumah] Everyday HOST CLUB - S01E01v3 [AMZN.WEB-DL 1080P AVC EAC3]", model.AttrVersion, "v3"},
-		{"[Gecko] Show - S01E02v2 [1080p]", model.AttrVersion, "v2"},
-		{"[CicakRumah] False Memory (2020) [v2, BSITE.WEB-DL 1080P HEVC, AAC D-AUD, D-SUB]", model.AttrVersion, "v2"},
+		{"[CicakRumah] Everyday HOST CLUB - S01E01v3 [AMZN.WEB-DL 1080P AVC EAC3]", model.AttrVersion, "V3"},
+		{"[Gecko] Show - S01E02v2 [1080p]", model.AttrVersion, "V2"},
+		{"[CicakRumah] False Memory (2020) [v2, BSITE.WEB-DL 1080P HEVC, AAC D-AUD, D-SUB]", model.AttrVersion, "V2"},
 		{"[CicakRumah] False Memory (2020) [BSITE.WEB-DL 1080P AAC D-AUD, D-SUB]", model.AttrAudioFlag, "DUAL_AUDIO"},
 		{"[Gecko] Show - S01E01 [1080P AAC M-AUD, M-SUB]", model.AttrAudioFlag, "MULTI_AUDIO"},
 		{"[Gecko] Show - S01E01 [CTHP.WEB-DL 1080p AVC AAC M-SUB]", model.AttrSubFlag, "soft"},
@@ -143,7 +143,7 @@ func TestGeckoExplicitMetadata(t *testing.T) {
 			if len(got) != 1 || got[0] != tc.want {
 				t.Errorf("%s=%v want %s", tc.kind, got, tc.want)
 			}
-			if tc.want == "v3" && (canonicalEpisode(res) != "1") {
+			if tc.want == "V3" && (canonicalEpisode(res) != "1") {
 				t.Errorf("episode=%s want 1", canonicalEpisode(res))
 			}
 		})

@@ -35,7 +35,7 @@ func extractVersionAttrsAndRemoveFromTokens(tokens []model.Token, out *[]model.A
 		if v == "" {
 			v = m[1]
 		}
-		norm := "v" + v
+		norm := "V" + v
 		*out = append(*out, model.Attribute{Type: model.AttrVersion, Normalized: norm, TokenStart: i, TokenEnd: i + 1, Confidence: 0.7, Source: model.AttrSourceVersionToken})
 		// Only remove when it is clearly meta (most common inside brackets/parens).
 		if !compactEpisodeVersion && (isInBracket(tokens, i) || isInParen(tokens, i)) {

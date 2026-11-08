@@ -170,6 +170,13 @@ rules:
       normalized: CS-EX1
     priority: 100
 
+  - id: platform_nhk_one
+    raw_tokens: ["nhk-g", "nhkg", "nhk g", "nhk1"]
+    emit:
+      type: platform
+      normalized: NHK_ONE
+    priority: 100
+
   - id: platform_wowow
     raw_tokens: ["wowow"]
     emit:

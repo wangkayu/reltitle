@@ -194,7 +194,7 @@ func (s *epVersionScan) scanVersionSuffixedEpisode(i int) bool {
 	}
 	score := len(mm[1]) + 97
 	if s.considerCandidate(score, i, n) {
-		s.bestVer = "v" + ver
+		s.bestVer = "V" + ver
 	}
 	return true
 }

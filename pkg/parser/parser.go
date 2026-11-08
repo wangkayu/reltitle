@@ -1025,8 +1025,10 @@ func (p *Parser) resolveTitleAndAliases(st *parseState) {
 	if strings.TrimSpace(st.ctx.EpisodeVersion) != "" {
 		// Align with V1: use generic AttrVersion.
 		norm := strings.TrimSpace(st.ctx.EpisodeVersion)
-		if !strings.HasPrefix(strings.ToLower(norm), "v") {
-			norm = "v" + norm
+		if len(norm) > 0 && (norm[0] == 'v' || norm[0] == 'V') {
+			norm = "V" + norm[1:]
+		} else {
+			norm = "V" + norm
 		}
 		if st.ctx.EpisodeVersionIdx >= 0 {
 			st.attrs = append(st.attrs, model.Attribute{Type: model.AttrVersion, Normalized: norm, TokenStart: st.ctx.EpisodeVersionIdx, TokenEnd: st.ctx.EpisodeVersionIdx + 1, Confidence: 0.7, Source: model.AttrSourceEpisodeVersion})
@@ -1344,6 +1346,7 @@ func (p *Parser) canonicalizeAttributes(st *parseState) {
 	st.attrs = p.normalizeSubtitleAttrs(st.attrs, st.tokens)
 	st.attrs = p.enrichBatchSourceTypeFromPackKind(st.attrs, st.contentKind)
 	st.attrs = reconcileFileExtensionContainer(st.attrs)
+	st.attrs = normalizeResolutionAttrs(st.attrs)
 	st.attrs = dedupeAttributes(st.attrs)
 	st.attrs = collapseOverlappingSpecificAudioCodecs(st.attrs)
 	st.ctx.AudioSlot = reconcileAudioSlotWithAttributes(st.ctx.AudioSlot, st.attrs)

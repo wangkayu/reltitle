@@ -19,6 +19,10 @@ canonical:
     - HDTC
     - HDTS
     - CAM
+    - CAMRip
+    - DVDScr
+    - PPV
+    - R5
     - LD
     - TC
 
@@ -61,6 +65,35 @@ canonical:
     - WETV
     - VIKI
     - IVI
+    # TV channels and services the lexicon and the slot-2 inference recognize.
+    # NHK-G is reported as NHK_ONE (the same channel) by token synonyms.
+    - NHK-E
+    - NTV
+    - TBS
+    - CX
+    - TX
+    - TVO
+    - KTV
+    - MX
+    - TVER
+    - BS-NTV
+    - BS-TBS
+    - BS-FUJI
+    - BS-TX
+    - BS-ANIMAX
+    - BS-YOSHIMOTO
+    - BS4
+    - BS8
+    - BS12
+    - CS-EX2
+    - FUJI_TWO
+    - GAORA
+    - FAMIGEKI
+    - KIDS_STATION
+    - HBO_MAX
+    - ANIPLUS
+    - TENCENT
+    - MYTV
 
   sub_flag:
     - hard
@@ -126,12 +159,12 @@ canonical:
     - MPEG2
     - QUICKTIME
     - XVID
+    - VP9
 
   audio_codec:
     - AAC
     - AC3
     - EAC3
-    - E-AC-3
     - FLAC
     - MP3
     - OPUS
@@ -148,6 +181,36 @@ canonical:
     - TS
     - ISO
     - M2TS
+
+  bit_depth:
+    - 8bit
+    - 10bit
+    - 12bit
+
+  platform_region:
+    - ITA
+    - JP
+    - US
+    - HK+MO+TW
+    - JP_ONLY
+    - CN_ONLY
+    - ASIA
+    - REGION_FREE
+
+  edition:
+    # Note promotion and the CUSTOM release tag produce these values.
+    - BDMV
+    - DVD_ISO
+    - UHD
+    - UHDRIP
+    - UHD_BDRIP
+    - DVD9
+    - JDVD
+    - R2J
+    - LASER_DISC_BOX
+    - BD_BOX
+    - RESTORE_4K_2K_EDITION
+    - CUSTOM
 
   note_whitelist:
     # 仅保留在 note 的业务备注（示例）

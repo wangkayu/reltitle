@@ -42,18 +42,69 @@ rules:
       type: source_type
       normalized: DVD
 
-  - id: note_to_platform
+  # One rule per canonical value: a promotion that copies the note text cannot
+  # be listed in `vocabulary`, so every accepted spelling names its value here.
+  - id: note_to_platform_netflix
     match:
-      note_values_case_insensitive: ["NF", "NETFLIX", "CR", "BAHA", "ABEMA", "UNEXT", "AMZN", "AMAZON", "AT-X", "BS11"]
+      note_values_case_insensitive: ["NF", "NETFLIX"]
     promote_to:
       type: platform
-      normalized_from_token: true
+      normalized: NETFLIX
 
-  - id: note_to_sub_flag_multi
+  - id: note_to_platform_cr
+    match:
+      note_values_case_insensitive: ["CR", "CRUNCHYROLL"]
+    promote_to:
+      type: platform
+      normalized: CR
+
+  - id: note_to_platform_baha
+    match:
+      note_values_case_insensitive: ["BAHA", "BAHAMUT"]
+    promote_to:
+      type: platform
+      normalized: BAHA
+
+  - id: note_to_platform_abema
+    match:
+      note_values_case_insensitive: ["ABEMA"]
+    promote_to:
+      type: platform
+      normalized: ABEMA
+
+  - id: note_to_platform_unext
+    match:
+      note_values_case_insensitive: ["UNEXT"]
+    promote_to:
+      type: platform
+      normalized: UNEXT
+
+  - id: note_to_platform_amzn
+    match:
+      note_values_case_insensitive: ["AMZN", "AMAZON"]
+    promote_to:
+      type: platform
+      normalized: AMZN
+
+  - id: note_to_platform_atx
+    match:
+      note_values_case_insensitive: ["AT-X", "ATX"]
+    promote_to:
+      type: platform
+      normalized: AT-X
+
+  - id: note_to_platform_bs11
+    match:
+      note_values_case_insensitive: ["BS11"]
+    promote_to:
+      type: platform
+      normalized: BS11
+
+  - id: note_to_sub_lang_multi
     match:
       note_values_case_insensitive: ["MULTI", "MULTISUB"]
     promote_to:
-      type: sub_flag
+      type: sub_lang
       normalized: MULTI
 
   - id: note_to_sub_flag_subs
@@ -272,10 +323,17 @@ rules:
 
   - id: note_to_container_ts
     match:
-      note_values_case_insensitive: ["TS", "M2TS"]
+      note_values_case_insensitive: ["TS"]
     promote_to:
       type: container
-      normalized_from_token: true
+      normalized: TS
+
+  - id: note_to_container_m2ts
+    match:
+      note_values_case_insensitive: ["M2TS"]
+    promote_to:
+      type: container
+      normalized: M2TS
 
   - id: note_to_container_iso
     match:
@@ -298,19 +356,61 @@ rules:
       type: bit_depth
       normalized: "10bit"
 
-  - id: note_to_edition_uhd_variants
+  - id: note_to_edition_uhd
     match:
-      note_values_case_insensitive: ["UHD", "UHDRIP", "UHD_BDRIP"]
+      note_values_case_insensitive: ["UHD"]
     promote_to:
       type: edition
-      normalized_from_token: true
+      normalized: UHD
 
-  - id: note_to_edition_disc_variants
+  - id: note_to_edition_uhdrip
     match:
-      note_values_case_insensitive: ["DVD9", "JDVD", "R2J", "LASER_DISC_BOX", "BD_BOX"]
+      note_values_case_insensitive: ["UHDRIP"]
     promote_to:
       type: edition
-      normalized_from_token: true
+      normalized: UHDRIP
+
+  - id: note_to_edition_uhd_bdrip
+    match:
+      note_values_case_insensitive: ["UHD_BDRIP"]
+    promote_to:
+      type: edition
+      normalized: UHD_BDRIP
+
+  - id: note_to_edition_dvd9
+    match:
+      note_values_case_insensitive: ["DVD9"]
+    promote_to:
+      type: edition
+      normalized: DVD9
+
+  - id: note_to_edition_jdvd
+    match:
+      note_values_case_insensitive: ["JDVD"]
+    promote_to:
+      type: edition
+      normalized: JDVD
+
+  - id: note_to_edition_r2j
+    match:
+      note_values_case_insensitive: ["R2J"]
+    promote_to:
+      type: edition
+      normalized: R2J
+
+  - id: note_to_edition_laser_disc_box
+    match:
+      note_values_case_insensitive: ["LASER_DISC_BOX"]
+    promote_to:
+      type: edition
+      normalized: LASER_DISC_BOX
+
+  - id: note_to_edition_bd_box
+    match:
+      note_values_case_insensitive: ["BD_BOX"]
+    promote_to:
+      type: edition
+      normalized: BD_BOX
 
   - id: note_to_edition_restore_4k_2k
     match:

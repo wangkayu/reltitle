@@ -105,6 +105,16 @@ func TestServeVocabularyCoversTheDictionary(t *testing.T) {
 			t.Fatalf("vocabulary has no %s values: %+v", dimension, vocabulary.Dimensions)
 		}
 	}
+	// A dimension the canonical dictionary defines reports exactly its values:
+	// the parser's ad-hoc WxH and cropped-tier outputs are not options.
+	if len(values["resolution"]) != 8 {
+		t.Fatalf("resolution values = %v, want the 8 canonical tiers", values["resolution"])
+	}
+	for _, notCanonical := range []string{"1440x1080", "1008p", "1440p"} {
+		if values["resolution"][notCanonical] {
+			t.Fatalf("resolution lists non-canonical %q: %+v", notCanonical, values["resolution"])
+		}
+	}
 	// content_rating outputs one value per fact: every age-limit marker is
 	// AGE_RESTRICTED, so the vocabulary lists exactly these three.
 	wantRatings := map[string]bool{"UNCENSORED": true, "CENSORED": true, "AGE_RESTRICTED": true}

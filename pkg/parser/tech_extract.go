@@ -38,17 +38,27 @@ func extractWxHResolutionAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[
 		if w < h {
 			w, h = h, w
 		}
-		// Map common sizes to p-based resolution.
+		// The dimension names a quality tier by vertical lines, so anamorphic
+		// and letterboxed frames report the same tier as their 16:9 sibling:
+		// 1440x1080 and 2600x1080 are 1080p, 848x480 is 480p.
 		norm := ""
-		switch {
-		case w == 3840 && h == 2160:
+		switch h {
+		case 4320:
+			norm = "4320p"
+		case 2160:
 			norm = "2160p"
-		case w == 1920 && h == 1080:
+		case 1080:
 			norm = "1080p"
-		case w == 1280 && h == 720:
+		case 720:
 			norm = "720p"
-		case w == 720 && h == 480:
+		case 576:
+			norm = "576p"
+		case 540:
+			norm = "540p"
+		case 480:
 			norm = "480p"
+		case 360:
+			norm = "360p"
 		}
 		if norm == "" {
 			norm = strconv.Itoa(w) + "x" + strconv.Itoa(h)

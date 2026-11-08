@@ -56,12 +56,15 @@ func containsASCIIWordLike(s string, markers ...string) bool {
 	return false
 }
 
-// extractTechSubsSemanticsAndRemoveFromTokens scans bracket/paren blocks and
-// plain token segments for subtitle semantics, emits subtitle attributes, and
-// removes the consumed tokens. The extraction machinery (segment scanning,
-// flag/language/format detection) lives in tech_subs_extract.go.
+// isToonsHubTitle reports whether the release is a ToonsHub upload, whose
+// language brackets have their own routing (subtitle slot for the CN route,
+// audio language otherwise).
+func isToonsHubTitle(tokens []model.Token) bool {
+	return len(tokens) >= 3 && tokens[0].Text == "[" && strings.EqualFold(tokens[1].Text, "ToonsHub") && tokens[2].Text == "]"
+}
+
 func isToonsHubCN(tokens []model.Token) bool {
-	if len(tokens) < 3 || tokens[0].Text != "[" || !strings.EqualFold(tokens[1].Text, "ToonsHub") || tokens[2].Text != "]" {
+	if !isToonsHubTitle(tokens) {
 		return false
 	}
 	for i := 3; i < len(tokens); i++ {
@@ -114,6 +117,10 @@ func ampersandJoinedLangEnumeration(s string) bool {
 	return true
 }
 
+// extractTechSubsSemanticsAndRemoveFromTokens scans bracket/paren blocks and
+// plain token segments for subtitle semantics, emits subtitle attributes, and
+// removes the consumed tokens. The extraction machinery (segment scanning,
+// flag/language/format detection) lives in tech_subs_extract.go.
 func extractTechSubsSemanticsAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Attribute) {
 	if len(tokens) == 0 || attrs == nil {
 		return

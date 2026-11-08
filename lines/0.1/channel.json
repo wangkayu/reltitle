@@ -1,0 +1,21 @@
+{
+  "schema_version": "rt-channel-1",
+  "line": "0.1",
+  "protocol": "rt-serve-1",
+  "version": "0.1.1-test.13",
+  "sequence": 1,
+  "published_at": "2026-11-08T06:29:28Z",
+  "artifacts": {
+    "linux/amd64": {
+      "path": "0.1.1-test.13/reltitle-linux-amd64",
+      "sha256": "4576a3f059f344dba6dedb42f7493356bb8ecec09997d6ba6a5f5ec93884648e",
+      "size": 3899544
+    },
+    "linux/arm64": {
+      "path": "0.1.1-test.13/reltitle-linux-arm64",
+      "sha256": "93760b520b7ced92bf302efe1949ec329f0c26b4cbd0fdfbc6fb251c711c8308",
+      "size": 3801240
+    }
+  },
+  "release_url": "https://github.com/wangkayu/reltitle/commit/e5a3409e0975b68d4fd45aea9883fcc17bd87c44"
+}

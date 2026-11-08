@@ -105,8 +105,16 @@ func TestServeVocabularyCoversTheDictionary(t *testing.T) {
 			t.Fatalf("vocabulary has no %s values: %+v", dimension, vocabulary.Dimensions)
 		}
 	}
-	if !values["content_rating"]["UNCENSORED"] {
-		t.Fatalf("content_rating has no UNCENSORED: %+v", values["content_rating"])
+	// content_rating outputs one value per fact: every age-limit marker is
+	// AGE_RESTRICTED, so the vocabulary lists exactly these three.
+	wantRatings := map[string]bool{"UNCENSORED": true, "CENSORED": true, "AGE_RESTRICTED": true}
+	if len(values["content_rating"]) != len(wantRatings) {
+		t.Fatalf("content_rating values = %v, want %v", values["content_rating"], wantRatings)
+	}
+	for value := range values["content_rating"] {
+		if !wantRatings[value] {
+			t.Fatalf("content_rating has unexpected value %q: %+v", value, values["content_rating"])
+		}
 	}
 }
 

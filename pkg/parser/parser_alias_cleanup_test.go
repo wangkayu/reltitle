@@ -2906,6 +2906,47 @@ func TestParserNotePromotion_AgeRestrictedToContentRating(t *testing.T) {
 	}
 }
 
+func TestParserContentRatingNormalizesMarkers(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+
+	for _, tc := range []struct {
+		token string
+		want  string
+	}{
+		{"无修正", "UNCENSORED"},
+		{"censored", "CENSORED"},
+		{"年龄限制版", "AGE_RESTRICTED"},
+		{"R18", "AGE_RESTRICTED"},
+		{"R18+", "AGE_RESTRICTED"},
+		{"r-rated", "AGE_RESTRICTED"},
+		{"restricted", "AGE_RESTRICTED"},
+		{"mature", "AGE_RESTRICTED"},
+		// "adult" is not an age-limit label: it is also a network name.
+		{"adult", ""},
+		// "uncut" is the cut of the release, emitted as an edition note.
+		{"uncut", ""},
+	} {
+		res, err := p.Parse("[Group] Show - 01 [1080p][" + tc.token + "]")
+		if err != nil {
+			t.Fatalf("%s: parse failed: %v", tc.token, err)
+		}
+		got := attrValues(res, model.AttrContentRating)
+		if tc.want == "" {
+			if len(got) != 0 {
+				t.Fatalf("%s: expected no content_rating, got %v", tc.token, got)
+			}
+			continue
+		}
+		if len(got) != 1 || got[0] != tc.want {
+			t.Fatalf("%s: content_rating=%v want=%s", tc.token, got, tc.want)
+		}
+	}
+}
+
 func TestParserNoteFinalInParenAlias_NoLongerPromotedAsMeta(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {

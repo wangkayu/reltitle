@@ -649,6 +649,13 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.75
+      - tokens: ["年龄限制版"]
+        emit:
+          - type: note
+            normalized: "AGE_RESTRICTED"
+            token_index: -1
+        remove: true
+        confidence: 0.75
       - tokens: ["先行版"]
         emit:
           - type: note
@@ -9489,6 +9496,11 @@ entries:
   # Content Rating (内容分级/限制标记)
   # ============================================================================
   
+  # content_rating outputs one value per fact: UNCENSORED (no censorship),
+  # CENSORED (censorship applied) and AGE_RESTRICTED (every age-limit marker).
+  # Every surface spelling of one fact maps to one value, so a consumer never
+  # needs to know which wording a release used. "uncut" is not a rating: the
+  # edition pass claims it as an UNCUT edition note.
   - id: content_rating_uncensored
     any_of:
       - tokens: ["uncensored"]
@@ -9502,13 +9514,6 @@ entries:
         emit:
           - type: content_rating
             normalized: "UNCENSORED"
-            token_index: -1
-        remove: true
-        confidence: 0.7
-      - tokens: ["uncut"]
-        emit:
-          - type: content_rating
-            normalized: "UNCUT"
             token_index: -1
         remove: true
         confidence: 0.7
@@ -9530,50 +9535,40 @@ entries:
         remove: true
         confidence: 0.6
 
-  - id: content_rating_restricted
+  - id: content_rating_age_restricted
     any_of:
       - tokens: ["restricted"]
         emit:
           - type: content_rating
-            normalized: "RESTRICTED"
+            normalized: "AGE_RESTRICTED"
             token_index: -1
         remove: true
         confidence: 0.7
-      - tokens: ["r-rated"]
+      - tokens: ["r", "-", "rated"]
         emit:
           - type: content_rating
-            normalized: "R_RATED"
+            normalized: "AGE_RESTRICTED"
             token_index: -1
         remove: true
         confidence: 0.7
       - tokens: ["r18"]
         emit:
           - type: content_rating
-            normalized: "R18"
+            normalized: "AGE_RESTRICTED"
             token_index: -1
         remove: true
         confidence: 0.8
       - tokens: ["r18+"]
         emit:
           - type: content_rating
-            normalized: "R18_PLUS"
+            normalized: "AGE_RESTRICTED"
             token_index: -1
         remove: true
         confidence: 0.8
-
-  - id: content_rating_mature
-    any_of:
       - tokens: ["mature"]
         emit:
           - type: content_rating
-            normalized: "MATURE"
-            token_index: -1
-        remove: true
-        confidence: 0.6
-      - tokens: ["adult"]
-        emit:
-          - type: content_rating
-            normalized: "ADULT"
+            normalized: "AGE_RESTRICTED"
             token_index: -1
         remove: true
         confidence: 0.6

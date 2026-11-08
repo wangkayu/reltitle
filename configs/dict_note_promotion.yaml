@@ -254,6 +254,13 @@ rules:
       type: edition
       normalized: DVD_ISO
 
+  - id: note_to_edition_deluxe
+    match:
+      note_values_case_insensitive: ["DELUXE"]
+    promote_to:
+      type: edition
+      normalized: DELUXE
+
   - id: note_to_version_rev
     match:
       note_values_case_insensitive: ["REV"]

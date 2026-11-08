@@ -3651,8 +3651,11 @@ func TestParserGroupRouteOverride_GroupEPRouteMarukoNotMovie(t *testing.T) {
 	if notes := attrValues(res, model.AttrNote); !containsAlias(notes, "鲑仔和电线杆叔叔&不要责怪我把自己当女儿&喜欢恐怖电影吗") {
 		t.Fatalf("missing maruko eptitle note, notes=%v", notes)
 	}
-	if notes := attrValues(res, model.AttrNote); !containsAlias(notes, "2023.08.06") {
-		t.Fatalf("missing maruko airdate note, notes=%v", notes)
+	if got := firstAttrValue(res, model.AttrDate); got != "2023-08-06" {
+		t.Fatalf("date=%q want=%q", got, "2023-08-06")
+	}
+	if notes := attrValues(res, model.AttrNote); containsAlias(notes, "2023.08.06") {
+		t.Fatalf("bracketed date must not repeat as a note, notes=%v", notes)
 	}
 	if sem := canonicalEPSemantics(res); sem == nil {
 		t.Fatalf("ep_semantics should not be nil")
@@ -4777,7 +4780,7 @@ func TestLexiconDict_ConfigFirst_YuePhraseVariants(t *testing.T) {
 	}
 }
 
-func TestTagCodeAudioLang_CAUsesYUE(t *testing.T) {
+func TestTagCodeAudioLang_CAIsChineseAudio(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {
 		t.Fatalf("load config: %v", err)
@@ -4789,8 +4792,17 @@ func TestTagCodeAudioLang_CAUsesYUE(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse failed: %v", err)
 	}
-	if !hasAttrValue(attrValues(res, model.AttrAudioLang), "YUE") {
-		t.Fatalf("expected tag code CA => audio_lang YUE, got=%v", attrValues(res, model.AttrAudioLang))
+	langs := attrValues(res, model.AttrAudioLang)
+	if !hasAttrValue(langs, "CMN") {
+		t.Fatalf("expected tag code CA => audio_lang CMN, got=%v", langs)
+	}
+	if hasAttrValue(langs, "YUE") {
+		t.Fatalf("tag code CA must not be YUE, got=%v", langs)
+	}
+	for _, note := range attrValues(res, model.AttrNote) {
+		if strings.HasPrefix(note, "tag_code:") {
+			t.Fatalf("raw tag code must not be a note, notes=%v", attrValues(res, model.AttrNote))
+		}
 	}
 }
 

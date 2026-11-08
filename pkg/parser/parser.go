@@ -1262,9 +1262,6 @@ func (p *Parser) applyEpSegRoute(st *parseState) {
 		if tailTitle != "" {
 			st.attrs = append(st.attrs, groupRouteNote(tailTitle))
 		}
-		if dm := bracketDatePattern.FindStringSubmatch(st.rawTitle); len(dm) > 1 && strings.TrimSpace(dm[1]) != "" {
-			st.attrs = append(st.attrs, groupRouteNote(strings.TrimSpace(dm[1])))
-		}
 	} else if st.epslot == nil || st.epslot.Primary == nil || strings.TrimSpace(st.epslot.Primary.Episode) == "" {
 		st.epslot = newEPSlot(primary)
 	}

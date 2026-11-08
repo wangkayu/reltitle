@@ -58,6 +58,15 @@ entries:
     remove: true
     confidence: 0.75
 
+  - id: edition_deluxe
+    tokens: ["deluxe", "edition"]
+    emit:
+      - type: note
+        normalized: "DELUXE"
+        token_index: -1
+    remove: true
+    confidence: 0.7
+
   - id: audio_truefrench
     any_of:
       - tokens: ["truefrench"]
@@ -5743,6 +5752,22 @@ entries:
         remove: true
         confidence: 0.75
       - scope: bracket
+        tokens: ["简体字幕"]
+        emit:
+          - type: sub_lang
+            normalized: "SC"
+            token_index: 0
+        remove: true
+        confidence: 0.75
+      - scope: bracket
+        tokens: ["繁字"]
+        emit:
+          - type: sub_lang
+            normalized: "TC"
+            token_index: 0
+        remove: true
+        confidence: 0.75
+      - scope: bracket
         tokens: ["繁体"]
         emit:
           - type: sub_lang
@@ -5880,6 +5905,15 @@ entries:
         token_index: -1
     remove: true
     confidence: 0.75
+
+  - id: audio_atmos_chinese
+    tokens: ["杜比全景声"]
+    emit:
+      - type: audio_object
+        normalized: "ATMOS"
+        token_index: -1
+    remove: true
+    confidence: 0.8
 
   - id: audio_truehd_atmos_71
     tokens: ["truehd", "atmos", "7.1"]
@@ -6503,6 +6537,46 @@ entries:
             token_index: -1
         remove: true
         confidence: 0.6
+      - scope: paren
+        tokens: ["dual", "-", "audio,"]
+        emit:
+          - type: audio_flag
+            normalized: "DUAL"
+            token_index: -1
+        remove: false
+        confidence: 0.75
+      - scope: paren
+        tokens: ["dual", ".", "audio"]
+        emit:
+          - type: audio_flag
+            normalized: "DUAL"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - scope: bracket
+        tokens: ["dual", ".", "audio"]
+        emit:
+          - type: audio_flag
+            normalized: "DUAL"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - scope: plain
+        tokens: ["dual", ".", "audio"]
+        emit:
+          - type: audio_flag
+            normalized: "DUAL"
+            token_index: -1
+        remove: false
+        confidence: 0.7
+      - scope: plain
+        tokens: ["dual", "-", "audio"]
+        emit:
+          - type: audio_flag
+            normalized: "DUAL"
+            token_index: -1
+        remove: true
+        confidence: 0.7
 
   - id: sub_multi_subs
     any_of:
@@ -7113,6 +7187,16 @@ entries:
         remove: true
         confidence: 0.8
       - tokens: ["1080p@60fps"]
+        emit:
+          - type: resolution
+            normalized: "1080p"
+            token_index: -1
+          - type: note
+            normalized: "60FPS"
+            token_index: -1
+        remove: true
+        confidence: 0.75
+      - tokens: ["1080p60"]
         emit:
           - type: resolution
             normalized: "1080p"
@@ -8041,6 +8125,23 @@ entries:
         emit:
           - type: container
             normalized: "TS"
+            token_index: 1
+        remove: true
+        confidence: 0.65
+
+  - id: container_rmvb
+    any_of:
+      - tokens: ["rmvb"]
+        emit:
+          - type: container
+            normalized: "RMVB"
+            token_index: -1
+        remove: true
+        confidence: 0.65
+      - tokens: [".", "rmvb"]
+        emit:
+          - type: container
+            normalized: "RMVB"
             token_index: 1
         remove: true
         confidence: 0.65

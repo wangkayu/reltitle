@@ -39,11 +39,9 @@ func passExtractTagCodeAudioLang(tokens []model.Token, attrs *[]model.Attribute,
 			continue
 		}
 
-		addAttr(model.AttrNote, "tag_code:"+up, i, closeIdx+1, 0.7, model.AttrSourceTagCode)
-
 		if allowErai {
 			if up == "CA" {
-				addAttr(model.AttrAudioLang, "YUE", i, closeIdx+1, 0.75, model.AttrSourceTagCodeAudioLang)
+				addAttr(model.AttrAudioLang, "CMN", i, closeIdx+1, 0.75, model.AttrSourceTagCodeAudioLang)
 			}
 			if up == "JA" {
 				addAttr(model.AttrAudioLang, "JPN", i, closeIdx+1, 0.75, model.AttrSourceTagCodeAudioLang)

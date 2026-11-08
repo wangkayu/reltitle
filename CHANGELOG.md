@@ -60,6 +60,15 @@ adapt. `1.0.0` will be declared once the output shape is stable.
 
 - Subtitle file names report their language: `zh`/`zho`/`chi` as `ZH`; a Chinese tag with an explicit `Hans` script or a `CN`/`SG`/`MY` region as `SC`, and with `Hant` or `TW`/`HK`/`MO` as `TC`, so `zh-Hans`, `zh-CN`, `zh-SG`, `zh-Hans-CN` and `zh-TW`, `zh-HK`, `zh-MO` all resolve (a bare or unknown region stays the generic `ZH`); `ja`/`jp`/`jpn`/`japanese` as `JPN`, `en`/`eng`/`english`/`en-US` as `ENG`, `ko`/`korean` as `KOR`, and any other known language by its primary subtag with a script or region (`ja-JP`, `en-GB`); `track2`–`track5` as `ENG`/`TC`/`SC`/`JPN`. A bracket holding only these tags is claimed as subtitles before the audio pass, so it no longer becomes an audio language or a title alias; ToonsHub keeps its own routing. A script/region-qualified `zh` reports only its `SC`/`TC` precision, never an extra generic `ZH`.
 - Subtitle file names report their format: `ass`, `srt`, `ssa`, `pgs`, `sup`, `vobsub` and `vtt` are `sub_format` values, so `chs.vtt` reports `SC` and `VTT`.
+- `Dual.Audio` and `Dual-Audio` report `audio_flag=DUAL_AUDIO` outside a bracket
+  as well as inside one; the dotted spelling used to fail on its separator, and
+  the parenthesized `Dual-Audio,` form used to keep the trailing comma.
+- `杜比全景声` reports `audio_object=ATMOS`, the same as `atmos`.
+- `1080P60` reports `resolution=1080p` and `note=60FPS`, the same as
+  `1080p@60fps`.
+- `RMVB` reports `container=RMVB`.
+- `Deluxe Edition` reports `edition=DELUXE`.
+- `简体字幕` and `繁字` report `sub_lang=SC` and `sub_lang=TC`.
 - Canonical values for the TV channels and services the lexicon recognizes
   (`BS-NTV`, `CS-EX2`, `MYTV`, `TBS`, `MX`, `TVER`, `TENCENT`, `HBO_MAX`,
   `ANIPLUS`, …), for the source types `CAMRip`, `DVDScr`, `PPV` and `R5`, for
@@ -80,6 +89,14 @@ adapt. `1.0.0` will be declared once the output shape is stable.
 
 ### Fixed
 
+- Erai-raws' `(CA)` tag reported `audio_lang=YUE`; it marks Chinese audio and
+  now reports `CMN`. The raw tag code is no longer emitted as a
+  `note` (`tag_code:CA`, `tag_code:JA`); `(JA)` still reports `JPN`.
+- The Maruko group route added a bracketed airdate as a note even though the
+  same date was already reported as a `date` attribute. The note is gone.
+- A `WxH` frame in the bracket immediately before the first tech token
+  (`[848x480][RMVB]`) still reports its resolution; bracket tokens used to make
+  the token distance look too large.
 - `r-rated` now matches as the token sequence `r` `-` `rated`; as a single token
   it never matched.
 - A bracketed `DTS-HD MA` (`DTS-HD.MA`, `DTS HD MA`) reports one

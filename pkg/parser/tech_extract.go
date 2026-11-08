@@ -9,6 +9,27 @@ import (
 	"github.com/wangkayu/reltitle/pkg/model"
 )
 
+// onlyBracketTokensBetween reports whether the tokens in [from, to) are only
+// brackets, separators or empty text. A WxH in the bracket immediately before
+// the first tech token is still part of the tech section, even though bracket
+// tokens make the raw token distance look larger.
+func onlyBracketTokensBetween(tokens []model.Token, from, to int) bool {
+	if from < 0 {
+		from = 0
+	}
+	if to > len(tokens) {
+		to = len(tokens)
+	}
+	for i := from; i < to; i++ {
+		switch strings.TrimSpace(tokens[i].Text) {
+		case "", "[", "]", "【", "】", "(", ")", "（", "）":
+		default:
+			return false
+		}
+	}
+	return true
+}
+
 func extractWxHResolutionAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[]model.Attribute) {
 	if attrs == nil || len(tokens) == 0 {
 		return
@@ -18,7 +39,7 @@ func extractWxHResolutionAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[
 		if tokens[i].Removed {
 			continue
 		}
-		if hasTechStart && i+2 < techStart {
+		if hasTechStart && i+2 < techStart && !onlyBracketTokensBetween(tokens, i+1, techStart) {
 			continue
 		}
 		t := strings.TrimSpace(tokens[i].Text)

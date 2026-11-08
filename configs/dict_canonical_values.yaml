@@ -181,6 +181,7 @@ canonical:
     - TS
     - ISO
     - M2TS
+    - RMVB
 
   bit_depth:
     - 8bit
@@ -210,6 +211,7 @@ canonical:
     - LASER_DISC_BOX
     - BD_BOX
     - RESTORE_4K_2K_EDITION
+    - DELUXE
     - CUSTOM
 
   revision:

@@ -491,7 +491,6 @@ var bracketSegmentPattern = regexp.MustCompile(`\[(.*?)\]`)
 var episodeLikeThirdBracketPattern = regexp.MustCompile(`(?i)^\s*(\d{1,4})(?:\s*([_ .-]|&)\s*(.*))?\s*$`)
 var spKindLeadPattern = regexp.MustCompile(`(?i)^(SP|OVA|OAD|ONA|NCOP|NCED|PV|CM)\b`)
 var episodeLikeAliasPattern = regexp.MustCompile(`(?i)^\s*\d{1,4}(?:\s*([_ .-]|&)\s*.*)?$`)
-var bracketDatePattern = regexp.MustCompile(`\[(\d{4}[./-]\d{2}[./-]\d{2})\]`)
 var aptx4869ConanEpisodeTitlePattern = regexp.MustCompile(`^\s*(名[侦偵]探柯南)\s+0*(\d{1,4})\s+(.+?)\s*$`)
 
 func extractEpisodeLikeFromThirdBracket(rawTitle string) (episode string, spKind string, ok bool) {

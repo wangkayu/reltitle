@@ -188,14 +188,15 @@ func marshalResponse(response serveResponse) []byte {
 	return raw
 }
 
-// vocabularyOf lists every attribute dimension the dictionary defines, with
-// the canonical values of dict_canonical_values.yaml, the values the lexicon
-// emits, and the promoted values of dict_note_promotion.yaml. Promotions with
-// a token-derived value cannot be listed. Dimensions and values are sorted so
-// the answer is stable across builds; a consumer reorders them for its own
-// display.
+// vocabularyOf lists every attribute dimension's canonical values. A dimension
+// that dict_canonical_values.yaml defines reports exactly those values; any
+// other dimension (content_rating, edition, …) reports the values the lexicon
+// emits and dict_note_promotion.yaml produces. Promotions with a token-derived
+// value cannot be listed. Dimensions and values are sorted so the answer is
+// stable across builds; a consumer reorders them for its own display.
 func vocabularyOf(cfg *config.Config) []dimensionVocabulary {
 	values := make(map[model.AttrType]map[string]bool)
+	canonical := make(map[model.AttrType]bool)
 	add := func(dimension model.AttrType, value string) {
 		value = strings.TrimSpace(value)
 		if dimension == "" || value == "" {
@@ -211,6 +212,7 @@ func vocabularyOf(cfg *config.Config) []dimensionVocabulary {
 		if !ok {
 			continue
 		}
+		canonical[model.AttrType(dimension)] = true
 		for _, item := range items {
 			if value, ok := item.(string); ok {
 				add(model.AttrType(dimension), value)
@@ -219,16 +221,20 @@ func vocabularyOf(cfg *config.Config) []dimensionVocabulary {
 	}
 	for _, entry := range cfg.Lexicon.Entries {
 		for _, emit := range entry.Emit {
-			add(model.AttrType(emit.Type), emit.Normalized)
+			if !canonical[model.AttrType(emit.Type)] {
+				add(model.AttrType(emit.Type), emit.Normalized)
+			}
 		}
 		for _, clause := range entry.AnyOf {
 			for _, emit := range clause.Emit {
-				add(model.AttrType(emit.Type), emit.Normalized)
+				if !canonical[model.AttrType(emit.Type)] {
+					add(model.AttrType(emit.Type), emit.Normalized)
+				}
 			}
 		}
 	}
 	for _, rule := range cfg.DictNotePromotion.Rules {
-		if !rule.PromoteTo.NormalizedFromToken {
+		if !rule.PromoteTo.NormalizedFromToken && !canonical[model.AttrType(rule.PromoteTo.Type)] {
 			add(model.AttrType(rule.PromoteTo.Type), rule.PromoteTo.Normalized)
 		}
 	}

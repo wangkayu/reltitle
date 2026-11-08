@@ -25,11 +25,21 @@ adapt. `1.0.0` will be declared once the output shape is stable.
 - `reltitle serve`'s `vocabulary` now lists the values note promotion can
   produce, so `AGE_RESTRICTED` and the other promoted values are visible to a
   consumer that builds its options from the dictionary.
+- Resolution normalizes by height: a `WxH` token whose height is a canonical
+  tier reports that tier (`1440x1080` and `2600x1080` are `1080p`, `848x480`
+  is `480p`); a height outside the tiers keeps the raw `WxH`. `1440x1080` is
+  no longer a canonical resolution value.
 
 ### Fixed
 
 - `r-rated` now matches as the token sequence `r` `-` `rated`; as a single token
   it never matched.
+- `reltitle serve`'s `vocabulary` reports exactly the canonical values of a
+  dimension that `dict_canonical_values.yaml` defines. Before, the lexicon's
+  ad-hoc spellings (`1008p`, `1440p`, `1440x1080`, …) were listed beside them,
+  contradicting the "canonical values" contract a consumer builds options from.
+  Lexicon-only dimensions (`content_rating`, `edition`, …) still report the
+  lexicon and promoted values.
 
 ## [0.0.4] - 2026-11-06
 

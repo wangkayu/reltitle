@@ -147,12 +147,12 @@ rules:
       type: resolution
       normalized: 360p
 
-  - id: note_to_resolution_1440x1080
+  - id: note_to_resolution_1080p_wxh
     match:
       note_values_case_insensitive: ["1440X1080"]
     promote_to:
       type: resolution
-      normalized: 1440x1080
+      normalized: 1080p
 
   - id: note_to_content_rating_age_restricted
     match:

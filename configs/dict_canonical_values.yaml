@@ -118,7 +118,6 @@ canonical:
     - 576p
     - 540p
     - 360p
-    - 1440x1080
 
   video_codec:
     - HEVC

@@ -86,11 +86,212 @@ func (e *techSubsSemanticsExtract) isSubsMarkerToken(s string) bool {
 // whether anything was emitted.
 var subtitleListCodes = map[string]string{
 	"chs": "SC", "sc": "SC", "gb": "SC", "cht": "TC", "tc": "TC", "big5": "TC",
-	"jpsc": "JPSC", "jptc": "JPTC",
+	"zh": "ZH", "zho": "ZH", "chi": "ZH", "jpsc": "JPSC", "jptc": "JPTC",
 	"ja": "JPN", "jp": "JPN", "jpn": "JPN", "en": "ENG", "eng": "ENG",
 	"ko": "KOR", "kor": "KOR", "es": "SPA", "pt": "POR", "fr": "FRA",
 	"de": "DEU", "it": "ITA", "ru": "RUS", "ar": "ARA", "id": "IND",
 	"th": "THA", "pl": "POL", "my": "MSA", "vi": "VIE", "ca": "CAT",
+}
+
+// subtitleTrackCodes maps the media-server track markers used in subtitle
+// file names to the language each one denotes.
+var subtitleTrackCodes = map[string]string{
+	"track2": "ENG", "track3": "TC", "track4": "SC", "track5": "JPN",
+}
+
+// subtitleStandaloneTags are the tags a block may consist of on its own and
+// still read as a subtitle tag. It is deliberately narrower than
+// subtitleListCodes: two-letter codes that are common English words (it, id,
+// my, no) are absent, so a bracketed title such as [It] stays a title. Those
+// codes still resolve inside an & or _ enumeration.
+var subtitleStandaloneTags = map[string]bool{
+	"zh": true, "zho": true, "chi": true, "ja": true, "jp": true, "jpn": true, "en": true, "eng": true,
+	"ko": true, "kor": true, "chs": true, "cht": true, "sc": true, "tc": true,
+	"gb": true, "big5": true, "jpsc": true, "jptc": true,
+	"english": true, "japanese": true, "korean": true,
+	"ass": true, "srt": true, "ssa": true, "pgs": true, "sup": true,
+	"vobsub": true, "vtt": true,
+}
+
+// qualifiedZHHead reports whether the token at i is the bare "zh" head of a
+// BCP 47 sequence such as zh-Hans or zh_cn. The script/region part carries the
+// SC/TC precision, so the head must not also emit the generic ZH value.
+func qualifiedZHHead(tokens []model.Token, i, end int) bool {
+	if !strings.EqualFold(strings.TrimSpace(tokens[i].Text), "zh") {
+		return false
+	}
+	sep := false
+	for k := i + 1; k < end; k++ {
+		t := strings.TrimSpace(tokens[k].Text)
+		if t == "" {
+			continue
+		}
+		if !sep {
+			if t != "-" && t != "_" {
+				return false
+			}
+			sep = true
+			continue
+		}
+		for _, r := range t {
+			if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') {
+				return true
+			}
+		}
+		return false
+	}
+	return false
+}
+
+// subtitleLangTag resolves a BCP 47-style language tag used as a subtitle
+// file-name suffix (zh-Hant, zh-Hans-CN, zh-TW, en-US, ja-JP) to its sub_lang
+// value. Chinese needs the script or region to choose SC or TC; any other
+// language resolves by its primary subtag. A lone primary subtag is not a
+// qualified tag — those are handled by the standalone code list.
+func subtitleLangTag(tag string) (string, bool) {
+	tag = strings.ReplaceAll(strings.ToLower(strings.TrimSpace(tag)), "_", "-")
+	parts := strings.Split(tag, "-")
+	if len(parts) == 0 || parts[0] == "" {
+		return "", false
+	}
+	if parts[0] == "zh" || parts[0] == "zho" || parts[0] == "chi" {
+		return subtitleChineseScript(parts[1:]), true
+	}
+	if len(parts) < 2 {
+		return "", false
+	}
+	for _, p := range parts[1:] {
+		if !isLangSubtag(p) {
+			return "", false
+		}
+	}
+	code, ok := subtitleListCodes[parts[0]]
+	if !ok {
+		return "", false
+	}
+	return code, true
+}
+
+// subtitleChineseScript picks the script of a Chinese tag. An explicit Hans or
+// Hant subtag wins; otherwise the region decides (CN/SG/MY are simplified,
+// TW/HK/MO traditional). A bare or unknown region keeps the generic ZH.
+func subtitleChineseScript(subtags []string) string {
+	script := ""
+	for _, p := range subtags {
+		if script != "" {
+			break
+		}
+		switch p {
+		case "hans", "cn", "sg", "my":
+			script = "SC"
+		case "hant", "tw", "hk", "mo":
+			script = "TC"
+		}
+	}
+	if script == "" {
+		return "ZH"
+	}
+	return script
+}
+
+// isLangSubtag reports whether p looks like a BCP 47 script (4 letters) or
+// region (2 letters or 3 digits) subtag.
+func isLangSubtag(p string) bool {
+	if len(p) == 2 || len(p) == 4 {
+		for _, r := range p {
+			if (r < 'a' || r > 'z') && (r < 'A' || r > 'Z') {
+				return false
+			}
+		}
+		return true
+	}
+	if len(p) == 3 {
+		for _, r := range p {
+			if r < '0' || r > '9' {
+				return false
+			}
+		}
+		return true
+	}
+	return false
+}
+
+// subtitleBCP47Tag reports whether token is a BCP 47 subtitle tag with a
+// script or region subtag (zh_cn, zh-Hans, zh-SG, en-US, ja-JP).
+func subtitleBCP47Tag(token string) bool {
+	_, ok := subtitleLangTag(token)
+	return ok
+}
+
+// subtitleStandaloneTag reports whether one block text is a subtitle tag that
+// may stand alone, so the pass can claim it before the audio pass reads it as
+// an audio language.
+func subtitleStandaloneTag(text string) bool {
+	text = strings.Trim(strings.TrimSpace(strings.ToLower(text)), "[]【】()（）")
+	if text == "" {
+		return false
+	}
+	if subtitleStandaloneTags[text] || subtitleBCP47Tag(text) {
+		return true
+	}
+	_, track := subtitleTrackCodes[text]
+	return track
+}
+
+// subtitleEnumerationToken is the wider check used once a block is known to
+// be a joined list: every listed code is a language, format or track marker.
+func subtitleEnumerationToken(token string) bool {
+	token = strings.TrimSpace(strings.ToLower(token))
+	if token == "" {
+		return false
+	}
+	if subtitleStandaloneTags[token] || subtitleBCP47Tag(token) {
+		return true
+	}
+	if _, ok := subtitleListCodes[token]; ok {
+		return true
+	}
+	_, track := subtitleTrackCodes[token]
+	return track
+}
+
+// subtitleTagOnlyBlock reports whether the whole block is subtitle
+// language/format tags joined by &, +, _, - or a dot, e.g. "chs&jpn",
+// "chs_jpn", "zh-cn", "chs.vtt", "track3". Such a block names subtitles, not
+// an audio track, even when it is the only content of the bracket.
+func subtitleTagOnlyBlock(text string) bool {
+	text = strings.Trim(strings.TrimSpace(strings.ToLower(text)), "[]【】()（）")
+	if text == "" {
+		return false
+	}
+	if subtitleStandaloneTag(text) {
+		return true
+	}
+	parts := strings.FieldsFunc(text, func(r rune) bool {
+		switch r {
+		case '&', '+', ',', '、', '.', ' ':
+			return true
+		}
+		return false
+	})
+	if len(parts) < 2 {
+		return false
+	}
+	for _, part := range parts {
+		if subtitleEnumerationToken(part) {
+			continue
+		}
+		sub := strings.FieldsFunc(part, func(r rune) bool { return r == '_' || r == '-' })
+		if len(sub) < 2 {
+			return false
+		}
+		for _, item := range sub {
+			if !subtitleEnumerationToken(item) {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func (e *techSubsSemanticsExtract) emitFromSegment(start int, end int, conf float64) bool {
@@ -201,6 +402,14 @@ func (e *techSubsSemanticsExtract) emitFromSegment(start int, end int, conf floa
 		strings.Contains(noSpaceLower, "jpsc") || strings.Contains(noSpaceLower, "jptc") {
 		isSubsLike = true
 	}
+	// A block made only of subtitle tags (zh-cn, ja, en-US, track3, vtt,
+	// chs&jpn) is subtitle semantics even when it stands alone. This pass runs
+	// before the audio pass, so the tag is claimed here instead of becoming an
+	// audio language or a title alias. ToonsHub keeps its own routing: a lone
+	// [EN] there is an audio language unless the title is the CN variant.
+	if !isToonsHubTitle(e.tokens) && subtitleTagOnlyBlock(noSpaceLower) {
+		isSubsLike = true
+	}
 	// GB/Big5 是明确的简/繁编码标记，等同 CHS/CHT；词边界匹配防误报。
 	if containsASCIIWordLike(noSpaceLower, "gb", "big5") {
 		isSubsLike = true
@@ -270,6 +479,9 @@ func (e *techSubsSemanticsExtract) emitFromSegment(start int, end int, conf floa
 	if cutStart > start {
 		for k := cutStart; k < end; k++ {
 			code := strings.ToLower(strings.Trim(tokens[k].Text, ","))
+			if code == "zh" && qualifiedZHHead(tokens, k, end) {
+				continue
+			}
 			if canonical := subtitleListCodes[code]; canonical != "" && code != "ca" {
 				e.addLang(langs, canonical)
 			}
@@ -307,16 +519,27 @@ func (e *techSubsSemanticsExtract) emitFromSegment(start int, end int, conf floa
 			e.addLang(langs, "TC")
 		}
 	}
-	if containsASCIIWordLike(noSpaceLower, "jp", "jpn", "japanese") {
+	tagText := strings.NewReplacer("_", "-").Replace(noSpaceLower)
+	if containsASCIIWordLike(tagText, "ja", "jp", "jpn", "japanese") {
 		e.addLang(langs, "JPN")
 	}
-	if containsASCIIWordLike(noSpaceLower, "chs", "gb", "sc", "zh-hans", "zh-cn") {
-		e.addLang(langs, "SC")
+	if code, ok := subtitleLangTag(listText); ok {
+		e.addLang(langs, code)
+	} else {
+		if containsASCIIWordLike(tagText, "chs", "gb", "sc", "zh-hans", "zh-cn", "zh-sg", "zh-my") {
+			e.addLang(langs, "SC")
+		}
+		if containsASCIIWordLike(tagText, "cht", "big5", "tc", "zh-hant", "zh-tw", "zh-hk", "zh-mo") {
+			e.addLang(langs, "TC")
+		}
+		if containsASCIIWordLike(tagText, "zho", "chi") {
+			e.addLang(langs, "ZH")
+		}
 	}
-	if containsASCIIWordLike(noSpaceLower, "cht", "big5", "tc", "zh-hant", "zh-tw", "zh-hk") {
-		e.addLang(langs, "TC")
+	if code, ok := subtitleTrackCodes[listText]; ok {
+		e.addLang(langs, code)
 	}
-	if strings.Contains(noSpace, "英") || containsASCIIWordLike(noSpaceLower, "eng", "english") {
+	if strings.Contains(noSpace, "英") || containsASCIIWordLike(noSpaceLower, "eng", "english", "en") {
 		e.addLang(langs, "ENG")
 	}
 	if containsASCIIWordLike(noSpaceLower, "español", "espanol", "spanish") {
@@ -326,6 +549,9 @@ func (e *techSubsSemanticsExtract) emitFromSegment(start int, end int, conf floa
 		e.addLang(langs, "CAT")
 	}
 	if strings.Contains(noSpace, "韩") || strings.Contains(noSpace, "韓") || containsASCIIWordLike(noSpaceLower, "kor", "korean") {
+		e.addLang(langs, "KOR")
+	}
+	if containsASCIIWordLike(noSpaceLower, "ko") {
 		e.addLang(langs, "KOR")
 	}
 	if strings.Contains(noSpace, "日") {
@@ -343,7 +569,7 @@ func (e *techSubsSemanticsExtract) emitFromSegment(start int, end int, conf floa
 			continue
 		}
 		su := strings.ToUpper(s)
-		if su == "ASS" || su == "SRT" || su == "SSA" {
+		if su == "ASS" || su == "SRT" || su == "SSA" || su == "VTT" {
 			e.addFmt(fmts, su)
 			continue
 		}
@@ -367,6 +593,9 @@ func (e *techSubsSemanticsExtract) emitFromSegment(start int, end int, conf floa
 	}
 	if strings.Contains(noSpaceLower, "srt") {
 		e.addFmt(fmts, "SRT")
+	}
+	if strings.Contains(noSpaceLower, "vtt") {
+		e.addFmt(fmts, "VTT")
 	}
 	// "SUB" 在场景标题里大多表示 "有字幕"(例如 Sub_Esp)，不是字幕封装格式。
 	// 强收敛模式下不再使用 sub_flag 表示“有字幕”，只输出 hard/soft/ex。
@@ -413,14 +642,14 @@ func (e *techSubsSemanticsExtract) emitFromSegment(start int, end int, conf floa
 		emitted = true
 	}
 
-	langOrder := []string{"RAW", "SC", "TC", "JPSC", "JPTC", "JPN", "ENG", "KOR", "SPA", "CAT", "FRA", "DEU", "ITA", "POR", "RUS", "ARA", "IND", "THA", "POL", "MSA", "VIE"}
+	langOrder := []string{"RAW", "ZH", "SC", "TC", "JPSC", "JPTC", "JPN", "ENG", "KOR", "SPA", "CAT", "FRA", "DEU", "ITA", "POR", "RUS", "ARA", "IND", "THA", "POL", "MSA", "VIE"}
 	for _, l := range langOrder {
 		if langs[l] {
 			e.addAttr(model.AttrSubLang, l, cutStart, end, conf)
 			emitted = true
 		}
 	}
-	fmtOrder := []string{"ASS", "SRT", "PGS", "SSA", "SUB", "VOBSUB"}
+	fmtOrder := []string{"ASS", "SRT", "PGS", "SSA", "SUB", "VOBSUB", "VTT"}
 	for _, f := range fmtOrder {
 		if fmts[f] {
 			e.addAttr(model.AttrSubFormat, f, cutStart, end, conf)

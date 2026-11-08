@@ -58,6 +58,8 @@ adapt. `1.0.0` will be declared once the output shape is stable.
 
 ### Added
 
+- Subtitle file names report their language: `zh`/`zho`/`chi` as `ZH`; a Chinese tag with an explicit `Hans` script or a `CN`/`SG`/`MY` region as `SC`, and with `Hant` or `TW`/`HK`/`MO` as `TC`, so `zh-Hans`, `zh-CN`, `zh-SG`, `zh-Hans-CN` and `zh-TW`, `zh-HK`, `zh-MO` all resolve (a bare or unknown region stays the generic `ZH`); `ja`/`jp`/`jpn`/`japanese` as `JPN`, `en`/`eng`/`english`/`en-US` as `ENG`, `ko`/`korean` as `KOR`, and any other known language by its primary subtag with a script or region (`ja-JP`, `en-GB`); `track2`–`track5` as `ENG`/`TC`/`SC`/`JPN`. A bracket holding only these tags is claimed as subtitles before the audio pass, so it no longer becomes an audio language or a title alias; ToonsHub keeps its own routing. A script/region-qualified `zh` reports only its `SC`/`TC` precision, never an extra generic `ZH`.
+- Subtitle file names report their format: `ass`, `srt`, `ssa`, `pgs`, `sup`, `vobsub` and `vtt` are `sub_format` values, so `chs.vtt` reports `SC` and `VTT`.
 - Canonical values for the TV channels and services the lexicon recognizes
   (`BS-NTV`, `CS-EX2`, `MYTV`, `TBS`, `MX`, `TVER`, `TENCENT`, `HBO_MAX`,
   `ANIPLUS`, …), for the source types `CAMRip`, `DVDScr`, `PPV` and `R5`, for

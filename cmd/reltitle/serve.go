@@ -188,18 +188,44 @@ func marshalResponse(response serveResponse) []byte {
 	return raw
 }
 
-// vocabularyOf lists every attribute dimension's canonical values. A dimension
-// that dict_canonical_values.yaml defines reports exactly those values; any
-// other dimension (content_rating, edition, …) reports the values the lexicon
-// emits and dict_note_promotion.yaml produces. Promotions with a token-derived
-// value cannot be listed. Dimensions and values are sorted so the answer is
-// stable across builds; a consumer reorders them for its own display.
+// vocabularyDimensions lists the attribute dimensions a consumer may build an
+// option list from: each one reports a closed set of values the parser can
+// emit. Structural dimensions (contents, pack_kind, pack_profile), free-form
+// ones (note, title, group) and dimensions whose values are open or
+// synthesized in code (version, audio_object, audio_channels, sub_format,
+// release_status) stay out, because their values cannot be enumerated here.
+var vocabularyDimensions = map[model.AttrType]bool{
+	model.AttrContentRating:  true,
+	model.AttrSourceType:     true,
+	model.AttrResolution:     true,
+	model.AttrVideoCodec:     true,
+	model.AttrAudioCodec:     true,
+	model.AttrBitDepth:       true,
+	model.AttrContainer:      true,
+	model.AttrPlatform:       true,
+	model.AttrPlatformRegion: true,
+	model.AttrHDR:            true,
+	model.AttrSubFlag:        true,
+	model.AttrSubLang:        true,
+	model.AttrSubLangGroup:   true,
+	model.AttrAudioFlag:      true,
+	model.AttrAudioLang:      true,
+	model.AttrEdition:        true,
+}
+
+// vocabularyOf lists the canonical values of every published attribute
+// dimension. A dimension that dict_canonical_values.yaml defines reports
+// exactly those values; a dimension it does not define (content_rating,
+// edition, …) reports the values the lexicon emits and dict_note_promotion.yaml
+// produces. Promotions with a token-derived value cannot be listed and are
+// skipped. Dimensions and values are sorted so the answer is stable across
+// builds; a consumer reorders them for its own display.
 func vocabularyOf(cfg *config.Config) []dimensionVocabulary {
 	values := make(map[model.AttrType]map[string]bool)
 	canonical := make(map[model.AttrType]bool)
 	add := func(dimension model.AttrType, value string) {
 		value = strings.TrimSpace(value)
-		if dimension == "" || value == "" {
+		if dimension == "" || value == "" || !vocabularyDimensions[dimension] {
 			return
 		}
 		if values[dimension] == nil {

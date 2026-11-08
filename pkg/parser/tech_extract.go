@@ -41,31 +41,131 @@ func extractWxHResolutionAttrsAndRemoveFromTokens(tokens []model.Token, attrs *[
 		// The dimension names a quality tier by vertical lines, so anamorphic
 		// and letterboxed frames report the same tier as their 16:9 sibling:
 		// 1440x1080 and 2600x1080 are 1080p, 848x480 is 480p.
-		norm := ""
-		switch h {
-		case 4320:
-			norm = "4320p"
-		case 2160:
-			norm = "2160p"
-		case 1080:
-			norm = "1080p"
-		case 720:
-			norm = "720p"
-		case 576:
-			norm = "576p"
-		case 540:
-			norm = "540p"
-		case 480:
-			norm = "480p"
-		case 360:
-			norm = "360p"
-		}
-		if norm == "" {
-			norm = strconv.Itoa(w) + "x" + strconv.Itoa(h)
-		}
+		norm := canonicalResolutionValue(strconv.Itoa(w) + "x" + strconv.Itoa(h))
 		*attrs = append(*attrs, model.Attribute{Type: model.AttrResolution, Normalized: norm, TokenStart: i, TokenEnd: i + 1, Confidence: 0.75, Source: model.AttrSourceResolutionWxH})
 		tokens[i].Removed = true
 	}
+}
+
+// resolutionTierHeights lists the canonical resolution tiers in ascending
+// order. Every reported resolution value is one of these tiers, so a consumer
+// that builds its option list from `vocabulary` can match every parse output.
+var resolutionTierHeights = []int{360, 480, 540, 576, 720, 1080, 2160, 4320}
+
+// resolutionWidthFamilies maps a frame width to the tier whose 16:9 encode is
+// that wide. A letterboxed frame keeps the height it was mastered for: a
+// 1920x800 cinema crop belongs to the 1080p family, a 3840x1600 one to 2160p.
+var resolutionWidthFamilies = []struct {
+	minWidth int
+	tier     string
+}{
+	{7680, "4320p"},
+	{3840, "2160p"},
+	{1920, "1080p"},
+	{1280, "720p"},
+	{1024, "576p"},
+	{960, "540p"},
+	{854, "480p"},
+	{0, "360p"},
+}
+
+var resolutionValuePattern = regexp.MustCompile(`(?i)^(\d{2,5})p$`)
+
+// canonicalResolutionValue reports the tier a resolution spelling belongs to:
+// a `WxH` frame takes its exact height tier, else the larger of its width
+// family and its nearest height tier; a bare `Np` takes its nearest height
+// tier. Anything else is returned unchanged.
+func canonicalResolutionValue(value string) string {
+	v := strings.TrimSpace(value)
+	if v == "" {
+		return v
+	}
+	if m := wxhResolutionPattern.FindStringSubmatch(v); len(m) == 4 {
+		w, _ := strconv.Atoi(m[1])
+		h, _ := strconv.Atoi(m[2])
+		if w <= 0 || h <= 0 {
+			return v
+		}
+		if w < h {
+			w, h = h, w
+		}
+		if tier := exactResolutionTier(h); tier != "" {
+			return tier
+		}
+		byHeight := nearestResolutionTier(h)
+		if byWidth := resolutionWidthFamilyTier(w); resolutionTierRank(byWidth) > resolutionTierRank(byHeight) {
+			return byWidth
+		}
+		return byHeight
+	}
+	if m := resolutionValuePattern.FindStringSubmatch(v); len(m) == 2 {
+		h, _ := strconv.Atoi(m[1])
+		if h > 0 {
+			return nearestResolutionTier(h)
+		}
+	}
+	return v
+}
+
+func exactResolutionTier(height int) string {
+	for _, tier := range resolutionTierHeights {
+		if tier == height {
+			return strconv.Itoa(tier) + "p"
+		}
+	}
+	return ""
+}
+
+func nearestResolutionTier(height int) string {
+	best := resolutionTierHeights[0]
+	bestDiff := absDiff(height, best)
+	for _, tier := range resolutionTierHeights[1:] {
+		if d := absDiff(height, tier); d < bestDiff {
+			best, bestDiff = tier, d
+		}
+	}
+	return strconv.Itoa(best) + "p"
+}
+
+func resolutionWidthFamilyTier(width int) string {
+	for _, family := range resolutionWidthFamilies {
+		if width >= family.minWidth {
+			return family.tier
+		}
+	}
+	return "360p"
+}
+
+func resolutionTierRank(tier string) int {
+	for i, height := range resolutionTierHeights {
+		if strconv.Itoa(height)+"p" == tier {
+			return i
+		}
+	}
+	return -1
+}
+
+func absDiff(a, b int) int {
+	if a > b {
+		return a - b
+	}
+	return b - a
+}
+
+// normalizeResolutionAttrs rewrites every resolution attribute to its canonical
+// tier. Attributes reach the parser from the lexicon, note promotion and
+// inference with ad-hoc spellings (1008p, 2276p, 3840x1600); the output keeps
+// the raw text in tokens and one canonical tier in the attribute.
+func normalizeResolutionAttrs(attrs []model.Attribute) []model.Attribute {
+	for i := range attrs {
+		if attrs[i].Type != model.AttrResolution {
+			continue
+		}
+		if v := canonicalResolutionValue(attrs[i].Normalized); v != "" {
+			attrs[i].Normalized = v
+		}
+	}
+	return attrs
 }
 
 var stableTechResolutionPattern = regexp.MustCompile(`(?i)^(\d{3,4})p$`)

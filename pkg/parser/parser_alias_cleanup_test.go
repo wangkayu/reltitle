@@ -888,9 +888,6 @@ func TestParserSubtitleSignals_MultiSubSingleTokenRecognized(t *testing.T) {
 	if !hasAttrValue(attrValues(res, model.AttrSubLang), "MULTI") {
 		t.Fatalf("expected sub_lang=MULTI, got=%v", attrValues(res, model.AttrSubLang))
 	}
-	if !hasAttrValue(attrValues(res, model.AttrSubFlag), "soft") {
-		t.Fatalf("expected sub_flag=soft, got=%v", attrValues(res, model.AttrSubFlag))
-	}
 }
 
 func TestParserSpecialMarkerCnToken_IsConsumedAndMappedToContents(t *testing.T) {
@@ -4347,7 +4344,7 @@ func TestParserEpisodeDashBoundary_AllowsVersionAndEndFlag(t *testing.T) {
 			name: "dash_ep_with_version",
 			raw:  "[TestGroup] Sample Show - 01 v2 [1080p][WEB-DL]",
 			ep:   "1",
-			ver:  "v2",
+			ver:  "V2",
 		},
 		{
 			name: "dash_ep_with_endflag",
@@ -5434,7 +5431,7 @@ func TestLexiconDict_GluedTechTokensShouldBeConsumed(t *testing.T) {
 			raw:   "[A&C] 足球小将剧场版1.Captain Tsubasa Movie 01 The great competition of Europe (1985) (35mm 2276p HEVC) [Multi-Audio-Subs](原胶片数码扫描转制高清4K版）",
 			token: "2276p",
 			expectAttrs: map[model.AttrType]string{
-				model.AttrResolution: "2276p",
+				model.AttrResolution: "2160p",
 			},
 		},
 		{

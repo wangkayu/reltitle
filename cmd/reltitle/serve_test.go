@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"os"
 	"strings"
 	"testing"
 )
@@ -125,6 +126,70 @@ func TestServeVocabularyCoversTheDictionary(t *testing.T) {
 		if !wantRatings[value] {
 			t.Fatalf("content_rating has unexpected value %q: %+v", value, values["content_rating"])
 		}
+	}
+}
+
+// TestServeVocabularyCoversEveryParsedValue holds the contract a consumer
+// builds its option list on: for every published dimension, every value a
+// parse can report is one of the vocabulary's values, and no free-form or
+// structural dimension is published at all.
+func TestServeVocabularyCoversEveryParsedValue(t *testing.T) {
+	server, err := newServeServer("test")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	vocabulary := map[string]map[string]bool{}
+	published := map[string]bool{}
+	for _, dimension := range server.vocabulary {
+		published[dimension.Dimension] = true
+		vocabulary[dimension.Dimension] = map[string]bool{}
+		for _, value := range dimension.Values {
+			vocabulary[dimension.Dimension][value] = true
+		}
+	}
+	for _, freeForm := range []string{"note", "title", "title_alias", "group", "contents", "pack_profile", "audio_object", "audio_channels", "sub_format"} {
+		if published[freeForm] {
+			t.Errorf("vocabulary publishes the free-form dimension %q", freeForm)
+		}
+	}
+
+	file, err := os.Open("../../pkg/parser/testdata/golden.jsonl")
+	if err != nil {
+		t.Fatalf("open golden corpus: %v", err)
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	scanner.Buffer(make([]byte, 0, 1<<16), 1<<22)
+	titles := 0
+	for scanner.Scan() {
+		var entry struct {
+			Title string `json:"title"`
+		}
+		if err := json.Unmarshal(scanner.Bytes(), &entry); err != nil {
+			t.Fatalf("golden line: %v", err)
+		}
+		if entry.Title == "" {
+			continue
+		}
+		titles++
+		result, err := server.parser.Parse(entry.Title)
+		if err != nil {
+			t.Fatalf("%s: parse failed: %v", entry.Title, err)
+		}
+		for _, attribute := range result.Attributes {
+			if !vocabularyDimensions[attribute.Type] {
+				continue
+			}
+			if !vocabulary[string(attribute.Type)][attribute.Normalized] {
+				t.Errorf("%s: %s=%q is not a vocabulary value (%v)", entry.Title, attribute.Type, attribute.Normalized, vocabulary[string(attribute.Type)])
+			}
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		t.Fatalf("read golden corpus: %v", err)
+	}
+	if titles == 0 {
+		t.Fatal("the golden corpus is empty")
 	}
 }
 

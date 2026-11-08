@@ -4662,6 +4662,23 @@ entries:
         remove: true
         confidence: 0.7
 
+  - id: hdr_hdr10_plus_sign
+    any_of:
+      - tokens: ["hdr10", "+"]
+        emit:
+          - type: hdr
+            normalized: "HDR10_PLUS"
+            token_index: 0
+        remove: true
+        confidence: 0.75
+      - tokens: ["hdr10", "plus"]
+        emit:
+          - type: hdr
+            normalized: "HDR10_PLUS"
+            token_index: 0
+        remove: true
+        confidence: 0.7
+
   - id: hdr_hdr10
     tokens: ["hdr10"]
     emit:
@@ -7651,14 +7668,14 @@ entries:
       - tokens: ["mpeg"]
         emit:
           - type: video_codec
-            normalized: "MPEG"
+            normalized: "MPEG2"
             token_index: -1
         remove: true
         confidence: 0.75
       - tokens: ["MPEG"]
         emit:
           - type: video_codec
-            normalized: "MPEG"
+            normalized: "MPEG2"
             token_index: -1
         remove: true
         confidence: 0.75

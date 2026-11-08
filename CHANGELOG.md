@@ -22,24 +22,51 @@ adapt. `1.0.0` will be declared once the output shape is stable.
   `restricted` and `mature` now normalize to `AGE_RESTRICTED`; previously each
   produced its own value. `adult` is no longer classified (it also names a
   network), and `uncut` stays an `UNCUT` edition note rather than a rating.
-- `reltitle serve`'s `vocabulary` now lists the values note promotion can
-  produce, so `AGE_RESTRICTED` and the other promoted values are visible to a
-  consumer that builds its options from the dictionary.
-- Resolution normalizes by height: a `WxH` token whose height is a canonical
-  tier reports that tier (`1440x1080` and `2600x1080` are `1080p`, `848x480`
-  is `480p`); a height outside the tiers keeps the raw `WxH`. `1440x1080` is
-  no longer a canonical resolution value.
+- Resolution reports one of the eight canonical tiers. A `WxH` frame takes its
+  exact height tier (`1440x1080` and `2600x1080` are `1080p`, `848x480` is
+  `480p`), otherwise the larger of its width family and its nearest tier
+  (`3840x1600` is `2160p`). Any other `Np` spelling takes its nearest tier
+  (`2276p` is `2160p`, `810p` is `720p`). The dictionary's ad-hoc heights are
+  no longer output values.
+- `version` values are uppercase `V<n>` (`V2`, not `v2`), matching the
+  dictionary's `V2`–`V5` entries.
+- A generic `MPEG` tag reports `MPEG2`; `MPEG` is no longer a video codec value.
+- `[HDR10+]` reports `HDR10_PLUS`; the bracketed form used to split into
+  `hdr10` and a stray `+`, yielding `HDR10`.
+- A `MULTI`/`MULTISUB` note reports `sub_lang=MULTI`. It used to be promoted to
+  `sub_flag=soft`, which also produced `sub_lang=MULTI` through a hint; the
+  note no longer adds `sub_flag=soft`.
+- `reltitle serve`'s `vocabulary` lists only the dimensions whose values are
+  closed and enumerable, and for those lists every value a parse can report:
+  the canonical values of a dimension `dict_canonical_values.yaml` defines, and
+  the lexicon and promoted values of one it does not (`content_rating`,
+  `edition`, `hdr`). Structural (`contents`, `pack_kind`, `pack_profile`),
+  free-form (`note`, `title`, `group`) and open or code-synthesized dimensions
+  (`version`, `audio_object`, `audio_channels`, `sub_format`,
+  `release_status`) are not published. A conformance test parses the golden
+  corpus and fails on any published-dimension value the vocabulary lacks.
+
+### Added
+
+- Canonical values for the TV channels and services the lexicon recognizes
+  (`BS-NTV`, `CS-EX2`, `MYTV`, `TBS`, `MX`, `TVER`, `TENCENT`, `HBO_MAX`,
+  `ANIPLUS`, …), for the source types `CAMRip`, `DVDScr`, `PPV` and `R5`, for
+  `VP9`, plus canonical `bit_depth`, `platform_region` and `edition` sections.
+  Every value the parser reports for these dimensions is now listed.
+- `NHK-G`, `NHKG` and `NHK1` are token synonyms for `NHK_ONE`.
+- Note promotion names one rule per canonical value, so `vocabulary` can list
+  every promoted value, `MULTI` is a subtitle language, and `TS`/`M2TS`,
+  `UHD`/`UHDRIP`/`UHD_BDRIP` and the disc-variant editions each report their
+  own value instead of sharing a token-derived one.
 
 ### Fixed
 
 - `r-rated` now matches as the token sequence `r` `-` `rated`; as a single token
   it never matched.
-- `reltitle serve`'s `vocabulary` reports exactly the canonical values of a
-  dimension that `dict_canonical_values.yaml` defines. Before, the lexicon's
-  ad-hoc spellings (`1008p`, `1440p`, `1440x1080`, …) were listed beside them,
+- `reltitle serve`'s `vocabulary` reported the lexicon's ad-hoc spellings
+  (`1008p`, `1440p`, `1440x1080`, …) beside a canonical dimension's values,
   contradicting the "canonical values" contract a consumer builds options from.
-  Lexicon-only dimensions (`content_rating`, `edition`, …) still report the
-  lexicon and promoted values.
+  It now reports exactly the canonical values.
 
 ## [0.0.4] - 2026-11-06
 

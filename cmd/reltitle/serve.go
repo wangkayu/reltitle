@@ -189,9 +189,11 @@ func marshalResponse(response serveResponse) []byte {
 }
 
 // vocabularyOf lists every attribute dimension the dictionary defines, with
-// the canonical values of dict_canonical_values.yaml plus the values the
-// lexicon emits. Dimensions and values are sorted so the answer is stable
-// across builds; a consumer reorders them for its own display.
+// the canonical values of dict_canonical_values.yaml, the values the lexicon
+// emits, and the promoted values of dict_note_promotion.yaml. Promotions with
+// a token-derived value cannot be listed. Dimensions and values are sorted so
+// the answer is stable across builds; a consumer reorders them for its own
+// display.
 func vocabularyOf(cfg *config.Config) []dimensionVocabulary {
 	values := make(map[model.AttrType]map[string]bool)
 	add := func(dimension model.AttrType, value string) {
@@ -223,6 +225,11 @@ func vocabularyOf(cfg *config.Config) []dimensionVocabulary {
 			for _, emit := range clause.Emit {
 				add(model.AttrType(emit.Type), emit.Normalized)
 			}
+		}
+	}
+	for _, rule := range cfg.DictNotePromotion.Rules {
+		if !rule.PromoteTo.NormalizedFromToken {
+			add(model.AttrType(rule.PromoteTo.Type), rule.PromoteTo.Normalized)
 		}
 	}
 	dimensions := make([]string, 0, len(values))

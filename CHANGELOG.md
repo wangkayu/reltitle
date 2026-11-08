@@ -13,6 +13,24 @@ no code change. A MINOR release (`0.x.0`) changes the output shape (a field or
 an attribute dimension is added, renamed, or removed), so consumers have to
 adapt. `1.0.0` will be declared once the output shape is stable.
 
+## [Unreleased]
+
+### Changed
+
+- `content_rating` reports one value per fact: `UNCENSORED`, `CENSORED` and
+  `AGE_RESTRICTED`. The age-limit spellings `R18`, `R18+`, `r-rated`,
+  `restricted` and `mature` now normalize to `AGE_RESTRICTED`; previously each
+  produced its own value. `adult` is no longer classified (it also names a
+  network), and `uncut` stays an `UNCUT` edition note rather than a rating.
+- `reltitle serve`'s `vocabulary` now lists the values note promotion can
+  produce, so `AGE_RESTRICTED` and the other promoted values are visible to a
+  consumer that builds its options from the dictionary.
+
+### Fixed
+
+- `r-rated` now matches as the token sequence `r` `-` `rated`; as a single token
+  it never matched.
+
 ## [0.0.4] - 2026-11-06
 
 ### Added

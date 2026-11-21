@@ -484,3 +484,8 @@ Some Show S01 1080p WEB-DL H264 AAC
 [G] Sample Film (2026) [Alternate Title] [1080p][WEB-DL][CHS&JA][MKV]
 【豌豆字幕组】[药屋少女的呢喃（药师少女的独语）/ Kusuriya no Hitorigoto S3][03(51)][简体][1080P][MP4]
 [BeanSub][Kusuriya no Hitorigoto S3][03_51][CHS][1080P][x264_AAC].mp4
+# Compact season range followed by a completion marker.
+[喵萌奶茶屋&VCB-Studio] 古见同学有交流障碍 10-bit 1080p HEVC BDRip [S1-2 Fin]
+# Hyphenated release groups with an internal @ in release titles and filenames.
+Death.Note.S01.2006.1080p.BluRay.x265.FLAC.2.0-AnimeF@ADE
+Death.Note.S01E02.2006.1080p.BluRay.x265.FLAC.2.0-AnimeF@ADE.mkv

@@ -388,20 +388,26 @@ func extractSeasonRangeAndRemoveFromTokens(tokens []model.Token) string {
 		if mid != "-" {
 			continue
 		}
-		ml := reExtractSeasonRangeAndRemoveFromTokens1.FindStringSubmatch(l)
-		mr := reExtractSeasonRangeAndRemoveFromTokens2.FindStringSubmatch(r)
-		if len(ml) != 2 || len(mr) != 2 {
+		left := seasonRangeEndpointPattern.FindStringSubmatch(l)
+		if left == nil {
 			continue
 		}
-		ls := strings.TrimLeft(ml[1], "0")
-		rs := strings.TrimLeft(mr[1], "0")
+		ls := strings.TrimLeft(left[1], "0")
 		if ls == "" {
-			ls = "0"
+			continue
+		}
+		var rs string
+		if right := seasonRangeEndpointPattern.FindStringSubmatch(r); right != nil {
+			rs = strings.TrimLeft(right[1], "0")
+		} else if compactSeasonRangeEndpointPattern.MatchString(r) && hasCompletedSeasonRangeBracket(tokens, i) {
+			// In [S1-2 Fin], Fin qualifies the compact season range.
+			first, _ := strconv.Atoi(ls)
+			last, _ := strconv.Atoi(r)
+			if last > first {
+				rs = strconv.Itoa(last)
+			}
 		}
 		if rs == "" {
-			rs = "0"
-		}
-		if ls == "0" || rs == "0" {
 			continue
 		}
 		cand := "S" + ls + "-S" + rs
@@ -414,6 +420,15 @@ func extractSeasonRangeAndRemoveFromTokens(tokens []model.Token) string {
 		}
 	}
 	return best
+}
+
+// hasCompletedSeasonRangeBracket distinguishes [S1-2 Fin] from S1 - 2.
+func hasCompletedSeasonRangeBracket(tokens []model.Token, start int) bool {
+	if start == 0 || start+4 >= len(tokens) || !strings.EqualFold(tokens[start+3].Text, "Fin") {
+		return false
+	}
+	open, close := tokens[start-1].Text, tokens[start+4].Text
+	return (open == "[" && close == "]") || (open == "【" && close == "】")
 }
 
 var movieIndexPattern = regexp.MustCompile(`(?i)^(?:movie)?\s*(\d{1,3})$`)
@@ -615,8 +630,8 @@ func detectMovieIndexAndKeyword(tokens []model.Token) (movieIndex string, tokenI
 
 // Regular expressions hoisted out of function bodies so they are compiled once at init.
 var (
-	reIsTailGroupLike1                       = regexp.MustCompile(`^[A-Z0-9]{2,10}$`)
-	reDetectSPKind1                          = regexp.MustCompile(`(?i)^0?\d{1,3}\s*(?:&|＆)\s*(sp|ova|oad|ona|ex|ncop|nced|pv)\b`)
-	reExtractSeasonRangeAndRemoveFromTokens1 = regexp.MustCompile(`(?i)^s(\d{1,2})$`)
-	reExtractSeasonRangeAndRemoveFromTokens2 = regexp.MustCompile(`(?i)^s(\d{1,2})$`)
+	reIsTailGroupLike1                = regexp.MustCompile(`^[A-Z0-9]{2,10}$`)
+	reDetectSPKind1                   = regexp.MustCompile(`(?i)^0?\d{1,3}\s*(?:&|＆)\s*(sp|ova|oad|ona|ex|ncop|nced|pv)\b`)
+	seasonRangeEndpointPattern        = regexp.MustCompile(`(?i)^s(\d{1,2})$`)
+	compactSeasonRangeEndpointPattern = regexp.MustCompile(`^\d{1,2}$`)
 )

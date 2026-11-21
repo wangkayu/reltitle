@@ -183,7 +183,7 @@ func isLikelyGroupLikeTitleFallback(s string) bool {
 }
 
 var tailGroupFromRawTitlePattern = regexp.MustCompile(`(?i)(?:^|\s)-(?:\s*)?([A-Za-z][A-Za-z0-9]{1,24}(?:-[A-Za-z0-9]{1,24}){0,4}-(?:Raws|Subs))\b`)
-var tailGroupFromRawTitleAnyPattern = regexp.MustCompile(`(?i)-(\s*)?([A-Za-z][A-Za-z0-9]{2,20})\s*$`)
+var tailGroupFromRawTitleAnyPattern = regexp.MustCompile(`-\s*(` + tailGroupNamePattern + `)\s*$`)
 var tailGroupFromRawTitleBracketPattern = regexp.MustCompile(`(?:\[([^\[\]]{1,80})\]|【([^【】]{1,80})】)\s*$`)
 
 func (p *Parser) detectTailGroupFromRawTitle(rawTitle string) string {
@@ -204,10 +204,14 @@ func (p *Parser) detectTailGroupFromRawTitle(rawTitle string) string {
 		}
 	}
 	// Generic release tail group like "...-HDSWEB" / "...-VARYG".
-	if m := tailGroupFromRawTitleAnyPattern.FindStringSubmatch(s); len(m) == 3 {
-		g := strings.TrimSpace(m[2])
-		if g != "" && isTailGroupToken(g) {
-			return g
+	if m := tailGroupFromRawTitleAnyPattern.FindStringSubmatch(s); len(m) == 2 && isTailGroupToken(m[1]) {
+		return m[1]
+	}
+	// A scene filename can have a consumed group token just before its extension.
+	if strings.Contains(s, "@") && reVideoFileExtensionTail.MatchString(s) {
+		stem := s[:strings.LastIndexByte(s, '.')]
+		if m := tailGroupFromRawTitleAnyPattern.FindStringSubmatch(stem); len(m) == 2 && strings.Contains(m[1], "@") && isTailGroupToken(m[1]) {
+			return m[1]
 		}
 	}
 	// Tail bracket group like "... [SnC-Fansub]".

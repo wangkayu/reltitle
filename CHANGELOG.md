@@ -15,6 +15,14 @@ adapt. `1.0.0` will be declared once the output shape is stable.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-22
+
+### Fixed
+
+- Recognize release groups with an internal `@` at the end of hyphenated release
+  titles and video filenames.
+- Parse bracketed `[S1-2 Fin]` tags as completed season ranges.
+
 ## [0.1.0] - 2026-11-08
 
 ### Changed

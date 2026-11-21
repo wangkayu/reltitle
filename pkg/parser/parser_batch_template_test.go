@@ -118,6 +118,54 @@ func TestParserBatchSeasonRange_FromSeasonKeywordAndConnector(t *testing.T) {
 	}
 }
 
+// The recorded Komi release tag uses one S for the whole season range.
+const komiCompactSeasonRangeTitle = "[喵萌奶茶屋&VCB-Studio] 古见同学有交流障碍 10-bit 1080p HEVC BDRip [S1-2 Fin]"
+
+func TestParserBatchSeasonRange_CompactWithFin(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+	res, err := p.Parse(komiCompactSeasonRangeTitle)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	if res.ContentKind != model.ContentKindBatch {
+		t.Errorf("content_kind=%q want BATCH", res.ContentKind)
+	}
+	semantics := canonicalEPSemantics(res)
+	if semantics == nil || semantics.Primary == nil {
+		t.Fatal("missing primary season range")
+	}
+	if primary := semantics.Primary; primary.Kind != model.EPKindSeasonRange || primary.SeasonRange != "S1-S2" || primary.Episode != "" {
+		t.Errorf("primary=%+v want season range S1-S2 without an episode", primary)
+	}
+	if got := firstAttrValue(res, model.AttrReleaseStatus); got != "FIN" {
+		t.Errorf("release_status=%q want FIN", got)
+	}
+}
+
+func TestParserBatchSeasonRange_CompactWithoutFinKeepsEpisode(t *testing.T) {
+	cfg, err := config.LoadAll("../../configs")
+	if err != nil {
+		t.Fatalf("load config: %v", err)
+	}
+	p := New(cfg)
+	for _, raw := range []string{
+		"[Group] Show S01 - 02 [1080p]",
+		"[Group] Show [S1-2] [1080p]",
+	} {
+		res, err := p.Parse(raw)
+		if err != nil {
+			t.Fatalf("parse %q: %v", raw, err)
+		}
+		if got := canonicalEpisode(res); got != "2" {
+			t.Errorf("%q episode=%q want 2", raw, got)
+		}
+	}
+}
+
 func TestParserBatchSeasonRange_FrenchSaisonRange(t *testing.T) {
 	cfg, err := config.LoadAll("../../configs")
 	if err != nil {
